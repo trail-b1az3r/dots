@@ -1,0 +1,14 @@
+[Unit]
+Description=Halcyon idle management (hypridle)
+PartOf=halcyon-session.target
+After=halcyon-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env hypridle
+Restart=on-failure
+RestartSec=5
+Slice=session.slice
+
+[Install]
+WantedBy=halcyon-session.target

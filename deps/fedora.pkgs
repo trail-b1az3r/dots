@@ -1,0 +1,39 @@
+# Fedora package map.  "copr:<owner>/<project>" enables a COPR first.
+
+hyprland        hyprland
+hyprctl         hyprland
+quickshell      copr:errornointernet/quickshell quickshell
+waybar          waybar
+python          python3
+pipewire        pipewire pipewire-pulseaudio
+wireplumber     wireplumber
+wpctl           wireplumber
+portal          xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
+polkit-agent    hyprpolkitagent
+hyprlock        hyprlock
+hypridle        hypridle
+wl-clipboard    wl-clipboard
+cliphist        cliphist
+grim            grim
+slurp           slurp
+screenrecord    wf-recorder
+brightnessctl   brightnessctl
+playerctl       playerctl
+networkmanager  NetworkManager
+bluez           bluez bluez-tools
+upower          upower
+libnotify       libnotify
+imagemagick     ImageMagick
+wallpaper       swww
+fonts-ui        rsms-inter-fonts
+fonts-mono      jetbrains-mono-fonts
+fonts-symbols   -
+powerprofiles   power-profiles-daemon
+ollama          -
+piper           -
+whisper         -
+nixorb          -
+hypernix        -
+
+@build          gcc-c++ cmake ninja-build git pkgconf-pkg-config
+@quickshell-dev qt6-qtbase-devel qt6-qtbase-private-devel qt6-qtdeclarative-devel qt6-qtdeclarative-private-devel qt6-qtwayland-devel qt6-qtsvg-devel qt6-qtshadertools-devel spirv-tools cli11-devel libdrm-devel mesa-libgbm-devel wayland-devel wayland-protocols-devel jemalloc-devel pam-devel polkit-devel glib2-devel pipewire-devel libxcb-devel vulkan-headers google-breakpad-devel

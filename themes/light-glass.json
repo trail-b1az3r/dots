@@ -1,0 +1,19 @@
+{
+  "name": "Light Glass",
+  "description": "Frosted white surfaces with soft shadows — the daylight counterpart to Dark Glass.",
+  "appearance": { "mode": "light" },
+  "glass": {
+    "preset": "light-glass",
+    "opacity": 0.68,
+    "blurStrength": 1.05,
+    "saturation": 1.14,
+    "tintStrength": 0.16,
+    "borderOpacity": 0.4,
+    "cornerRadius": 18,
+    "shadowStrength": 0.34,
+    "specularStrength": 0.58,
+    "refraction": 0.44,
+    "noise": 0.009,
+    "elevationSpread": 1.0
+  }
+}

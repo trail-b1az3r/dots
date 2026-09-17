@@ -1,0 +1,16 @@
+[Unit]
+Description=Halcyon clipboard history
+PartOf=halcyon-session.target
+After=halcyon-session.target
+ConditionPathIsDirectory=%h
+
+[Service]
+Type=simple
+# Two watchers, because text and images are stored under separate types.
+ExecStart=/usr/bin/env wl-paste --type text --watch cliphist store
+Restart=on-failure
+RestartSec=5
+Slice=background.slice
+
+[Install]
+WantedBy=halcyon-session.target

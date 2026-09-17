@@ -1,0 +1,14 @@
+[Unit]
+Description=Halcyon clipboard history (images)
+PartOf=halcyon-session.target
+After=halcyon-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env wl-paste --type image --watch cliphist store
+Restart=on-failure
+RestartSec=5
+Slice=background.slice
+
+[Install]
+WantedBy=halcyon-session.target

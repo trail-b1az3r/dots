@@ -1,0 +1,14 @@
+[Unit]
+Description=Halcyon polkit authentication agent
+PartOf=halcyon-session.target
+After=halcyon-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env hyprpolkitagent
+Restart=on-failure
+RestartSec=5
+Slice=session.slice
+
+[Install]
+WantedBy=halcyon-session.target

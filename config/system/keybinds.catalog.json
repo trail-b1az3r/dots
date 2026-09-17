@@ -1,0 +1,732 @@
+{
+  "version": 1,
+  "modifiers": {
+    "mod": "SUPER",
+    "modShift": "SUPER + SHIFT",
+    "modAlt": "SUPER + ALT",
+    "modCtrl": "SUPER + CTRL"
+  },
+  "categories": [
+    {
+      "id": "system",
+      "title": "System"
+    },
+    {
+      "id": "shell",
+      "title": "Desktop Shell"
+    },
+    {
+      "id": "windows",
+      "title": "Windows"
+    },
+    {
+      "id": "workspaces",
+      "title": "Workspaces"
+    },
+    {
+      "id": "media",
+      "title": "Media & Hardware"
+    },
+    {
+      "id": "capture",
+      "title": "Screenshots & Recording"
+    },
+    {
+      "id": "apps",
+      "title": "Applications"
+    }
+  ],
+  "binds": [
+    {
+      "id": "spotlight",
+      "category": "shell",
+      "title": "Spotlight search",
+      "default": "SUPER + Space",
+      "run": {
+        "exec": "halcyon shell spotlight toggle"
+      }
+    },
+    {
+      "id": "spotlight.ai",
+      "category": "shell",
+      "title": "Ask the assistant",
+      "default": "SUPER + SHIFT + Space",
+      "run": {
+        "exec": "halcyon shell spotlight askAi"
+      }
+    },
+    {
+      "id": "appSwitcher",
+      "category": "shell",
+      "title": "Application switcher",
+      "default": "SUPER + Tab",
+      "run": {
+        "exec": "halcyon shell switcher next"
+      },
+      "flags": {
+        "repeating": true
+      }
+    },
+    {
+      "id": "appSwitcher.prev",
+      "category": "shell",
+      "title": "Application switcher (back)",
+      "default": "SUPER + SHIFT + Tab",
+      "run": {
+        "exec": "halcyon shell switcher previous"
+      },
+      "flags": {
+        "repeating": true
+      }
+    },
+    {
+      "id": "overview",
+      "category": "shell",
+      "title": "Mission Control overview",
+      "default": "SUPER + E",
+      "run": {
+        "exec": "halcyon shell overview toggle"
+      }
+    },
+    {
+      "id": "controlCenter",
+      "category": "shell",
+      "title": "Control Center",
+      "default": "SUPER + C",
+      "run": {
+        "exec": "halcyon shell control toggle"
+      }
+    },
+    {
+      "id": "notifications",
+      "category": "shell",
+      "title": "Notification centre",
+      "default": "SUPER + N",
+      "run": {
+        "exec": "halcyon shell notifications toggle"
+      }
+    },
+    {
+      "id": "calendar",
+      "category": "shell",
+      "title": "Calendar",
+      "default": "SUPER + K",
+      "run": {
+        "exec": "halcyon shell calendar toggle"
+      }
+    },
+    {
+      "id": "dashboard",
+      "category": "shell",
+      "title": "Desktop widgets",
+      "default": "SUPER + D",
+      "run": {
+        "exec": "halcyon shell dashboard toggle"
+      }
+    },
+    {
+      "id": "settings",
+      "category": "shell",
+      "title": "Settings",
+      "default": "SUPER + comma",
+      "run": {
+        "exec": "halcyon shell settings open"
+      }
+    },
+    {
+      "id": "keybindHelp",
+      "category": "shell",
+      "title": "Keyboard shortcut reference",
+      "default": "SUPER + slash",
+      "run": {
+        "exec": "halcyon shell cheatsheet toggle"
+      }
+    },
+    {
+      "id": "assistant.talk",
+      "category": "shell",
+      "title": "Assistant push-to-talk",
+      "default": "SUPER + A",
+      "run": {
+        "exec": "halcyon assistant listen --hold"
+      },
+      "flags": {
+        "release": false
+      }
+    },
+    {
+      "id": "assistant.stop",
+      "category": "shell",
+      "title": "Cancel the assistant",
+      "default": "SUPER + SHIFT + A",
+      "run": {
+        "exec": "halcyon assistant cancel"
+      }
+    },
+    {
+      "id": "powerMenu",
+      "category": "system",
+      "title": "Power menu",
+      "default": "SUPER + Escape",
+      "run": {
+        "exec": "halcyon shell power toggle"
+      }
+    },
+    {
+      "id": "lock",
+      "category": "system",
+      "title": "Lock the screen",
+      "default": "SUPER + CTRL + Q",
+      "run": {
+        "exec": "halcyon session lock"
+      }
+    },
+    {
+      "id": "reload",
+      "category": "system",
+      "title": "Reload the desktop",
+      "default": "SUPER + CTRL + R",
+      "run": {
+        "exec": "halcyon session reload"
+      }
+    },
+    {
+      "id": "exit",
+      "category": "system",
+      "title": "Log out",
+      "default": "SUPER + CTRL + ESCAPE",
+      "run": {
+        "dsp": "hl.dsp.exit()"
+      }
+    },
+    {
+      "id": "toggleDnd",
+      "category": "system",
+      "title": "Toggle Do Not Disturb",
+      "default": "SUPER + SHIFT + N",
+      "run": {
+        "exec": "halcyon notify dnd toggle"
+      }
+    },
+    {
+      "id": "toggleTheme",
+      "category": "system",
+      "title": "Toggle light / dark",
+      "default": "SUPER + SHIFT + T",
+      "run": {
+        "exec": "halcyon theme toggle-mode"
+      }
+    },
+    {
+      "id": "nextWallpaper",
+      "category": "system",
+      "title": "Next wallpaper",
+      "default": "SUPER + SHIFT + W",
+      "run": {
+        "exec": "halcyon wallpaper next"
+      }
+    },
+    {
+      "id": "cyclePowerMode",
+      "category": "system",
+      "title": "Cycle power profile",
+      "default": "SUPER + SHIFT + P",
+      "run": {
+        "exec": "halcyon power cycle"
+      }
+    },
+    {
+      "id": "window.close",
+      "category": "windows",
+      "title": "Close window",
+      "default": "SUPER + W",
+      "run": {
+        "dsp": "hl.dsp.window.close()"
+      }
+    },
+    {
+      "id": "window.kill",
+      "category": "windows",
+      "title": "Force quit window",
+      "default": "SUPER + ALT + W",
+      "run": {
+        "dsp": "hl.dsp.window.kill()"
+      }
+    },
+    {
+      "id": "window.minimize",
+      "category": "windows",
+      "title": "Minimise window",
+      "default": "SUPER + M",
+      "run": {
+        "exec": "halcyon window minimize"
+      }
+    },
+    {
+      "id": "window.hide",
+      "category": "windows",
+      "title": "Hide application",
+      "default": "SUPER + H",
+      "run": {
+        "exec": "halcyon window hide"
+      }
+    },
+    {
+      "id": "window.restore",
+      "category": "windows",
+      "title": "Restore last minimised window",
+      "default": "SUPER + SHIFT + M",
+      "run": {
+        "exec": "halcyon window restore"
+      }
+    },
+    {
+      "id": "window.fullscreen",
+      "category": "windows",
+      "title": "Fullscreen",
+      "default": "SUPER + F",
+      "run": {
+        "dsp": "hl.dsp.window.fullscreen({ mode = \"fullscreen\" })"
+      }
+    },
+    {
+      "id": "window.maximize",
+      "category": "windows",
+      "title": "Maximise",
+      "default": "SUPER + SHIFT + F",
+      "run": {
+        "dsp": "hl.dsp.window.fullscreen({ mode = \"maximize\" })"
+      }
+    },
+    {
+      "id": "window.float",
+      "category": "windows",
+      "title": "Toggle floating",
+      "default": "SUPER + T",
+      "run": {
+        "dsp": "hl.dsp.window.float({ action = \"toggle\" })"
+      }
+    },
+    {
+      "id": "window.center",
+      "category": "windows",
+      "title": "Centre window",
+      "default": "SUPER + CTRL + C",
+      "run": {
+        "dsp": "hl.dsp.window.center()"
+      }
+    },
+    {
+      "id": "window.pin",
+      "category": "windows",
+      "title": "Pin above others",
+      "default": "SUPER + CTRL + P",
+      "run": {
+        "dsp": "hl.dsp.window.pin()"
+      }
+    },
+    {
+      "id": "window.split",
+      "category": "windows",
+      "title": "Toggle split direction",
+      "default": "SUPER + J",
+      "run": {
+        "dsp": "hl.dsp.layout(\"togglesplit\")"
+      }
+    },
+    {
+      "id": "focus.left",
+      "category": "windows",
+      "title": "Focus left",
+      "default": "SUPER + left",
+      "run": {
+        "dsp": "hl.dsp.focus({ direction = \"left\" })"
+      }
+    },
+    {
+      "id": "focus.right",
+      "category": "windows",
+      "title": "Focus right",
+      "default": "SUPER + right",
+      "run": {
+        "dsp": "hl.dsp.focus({ direction = \"right\" })"
+      }
+    },
+    {
+      "id": "focus.up",
+      "category": "windows",
+      "title": "Focus up",
+      "default": "SUPER + up",
+      "run": {
+        "dsp": "hl.dsp.focus({ direction = \"up\" })"
+      }
+    },
+    {
+      "id": "focus.down",
+      "category": "windows",
+      "title": "Focus down",
+      "default": "SUPER + down",
+      "run": {
+        "dsp": "hl.dsp.focus({ direction = \"down\" })"
+      }
+    },
+    {
+      "id": "move.left",
+      "category": "windows",
+      "title": "Move window left",
+      "default": "SUPER + SHIFT + left",
+      "run": {
+        "dsp": "hl.dsp.window.move({ direction = \"left\" })"
+      }
+    },
+    {
+      "id": "move.right",
+      "category": "windows",
+      "title": "Move window right",
+      "default": "SUPER + SHIFT + right",
+      "run": {
+        "dsp": "hl.dsp.window.move({ direction = \"right\" })"
+      }
+    },
+    {
+      "id": "move.up",
+      "category": "windows",
+      "title": "Move window up",
+      "default": "SUPER + SHIFT + up",
+      "run": {
+        "dsp": "hl.dsp.window.move({ direction = \"up\" })"
+      }
+    },
+    {
+      "id": "move.down",
+      "category": "windows",
+      "title": "Move window down",
+      "default": "SUPER + SHIFT + down",
+      "run": {
+        "dsp": "hl.dsp.window.move({ direction = \"down\" })"
+      }
+    },
+    {
+      "id": "resize.left",
+      "category": "windows",
+      "title": "Shrink horizontally",
+      "default": "SUPER + ALT + left",
+      "run": {
+        "dsp": "hl.dsp.window.resize({ x = -60, y = 0, relative = true })"
+      },
+      "flags": {
+        "repeating": true
+      }
+    },
+    {
+      "id": "resize.right",
+      "category": "windows",
+      "title": "Grow horizontally",
+      "default": "SUPER + ALT + right",
+      "run": {
+        "dsp": "hl.dsp.window.resize({ x = 60, y = 0, relative = true })"
+      },
+      "flags": {
+        "repeating": true
+      }
+    },
+    {
+      "id": "resize.up",
+      "category": "windows",
+      "title": "Shrink vertically",
+      "default": "SUPER + ALT + up",
+      "run": {
+        "dsp": "hl.dsp.window.resize({ x = 0, y = -60, relative = true })"
+      },
+      "flags": {
+        "repeating": true
+      }
+    },
+    {
+      "id": "resize.down",
+      "category": "windows",
+      "title": "Grow vertically",
+      "default": "SUPER + ALT + down",
+      "run": {
+        "dsp": "hl.dsp.window.resize({ x = 0, y = 60, relative = true })"
+      },
+      "flags": {
+        "repeating": true
+      }
+    },
+    {
+      "id": "workspace.next",
+      "category": "workspaces",
+      "title": "Next workspace",
+      "default": "SUPER + CTRL + right",
+      "run": {
+        "dsp": "hl.dsp.focus({ workspace = \"e+1\" })"
+      }
+    },
+    {
+      "id": "workspace.prev",
+      "category": "workspaces",
+      "title": "Previous workspace",
+      "default": "SUPER + CTRL + left",
+      "run": {
+        "dsp": "hl.dsp.focus({ workspace = \"e-1\" })"
+      }
+    },
+    {
+      "id": "workspace.back",
+      "category": "workspaces",
+      "title": "Back and forth",
+      "default": "SUPER + grave",
+      "run": {
+        "dsp": "hl.dsp.focus({ workspace = \"previous\" })"
+      }
+    },
+    {
+      "id": "workspace.scratch",
+      "category": "workspaces",
+      "title": "Scratchpad",
+      "default": "SUPER + S",
+      "run": {
+        "dsp": "hl.dsp.workspace.toggle_special(\"scratch\")"
+      }
+    },
+    {
+      "id": "workspace.toScratch",
+      "category": "workspaces",
+      "title": "Move window to scratchpad",
+      "default": "SUPER + SHIFT + S",
+      "run": {
+        "dsp": "hl.dsp.window.move({ workspace = \"special:scratch\" })"
+      }
+    },
+    {
+      "id": "monitor.next",
+      "category": "workspaces",
+      "title": "Focus next monitor",
+      "default": "SUPER + CTRL + up",
+      "run": {
+        "dsp": "hl.dsp.focus({ monitor = \"+1\" })"
+      }
+    },
+    {
+      "id": "monitor.prev",
+      "category": "workspaces",
+      "title": "Focus previous monitor",
+      "default": "SUPER + CTRL + down",
+      "run": {
+        "dsp": "hl.dsp.focus({ monitor = \"-1\" })"
+      }
+    },
+    {
+      "id": "volume.up",
+      "category": "media",
+      "title": "Volume up",
+      "default": "XF86AudioRaiseVolume",
+      "run": {
+        "exec": "halcyon audio volume +5"
+      },
+      "flags": {
+        "locked": true,
+        "repeating": true
+      }
+    },
+    {
+      "id": "volume.down",
+      "category": "media",
+      "title": "Volume down",
+      "default": "XF86AudioLowerVolume",
+      "run": {
+        "exec": "halcyon audio volume -5"
+      },
+      "flags": {
+        "locked": true,
+        "repeating": true
+      }
+    },
+    {
+      "id": "volume.mute",
+      "category": "media",
+      "title": "Mute output",
+      "default": "XF86AudioMute",
+      "run": {
+        "exec": "halcyon audio mute toggle"
+      },
+      "flags": {
+        "locked": true
+      }
+    },
+    {
+      "id": "mic.mute",
+      "category": "media",
+      "title": "Mute microphone",
+      "default": "XF86AudioMicMute",
+      "run": {
+        "exec": "halcyon audio mic toggle"
+      },
+      "flags": {
+        "locked": true
+      }
+    },
+    {
+      "id": "brightness.up",
+      "category": "media",
+      "title": "Brightness up",
+      "default": "XF86MonBrightnessUp",
+      "run": {
+        "exec": "halcyon backlight +5"
+      },
+      "flags": {
+        "locked": true,
+        "repeating": true
+      }
+    },
+    {
+      "id": "brightness.down",
+      "category": "media",
+      "title": "Brightness down",
+      "default": "XF86MonBrightnessDown",
+      "run": {
+        "exec": "halcyon backlight -5"
+      },
+      "flags": {
+        "locked": true,
+        "repeating": true
+      }
+    },
+    {
+      "id": "media.playPause",
+      "category": "media",
+      "title": "Play / pause",
+      "default": "XF86AudioPlay",
+      "run": {
+        "exec": "halcyon media play-pause"
+      },
+      "flags": {
+        "locked": true
+      }
+    },
+    {
+      "id": "media.next",
+      "category": "media",
+      "title": "Next track",
+      "default": "XF86AudioNext",
+      "run": {
+        "exec": "halcyon media next"
+      },
+      "flags": {
+        "locked": true
+      }
+    },
+    {
+      "id": "media.prev",
+      "category": "media",
+      "title": "Previous track",
+      "default": "XF86AudioPrev",
+      "run": {
+        "exec": "halcyon media previous"
+      },
+      "flags": {
+        "locked": true
+      }
+    },
+    {
+      "id": "shot.region",
+      "category": "capture",
+      "title": "Screenshot a region",
+      "default": "SUPER + SHIFT + 4",
+      "run": {
+        "exec": "halcyon screenshot region"
+      }
+    },
+    {
+      "id": "shot.ui",
+      "category": "capture",
+      "title": "Screenshot & recording panel",
+      "default": "SUPER + SHIFT + 5",
+      "run": {
+        "exec": "halcyon shell capture toggle"
+      }
+    },
+    {
+      "id": "shot.screen",
+      "category": "capture",
+      "title": "Screenshot the screen",
+      "default": "SUPER + SHIFT + 3",
+      "run": {
+        "exec": "halcyon screenshot screen"
+      }
+    },
+    {
+      "id": "shot.window",
+      "category": "capture",
+      "title": "Screenshot the window",
+      "default": "SUPER + SHIFT + 6",
+      "run": {
+        "exec": "halcyon screenshot window"
+      }
+    },
+    {
+      "id": "clipboard",
+      "category": "capture",
+      "title": "Clipboard history",
+      "default": "SUPER + V",
+      "run": {
+        "exec": "halcyon shell spotlight clipboard"
+      }
+    },
+    {
+      "id": "app.terminal",
+      "category": "apps",
+      "title": "Terminal",
+      "default": "SUPER + Return",
+      "run": {
+        "exec": "halcyon open terminal"
+      }
+    },
+    {
+      "id": "app.files",
+      "category": "apps",
+      "title": "File manager",
+      "default": "SUPER + SHIFT + Return",
+      "run": {
+        "exec": "halcyon open files"
+      }
+    },
+    {
+      "id": "app.browser",
+      "category": "apps",
+      "title": "Browser",
+      "default": "SUPER + B",
+      "run": {
+        "exec": "halcyon open browser"
+      }
+    },
+    {
+      "id": "app.hypernix",
+      "category": "apps",
+      "title": "HyperNix",
+      "default": "SUPER + SHIFT + H",
+      "run": {
+        "exec": "halcyon hypernix launch"
+      }
+    }
+  ],
+  "mouseBinds": [
+    {
+      "id": "mouse.move",
+      "title": "Drag window",
+      "default": "SUPER + mouse:272",
+      "run": {
+        "dsp": "hl.dsp.window.drag()"
+      }
+    },
+    {
+      "id": "mouse.resize",
+      "title": "Resize window",
+      "default": "SUPER + mouse:273",
+      "run": {
+        "dsp": "hl.dsp.window.resize()"
+      }
+    }
+  ]
+}
