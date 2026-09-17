@@ -167,6 +167,59 @@ class TestGeneratedFiles(IsolatedHalcyon):
             # looks like a rendering bug rather than a config mistake.
             self.assertIn(name, parsed, msg=f"{name} is listed but not defined")
 
+    def test_waybar_commands_use_an_absolute_halcyon_path(self) -> None:
+        # Waybar runs these through /bin/sh with the PATH its systemd unit
+        # inherited, which usually lacks ~/.local/bin. A bare `halcyon`
+        # then fails silently: the button is there and does nothing.
+        import os
+
+        binary = os.path.join(self.root, "bin", "halcyon")
+        os.makedirs(os.path.dirname(binary), exist_ok=True)
+        with open(binary, "w", encoding="utf-8") as handle:
+            handle.write("#!/bin/sh\nexit 0\n")
+        os.chmod(binary, 0o755)
+
+        config = dict(self.waybar_base)
+        render._resolve_waybar_commands(config, binary)
+
+        seen = 0
+        for module in config.values():
+            if not isinstance(module, dict):
+                continue
+            for field in render._WAYBAR_COMMAND_FIELDS:
+                value = module.get(field)
+                if not isinstance(value, str):
+                    continue
+                self.assertFalse(
+                    value.startswith("halcyon "), msg=f"{field}: {value}"
+                )
+                if binary in value:
+                    seen += 1
+        self.assertGreater(seen, 0, "no command was rewritten")
+
+    def test_waybar_commands_are_left_alone_when_no_binary_is_found(self) -> None:
+        # Baking in a path that does not exist would be worse than a bare
+        # name that at least works for anyone with ~/.local/bin on PATH.
+        config = dict(self.waybar_base)
+        render._resolve_waybar_commands(config, "halcyon")
+        self.assertEqual(config["custom/menu"], self.waybar_base["custom/menu"])
+
+    def test_only_halcyon_commands_are_rewritten(self) -> None:
+        config = {
+            "custom/x": {
+                "on-click": "halcyon shell spotlight toggle",
+                "on-click-right": "halcyonade --not-ours",
+                "exec": "/usr/bin/true",
+                "format": "halcyon is not a command here",
+            }
+        }
+        render._resolve_waybar_commands(config, "/opt/bin/halcyon")
+        module = config["custom/x"]
+        self.assertEqual(module["on-click"], "/opt/bin/halcyon shell spotlight toggle")
+        self.assertEqual(module["on-click-right"], "halcyonade --not-ours")
+        self.assertEqual(module["exec"], "/usr/bin/true")
+        self.assertEqual(module["format"], "halcyon is not a command here")
+
     def test_waybar_css_uses_gtk3_syntax_only(self) -> None:
         css = render.render_waybar_css(self.tokens)
         self.assertIn("@define-color", css)

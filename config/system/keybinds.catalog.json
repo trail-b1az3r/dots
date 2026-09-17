@@ -137,6 +137,15 @@
       "id": "keybindHelp",
       "category": "shell",
       "title": "Keyboard shortcut reference",
+      "default": "CTRL + slash",
+      "run": {
+        "exec": "halcyon shell cheatsheet toggle"
+      }
+    },
+    {
+      "id": "keybindHelp.alt",
+      "category": "shell",
+      "title": "Keyboard shortcut reference (alternate)",
       "default": "SUPER + slash",
       "run": {
         "exec": "halcyon shell cheatsheet toggle"
@@ -633,6 +642,15 @@
       "id": "shot.region",
       "category": "capture",
       "title": "Screenshot a region",
+      "default": "CTRL + SHIFT + S",
+      "run": {
+        "exec": "halcyon screenshot region"
+      }
+    },
+    {
+      "id": "shot.region.alt",
+      "category": "capture",
+      "title": "Screenshot a region (alternate)",
       "default": "SUPER + SHIFT + 4",
       "run": {
         "exec": "halcyon screenshot region"

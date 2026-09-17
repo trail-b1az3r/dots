@@ -937,8 +937,64 @@ def render_waybar_config(
             # so leaving unused ones in place costs real CPU.
             del config[key]
 
+    _resolve_waybar_commands(config, halcyon_binary())
+
     header = "\n".join(f"// {line}" for line in BANNER.splitlines())
     return header + "\n" + json.dumps(config, indent=2) + "\n"
+
+
+#: Module fields Waybar executes as shell commands.
+_WAYBAR_COMMAND_FIELDS = (
+    "exec",
+    "exec-if",
+    "on-click",
+    "on-click-middle",
+    "on-click-right",
+    "on-click-backward",
+    "on-click-forward",
+    "on-scroll-up",
+    "on-scroll-down",
+    "on-update",
+    "on-double-click",
+)
+
+
+def _resolve_waybar_commands(config: dict[str, Any], binary: str) -> None:
+    """Point every `halcyon ...` command at the binary by absolute path.
+
+    Waybar runs these through /bin/sh with whatever PATH its unit
+    inherited, and a systemd user session frequently does not have
+    ~/.local/bin on it. A bare `halcyon` then fails silently — the button
+    is there, it just does nothing, which is exactly how it was reported.
+    The keybind renderer already resolves the path for the same reason;
+    this is the other half of it.
+    """
+    if binary == "halcyon":
+        # Nothing better was found, so leave the commands alone rather
+        # than baking in a path that does not exist.
+        return
+
+    def rewrite(command: str) -> str:
+        if command == "halcyon":
+            return binary
+        if command.startswith("halcyon "):
+            return binary + command[len("halcyon"):]
+        return command
+
+    for key, module in config.items():
+        if not isinstance(module, dict):
+            continue
+        for field in _WAYBAR_COMMAND_FIELDS:
+            value = module.get(field)
+            if isinstance(value, str):
+                module[field] = rewrite(value)
+        # `menu-actions` maps a menu entry to a command.
+        actions = module.get("menu-actions")
+        if isinstance(actions, dict):
+            module["menu-actions"] = {
+                name: rewrite(cmd) if isinstance(cmd, str) else cmd
+                for name, cmd in actions.items()
+            }
 
 
 _WAYBAR_BUILTIN = {
