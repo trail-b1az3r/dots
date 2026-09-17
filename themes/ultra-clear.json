@@ -1,0 +1,18 @@
+{
+  "name": "Ultra Clear",
+  "description": "Almost invisible surfaces. Maximum wallpaper, minimum chrome. Heaviest on the GPU because the blur has nothing to hide behind.",
+  "glass": {
+    "preset": "ultra-clear",
+    "opacity": 0.28,
+    "blurStrength": 1.35,
+    "saturation": 1.32,
+    "tintStrength": 0.06,
+    "borderOpacity": 0.5,
+    "cornerRadius": 20,
+    "shadowStrength": 0.42,
+    "specularStrength": 0.75,
+    "refraction": 0.62,
+    "noise": 0.008,
+    "elevationSpread": 1.15
+  }
+}

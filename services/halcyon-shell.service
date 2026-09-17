@@ -1,0 +1,21 @@
+[Unit]
+Description=Halcyon shell (Quickshell)
+Documentation=https://quickshell.org
+PartOf=halcyon-session.target
+After=halcyon-session.target
+StartLimitIntervalSec=90
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env qs -c halcyon
+ExecReload=/usr/bin/env qs -c halcyon ipc call shell reload
+Restart=on-failure
+RestartSec=2
+# The shell owns Spotlight, Control Center and notifications. Losing it
+# should not take the session down, so a repeated crash gives up rather
+# than looping forever.
+Slice=session.slice
+
+[Install]
+WantedBy=halcyon-session.target

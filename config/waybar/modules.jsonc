@@ -1,0 +1,212 @@
+// Halcyon — Waybar module definitions.
+//
+// This file holds only the *behaviour* of each module. Layout (which
+// modules appear, and where), sizing and colours come from settings.json
+// via `halcyon theme apply`, which merges this file into
+// ~/.config/halcyon/generated/waybar-config.jsonc.
+//
+// Edit this to change what a module does; edit settings.json to change
+// which modules you see.
+//
+// Icons are Material Design Icons from Nerd Fonts (the `fonts-symbols`
+// dependency). Halcyon ships no proprietary icon fonts.
+{
+  "custom/menu": {
+    "format": "󰀻",
+    "tooltip": false,
+    "on-click": "halcyon shell spotlight toggle",
+    "on-click-right": "halcyon shell power toggle"
+  },
+
+  "hyprland/workspaces": {
+    "format": "{icon}",
+    "format-icons": { "default": "", "active": "", "urgent": "" },
+    "on-click": "activate",
+    "all-outputs": false,
+    "active-only": false,
+    "show-special": false,
+    "persistent-only": false,
+    "sort-by": "id",
+    "enable-bar-scroll": true,
+    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'"
+  },
+
+  "hyprland/window": {
+    "format": "{title}",
+    "max-length": 44,
+    "separate-outputs": true,
+    "rewrite": {
+      "": "Desktop",
+      "(.*) — Mozilla Firefox": "Firefox",
+      "(.*) - Chromium": "Chromium",
+      "(.*) - Visual Studio Code": "Code",
+      "(.*) — Dolphin": "Files",
+      "(.*) - Nautilus": "Files"
+    },
+    "tooltip": false
+  },
+
+  "clock": {
+    "interval": 30,
+    "format": "{:%a %e %b   %H:%M}",
+    "format-alt": "{:%H:%M:%S}",
+    "tooltip": false,
+    "on-click": "halcyon shell calendar toggle"
+  },
+
+  "cpu": {
+    "interval": 5,
+    "format": "󰻠 {usage}%",
+    "states": { "warning": 70, "critical": 90 },
+    "tooltip": true,
+    "on-click": "halcyon shell dashboard toggle"
+  },
+
+  "memory": {
+    "interval": 5,
+    "format": "󰍛 {percentage}%",
+    "tooltip-format": "{used:0.1f} GiB of {total:0.1f} GiB",
+    "states": { "warning": 78, "critical": 92 },
+    "on-click": "halcyon shell dashboard toggle"
+  },
+
+  "custom/gpu": {
+    "exec": "halcyon status gpu --waybar",
+    "return-type": "json",
+    "interval": 10,
+    "on-click": "halcyon shell dashboard toggle"
+  },
+
+  "custom/powermode": {
+    "exec": "halcyon status power --waybar",
+    "return-type": "json",
+    "interval": 30,
+    "signal": 7,
+    "on-click": "halcyon power cycle",
+    "on-click-right": "halcyon shell control toggle"
+  },
+
+  "battery": {
+    "interval": 30,
+    "states": { "good": 80, "warning": 25, "critical": 10 },
+    "format": "{icon} {capacity}%",
+    "format-charging": "󰂄 {capacity}%",
+    "format-plugged": "󰚥 {capacity}%",
+    "format-icons": ["󰁺", "󰁼", "󰁾", "󰂀", "󰂂"],
+    "tooltip-format": "{timeTo}\n{power:0.1f} W",
+    "on-click": "halcyon shell control toggle"
+  },
+
+  "network": {
+    "interval": 10,
+    "format-wifi": "󰖩 {signalStrength}%",
+    "format-ethernet": "󰈀",
+    "format-linked": "󰈀",
+    "format-disconnected": "󰖪",
+    "tooltip-format-wifi": "{essid}\n{ipaddr}\n↓ {bandwidthDownBytes}  ↑ {bandwidthUpBytes}",
+    "tooltip-format-ethernet": "{ifname}\n{ipaddr}",
+    "tooltip-format-disconnected": "Not connected",
+    "on-click": "halcyon shell control network"
+  },
+
+  "bluetooth": {
+    "format": "󰂯",
+    "format-disabled": "󰂲",
+    "format-connected": "󰂱 {num_connections}",
+    "tooltip-format": "{controller_alias}",
+    "tooltip-format-connected": "{device_enumerate}",
+    "on-click": "halcyon shell control bluetooth"
+  },
+
+  "pulseaudio": {
+    "format": "{icon} {volume}%",
+    "format-muted": "󰝟",
+    "format-bluetooth": "󰂱 {volume}%",
+    "format-icons": {
+      "headphone": "󰋋",
+      "headset": "󰋎",
+      "default": ["󰕿", "󰖀", "󰕾"]
+    },
+    "scroll-step": 5,
+    "on-click": "halcyon audio mute toggle",
+    "on-click-right": "halcyon shell control audio"
+  },
+
+  "pulseaudio#microphone": {
+    "format": "{format_source}",
+    "format-source": "󰍬",
+    "format-source-muted": "󰍭",
+    "on-click": "halcyon audio mic toggle",
+    "tooltip-format": "Microphone {volume}%"
+  },
+
+  "mpris": {
+    "format": "{status_icon} {dynamic}",
+    "dynamic-order": ["title", "artist"],
+    "dynamic-len": 28,
+    "status-icons": { "playing": "󰐊", "paused": "󰏤", "stopped": "󰓛" },
+    "interval": 2,
+    "on-click": "halcyon media play-pause",
+    "on-click-right": "halcyon shell media toggle",
+    "on-scroll-up": "halcyon media next",
+    "on-scroll-down": "halcyon media previous",
+    "tooltip": true
+  },
+
+  "privacy": {
+    "icon-size": 13,
+    "transition-duration": 220,
+    "modules": [
+      { "type": "screenshare", "tooltip": true },
+      { "type": "audio-in", "tooltip": true }
+    ]
+  },
+
+  // "interval": "once" plus a signal keeps this event-driven: the module
+  // is refreshed when the assistant's state changes, not on a timer.
+  "custom/assistant": {
+    "exec": "halcyon status assistant --waybar",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 9,
+    "on-click": "halcyon assistant toggle",
+    "on-click-right": "halcyon shell settings open assistant"
+  },
+
+  "custom/hypernix": {
+    "exec": "halcyon hypernix status --waybar",
+    "return-type": "json",
+    "interval": 60,
+    "on-click": "halcyon hypernix launch",
+    "on-click-right": "halcyon shell settings open hypernix"
+  },
+
+  "custom/notifications": {
+    "exec": "halcyon status notifications --waybar",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "on-click": "halcyon shell notifications toggle",
+    "on-click-right": "halcyon notify dnd toggle"
+  },
+
+  "custom/control": {
+    "format": "󰕮",
+    "tooltip": false,
+    "on-click": "halcyon shell control toggle"
+  },
+
+  "tray": {
+    "icon-size": 15,
+    "spacing": 8,
+    "show-passive-items": false
+  },
+
+  "idle_inhibitor": {
+    "format": "{icon}",
+    "format-icons": { "activated": "󰅶", "deactivated": "󰾪" },
+    "tooltip-format-activated": "Sleep is inhibited",
+    "tooltip-format-deactivated": "Sleep is allowed"
+  }
+}

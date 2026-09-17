@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Halcyon's mark.
+
+  Three panes at the same angle, offset and overlapping. Each is
+  translucent, so the overlaps read denser than the panes themselves and
+  the depth order shows without an outline drawn for it. It is the
+  desktop's material drawn as a logo rather than a picture of something.
+
+  Constraints this is built to: SVG 1.1 with `xlink:href`, plain opacity
+  and no blend modes, because Qt's renderer (which Quickshell uses)
+  supports SVG Tiny and silently drops anything past it. `currentColor`
+  drives the tint, so the launcher inherits the accent.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Halcyon">
+  <title>Halcyon</title>
+
+  <defs>
+    <!-- One pane. The others are this rotated about the centre. -->
+    <path id="hal-pane"
+          d="M32 7.5 L52.5 26 A4.5 4.5 0 0 1 53.5 31.2 L38.8 55.2
+             A4.5 4.5 0 0 1 34.9 57.4 L29.1 57.4
+             A4.5 4.5 0 0 1 25.2 55.2 L10.5 31.2
+             A4.5 4.5 0 0 1 11.5 26 Z"/>
+    <clipPath id="hal-frame">
+      <rect x="0" y="0" width="64" height="64" rx="14"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#hal-frame)">
+    <!-- The backdrop the panes sit on. -->
+    <rect width="64" height="64" rx="14" fill="currentColor" opacity="0.12"/>
+
+    <!-- Back, middle, front. Overlaps accumulate. -->
+    <use xlink:href="#hal-pane" href="#hal-pane" fill="currentColor" opacity="0.26"
+         transform="rotate(-24 32 32) translate(-4.5 1.5)"/>
+    <use xlink:href="#hal-pane" href="#hal-pane" fill="currentColor" opacity="0.26"
+         transform="rotate(24 32 32) translate(4.5 1.5)"/>
+    <use xlink:href="#hal-pane" href="#hal-pane" fill="currentColor" opacity="0.34"/>
+
+    <!-- The specular edge: bright along the top, gone by the waist. -->
+    <path d="M32 7.5 L52.5 26 A4.5 4.5 0 0 1 53.5 31.2 L50.5 36
+             L32 12.5 L13.5 36 L10.5 31.2 A4.5 4.5 0 0 1 11.5 26 Z"
+          fill="#ffffff" opacity="0.42"/>
+
+    <!-- A hairline, so the mark holds its shape on a light background. -->
+    <use xlink:href="#hal-pane" href="#hal-pane" fill="none" stroke="currentColor"
+         stroke-width="1.1" opacity="0.6"/>
+  </g>
+</svg>

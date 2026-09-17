@@ -1,0 +1,39 @@
+# openSUSE package map (best effort; Hyprland lives in X11:Wayland).
+
+hyprland        hyprland
+hyprctl         hyprland
+quickshell      -
+waybar          waybar
+python          python3
+pipewire        pipewire pipewire-pulseaudio
+wireplumber     wireplumber
+wpctl           wireplumber
+portal          xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
+polkit-agent    polkit-kde-agent-5
+hyprlock        hyprlock
+hypridle        hypridle
+wl-clipboard    wl-clipboard
+cliphist        -
+grim            grim
+slurp           slurp
+screenrecord    wf-recorder
+brightnessctl   brightnessctl
+playerctl       playerctl
+networkmanager  NetworkManager
+bluez           bluez
+upower          upower
+libnotify       libnotify-tools
+imagemagick     ImageMagick
+wallpaper       -
+fonts-ui        google-inter-fonts
+fonts-mono      jetbrains-mono-fonts
+fonts-symbols   -
+powerprofiles   power-profiles-daemon
+ollama          -
+piper           -
+whisper         -
+nixorb          -
+hypernix        -
+
+@build          gcc-c++ cmake ninja git pkg-config
+@quickshell-dev qt6-base-devel qt6-declarative-devel qt6-declarative-private-devel qt6-wayland-devel qt6-svg-devel qt6-shadertools-devel cli11-devel libdrm-devel wayland-devel wayland-protocols-devel jemalloc-devel pam-devel polkit-devel glib2-devel pipewire-devel libxcb-devel vulkan-headers

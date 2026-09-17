@@ -1,0 +1,20 @@
+{
+  "name": "OLED",
+  "description": "True black backdrops, hairline borders and no blur on the largest surfaces. Saves panel power and removes halo bloom on OLED displays.",
+  "appearance": { "mode": "dark" },
+  "glass": {
+    "preset": "oled",
+    "opacity": 0.9,
+    "blurStrength": 0.55,
+    "saturation": 1.0,
+    "tintStrength": 0.06,
+    "borderOpacity": 0.2,
+    "cornerRadius": 16,
+    "shadowStrength": 0.2,
+    "specularStrength": 0.18,
+    "refraction": 0.12,
+    "noise": 0.0,
+    "elevationSpread": 0.8
+  },
+  "graphics": { "blurQuality": "low", "shadowQuality": "low" }
+}

@@ -1,0 +1,15 @@
+[Unit]
+Description=Halcyon adaptive power policy
+PartOf=halcyon-session.target
+After=halcyon-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/halcyon power watch
+Restart=on-failure
+RestartSec=10
+Slice=background.slice
+Nice=10
+
+[Install]
+WantedBy=halcyon-session.target

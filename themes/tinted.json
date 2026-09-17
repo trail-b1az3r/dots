@@ -1,0 +1,18 @@
+{
+  "name": "Tinted",
+  "description": "Halcyon's default. Glass carries a wallpaper-derived tint, so panels feel like part of the desktop rather than sheets laid on top of it.",
+  "glass": {
+    "preset": "tinted",
+    "opacity": 0.6,
+    "blurStrength": 1.0,
+    "saturation": 1.2,
+    "tintStrength": 0.22,
+    "borderOpacity": 0.34,
+    "cornerRadius": 18,
+    "shadowStrength": 0.55,
+    "specularStrength": 0.5,
+    "refraction": 0.4,
+    "noise": 0.012,
+    "elevationSpread": 1.0
+  }
+}

@@ -1,0 +1,9 @@
+[Unit]
+Description=Halcyon desktop session
+Documentation=https://github.com/trail-b1az3r/dots
+BindsTo=graphical-session.target
+Wants=graphical-session-pre.target
+After=graphical-session-pre.target
+# The compositor brings this up once it has a Wayland display; everything
+# below binds to it, so `systemctl --user stop halcyon-session.target`
+# stops the whole desktop cleanly and logout does not leave orphans.

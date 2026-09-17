@@ -1,0 +1,43 @@
+# NixOS package map (nixpkgs attribute names).
+#
+# On NixOS the installer does not install packages imperatively by default:
+# it writes a ready-to-import module to ~/.config/halcyon/nixos and tells
+# you to add it.  `--nix-imperative` opts into nix-env installs instead.
+
+hyprland        hyprland
+hyprctl         hyprland
+quickshell      quickshell
+waybar          waybar
+python          python3
+pipewire        pipewire
+wireplumber     wireplumber
+wpctl           wireplumber
+portal          xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
+polkit-agent    hyprpolkitagent
+hyprlock        hyprlock
+hypridle        hypridle
+wl-clipboard    wl-clipboard
+cliphist        cliphist
+grim            grim
+slurp           slurp
+screenrecord    wf-recorder
+brightnessctl   brightnessctl
+playerctl       playerctl
+networkmanager  networkmanager
+bluez           bluez
+upower          upower
+libnotify       libnotify
+imagemagick     imagemagick
+wallpaper       swww
+fonts-ui        inter
+fonts-mono      jetbrains-mono
+fonts-symbols   nerd-fonts.symbols-only
+powerprofiles   power-profiles-daemon
+ollama          ollama
+piper           piper-tts
+whisper         openai-whisper-cpp
+nixorb          -
+hypernix        -
+
+@build          cmake ninja gcc pkg-config
+@quickshell-dev qt6.qtbase qt6.qtdeclarative qt6.qtwayland qt6.qtsvg qt6.qtshadertools

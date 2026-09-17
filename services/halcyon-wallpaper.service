@@ -1,0 +1,15 @@
+[Unit]
+Description=Halcyon wallpaper rotation
+PartOf=halcyon-session.target
+After=halcyon-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/halcyon wallpaper watch
+Restart=on-failure
+RestartSec=30
+Slice=background.slice
+Nice=10
+
+[Install]
+WantedBy=halcyon-session.target

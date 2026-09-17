@@ -1,0 +1,19 @@
+{
+  "name": "Dark Glass",
+  "description": "Deep, smoky surfaces with restrained highlights. Good for low-light rooms and bright wallpapers.",
+  "appearance": { "mode": "dark" },
+  "glass": {
+    "preset": "dark-glass",
+    "opacity": 0.74,
+    "blurStrength": 0.85,
+    "saturation": 1.08,
+    "tintStrength": 0.3,
+    "borderOpacity": 0.26,
+    "cornerRadius": 17,
+    "shadowStrength": 0.68,
+    "specularStrength": 0.34,
+    "refraction": 0.28,
+    "noise": 0.014,
+    "elevationSpread": 0.92
+  }
+}

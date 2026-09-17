@@ -1,0 +1,354 @@
+/* Halcyon — Waybar stylesheet.
+ *
+ * The colours and metrics come from
+ * ~/.config/halcyon/generated/waybar-colors.css, which `halcyon theme apply`
+ * derives from your wallpaper and glass settings. This file is the layout
+ * and the states; edit it freely, it is never regenerated.
+ *
+ * Waybar runs on GTK3, whose CSS has no custom properties and no
+ * backdrop-filter. The blur behind the bar is the compositor's — Hyprland
+ * has a layer rule for the `waybar` namespace — and everything here is
+ * what sits on top of it.
+ */
+
+@import url("../halcyon/generated/waybar-colors.css");
+
+/* ── Reset ─────────────────────────────────────────────────────────── */
+
+* {
+  /* GTK3 draws a focus outline on anything focusable; on a bar it lands
+   * as a dotted rectangle around whatever the pointer last touched. */
+  border: none;
+  border-radius: 0;
+  min-height: 0;
+  box-shadow: none;
+  text-shadow: none;
+  transition: none;
+}
+
+/* ── The bar ───────────────────────────────────────────────────────── */
+
+window#waybar {
+  background: transparent;
+  color: @hal-text;
+}
+
+/* The bar's own surface. Drawn on an inner box rather than the window so
+ * the rounded corners are not clipped by the layer surface. */
+.modules-left,
+.modules-center,
+.modules-right {
+  background-color: @hal-surface;
+  border: 1px solid @hal-glass-border;
+  border-radius: 17px;
+  padding: 0 6px;
+  margin: 0 3px;
+}
+
+/* A brighter hairline along the top edge, the same cue the shell's glass
+ * panels use: light falls on the top of a pane, not all the way round. */
+.modules-left {
+  border-top-color: @hal-glass-highlight;
+}
+.modules-center {
+  border-top-color: @hal-glass-highlight;
+}
+.modules-right {
+  border-top-color: @hal-glass-highlight;
+}
+
+/* ── Modules ───────────────────────────────────────────────────────── */
+
+#custom-menu,
+#workspaces,
+#window,
+#clock,
+#cpu,
+#memory,
+#custom-gpu,
+#custom-powermode,
+#battery,
+#network,
+#bluetooth,
+#pulseaudio,
+#pulseaudio\.microphone,
+#mpris,
+#privacy,
+#custom-assistant,
+#custom-hypernix,
+#custom-notifications,
+#custom-control,
+#tray,
+#idle_inhibitor {
+  padding: 0 9px;
+  margin: 3px 1px;
+  border-radius: 12px;
+  color: @hal-text-secondary;
+  background-color: transparent;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+#custom-menu:hover,
+#clock:hover,
+#cpu:hover,
+#memory:hover,
+#custom-gpu:hover,
+#custom-powermode:hover,
+#battery:hover,
+#network:hover,
+#bluetooth:hover,
+#pulseaudio:hover,
+#pulseaudio\.microphone:hover,
+#mpris:hover,
+#custom-assistant:hover,
+#custom-hypernix:hover,
+#custom-notifications:hover,
+#custom-control:hover {
+  background-color: @hal-surface-hover;
+  color: @hal-text;
+}
+
+/* ── Launcher ──────────────────────────────────────────────────────── */
+
+#custom-menu {
+  color: @hal-accent-text;
+  font-size: 15px;
+  padding: 0 11px;
+  margin-left: 3px;
+}
+
+/* ── Workspaces ────────────────────────────────────────────────────── */
+
+#workspaces {
+  padding: 0 3px;
+}
+
+#workspaces button {
+  /* Dots rather than numbers, the way Spaces indicators read: the shape
+   * carries "how many and which", and the label would only repeat the
+   * number already on the keyboard. */
+  padding: 0;
+  margin: 0 3px;
+  min-width: 8px;
+  min-height: 8px;
+  border-radius: 4px;
+  background-color: @hal-workspace-idle;
+  color: transparent;
+  transition: background-color 180ms ease, min-width 180ms ease;
+}
+
+#workspaces button.occupied {
+  background-color: @hal-workspace-occupied;
+}
+
+#workspaces button.active {
+  background-color: @hal-workspace-active;
+  /* The active workspace stretches into a capsule — one shape change
+   * that is legible at a glance and at any size. */
+  min-width: 22px;
+}
+
+#workspaces button.urgent {
+  background-color: @hal-danger;
+}
+
+#workspaces button:hover {
+  background-color: @hal-text-secondary;
+}
+
+/* ── Window title ──────────────────────────────────────────────────── */
+
+#window {
+  color: @hal-text;
+  font-weight: 500;
+  padding: 0 4px;
+}
+
+window#waybar.empty #window {
+  background-color: transparent;
+  color: @hal-text-tertiary;
+}
+
+/* ── Clock ─────────────────────────────────────────────────────────── */
+
+#clock {
+  color: @hal-text;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+/* ── System meters ─────────────────────────────────────────────────── */
+
+#cpu.warning,
+#memory.warning {
+  color: @hal-warning;
+}
+
+#cpu.critical,
+#memory.critical {
+  color: @hal-danger;
+  background-color: rgba(244, 81, 79, 0.14);
+}
+
+#custom-gpu.active {
+  color: @hal-accent-text;
+}
+
+/* ── Power ─────────────────────────────────────────────────────────── */
+
+#battery.charging,
+#battery.plugged {
+  color: @hal-success;
+}
+
+#battery.warning:not(.charging) {
+  color: @hal-warning;
+}
+
+#battery.critical:not(.charging) {
+  color: @hal-danger;
+  background-color: rgba(244, 81, 79, 0.16);
+}
+
+#custom-powermode.performance {
+  color: @hal-warning;
+}
+
+#custom-powermode.battery-saver {
+  color: @hal-success;
+}
+
+/* ── Connectivity ──────────────────────────────────────────────────── */
+
+#network.disconnected,
+#bluetooth.disabled,
+#bluetooth.off {
+  color: @hal-text-tertiary;
+}
+
+#bluetooth.connected {
+  color: @hal-accent-text;
+}
+
+#pulseaudio.muted,
+#pulseaudio\.microphone.source-muted {
+  color: @hal-text-tertiary;
+}
+
+/* The microphone is the one indicator where being on is the notable
+ * state, so it is coloured when live rather than when muted. */
+#pulseaudio\.microphone {
+  color: @hal-text-secondary;
+}
+
+/* ── Media ─────────────────────────────────────────────────────────── */
+
+#mpris {
+  color: @hal-text-secondary;
+  min-width: 0;
+}
+
+#mpris.playing {
+  color: @hal-text;
+}
+
+#mpris.stopped {
+  color: @hal-text-tertiary;
+}
+
+/* ── Privacy ───────────────────────────────────────────────────────── */
+
+/* Screen sharing and microphone capture are the two things a bar should
+ * never be subtle about. */
+#privacy {
+  color: @hal-danger;
+  padding: 0 6px;
+}
+
+#privacy-item.screenshare,
+#privacy-item.audio-in {
+  color: @hal-danger;
+}
+
+/* ── Assistant ─────────────────────────────────────────────────────── */
+
+#custom-assistant.listening {
+  color: @hal-accent;
+  background-color: @hal-surface-selected;
+}
+
+#custom-assistant.thinking {
+  color: @hal-secondary;
+}
+
+#custom-assistant.speaking {
+  color: @hal-tertiary;
+}
+
+#custom-assistant.offline,
+#custom-assistant.disabled {
+  color: @hal-text-tertiary;
+}
+
+/* ── HyperNix ──────────────────────────────────────────────────────── */
+
+#custom-hypernix.ready {
+  color: @hal-text-secondary;
+}
+
+#custom-hypernix.missing {
+  color: @hal-text-tertiary;
+}
+
+#custom-hypernix.disabled {
+  padding: 0;
+  margin: 0;
+}
+
+/* ── Notifications ─────────────────────────────────────────────────── */
+
+#custom-notifications.unread {
+  color: @hal-accent-text;
+}
+
+#custom-notifications.dnd {
+  color: @hal-text-tertiary;
+}
+
+/* ── Control Center ────────────────────────────────────────────────── */
+
+#custom-control {
+  color: @hal-text;
+  font-size: 14px;
+  margin-right: 3px;
+}
+
+/* ── Tray ──────────────────────────────────────────────────────────── */
+
+#tray {
+  padding: 0 6px;
+}
+
+#tray > .passive {
+  -gtk-icon-effect: dim;
+}
+
+#tray > .needs-attention {
+  -gtk-icon-effect: highlight;
+  background-color: @hal-surface-selected;
+  border-radius: 10px;
+}
+
+/* ── Tooltips ──────────────────────────────────────────────────────── */
+
+tooltip {
+  background-color: @hal-surface-raised;
+  border: 1px solid @hal-glass-border;
+  border-radius: 12px;
+  color: @hal-text;
+}
+
+tooltip label {
+  color: @hal-text;
+  padding: 4px 2px;
+}

@@ -1,0 +1,43 @@
+# Arch Linux package map.  role <tab-or-space> packages…
+# "-" means the role has no native package; the installer will build it
+# from source (see scripts/lib/build.sh) or skip it.
+# "aur:" prefixed names are installed with the detected AUR helper.
+
+hyprland        hyprland
+hyprctl         hyprland
+quickshell      aur:quickshell
+waybar          waybar
+python          python
+pipewire        pipewire pipewire-pulse pipewire-audio
+wireplumber     wireplumber
+wpctl           wireplumber
+portal          xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
+polkit-agent    hyprpolkitagent
+hyprlock        hyprlock
+hypridle        hypridle
+wl-clipboard    wl-clipboard
+cliphist        cliphist
+grim            grim
+slurp           slurp
+screenrecord    wf-recorder
+brightnessctl   brightnessctl
+playerctl       playerctl
+networkmanager  networkmanager
+bluez           bluez bluez-utils
+upower          upower
+libnotify       libnotify
+imagemagick     imagemagick
+wallpaper       swww
+fonts-ui        inter-font
+fonts-mono      ttf-jetbrains-mono
+fonts-symbols   ttf-nerd-fonts-symbols-mono
+powerprofiles   power-profiles-daemon
+ollama          ollama
+piper           aur:piper-tts-bin
+whisper         aur:whisper.cpp
+nixorb          -
+hypernix        -
+
+# Build toolchain, used when a role has to be compiled.
+@build          base-devel cmake ninja git pkgconf
+@quickshell-dev qt6-base qt6-declarative qt6-wayland qt6-svg qt6-shadertools spirv-tools cli11 libdrm libgbm wayland wayland-protocols jemalloc pam polkit glib2 libpipewire libxcb vulkan-headers cpptrace

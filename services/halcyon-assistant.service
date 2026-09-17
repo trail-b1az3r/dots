@@ -1,0 +1,21 @@
+[Unit]
+Description=Halcyon AI assistant
+PartOf=halcyon-session.target
+After=halcyon-session.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/halcyon assistant daemon --quiet
+Restart=on-failure
+RestartSec=5
+# The assistant is optional: if its backends are missing it exits, and
+# the desktop is unaffected.
+Slice=background.slice
+# Speech and inference are not interactive work; let the compositor win.
+Nice=5
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=halcyon-session.target

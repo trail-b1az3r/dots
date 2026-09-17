@@ -1,0 +1,18 @@
+{
+  "name": "Clear",
+  "description": "Transparent but legible. The default when you want the wallpaper to stay part of the composition.",
+  "glass": {
+    "preset": "clear",
+    "opacity": 0.42,
+    "blurStrength": 1.15,
+    "saturation": 1.26,
+    "tintStrength": 0.12,
+    "borderOpacity": 0.42,
+    "cornerRadius": 19,
+    "shadowStrength": 0.48,
+    "specularStrength": 0.62,
+    "refraction": 0.5,
+    "noise": 0.01,
+    "elevationSpread": 1.05
+  }
+}
