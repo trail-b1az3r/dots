@@ -72,13 +72,42 @@ class TestGeneratedFiles(IsolatedHalcyon):
         text = render.render_hypr_runtime_lua(self.settings, self.tokens, {})
         self.assertIn("hl.config", text)
 
-    def test_an_invented_option_is_refused(self) -> None:
-        problems = hyprland.validate_options({"general": {"not_an_option": 1}})
-        self.assertTrue(any("not_an_option" in p for p in problems))
+    def test_an_unknown_option_warns_rather_than_failing(self) -> None:
+        # Our table is one release's worth of options; someone else's
+        # Hyprland may have more or fewer. Treating that gap as fatal
+        # aborted a real install on a config that was correct.
+        errors, unknown = hyprland.validate_options(
+            {"general": {"not_an_option": 1}}
+        )
+        self.assertEqual(errors, [])
+        self.assertTrue(any("not_an_option" in name for name in unknown))
 
     def test_an_out_of_range_value_is_refused(self) -> None:
-        problems = hyprland.validate_options({"general": {"border_size": -5}})
-        self.assertTrue(problems, "border_size = -5 should be out of range")
+        errors, _ = hyprland.validate_options({"general": {"border_size": -5}})
+        self.assertTrue(errors, "border_size = -5 should be out of range")
+
+    def test_hyprlang_and_lua_option_spellings_are_the_same_option(self) -> None:
+        # `hyprctl descriptions` reports input:touchpad:tap-to-click; the
+        # Lua key is input.touchpad.tap_to_click. Hyprland's own
+        # luaConfigValueName() maps : to . and - to _, so these are one
+        # option — and comparing them without normalising reported a
+        # correct config as invalid.
+        self.assertEqual(
+            hyprland.canonical_option("input:touchpad:tap-to-click"),
+            hyprland.canonical_option("input.touchpad.tap_to_click"),
+        )
+        self.assertEqual(
+            hyprland.canonical_option("general:col.active_border"),
+            "general.col.active_border",
+        )
+
+    def test_the_touchpad_options_we_emit_are_recognised(self) -> None:
+        # These two are the ones that actually broke an install.
+        errors, unknown = hyprland.validate_options(
+            {"input": {"touchpad": {"tap_to_click": True, "tap_and_drag": True}}}
+        )
+        self.assertEqual(errors, [])
+        self.assertEqual(unknown, [])
 
     def test_the_option_table_is_available_to_check_against(self) -> None:
         table, source = hyprland.options()

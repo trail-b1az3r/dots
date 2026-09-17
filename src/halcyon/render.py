@@ -15,6 +15,7 @@ import json
 import os
 import shutil
 import tempfile
+import warnings
 from typing import Any, Iterable
 
 from . import hyprland, paths
@@ -669,14 +670,25 @@ def render_hypr_runtime_lua(
         },
         "master": {"new_status": "master", "mfact": 0.55},
     }
-    # Refuse to emit an option Hyprland does not have, or a number outside
-    # its documented range: a config error here costs the user a broken
-    # session, and we can see it coming.
-    problems = hyprland.validate_options(config)
+    # A number outside its documented range is provably wrong, so refuse
+    # to emit it. An option our table has never heard of is only a gap in
+    # the table — Hyprland is the authority on its own options, and it
+    # reports what it rejects in `hyprctl configerrors`. Failing the whole
+    # generation over that once aborted an install on a config that was
+    # correct, which is a much worse outcome than a noisy warning.
+    problems, unknown = hyprland.validate_options(config)
     if problems:
         raise RenderError(
             "Generated Hyprland config would be invalid:\n  - "
             + "\n  - ".join(problems)
+        )
+    for name in unknown:
+        warnings.warn(
+            f"Hyprland option not in this version's table: {name}. "
+            "Emitting it anyway; check `hyprctl configerrors` if the "
+            "desktop misbehaves.",
+            RuntimeWarning,
+            stacklevel=2,
         )
 
     out.append(lua_value(config))

@@ -146,29 +146,49 @@ def options() -> tuple[dict[str, Any], str]:
                         for bound in ("min", "max"):
                             if bound in data:
                                 entry[bound] = data[bound]
-                    table[str(name)] = entry
+                    table[canonical_option(str(name))] = entry
                 if table:
                     return table, "hyprctl"
-    return _snapshot(), "snapshot"
+    return {canonical_option(k): v for k, v in _snapshot().items()}, "snapshot"
 
 
-#: Option paths in generated Lua use dots; Hyprland's table uses colons.
-def _to_option_key(path: str) -> str:
-    return path.replace(".", ":")
+def canonical_option(name: str) -> str:
+    """Normalise an option name the way Hyprland itself does.
+
+    `CConfigManager::luaConfigValueName` maps `:` to `.` and `-` to `_`,
+    so the hyprlang name `input:touchpad:tap-to-click` and the Lua key
+    `input.touchpad.tap_to_click` are the same option. `hyprctl
+    descriptions` reports the raw hyprlang form, so comparing against it
+    without this collapses into false "unknown option" reports — which is
+    exactly what once aborted an install over a config that was correct.
+    """
+    return name.replace(":", ".").replace("-", "_")
 
 
-def validate_options(config: dict[str, Any]) -> list[str]:
+def validate_options(config: dict[str, Any]) -> tuple[list[str], list[str]]:
     """Check a nested config table against Hyprland's own option list.
 
-    Returns human-readable problems: unknown option names, and numbers
-    outside the documented range. An empty option table (no hyprctl, no
-    snapshot) reports nothing rather than inventing failures.
+    Returns `(errors, warnings)`.
+
+    A value outside a documented range is an error: the range came from
+    the same table as the option, so it is provably wrong.
+
+    An option the table does not list is only a **warning**. Our table is
+    either a snapshot of one release or whatever the running compositor
+    reports, and neither is a complete account of every version someone
+    might run. Treating that gap as fatal means a newer or older Hyprland
+    stops the desktop from being generated at all — which is a far worse
+    failure than emitting an option the compositor will simply complain
+    about in `hyprctl configerrors`.
+
+    An empty option table reports nothing rather than inventing failures.
     """
     table, _ = options()
     if not table:
-        return []
+        return [], []
 
     problems: list[str] = []
+    unknown: list[str] = []
 
     def walk(node: dict[str, Any], prefix: str) -> None:
         for key, value in node.items():
@@ -176,10 +196,10 @@ def validate_options(config: dict[str, Any]) -> list[str]:
             if isinstance(value, dict):
                 walk(value, path)
                 continue
-            option_key = _to_option_key(path)
+            option_key = canonical_option(path)
             meta = table.get(option_key)
             if meta is None:
-                problems.append(f"unknown option: {option_key}")
+                unknown.append(option_key)
                 continue
             if isinstance(value, bool) or not isinstance(value, (int, float)):
                 continue
@@ -190,4 +210,4 @@ def validate_options(config: dict[str, Any]) -> list[str]:
                 problems.append(f"{option_key} = {value} is above the maximum {high}")
 
     walk(config, "")
-    return problems
+    return problems, unknown
