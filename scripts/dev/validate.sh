@@ -426,6 +426,15 @@ PY
 		return 0
 	fi
 	log_ok "Default bar layout resolves"
+
+	# A setting that ships undocumented is a setting nobody finds.
+	local doc_output
+	if doc_output="$(./scripts/dev/gen-settings-doc.py --check 2>&1)"; then
+		log_ok "Settings reference is current"
+	else
+		record_failure "docs/settings.md is stale or a setting is undocumented"
+		printf '%s\n' "$doc_output" | head -10 | sed 's/^/      /'
+	fi
 }
 
 # ── Run ────────────────────────────────────────────────────────────────

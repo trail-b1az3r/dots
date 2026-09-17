@@ -383,7 +383,11 @@ step_install_files() {
 	install_file "$HALCYON_REPO_ROOT/config/waybar/modules.jsonc" \
 		"$SHARE_DIR/waybar-modules.jsonc"
 	install_tree "$HALCYON_REPO_ROOT/themes" "$SHARE_DIR/themes"
-	install_tree "$HALCYON_REPO_ROOT/assets" "$SHARE_DIR/assets"
+	install_tree "$HALCYON_REPO_ROOT/assets/icons" "$SHARE_DIR/icons"
+	# Wallpapers go straight to SHARE_DIR/wallpapers rather than under
+	# assets/, because that is where HALCYON_WALLPAPER_DIR points by
+	# default — rotation looks for them there.
+	install_tree "$HALCYON_REPO_ROOT/assets/wallpapers" "$SHARE_DIR/wallpapers"
 	# The fallback menus, which run when Quickshell is not available.
 	install_tree "$HALCYON_REPO_ROOT/scripts" "$SHARE_DIR/scripts"
 
@@ -453,6 +457,10 @@ LAUNCHER
 		rm -f "$temp"
 		log_debug "unchanged: $target"
 	else
+		# The launcher is written here rather than through install_file,
+		# so it needs the manifest entry install_file would have made —
+		# without it a restore leaves the binary behind.
+		backup_path "$target"
 		install -Dm0755 "$temp" "$target"
 		rm -f "$temp"
 		log_ok "Installed $target"
