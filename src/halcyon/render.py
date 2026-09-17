@@ -15,6 +15,7 @@ import json
 import os
 import shutil
 import tempfile
+import warnings
 from typing import Any, Iterable
 
 from . import hyprland, paths
@@ -669,14 +670,25 @@ def render_hypr_runtime_lua(
         },
         "master": {"new_status": "master", "mfact": 0.55},
     }
-    # Refuse to emit an option Hyprland does not have, or a number outside
-    # its documented range: a config error here costs the user a broken
-    # session, and we can see it coming.
-    problems = hyprland.validate_options(config)
+    # A number outside its documented range is provably wrong, so refuse
+    # to emit it. An option our table has never heard of is only a gap in
+    # the table — Hyprland is the authority on its own options, and it
+    # reports what it rejects in `hyprctl configerrors`. Failing the whole
+    # generation over that once aborted an install on a config that was
+    # correct, which is a much worse outcome than a noisy warning.
+    problems, unknown = hyprland.validate_options(config)
     if problems:
         raise RenderError(
             "Generated Hyprland config would be invalid:\n  - "
             + "\n  - ".join(problems)
+        )
+    for name in unknown:
+        warnings.warn(
+            f"Hyprland option not in this version's table: {name}. "
+            "Emitting it anyway; check `hyprctl configerrors` if the "
+            "desktop misbehaves.",
+            RuntimeWarning,
+            stacklevel=2,
         )
 
     out.append(lua_value(config))
@@ -937,8 +949,64 @@ def render_waybar_config(
             # so leaving unused ones in place costs real CPU.
             del config[key]
 
+    _resolve_waybar_commands(config, halcyon_binary())
+
     header = "\n".join(f"// {line}" for line in BANNER.splitlines())
     return header + "\n" + json.dumps(config, indent=2) + "\n"
+
+
+#: Module fields Waybar executes as shell commands.
+_WAYBAR_COMMAND_FIELDS = (
+    "exec",
+    "exec-if",
+    "on-click",
+    "on-click-middle",
+    "on-click-right",
+    "on-click-backward",
+    "on-click-forward",
+    "on-scroll-up",
+    "on-scroll-down",
+    "on-update",
+    "on-double-click",
+)
+
+
+def _resolve_waybar_commands(config: dict[str, Any], binary: str) -> None:
+    """Point every `halcyon ...` command at the binary by absolute path.
+
+    Waybar runs these through /bin/sh with whatever PATH its unit
+    inherited, and a systemd user session frequently does not have
+    ~/.local/bin on it. A bare `halcyon` then fails silently — the button
+    is there, it just does nothing, which is exactly how it was reported.
+    The keybind renderer already resolves the path for the same reason;
+    this is the other half of it.
+    """
+    if binary == "halcyon":
+        # Nothing better was found, so leave the commands alone rather
+        # than baking in a path that does not exist.
+        return
+
+    def rewrite(command: str) -> str:
+        if command == "halcyon":
+            return binary
+        if command.startswith("halcyon "):
+            return binary + command[len("halcyon"):]
+        return command
+
+    for key, module in config.items():
+        if not isinstance(module, dict):
+            continue
+        for field in _WAYBAR_COMMAND_FIELDS:
+            value = module.get(field)
+            if isinstance(value, str):
+                module[field] = rewrite(value)
+        # `menu-actions` maps a menu entry to a command.
+        actions = module.get("menu-actions")
+        if isinstance(actions, dict):
+            module["menu-actions"] = {
+                name: rewrite(cmd) if isinstance(cmd, str) else cmd
+                for name, cmd in actions.items()
+            }
 
 
 _WAYBAR_BUILTIN = {

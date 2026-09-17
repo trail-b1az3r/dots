@@ -97,8 +97,9 @@ def probe(config_dir: str, generated_dir: str) -> dict:
         raise SystemExit(f"The config probe produced invalid JSON: {exc}") from exc
 
 
-def check(recorded: dict) -> list[str]:
+def check(recorded: dict) -> tuple[list[str], list[str]]:
     problems: list[str] = []
+    warnings_out: list[str] = []
 
     for message in recorded.get("errors") or {}:
         problems.append(f"lua: {message}")
@@ -108,10 +109,14 @@ def check(recorded: dict) -> list[str]:
         problems.append("no Hyprland option table available; skipped option checks")
     else:
         for path, value in (recorded.get("config") or {}).items():
-            key = path.replace(".", ":")
+            # Hyprland treats `:`/`.` and `-`/`_` as the same separator
+            # pair, so normalise before comparing — see
+            # hyprland.canonical_option.
+            key = hyprland.canonical_option(path)
             meta = options.get(key)
             if meta is None:
-                problems.append(f"unknown option: {key}")
+                # A gap in our table, not proof the option is wrong.
+                warnings_out.append(f"option not in this version's table: {key}")
                 continue
             if isinstance(value, bool) or not isinstance(value, (int, float)):
                 continue
@@ -152,7 +157,7 @@ def check(recorded: dict) -> list[str]:
             )
         seen[normalised] = str(bind.get("dispatcher", "?"))
 
-    return problems
+    return problems, warnings_out
 
 
 def _check_rule(rule: dict, effects: set[str], kind: str, problems: list[str]) -> None:
@@ -186,10 +191,14 @@ def main() -> int:
     args = parser.parse_args()
 
     recorded = probe(args.config, args.generated)
-    problems = check(recorded)
+    problems, soft = check(recorded)
 
     if args.json:
-        json.dump({"ok": not problems, "problems": problems}, sys.stdout, indent=2)
+        json.dump(
+            {"ok": not problems, "problems": problems, "warnings": soft},
+            sys.stdout,
+            indent=2,
+        )
         sys.stdout.write("\n")
         return 1 if problems else 0
 
@@ -204,13 +213,18 @@ def main() -> int:
     summary = ", ".join(f"{value} {name}" for name, value in counts.items())
     print(f"Loaded the configuration: {summary}.")
 
+    if soft:
+        print(f"\n{len(soft)} warning(s) — not failures:")
+        for warning in soft:
+            print(f"  · {warning}")
+
     if problems:
         print(f"\n{len(problems)} problem(s):")
         for problem in problems:
             print(f"  ✗ {problem}")
         return 1
 
-    print("No problems found.")
+    print("\nNo problems found.")
     return 0
 
 

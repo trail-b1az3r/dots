@@ -239,7 +239,7 @@ is `Super+Ctrl+<digit>`**, not `Super+Shift+<digit>`.
 | `Super + D` | Desktop widgets |
 | `Super + V` | Clipboard history |
 | `Super + ,` | Settings |
-| `Super + /` | Shortcut reference |
+| `Ctrl + /` | Shortcut reference (also `Super + /`) |
 | `Super + Escape` | Power menu |
 | `Super + Ctrl + Q` | Lock the screen |
 | `Super + Ctrl + R` | Reload the desktop |
@@ -284,7 +284,7 @@ is `Super+Ctrl+<digit>`**, not `Super+Shift+<digit>`.
 | Shortcut | Action |
 |---|---|
 | `Super + Shift + 3` | Screenshot the screen |
-| `Super + Shift + 4` | Screenshot a region |
+| `Ctrl + Shift + S` | Screenshot a region (also `Super + Shift + 4`) |
 | `Super + Shift + 5` | Screenshot & recording panel |
 | `Super + Shift + 6` | Screenshot the window |
 

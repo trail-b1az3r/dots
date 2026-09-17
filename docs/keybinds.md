@@ -1,7 +1,7 @@
 # Keyboard shortcuts
 
 Every binding is defined in `config/system/keybinds.catalog.json` and
-can be overridden individually. Press `Super + /` for this list on
+can be overridden individually. Press `Ctrl + /` for this list on
 screen.
 
 ## Design
@@ -20,6 +20,19 @@ Beyond that: `Super` alone switches or focuses, `Super+Shift` moves,
 `Super+Alt` resizes, `Super+Ctrl` is for workspace and session
 operations.
 
+> **A note on `Ctrl + /` and `Ctrl + Shift + S`.** These are compositor-level
+> binds, so they are taken before the focused application sees them —
+> `Ctrl + Shift + S` will shadow "Save As" in GIMP and Inkscape, and
+> `Ctrl + /` will shadow "toggle comment" in most editors. Both keep their
+> `Super` equivalents (`Super + /`, `Super + Shift + 4`), so if an
+> application needs its chord back:
+>
+> ```sh
+> halcyon settings set keybinds.shot.region none
+> halcyon settings set keybinds.keybindHelp none
+> halcyon theme apply
+> ```
+
 ## System
 
 | Shortcut | Action |
@@ -37,7 +50,7 @@ operations.
 | `Super + D` | Desktop widgets |
 | `Super + V` | Clipboard history |
 | `Super + ,` | Settings |
-| `Super + /` | This list |
+| `Ctrl + /` | This list (also `Super + /`) |
 | `Super + Escape` | Power menu |
 | `Super + Ctrl + Q` | Lock the screen |
 | `Super + Ctrl + R` | Reload the desktop |
@@ -86,7 +99,7 @@ operations.
 | Shortcut | Action |
 |---|---|
 | `Super + Shift + 3` | Screenshot the screen |
-| `Super + Shift + 4` | Screenshot a region |
+| `Ctrl + Shift + S` | Screenshot a region (also `Super + Shift + 4`) |
 | `Super + Shift + 5` | Screenshot & recording panel |
 | `Super + Shift + 6` | Screenshot the focused window |
 

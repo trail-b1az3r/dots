@@ -72,13 +72,42 @@ class TestGeneratedFiles(IsolatedHalcyon):
         text = render.render_hypr_runtime_lua(self.settings, self.tokens, {})
         self.assertIn("hl.config", text)
 
-    def test_an_invented_option_is_refused(self) -> None:
-        problems = hyprland.validate_options({"general": {"not_an_option": 1}})
-        self.assertTrue(any("not_an_option" in p for p in problems))
+    def test_an_unknown_option_warns_rather_than_failing(self) -> None:
+        # Our table is one release's worth of options; someone else's
+        # Hyprland may have more or fewer. Treating that gap as fatal
+        # aborted a real install on a config that was correct.
+        errors, unknown = hyprland.validate_options(
+            {"general": {"not_an_option": 1}}
+        )
+        self.assertEqual(errors, [])
+        self.assertTrue(any("not_an_option" in name for name in unknown))
 
     def test_an_out_of_range_value_is_refused(self) -> None:
-        problems = hyprland.validate_options({"general": {"border_size": -5}})
-        self.assertTrue(problems, "border_size = -5 should be out of range")
+        errors, _ = hyprland.validate_options({"general": {"border_size": -5}})
+        self.assertTrue(errors, "border_size = -5 should be out of range")
+
+    def test_hyprlang_and_lua_option_spellings_are_the_same_option(self) -> None:
+        # `hyprctl descriptions` reports input:touchpad:tap-to-click; the
+        # Lua key is input.touchpad.tap_to_click. Hyprland's own
+        # luaConfigValueName() maps : to . and - to _, so these are one
+        # option — and comparing them without normalising reported a
+        # correct config as invalid.
+        self.assertEqual(
+            hyprland.canonical_option("input:touchpad:tap-to-click"),
+            hyprland.canonical_option("input.touchpad.tap_to_click"),
+        )
+        self.assertEqual(
+            hyprland.canonical_option("general:col.active_border"),
+            "general.col.active_border",
+        )
+
+    def test_the_touchpad_options_we_emit_are_recognised(self) -> None:
+        # These two are the ones that actually broke an install.
+        errors, unknown = hyprland.validate_options(
+            {"input": {"touchpad": {"tap_to_click": True, "tap_and_drag": True}}}
+        )
+        self.assertEqual(errors, [])
+        self.assertEqual(unknown, [])
 
     def test_the_option_table_is_available_to_check_against(self) -> None:
         table, source = hyprland.options()
@@ -166,6 +195,59 @@ class TestGeneratedFiles(IsolatedHalcyon):
             # Waybar silently drops a module it has no config for, which
             # looks like a rendering bug rather than a config mistake.
             self.assertIn(name, parsed, msg=f"{name} is listed but not defined")
+
+    def test_waybar_commands_use_an_absolute_halcyon_path(self) -> None:
+        # Waybar runs these through /bin/sh with the PATH its systemd unit
+        # inherited, which usually lacks ~/.local/bin. A bare `halcyon`
+        # then fails silently: the button is there and does nothing.
+        import os
+
+        binary = os.path.join(self.root, "bin", "halcyon")
+        os.makedirs(os.path.dirname(binary), exist_ok=True)
+        with open(binary, "w", encoding="utf-8") as handle:
+            handle.write("#!/bin/sh\nexit 0\n")
+        os.chmod(binary, 0o755)
+
+        config = dict(self.waybar_base)
+        render._resolve_waybar_commands(config, binary)
+
+        seen = 0
+        for module in config.values():
+            if not isinstance(module, dict):
+                continue
+            for field in render._WAYBAR_COMMAND_FIELDS:
+                value = module.get(field)
+                if not isinstance(value, str):
+                    continue
+                self.assertFalse(
+                    value.startswith("halcyon "), msg=f"{field}: {value}"
+                )
+                if binary in value:
+                    seen += 1
+        self.assertGreater(seen, 0, "no command was rewritten")
+
+    def test_waybar_commands_are_left_alone_when_no_binary_is_found(self) -> None:
+        # Baking in a path that does not exist would be worse than a bare
+        # name that at least works for anyone with ~/.local/bin on PATH.
+        config = dict(self.waybar_base)
+        render._resolve_waybar_commands(config, "halcyon")
+        self.assertEqual(config["custom/menu"], self.waybar_base["custom/menu"])
+
+    def test_only_halcyon_commands_are_rewritten(self) -> None:
+        config = {
+            "custom/x": {
+                "on-click": "halcyon shell spotlight toggle",
+                "on-click-right": "halcyonade --not-ours",
+                "exec": "/usr/bin/true",
+                "format": "halcyon is not a command here",
+            }
+        }
+        render._resolve_waybar_commands(config, "/opt/bin/halcyon")
+        module = config["custom/x"]
+        self.assertEqual(module["on-click"], "/opt/bin/halcyon shell spotlight toggle")
+        self.assertEqual(module["on-click-right"], "halcyonade --not-ours")
+        self.assertEqual(module["exec"], "/usr/bin/true")
+        self.assertEqual(module["format"], "halcyon is not a command here")
 
     def test_waybar_css_uses_gtk3_syntax_only(self) -> None:
         css = render.render_waybar_css(self.tokens)
