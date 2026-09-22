@@ -599,6 +599,16 @@ halcyon_setting() {
 }
 
 step_validate() {
+	# A dry run wrote nothing, so there is nothing to check. Validating
+	# absent files reported problems for work we had deliberately
+	# skipped, and made `--dry-run` exit 1 on any machine that did not
+	# already have Halcyon installed.
+	if [[ -n "${HALCYON_DRY_RUN:-}" ]]; then
+		log_step "Checking what was installed"
+		log_info "Nothing was written, so there is nothing to check."
+		return 0
+	fi
+
 	log_step "Checking what was installed"
 
 	local problems=0

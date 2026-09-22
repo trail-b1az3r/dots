@@ -83,11 +83,22 @@ jobs:
       - name: Generate into a scratch home and parse the result
         run: |
           set -euo pipefail
-          export HOME="$RUNNER_TEMP/fakehome"
-          mkdir -p "$HOME"
+          scratch() {
+            # Halcyon is XDG-correct and the runner already sets
+            # XDG_CONFIG_HOME, which takes precedence over HOME. Moving
+            # HOME alone therefore redirects nothing.
+            export HOME="$1"
+            export XDG_CONFIG_HOME="$1/.config"
+            export XDG_DATA_HOME="$1/.local/share"
+            export XDG_STATE_HOME="$1/.local/state"
+            export XDG_CACHE_HOME="$1/.cache"
+            mkdir -p "$HOME"
+          }
+          scratch "$RUNNER_TEMP/fakehome"
+
           PYTHONPATH=src python -m halcyon.cli theme apply --no-reload --json
 
-          generated="$HOME/.config/halcyon/generated"
+          generated="$XDG_CONFIG_HOME/halcyon/generated"
           echo "Generated:"
           ls -la "$generated"
 
@@ -108,6 +119,9 @@ jobs:
       - name: Settings reference must be current
         run: ./scripts/dev/gen-settings-doc.py --check
 
+      - name: Sources must be valid on the oldest Python we support
+        run: ./scripts/dev/check-python-floor.py
+
   installer:
     name: Installer rehearsal
     runs-on: ubuntu-latest
@@ -121,20 +135,42 @@ jobs:
       - name: Dry run changes nothing
         run: |
           set -euo pipefail
-          export HOME="$RUNNER_TEMP/dryhome"
-          mkdir -p "$HOME"
+          scratch() {
+            # Halcyon is XDG-correct and the runner already sets
+            # XDG_CONFIG_HOME, which takes precedence over HOME. Moving
+            # HOME alone therefore redirects nothing.
+            export HOME="$1"
+            export XDG_CONFIG_HOME="$1/.config"
+            export XDG_DATA_HOME="$1/.local/share"
+            export XDG_STATE_HOME="$1/.local/state"
+            export XDG_CACHE_HOME="$1/.cache"
+            mkdir -p "$HOME"
+          }
+          scratch "$RUNNER_TEMP/dryhome"
+
           ./install.sh --dry-run -y
           # A dry run that wrote something is not a dry run.
-          if [ -d "$HOME/.config/halcyon" ]; then
-            echo "--dry-run created $HOME/.config/halcyon" >&2
+          if [ -d "$XDG_CONFIG_HOME/halcyon" ]; then
+            echo "--dry-run created $XDG_CONFIG_HOME/halcyon" >&2
             exit 1
           fi
 
       - name: Install, then install again and change nothing
         run: |
           set -euo pipefail
-          export HOME="$RUNNER_TEMP/installhome"
-          mkdir -p "$HOME"
+          scratch() {
+            # Halcyon is XDG-correct and the runner already sets
+            # XDG_CONFIG_HOME, which takes precedence over HOME. Moving
+            # HOME alone therefore redirects nothing.
+            export HOME="$1"
+            export XDG_CONFIG_HOME="$1/.config"
+            export XDG_DATA_HOME="$1/.local/share"
+            export XDG_STATE_HOME="$1/.local/state"
+            export XDG_CACHE_HOME="$1/.cache"
+            mkdir -p "$HOME"
+          }
+          scratch "$RUNNER_TEMP/installhome"
+
           ./install.sh --config-only --no-services -y
 
           # ~/.local/state is deliberately excluded: it is the journal
@@ -142,7 +178,7 @@ jobs:
           # run is supposed to add to it. Everything the desktop is
           # actually made of has to be byte-identical.
           fingerprint() {
-            find "$HOME/.config" "$HOME/.local/share" "$HOME/.local/bin" \
+            find "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$HOME/.local/bin" \
               -type f -exec sha256sum {} + 2>/dev/null | sort
           }
 
@@ -160,9 +196,21 @@ jobs:
       - name: Uninstall leaves only the user's own files
         run: |
           set -euo pipefail
-          export HOME="$RUNNER_TEMP/installhome"
+          scratch() {
+            # Halcyon is XDG-correct and the runner already sets
+            # XDG_CONFIG_HOME, which takes precedence over HOME. Moving
+            # HOME alone therefore redirects nothing.
+            export HOME="$1"
+            export XDG_CONFIG_HOME="$1/.config"
+            export XDG_DATA_HOME="$1/.local/share"
+            export XDG_STATE_HOME="$1/.local/state"
+            export XDG_CACHE_HOME="$1/.cache"
+            mkdir -p "$HOME"
+          }
+          scratch "$RUNNER_TEMP/installhome"
+
           ./uninstall.sh -y
-          leftover="$(find "$HOME/.config/halcyon" -type f 2>/dev/null || true)"
+          leftover="$(find "$XDG_CONFIG_HOME/halcyon" -type f 2>/dev/null || true)"
           if [ -n "$leftover" ]; then
             echo "Uninstall left files behind:" >&2
             echo "$leftover" >&2
@@ -182,9 +230,21 @@ jobs:
       - name: A version 1 file survives the upgrade
         run: |
           set -euo pipefail
-          export HOME="$RUNNER_TEMP/migratehome"
-          mkdir -p "$HOME/.config/halcyon"
-          cat > "$HOME/.config/halcyon/settings.json" <<'JSON'
+          scratch() {
+            # Halcyon is XDG-correct and the runner already sets
+            # XDG_CONFIG_HOME, which takes precedence over HOME. Moving
+            # HOME alone therefore redirects nothing.
+            export HOME="$1"
+            export XDG_CONFIG_HOME="$1/.config"
+            export XDG_DATA_HOME="$1/.local/share"
+            export XDG_STATE_HOME="$1/.local/state"
+            export XDG_CACHE_HOME="$1/.cache"
+            mkdir -p "$HOME"
+          }
+          scratch "$RUNNER_TEMP/migratehome"
+          mkdir -p "$XDG_CONFIG_HOME/halcyon"
+
+          cat > "$XDG_CONFIG_HOME/halcyon/settings.json" <<'JSON'
           {
             "version": 1,
             "bar": {
@@ -202,7 +262,9 @@ jobs:
           import json
           import os
 
-          path = os.path.expanduser("~/.config/halcyon/settings.json")
+          path = os.path.join(
+              os.environ["XDG_CONFIG_HOME"], "halcyon", "settings.json"
+          )
           with open(path, encoding="utf-8") as handle:
               data = json.load(handle)
 
@@ -219,6 +281,18 @@ jobs:
       - name: The pre-migration file was kept
         run: |
           set -euo pipefail
-          export HOME="$RUNNER_TEMP/migratehome"
-          ls -la "$HOME/.local/state/halcyon/migrations/"
-          test -n "$(ls -A "$HOME/.local/state/halcyon/migrations/")"
+          scratch() {
+            # Halcyon is XDG-correct and the runner already sets
+            # XDG_CONFIG_HOME, which takes precedence over HOME. Moving
+            # HOME alone therefore redirects nothing.
+            export HOME="$1"
+            export XDG_CONFIG_HOME="$1/.config"
+            export XDG_DATA_HOME="$1/.local/share"
+            export XDG_STATE_HOME="$1/.local/state"
+            export XDG_CACHE_HOME="$1/.cache"
+            mkdir -p "$HOME"
+          }
+          scratch "$RUNNER_TEMP/migratehome"
+
+          ls -la "$XDG_STATE_HOME/halcyon/migrations/"
+          test -n "$(ls -A "$XDG_STATE_HOME/halcyon/migrations/")"

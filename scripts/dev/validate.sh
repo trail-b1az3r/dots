@@ -215,6 +215,19 @@ check_python() {
 		fi
 	fi
 
+	# The README promises Python 3.9. A union in a type *alias* is an
+	# ordinary expression, so `from __future__ import annotations` does
+	# not save it — the module imports here and fails for a user on 3.9.
+	if [[ -x scripts/dev/check-python-floor.py ]]; then
+		local floor_output
+		if floor_output="$(./scripts/dev/check-python-floor.py 2>&1)"; then
+			log_ok "Sources are valid on Python 3.9"
+		else
+			record_failure "Sources use syntax newer than Python 3.9"
+			printf '%s\n' "$floor_output" | head -10 | sed 's/^/      /'
+		fi
+	fi
+
 	if command -v pyright >/dev/null 2>&1; then
 		if pyright --outputjson src >/dev/null 2>&1; then
 			log_ok "Type check clean"

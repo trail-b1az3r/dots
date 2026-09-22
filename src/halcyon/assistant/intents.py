@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from .. import actions as actions_module
 
@@ -27,7 +27,11 @@ class Intent:
     utterance: str = ""
 
 
-Rule = tuple[re.Pattern[str], Callable[[re.Match[str]], Intent | None]]
+#: `Optional[Intent]` rather than `Intent | None`: this is a type
+#: *alias*, so it is an ordinary expression evaluated when the module is
+#: imported. `from __future__ import annotations` defers annotations, not
+#: assignments, and `X | None` is a TypeError before Python 3.10.
+Rule = tuple[re.Pattern[str], Callable[[re.Match[str]], Optional[Intent]]]
 
 _NUMBER_WORDS = {
     "zero": 0, "ten": 10, "twenty": 20, "twenty five": 25, "thirty": 30,
