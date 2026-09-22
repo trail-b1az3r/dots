@@ -1,6 +1,5 @@
 {
   "version": 1,
-
   "appearance": {
     "mode": "dark",
     "followSunset": false,
@@ -14,7 +13,6 @@
     "fontSizeScale": 1.0,
     "cornerStyle": "continuous"
   },
-
   "glass": {
     "preset": "tinted",
     "opacity": 0.6,
@@ -31,44 +29,79 @@
     "noise": 0.012,
     "elevationSpread": 1.0
   },
-
   "motion": {
     "preset": "macos",
     "speedScale": 1.0,
     "reducedMotion": false,
     "overlayAnimations": true
   },
-
   "bar": {
     "enabled": true,
+    "fallbackBar": "none",
     "position": "top",
     "height": 34,
     "sideMargin": 10,
     "topMargin": 6,
     "floating": true,
     "showOnAllMonitors": true,
-    "left": ["custom/menu", "hyprland/workspaces", "hyprland/window"],
-    "center": ["clock"],
+    "left": [
+      "launcher",
+      "workspaces",
+      "activeWindow"
+    ],
+    "center": [
+      "clock"
+    ],
     "right": [
-      "custom/assistant",
-      "custom/hypernix",
-      "mpris",
-      "privacy",
+      "media",
+      "assistant",
+      "hypernix",
       "cpu",
       "memory",
-      "custom/gpu",
-      "custom/powermode",
-      "bluetooth",
+      "temperature",
+      "gpu",
       "network",
-      "pulseaudio",
-      "pulseaudio#microphone",
+      "bluetooth",
+      "audio",
+      "microphone",
       "battery",
-      "custom/notifications",
+      "powerProfile",
       "tray",
-      "custom/control"
-    ]
+      "notifications",
+      "systemMenu"
+    ],
+    "autoHide": false,
+    "hoverExpand": true,
+    "clock": {
+      "format": "HH:mm",
+      "seconds": false
+    },
+    "date": {
+      "format": "ddd d MMM"
+    },
+    "audio": {
+      "showPercent": true,
+      "scrollStep": 5
+    },
+    "battery": {
+      "showPercent": true
+    },
+    "microphone": {
+      "alwaysShow": false
+    },
+    "network": {
+      "showRate": false
+    },
+    "temperature": {
+      "warnAbove": 80
+    },
+    "media": {
+      "maxWidth": 220
+    },
+    "activeWindow": {
+      "maxWidth": 320
+    }
   },
-
   "workspaces": {
     "count": 10,
     "perMonitor": true,
@@ -77,7 +110,6 @@
     "names": {},
     "smartGaps": true
   },
-
   "input": {
     "keyboardLayout": "us",
     "keyboardVariant": "",
@@ -95,14 +127,12 @@
     "workspaceSwipe": true,
     "swipeFingers": 3
   },
-
   "displays": {
     "monitors": [],
     "defaultScale": "auto",
     "vrr": 1,
     "allowTearing": false
   },
-
   "graphics": {
     "blurQuality": "high",
     "shadowQuality": "high",
@@ -112,7 +142,6 @@
     "renderUnfocusedFps": 10,
     "gpuOverrides": "auto"
   },
-
   "wallpaper": {
     "path": "",
     "mode": "fill",
@@ -127,7 +156,6 @@
     },
     "deriveColors": true
   },
-
   "notifications": {
     "enabled": true,
     "position": "top-right",
@@ -140,7 +168,6 @@
     "historyLimit": 120,
     "showOnLockScreen": false
   },
-
   "power": {
     "profile": "balanced",
     "backend": "auto",
@@ -168,7 +195,6 @@
       "batterySeconds": 15
     }
   },
-
   "assistant": {
     "enabled": true,
     "provider": "auto",
@@ -213,7 +239,6 @@
     },
     "historyLimit": 50
   },
-
   "hypernix": {
     "enabled": true,
     "showWidget": true,
@@ -223,7 +248,6 @@
     "pollSeconds": 60,
     "command": "hypernix"
   },
-
   "search": {
     "maxResults": 40,
     "providers": {
@@ -242,12 +266,17 @@
       "hypernix": true,
       "assistant": true
     },
-    "fileRoots": ["~", "~/Documents", "~/Downloads", "~/Pictures", "~/Projects"],
+    "fileRoots": [
+      "~",
+      "~/Documents",
+      "~/Downloads",
+      "~/Pictures",
+      "~/Projects"
+    ],
     "fileDepth": 4,
     "webSearchUrl": "https://duckduckgo.com/?q={query}",
     "webSearchName": "DuckDuckGo"
   },
-
   "applications": {
     "terminal": "kitty",
     "browser": "",
@@ -256,7 +285,6 @@
     "screenshotDir": "~/Pictures/Screenshots",
     "recordingDir": "~/Videos/Recordings"
   },
-
   "accessibility": {
     "reducedMotion": false,
     "highContrast": false,
@@ -268,13 +296,11 @@
     "focusRing": true,
     "screenReaderLabels": true
   },
-
   "privacy": {
     "clipboardHistory": true,
     "clipboardHistoryLimit": 200,
     "recentFiles": true,
     "telemetry": false
   },
-
   "keybinds": {}
 }

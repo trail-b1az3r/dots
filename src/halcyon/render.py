@@ -1176,8 +1176,16 @@ def write_all(
         write_atomic(path, content)
         written.append(str(path))
 
+    # Waybar is an opt-in second bar, not the bar. Writing its config
+    # unconditionally would leave files on disk that look live and are
+    # not — and a unit that starts on finding them.
+    waybar_wanted = str(
+        settings.get("bar", {}).get("fallbackBar", "none")
+    ).lower() == "waybar"
+
     emit("theme", paths.THEME_JSON, render_theme_json(tokens))
-    emit("waybar-css", paths.WAYBAR_CSS, render_waybar_css(tokens))
+    if waybar_wanted:
+        emit("waybar-css", paths.WAYBAR_CSS, render_waybar_css(tokens))
     emit("hypr-theme", paths.HYPR_THEME_LUA, render_hypr_theme_lua(tokens, settings))
     emit("hypr-animations", paths.HYPR_ANIM_LUA, render_hypr_animations_lua(tokens))
     emit(
@@ -1190,11 +1198,23 @@ def write_all(
         paths.GENERATED_DIR / "hypr-runtime.lua",
         render_hypr_runtime_lua(settings, tokens, environment),
     )
-    emit(
-        "waybar-config",
-        paths.GENERATED_DIR / "waybar-config.jsonc",
-        render_waybar_config(settings, tokens, waybar_base),
-    )
+    if waybar_wanted:
+        emit(
+            "waybar-config",
+            paths.GENERATED_DIR / "waybar-config.jsonc",
+            render_waybar_config(settings, tokens, waybar_base),
+        )
+    else:
+        # Leaving a stale config behind would keep halcyon-bar.service's
+        # ConditionPathExists satisfied and start a bar nobody asked for.
+        for stale in (
+            paths.GENERATED_DIR / "waybar-config.jsonc",
+            paths.WAYBAR_CSS,
+        ):
+            try:
+                os.unlink(stale)
+            except OSError:
+                pass
     emit(
         "hyprlock",
         paths.GENERATED_DIR / "hyprlock-colors.conf",

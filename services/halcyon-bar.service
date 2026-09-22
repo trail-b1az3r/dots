@@ -1,14 +1,19 @@
 [Unit]
-Description=Halcyon status bar (Waybar)
+Description=Halcyon — Waybar fallback bar
+Documentation=https://github.com/trail-b1az3r/dots
 PartOf=halcyon-session.target
 After=halcyon-session.target
-StartLimitIntervalSec=90
-StartLimitBurst=5
+
+# Halcyon's own bar is the Ultra Bar, which runs inside halcyon-shell
+# and needs no separate process. This unit exists only for people who
+# set `bar.fallbackBar` to "waybar" — as a second bar that survives the
+# shell restarting. It is not enabled by default, and the guard below
+# means enabling it by hand does nothing until the setting agrees.
+ConditionPathExists=%h/.config/halcyon/generated/waybar-config.jsonc
 
 [Service]
 Type=simple
 ExecStart=/usr/bin/env waybar -c %h/.config/halcyon/generated/waybar-config.jsonc -s %h/.config/waybar/style.css
-# SIGUSR2 makes Waybar re-read its stylesheet without dropping the bar.
 ExecReload=/usr/bin/kill -USR2 $MAINPID
 Restart=on-failure
 RestartSec=2

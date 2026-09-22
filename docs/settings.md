@@ -75,16 +75,30 @@ The status bar's geometry and module layout.
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `bar.enabled` | bool | `true` | Whether Waybar runs at all. The shell works without it. |
+| `bar.enabled` | bool | `true` | Whether the Ultra Bar is shown. The rest of the shell works without it. |
+| `bar.fallbackBar` | string | `"none"` | `none`, or `waybar` to also run Waybar as a second bar that survives the shell restarting. Halcyon does not need it, and nothing for it is generated unless this is set. |
 | `bar.position` | string | `"top"` | `top` or `bottom`. |
 | `bar.height` | int | `34` | Bar height in logical pixels. |
 | `bar.sideMargin` | int | `10` | Horizontal inset when floating. |
 | `bar.topMargin` | int | `6` | Vertical inset when floating. |
 | `bar.floating` | bool | `true` | Detach the bar from the screen edge so it reads as a surface rather than a strip. |
 | `bar.showOnAllMonitors` | bool | `true` | One bar per monitor, or only on the primary. |
-| `bar.left` | list | `["custom/menu", "hyprland/workspaces", "hyprland/window"]` | Modules on the left, in order. Every name must have a definition in `config/waybar/modules.jsonc`. |
-| `bar.center` | list | `["clock"]` | Modules in the centre, in order. |
-| `bar.right` | list | `["custom/assistant", "custom/hypernix", "mpris", "privacy…` | Modules on the right, in order. |
+| `bar.left` | list | `["launcher", "workspaces", "activeWindow"]` | Modules on the left, in order, by id. `halcyon shell bar modules` lists every id. |
+| `bar.center` | list | `["clock"]` | Modules in the centre, in order. Genuinely centred on the bar, not placed after the left section. |
+| `bar.right` | list | `["media", "assistant", "hypernix", "cpu", "memory", "temp…` | Modules on the right, in order. |
+| `bar.autoHide` | bool | `false` | Slide the bar off screen until the pointer reaches its edge. |
+| `bar.hoverExpand` | bool | `true` | Let modules show more detail while the pointer is over them. |
+| `bar.clock.format` | string | `"HH:mm"` | Qt date format for the clock, e.g. `HH:mm` or `h:mm AP`. |
+| `bar.clock.seconds` | bool | `false` | Show seconds. Costs a repaint every second rather than every minute. |
+| `bar.date.format` | string | `"ddd d MMM"` | Qt date format for the separate date module. |
+| `bar.audio.showPercent` | bool | `true` | Show the volume number next to the icon. |
+| `bar.audio.scrollStep` | int | `5` | Percentage points per scroll notch over the audio module. |
+| `bar.battery.showPercent` | bool | `true` | Show the charge number next to the icon. |
+| `bar.microphone.alwaysShow` | bool | `false` | Show the microphone module even when it is not muted. |
+| `bar.network.showRate` | bool | `false` | Show throughput next to the connection icon. |
+| `bar.temperature.warnAbove` | int | `80` | Celsius above which the temperature module turns red. |
+| `bar.media.maxWidth` | int | `220` | Pixels before the track title elides. |
+| `bar.activeWindow.maxWidth` | int | `320` | Pixels before the window title elides. |
 
 ## Workspaces
 

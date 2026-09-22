@@ -293,26 +293,45 @@ check_generated() {
 	fi
 	log_ok "Every Hyprland option, rule, animation and bind is valid"
 
-	# Waybar's generated configuration has to reference only modules that
-	# have a definition, or the bar starts with gaps in it.
-	if ! PYTHONPATH=src python3 - "$workdir/config/generated/waybar-config.jsonc" <<'PY'; then
+	# The Ultra Bar's layout names modules by id; every id has to be one
+	# the bar can load, or that slot is a visible "unknown module" marker.
+	if ! PYTHONPATH=src python3 - <<'BARPY'; then
+import json
+import pathlib
+import re
 import sys
-from halcyon import jsonc
 
-config = jsonc.load_file(sys.argv[1])
-used = []
-for key in ("modules-left", "modules-center", "modules-right"):
-    used.extend(config.get(key, []))
+root = pathlib.Path("config/quickshell/halcyon/Modules/Bar")
+registry = (root / "BarModules.qml").read_text()
 
-missing = [name for name in used if name not in config]
-if missing:
-    print("modules with no definition: " + ", ".join(missing))
+known = set(re.findall(r'id:\s*"([\w.]+)"', registry))
+files = dict(re.findall(r'id:\s*"([\w.]+)"[^}]*?file:\s*"([^"]+)"', registry,
+                        re.S))
+
+missing_files = [
+    f"{name} -> {path}"
+    for name, path in files.items()
+    if not (root / path).is_file()
+]
+if missing_files:
+    print("bar modules with no file: " + ", ".join(missing_files))
     sys.exit(1)
-PY
-		record_failure "The generated Waybar configuration references undefined modules"
+
+with open("config/system/settings.default.json", encoding="utf-8") as handle:
+    settings = json.load(handle)
+
+bar = settings["bar"]
+used = bar["left"] + bar["center"] + bar["right"]
+unknown = [name for name in used if name not in known]
+if unknown:
+    print("bar layout names modules the registry does not have: "
+          + ", ".join(unknown))
+    sys.exit(1)
+BARPY
+		record_failure "The default bar layout references unknown modules"
 		return 0
 	fi
-	log_ok "Waybar configuration is complete"
+	log_ok "Ultra Bar layout resolves; every module has a file"
 }
 
 # ── Units ──────────────────────────────────────────────────────────────
@@ -394,37 +413,6 @@ KEYBINDPY
 	fi
 	log_ok "Keybind registry is valid; recovery bindings covered"
 
-	# Every Waybar module the default layout names must have a definition.
-	if ! PYTHONPATH=src python3 - <<'PY'; then
-import json
-import sys
-
-from halcyon import jsonc
-
-modules = jsonc.load_file("config/waybar/modules.jsonc")
-with open("config/system/settings.default.json", encoding="utf-8") as handle:
-    settings = json.load(handle)
-
-bar = settings["bar"]
-used = bar["left"] + bar["center"] + bar["right"]
-builtin = {
-    "battery", "backlight", "bluetooth", "clock", "cpu", "disk",
-    "idle_inhibitor", "memory", "mpris", "network", "privacy", "pulseaudio",
-    "temperature", "tray", "power-profiles-daemon", "keyboard-state", "user",
-    "load",
-}
-missing = [
-    name for name in used
-    if name not in modules and name.split("#")[0] not in builtin
-]
-if missing:
-    print("bar layout names modules with no definition: " + ", ".join(missing))
-    sys.exit(1)
-PY
-		record_failure "The default bar layout references undefined Waybar modules"
-		return 0
-	fi
-	log_ok "Default bar layout resolves"
 
 	# A setting that ships undocumented is a setting nobody finds.
 	local doc_output

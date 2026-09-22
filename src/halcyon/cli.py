@@ -565,6 +565,10 @@ def cmd_status(args: argparse.Namespace) -> int:
         payload = _notification_status(settings)
     elif args.what == "battery":
         payload = power_module.battery_state().as_dict()
+    elif args.what == "system":
+        from . import sysstat
+
+        payload = sysstat.snapshot().as_dict()
     else:
         return EXIT_USAGE
 
@@ -958,7 +962,7 @@ def build_parser() -> argparse.ArgumentParser:
     status = sub.add_parser("status", help="status payloads for the bar")
     status.add_argument(
         "what",
-        choices=["power", "gpu", "hypernix", "assistant", "notifications", "battery"],
+        choices=["power", "gpu", "hypernix", "assistant", "notifications", "battery", "system"],
     )
     status.add_argument("--waybar", action="store_true")
     status.set_defaults(func=cmd_status)

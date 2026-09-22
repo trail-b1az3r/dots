@@ -94,6 +94,11 @@ Singleton {
         }
     }
 
+    /** Re-read settings.json now, rather than waiting for the watcher. */
+    function reload(): void {
+        file.reload();
+    }
+
     function parse(text: string): void {
         if (!text || text.length === 0)
             return;
