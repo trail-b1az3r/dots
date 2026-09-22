@@ -8,7 +8,7 @@ halcyon doctor         # the same checks from the CLI
 halcyon doctor --json  # machine-readable, for a bug report
 ```
 
-`diagnose.sh` reports Hyprland, Quickshell and Waybar versions, which
+`diagnose.sh` reports Hyprland and Quickshell versions, which
 services are running, the detected GPU and power backend, any Hyprland
 config errors, and which optional dependencies are missing.
 
@@ -56,18 +56,22 @@ systemctl --user stop halcyon-shell
 qs -c halcyon
 ```
 
-Waybar the same way:
+The bar is part of that process, so it comes back with it.
+
+**A module is missing from the bar.** Either it is hiding itself because
+it has nothing true to report — no battery on a desktop, no sensor for
+temperature — or the id in your layout is not one the bar knows, in
+which case you will see a small `!` marker in its place. Hover it for
+the reason.
 
 ```sh
-systemctl --user stop halcyon-bar
-waybar -c ~/.config/halcyon/generated/waybar-config.jsonc \
-       -s ~/.config/waybar/style.css
+halcyon shell bar modules       # every id the bar can load
 ```
 
-**A module is missing from the bar.** Waybar silently drops a module it
-has no definition for. Every name in `bar.left`/`center`/`right` must
-exist in `config/waybar/modules.jsonc` or be a Waybar builtin —
-`./scripts/dev/validate.sh` checks this.
+**A module shows an `!` marker.** Its id is not in the registry, or the
+file behind it failed to load. `./scripts/dev/validate.sh` checks the
+default layout against the registry; for your own layout, compare
+`bar.left`/`center`/`right` against the list above.
 
 ## Appearance
 

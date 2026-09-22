@@ -12,8 +12,9 @@ Halcyon is four layers that mostly do not know about each other:
                   │  generated files
      ┌────────────┼────────────┬──────────────┐
      ▼            ▼            ▼              ▼
- Hyprland     Quickshell     Waybar      hyprlock /
- (Lua)        (QML)          (JSONC+CSS)  hypridle
+ Hyprland     Quickshell     hyprlock /
+ (Lua)        (QML, incl.    hypridle
+               the Ultra Bar)
 ```
 
 The core writes files. The three consumers read them. Nothing reads
@@ -27,8 +28,6 @@ settings.json  ──┐
 wallpaper      ──┼──▶  palette  ──▶  tokens  ──┬──▶  hypr-theme.lua
 defaults       ──┘     palette.py    theme.py  ├──▶  hypr-runtime.lua
                                                ├──▶  hypr-keybinds.lua
-                                               ├──▶  waybar-config.jsonc
-                                               ├──▶  waybar-colors.css
                                                ├──▶  theme.json
                                                ├──▶  hyprlock-colors.conf
                                                └──▶  hypridle-timeouts.conf
@@ -56,7 +55,7 @@ every renderer inherits them.
 
 **Renderers** (`render.py`) project that document into each consumer's
 own syntax. They share nothing but the token document — which is why a
-colour cannot be right in Waybar and wrong in Quickshell.
+colour cannot be right in one surface and wrong in another.
 
 **Validation happens before writing.** `render_hypr_runtime_lua` checks
 every option it is about to emit against Hyprland's own option table
@@ -110,17 +109,51 @@ drop shadow over the compositor's blur, with the layer's blur configured
 through `layerrule`. Elevation picks the parameters; a module sets an
 elevation, not a colour.
 
-## Waybar
+## The Ultra Bar
 
-Waybar is GTK3, which means no CSS custom properties and no
-`backdrop-filter`. The generated stylesheet uses `@define-color` only,
-and the generator checks that every colour used is defined.
+The bar is Halcyon's, written in Quickshell alongside every other
+surface. A bar module and a panel therefore share one theme, one service
+layer and one definition of what a click does — which a restyled
+third-party bar could never give.
 
-Module definitions live in `config/waybar/modules.jsonc`; the layout
-comes from `bar.left`/`center`/`right`. Halcyon's own modules are
-signal-driven (`SIGRTMIN+N`) rather than polled — the core sends the
-signal when something changes, which is why the bar costs almost nothing
-when the machine is idle.
+```
+Modules/Bar/
+├── UltraBar.qml        Variants over screens; one PanelWindow each
+├── BarSurface.qml      the glass panel and its three sections
+├── BarSection.qml      a row of modules, by id
+├── BarModuleHost.qml   loads one module; isolates its failure
+├── BarItem.qml         the shape every module has
+├── BarModules.qml      the registry: id → file
+└── modules/            one file per module
+```
+
+**Layout is data.** `bar.left`, `bar.center` and `bar.right` are lists of
+module ids in settings. No QML names a module; `BarModules` maps an id to
+a file and `BarModuleHost` loads it. Adding a module to your bar is an
+edit to settings.json.
+
+**One monitor cannot break another.** `Variants` over
+`Quickshell.screens` gives each monitor its own bar, with its modules
+bound to that screen — which is why the workspace indicator shows that
+monitor's workspaces.
+
+**One module cannot break the bar.** A module that fails to load leaves a
+marker with a tooltip naming it, rather than emptying the row. A module
+with nothing true to say hides itself: no battery on a desktop, no
+temperature without a sensor, no GPU reading where the driver reports
+none.
+
+**Its data comes from the kernel.** `src/halcyon/sysstat.py` reads
+`/proc` and `/sys` for CPU, memory, temperature, disk and network. CPU
+and network are rates, so they need two samples; before there are two,
+the value is *unknown* rather than zero.
+
+### Waybar
+
+Optional, and off. Halcyon does not need it and generates nothing for it
+unless `bar.fallbackBar` is set to `waybar`, in which case it runs as a
+second bar that survives the shell restarting. Its unit is guarded so a
+stale config cannot start it.
 
 ## The action layer
 
