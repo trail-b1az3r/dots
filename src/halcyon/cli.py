@@ -829,6 +829,33 @@ def cmd_keybinds(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_migrate(args: argparse.Namespace) -> int:
+    """Bring an older settings file up to the current schema."""
+    from . import migrate as migrate_module
+
+    result = migrate_module.run(dry_run=args.dry_run)
+
+    if args.json:
+        print(json.dumps(result.as_dict(), indent=2))
+        return EXIT_OK
+
+    if not result.migrated and not result.notes:
+        _print(
+            f"Settings are already at schema version {result.to_version}."
+        )
+        return EXIT_OK
+
+    _print(
+        f"Migrated settings from version {result.from_version} to "
+        f"{result.to_version}."
+    )
+    if result.backup:
+        _print(f"The previous file is at {result.backup}")
+    for note in result.notes:
+        _print(f"  · {note}")
+    return EXIT_OK
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="halcyon",
@@ -1005,6 +1032,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     keybinds_parser.add_argument("--json", action="store_true")
     keybinds_parser.set_defaults(func=cmd_keybinds)
+
+    migrate_parser = sub.add_parser(
+        "migrate", help="upgrade settings written by an older Halcyon"
+    )
+    migrate_parser.add_argument(
+        "-n", "--dry-run", action="store_true",
+        help="say what would change without writing anything",
+    )
+    migrate_parser.add_argument("--json", action="store_true")
+    migrate_parser.set_defaults(func=cmd_migrate)
 
     doctor_parser = sub.add_parser("doctor", help="check the installation")
     doctor_parser.add_argument("--json", action="store_true")

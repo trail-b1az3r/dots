@@ -509,6 +509,18 @@ ENTRY
 }
 
 step_configure() {
+	# Settings written by an older Halcyon are brought forward before
+	# anything reads them: generation would otherwise resolve a v1 bar
+	# layout against the Ultra Bar's module ids and come up empty.
+	if [[ -f "$HALCYON_CONFIG_DIR/settings.json" ]]; then
+		log_step "Migrating settings"
+		if run "$BIN_DIR/halcyon" migrate; then
+			:
+		else
+			log_warn "Could not migrate settings; they are unchanged."
+		fi
+	fi
+
 	log_step "Generating the theme"
 
 	if [[ -n "${HALCYON_DRY_RUN:-}" ]]; then

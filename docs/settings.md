@@ -336,4 +336,4 @@ Per-binding overrides.
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `version` | int | `1` | Schema version. Halcyon refuses to load settings written by a newer version rather than guessing. |
+| `version` | int | `2` | Schema version. Halcyon refuses to load settings written by a newer version rather than guessing. |
