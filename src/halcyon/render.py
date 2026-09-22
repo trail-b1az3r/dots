@@ -203,7 +203,20 @@ def _lua_banner() -> str:
 
 
 def write_atomic(path: os.PathLike[str] | str, content: str) -> None:
+    """Write, replacing the file in one step — and only when it differs.
+
+    Skipping an identical write is not just an optimisation: the shell
+    watches these files, and rewriting one with the same bytes wakes
+    every binding that reads it for nothing.
+    """
     path = str(path)
+    try:
+        with open(path, "r", encoding="utf-8") as existing:
+            if existing.read() == content:
+                return
+    except (OSError, UnicodeDecodeError):
+        pass
+
     directory = os.path.dirname(path) or "."
     os.makedirs(directory, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=directory, prefix=".halcyon-", suffix=".tmp")

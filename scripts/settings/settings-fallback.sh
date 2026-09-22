@@ -15,8 +15,10 @@ settings="$config_dir/settings.json"
 
 mkdir -p "$config_dir"
 if [[ ! -f "$settings" ]]; then
-	# An empty override file is valid: every key falls back to a default.
-	printf '{\n  "version": 1\n}\n' >"$settings"
+	# An empty override document is valid: every key falls back to a
+	# default, and leaving the version out means the file is read as
+	# current rather than as one needing migration.
+	printf '{\n}\n' >"$settings"
 fi
 
 # A terminal editor needs a terminal; a graphical one does not. Try the

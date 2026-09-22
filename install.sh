@@ -529,7 +529,17 @@ step_configure() {
 	fi
 
 	if [[ ! -f "$HALCYON_CONFIG_DIR/settings.json" ]]; then
-		printf '{\n  "version": 1\n}\n' >"$HALCYON_CONFIG_DIR/settings.json"
+		# The schema version is read from the defaults we just installed
+		# rather than written here. Hardcoding it meant a fresh install
+		# created a file one version behind, which the *next* install
+		# then migrated — so installing twice changed things.
+		local schema
+		schema="$("${HALCYON_PYTHON:-python3}" -c \
+			'import json,sys; print(json.load(open(sys.argv[1]))["version"])' \
+			"$SHARE_DIR/settings.default.json" 2>/dev/null || true)"
+		[[ "$schema" =~ ^[0-9]+$ ]] || schema=1
+		printf '{\n  "version": %s\n}\n' "$schema" \
+			>"$HALCYON_CONFIG_DIR/settings.json"
 		log_ok "Created $HALCYON_CONFIG_DIR/settings.json"
 	fi
 
