@@ -178,8 +178,12 @@ jobs:
           # run is supposed to add to it. Everything the desktop is
           # actually made of has to be byte-identical.
           fingerprint() {
+            # __pycache__ is the interpreter's, not ours: running the CLI
+            # writes bytecode into the installed tree, so its presence
+            # says nothing about whether the install changed anything.
             find "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$HOME/.local/bin" \
-              -type f -exec sha256sum {} + 2>/dev/null | sort
+              -type f -not -path '*/__pycache__/*' \
+              -exec sha256sum {} + 2>/dev/null | sort
           }
 
           before="$(fingerprint)"
