@@ -370,30 +370,29 @@ check_consistency() {
 
 	((bad == 0)) && log_ok "Every role has an entry in every package map"
 
-	# Keybinds must not collide.
-	if ! PYTHONPATH=src python3 - <<'PY'; then
-import json
+	# The keybind registry decides what is valid; this asks it.
+	if ! PYTHONPATH=src python3 - <<'KEYBINDPY'; then
 import sys
 
-with open("config/system/keybinds.catalog.json", encoding="utf-8") as handle:
-    catalog = json.load(handle)
+from halcyon import keybinds, pipeline
 
-seen = {}
-clashes = []
-for bind in catalog["binds"] + catalog["mouseBinds"]:
-    key = bind["default"].upper().replace(" ", "")
-    if key in seen:
-        clashes.append(f"{bind['default']}: {seen[key]} and {bind['id']}")
-    seen[key] = bind["id"]
+registry = keybinds.build(
+    pipeline.load_catalog(), {}, check_executables=False
+)
 
-if clashes:
-    print("\n".join(clashes))
+if registry.errors:
+    print(keybinds.report(registry.errors))
     sys.exit(1)
-PY
-		record_failure "The keybind catalog has duplicate shortcuts"
+
+gaps = keybinds.emergency_gaps(registry)
+if gaps:
+    print("no working binding for recovery capability: " + ", ".join(gaps))
+    sys.exit(1)
+KEYBINDPY
+		record_failure "The keybind catalog has errors"
 		return 0
 	fi
-	log_ok "No duplicate shortcuts in the catalog"
+	log_ok "Keybind registry is valid; recovery bindings covered"
 
 	# Every Waybar module the default layout names must have a definition.
 	if ! PYTHONPATH=src python3 - <<'PY'; then

@@ -74,6 +74,10 @@ FALLBACKS = {
     ("power", "toggle"): ("power", "power-menu.sh", []),
     ("control", "network"): ("network", "wifi-menu.sh", []),
     ("control", "audio"): ("audio", "output-menu.sh", []),
+    # Settings is the one surface you need most when the shell is down,
+    # so it degrades to editing the same file the app edits.
+    ("settings", "toggle"): ("settings", "settings-fallback.sh", []),
+    ("settings", "open"): ("settings", "settings-fallback.sh", []),
 }
 
 

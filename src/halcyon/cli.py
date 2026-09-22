@@ -756,6 +756,75 @@ def cmd_version(_args: argparse.Namespace) -> int:
 # ── Parser ─────────────────────────────────────────────────────────────
 
 
+# ── keybinds ───────────────────────────────────────────────────────────
+
+
+def cmd_keybinds(args: argparse.Namespace) -> int:
+    """Inspect the keybind registry — what is bound, and what is not."""
+    from . import keybinds as keybinds_module
+    from . import pipeline, settings as settings_module
+
+    catalog = pipeline.load_catalog()
+    current = settings_module.load()
+    registry = keybinds_module.build(catalog, current.get("keybinds") or {})
+
+    if args.json:
+        payload = {
+            "bindings": [b.as_dict() for b in registry.bindings],
+            "diagnostics": [
+                {
+                    "severity": d.severity,
+                    "binding": d.binding,
+                    "chord": d.chord,
+                    "message": d.message,
+                    "owner": d.owner,
+                    "resolution": d.resolution,
+                    "source": d.source,
+                }
+                for d in registry.diagnostics
+            ],
+            "emergency": keybinds_module.emergency_coverage(registry),
+        }
+        print(json.dumps(payload, indent=2))
+        return 1 if registry.errors else 0
+
+    if args.check:
+        text = keybinds_module.report(registry.diagnostics)
+        gaps = keybinds_module.emergency_gaps(registry)
+        if text:
+            print(text)
+        if gaps:
+            print(
+                "\nNo working binding for: "
+                + ", ".join(gaps)
+                + "\nThese must work when the shell is down."
+            )
+        if not text and not gaps:
+            print(f"{len(registry.bindings)} bindings, no problems found.")
+        return 1 if (registry.errors or gaps) else 0
+
+    by_category: dict[str, list] = {}
+    for binding in registry.bindings:
+        by_category.setdefault(binding.category, []).append(binding)
+
+    for category in sorted(by_category):
+        print(f"\n{category}")
+        for binding in sorted(by_category[category], key=lambda b: b.id):
+            marks = []
+            if binding.destructive:
+                marks.append("destructive")
+            if binding.requires_shell and not keybinds_module.has_fallback(binding):
+                marks.append("needs shell")
+            suffix = f"  [{', '.join(marks)}]" if marks else ""
+            print(f"  {binding.chord:<26} {binding.description}{suffix}")
+
+    if registry.errors:
+        print(f"\n{len(registry.errors)} binding(s) are not active:")
+        for diagnostic in registry.errors:
+            print("  " + diagnostic.format().replace("\n", "\n  "))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="halcyon",
@@ -922,6 +991,16 @@ def build_parser() -> argparse.ArgumentParser:
     from .assistant import cli as assistant_cli
 
     assistant_cli.add_parser(sub)
+
+    keybinds_parser = sub.add_parser(
+        "keybinds", help="list and check keyboard shortcuts"
+    )
+    keybinds_parser.add_argument(
+        "--check", action="store_true",
+        help="report problems and exit non-zero if any are fatal",
+    )
+    keybinds_parser.add_argument("--json", action="store_true")
+    keybinds_parser.set_defaults(func=cmd_keybinds)
 
     doctor_parser = sub.add_parser("doctor", help="check the installation")
     doctor_parser.add_argument("--json", action="store_true")

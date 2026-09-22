@@ -139,62 +139,56 @@ class TestGeneratedFiles(IsolatedHalcyon):
 
     def test_a_deliberate_keybind_collision_is_dropped_and_explained(self) -> None:
         catalog = {
+            "version": 2,
             "binds": [
                 {
                     "id": "first",
-                    "default": "SUPER + T",
-                    "run": {"dsp": "hl.dsp.window.close()"},
+                    "chord": "SUPER + T",
+                    "description": "one",
+                    "action": {"dsp": "hl.dsp.window.close()"},
                 },
                 {
                     "id": "second",
-                    "default": "super + t",
-                    "run": {"dsp": "hl.dsp.window.close()"},
+                    "chord": "super + t",
+                    "description": "two",
+                    "action": {"dsp": "hl.dsp.window.close()"},
                 },
-            ]
+            ],
         }
         text = render.render_hypr_keybinds_lua(self.settings, catalog)
         # Hyprland would take the last binding silently; saying which one
         # lost, in the generated file, is how this stays debuggable.
         self.assertEqual(text.count('hl.bind("SUPER + T"'), 1)
-        self.assertIn("skipped second", text)
+        self.assertEqual(text.count('hl.bind("super + t"'), 0)
+        self.assertIn("second", text)
+        self.assertIn("already bound", text)
 
     def test_the_catalog_cannot_smuggle_lua_through_a_dispatcher(self) -> None:
         catalog = {
+            "version": 2,
             "binds": [
                 {
                     "id": "evil",
-                    "default": "SUPER + T",
-                    "run": {"dsp": "os.execute('id')"},
+                    "chord": "SUPER + T",
+                    "description": "x",
+                    "action": {"dsp": "os.execute('id')"},
                 }
-            ]
+            ],
         }
-        with self.assertRaises(render.KeybindError):
-            render.render_hypr_keybinds_lua(self.settings, catalog)
+        text = render.render_hypr_keybinds_lua(self.settings, catalog)
+        self.assertNotIn('hl.bind("SUPER + T"', text)
 
     def test_an_action_less_bind_is_refused(self) -> None:
-        catalog = {"binds": [{"id": "empty", "default": "SUPER + T", "run": {}}]}
-        with self.assertRaises(render.KeybindError):
-            render.render_hypr_keybinds_lua(self.settings, catalog)
-
-    def test_waybar_config_is_valid_jsonc(self) -> None:
-        text = render.render_waybar_config(self.settings, self.tokens, self.waybar_base)
-        parsed = jsonc.loads(text)
-        self.assertIn("layer", parsed)
-        for side in ("modules-left", "modules-center", "modules-right"):
-            self.assertIsInstance(parsed.get(side, []), list)
-
-    def test_waybar_modules_all_have_a_definition(self) -> None:
-        text = render.render_waybar_config(self.settings, self.tokens, self.waybar_base)
-        parsed = jsonc.loads(text)
-        listed = [
-            name
-            for side in ("modules-left", "modules-center", "modules-right")
-            for name in parsed.get(side, [])
-        ]
-        for name in listed:
-            # Waybar silently drops a module it has no config for, which
-            # looks like a rendering bug rather than a config mistake.
-            self.assertIn(name, parsed, msg=f"{name} is listed but not defined")
+        catalog = {
+            "version": 2,
+            "binds": [
+                {"id": "empty", "chord": "SUPER + T", "description": "x",
+                 "action": {}}
+            ],
+        }
+        text = render.render_hypr_keybinds_lua(self.settings, catalog)
+        self.assertNotIn('hl.bind("SUPER + T"', text)
+        self.assertIn("no action", text)
 
     def test_waybar_commands_use_an_absolute_halcyon_path(self) -> None:
         # Waybar runs these through /bin/sh with the PATH its systemd unit
