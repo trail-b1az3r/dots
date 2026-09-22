@@ -296,15 +296,27 @@ check_generated() {
 	fi
 	log_ok "Theme generation succeeds"
 
-	if ! python3 scripts/dev/check-hypr-config.py \
-		--config config/hypr --generated "$workdir/config/generated" >/dev/null 2>&1; then
+	# Exit 2 is "could not check" (no Lua interpreter), which is a gap in
+	# what we can verify, not a broken configuration.
+	local config_rc=0
+	python3 scripts/dev/check-hypr-config.py \
+		--config config/hypr --generated "$workdir/config/generated" \
+		>/dev/null 2>&1 || config_rc=$?
+	case "$config_rc" in
+	0)
+		log_ok "Every Hyprland option, rule, animation and bind is valid"
+		;;
+	2)
+		SKIPPED+=("Hyprland config probe (no Lua interpreter)")
+		;;
+	*)
 		record_failure "The generated Hyprland configuration is not valid"
 		python3 scripts/dev/check-hypr-config.py \
 			--config config/hypr --generated "$workdir/config/generated" 2>&1 |
 			sed 's/^/      /'
 		return 0
-	fi
-	log_ok "Every Hyprland option, rule, animation and bind is valid"
+		;;
+	esac
 
 	# The Ultra Bar's layout names modules by id; every id has to be one
 	# the bar can load, or that slot is a visible "unknown module" marker.
