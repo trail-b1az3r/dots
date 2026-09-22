@@ -148,10 +148,12 @@ def resolve(settings: dict[str, Any], palette: Palette) -> dict[str, Any]:
     bar = settings.get("bar", {})
 
     return {
-        "generated": _dt.datetime.now(_dt.timezone.utc)
-        .replace(microsecond=0)
-        .isoformat()
-        .replace("+00:00", "Z"),
+        # Deliberately no generation timestamp. The token document is a
+        # pure function of settings and wallpaper, and stamping it with
+        # the current time made every regeneration produce a different
+        # file — which made a second `install.sh` look like it had
+        # changed something, and hid real changes in the noise. The
+        # file's own mtime already says when it was written.
         "mode": mode,
         "preset": glass_in.get("preset", "tinted"),
         "palette": palette.as_dict(),

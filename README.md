@@ -11,8 +11,8 @@ asset ships in this repository.
 
 The design principle throughout: **one set of tokens, every surface.**
 A colour, a radius or a duration is defined once and projected into
-Hyprland's Lua config, Waybar's GTK3 CSS, Quickshell's QML, hyprlock's
-hyprlang and the wallpaper daemon. There is no second place where a
+Hyprland's Lua config, Quickshell's QML, hyprlock's hyprlang and the
+wallpaper daemon. There is no second place where a
 value can drift.
 
 ---
@@ -24,6 +24,7 @@ value can drift.
 - [Installation](#installation)
 - [Supported distributions](#supported-distributions)
 - [Keyboard shortcuts](#keyboard-shortcuts)
+- [The Ultra Bar](#the-ultra-bar)
 - [Architecture](#architecture)
 - [Customisation](#customisation)
 - [The AI assistant](#the-ai-assistant)
@@ -40,12 +41,20 @@ value can drift.
 
 ## What you get
 
-**A shell, written in Quickshell.** A floating bar, Spotlight-style
+**A shell, written in Quickshell.** The Ultra Bar, Spotlight-style
 universal search, a Control Center, a notification centre with grouping
 and history, Mission Control, an application switcher, on-screen
 displays for volume and brightness, a lock screen with real PAM
-authentication, and desktop widgets. 78 QML files, no placeholder
-components.
+authentication, and desktop widgets. No placeholder components.
+
+**The bar is ours.** The Halcyon Ultra Bar is part of the shell, not a
+third-party bar with a stylesheet on it — so a bar module and a panel
+share one theme, one service layer and one definition of what a click
+does. 25 modules, composed from three lists of ids in settings; one per
+monitor, floating or attached, with auto-hide. A module that fails
+leaves a marker naming itself rather than emptying the row, and a module
+with nothing true to report hides instead of showing a zero. Waybar is
+no longer required, and is off unless you ask for it.
 
 **Glass that is actually composited.** `GlassSurface` layers a tint, a
 specular highlight, an inner shadow, a hairline border and a drop shadow
@@ -99,7 +108,7 @@ reduces quality from what you chose — it will not decide you meant
 |---|---|
 | Compositor | Hyprland **0.56 or newer** (Lua configuration) |
 | Shell | Quickshell **0.3 or newer** |
-| Bar | Waybar 0.11+ (GTK3) |
+| Bar | None — the Ultra Bar is part of the shell |
 | Session | Wayland, PipeWire, a working portal |
 | Python | 3.9 or newer, standard library only |
 
@@ -299,9 +308,85 @@ is `Super+Ctrl+<digit>`**, not `Super+Shift+<digit>`.
 
 Media and brightness keys work as labelled. Every binding is defined in
 `config/system/keybinds.catalog.json` and can be overridden per-binding
-in Settings; set one to `"none"` to unbind it. The generator refuses to
-emit two binds for the same chord and writes a comment saying which one
-lost.
+in Settings; set one to `"none"` to unbind it.
+
+```sh
+halcyon keybinds              # everything bound, by category
+halcyon keybinds --check      # what is wrong, and why
+halcyon keybinds --json       # the registry, for scripting
+```
+
+### When a binding does not work
+
+`halcyon keybinds --check` is the answer. Every binding is validated
+before it is generated — against Hyprland's own modifier list and
+libxkbcommon's keysym table — and anything rejected says so, naming the
+chord, the reason, what owns it if it collided, and the file it came
+from. The same diagnostics are written into the generated Lua, so the
+file answers the question on its own.
+
+An **error** means the binding is not emitted: an unknown action, a
+modifier that does not exist, a chord already taken. A **warning** means
+it is emitted anyway: a keysym our table does not list may still resolve
+on your keymap, and a tool that is not installed yet may be tomorrow.
+
+Five recovery capabilities — open a terminal, close a window, open
+settings, reload, exit — are checked for coverage on every generation,
+and a binding only counts if it still works with the shell down.
+
+---
+
+## The Ultra Bar
+
+The bar is Halcyon's own. Its layout is three lists of module ids:
+
+```sh
+halcyon shell bar modules                      # every id it can load
+halcyon settings set bar.left '["launcher","workspaces","activeWindow"]'
+halcyon settings set bar.right '["audio","battery","systemMenu"]'
+halcyon theme apply
+```
+
+| Setting | Effect |
+|---|---|
+| `bar.position` | `top` or `bottom`. |
+| `bar.floating` | Detach from the screen edge. |
+| `bar.autoHide` | Slide away until the pointer reaches the edge. |
+| `bar.showOnAllMonitors` | One bar per monitor, or only the first. |
+| `bar.height`, `bar.sideMargin`, `bar.topMargin` | Geometry. |
+
+### Modules
+
+`launcher`, `workspaces`, `activeWindow`, `clock`, `date`, `media`,
+`tray`, `notifications`, `cpu`, `memory`, `temperature`, `gpu`,
+`network`, `bluetooth`, `audio`, `microphone`, `battery`,
+`powerProfile`, `clipboard`, `hypernix`, `assistant`, `settings`,
+`systemMenu`, `spacer`, `separator`.
+
+Each takes its options from its own settings subtree —
+`bar.clock.format`, `bar.audio.scrollStep`, `bar.temperature.warnAbove`
+and so on. See the [settings reference](docs/settings.md).
+
+Modules hide themselves when they have nothing true to say: no battery
+on a desktop, no temperature where there is no sensor, no GPU reading
+where the driver reports none, no clipboard button when you have turned
+history off. A module whose id the bar does not know, or whose file
+fails to load, shows a small `!` marker naming the problem rather than
+vanishing.
+
+### Waybar
+
+Not required, and not running. Halcyon generates nothing for it unless
+you opt in:
+
+```sh
+halcyon settings set bar.fallbackBar waybar
+halcyon theme apply
+systemctl --user enable --now halcyon-bar
+```
+
+That gives you a second bar which survives the shell restarting. Setting
+it back to `none` removes the generated files again.
 
 ---
 
@@ -312,8 +397,6 @@ settings.json  ──┐
 wallpaper      ──┼──▶  palette  ──▶  tokens  ──┬──▶  hypr-theme.lua
 defaults       ──┘      (OKLCh)     (theme.py) ├──▶  hypr-runtime.lua
                                                ├──▶  hypr-keybinds.lua
-                                               ├──▶  waybar-config.jsonc
-                                               ├──▶  waybar-colors.css
                                                ├──▶  theme.json  ──▶ Quickshell
                                                ├──▶  hyprlock-colors.conf
                                                └──▶  hypridle-timeouts.conf
@@ -328,7 +411,8 @@ goes through it, so "did that take effect?" has one answer.
 | `src/halcyon/` | The Python core: colour, tokens, renderers, actions, search, power, assistant. Standard library only. |
 | `config/hypr/` | Hyprland's Lua configuration, split into appearance, behaviour and autostart. |
 | `config/quickshell/` | The shell — `Config`, `Services`, `Components`, `Modules`. |
-| `config/waybar/` | Module definitions; the config and CSS are generated. |
+| `config/quickshell/halcyon/Modules/Bar/` | The Ultra Bar: its module registry, and one file per module. |
+| `config/waybar/` | Only for the optional Waybar fallback. Nothing is generated for it unless you ask. |
 | `config/system/` | Settings defaults and the keybind catalog. |
 | `scripts/lib/` | Shell libraries: detection, packages, backup, build, menus. |
 | `deps/` | Per-distro package maps, role definitions, the Hyprland option snapshot. |
@@ -556,9 +640,9 @@ On battery, the adaptive policy steps effects down:
 The policy **only ever reduces**. Set blur to `low` on a desktop and
 nothing will raise it.
 
-Polling slows on battery too — Waybar modules are signal-driven rather
-than polled where possible, and the intervals for what must be polled
-are separate for AC and battery.
+Polling slows on battery too. The bar's system modules subscribe only
+while they are on screen, and the interval doubles on battery — the
+AC and battery intervals are separate settings.
 
 ```sh
 halcyon power status

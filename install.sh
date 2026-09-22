@@ -509,6 +509,18 @@ ENTRY
 }
 
 step_configure() {
+	# Settings written by an older Halcyon are brought forward before
+	# anything reads them: generation would otherwise resolve a v1 bar
+	# layout against the Ultra Bar's module ids and come up empty.
+	if [[ -f "$HALCYON_CONFIG_DIR/settings.json" ]]; then
+		log_step "Migrating settings"
+		if run "$BIN_DIR/halcyon" migrate; then
+			:
+		else
+			log_warn "Could not migrate settings; they are unchanged."
+		fi
+	fi
+
 	log_step "Generating the theme"
 
 	if [[ -n "${HALCYON_DRY_RUN:-}" ]]; then
@@ -517,7 +529,17 @@ step_configure() {
 	fi
 
 	if [[ ! -f "$HALCYON_CONFIG_DIR/settings.json" ]]; then
-		printf '{\n  "version": 1\n}\n' >"$HALCYON_CONFIG_DIR/settings.json"
+		# The schema version is read from the defaults we just installed
+		# rather than written here. Hardcoding it meant a fresh install
+		# created a file one version behind, which the *next* install
+		# then migrated — so installing twice changed things.
+		local schema
+		schema="$("${HALCYON_PYTHON:-python3}" -c \
+			'import json,sys; print(json.load(open(sys.argv[1]))["version"])' \
+			"$SHARE_DIR/settings.default.json" 2>/dev/null || true)"
+		[[ "$schema" =~ ^[0-9]+$ ]] || schema=1
+		printf '{\n  "version": %s\n}\n' "$schema" \
+			>"$HALCYON_CONFIG_DIR/settings.json"
 		log_ok "Created $HALCYON_CONFIG_DIR/settings.json"
 	fi
 
@@ -577,14 +599,41 @@ halcyon_setting() {
 }
 
 step_validate() {
+	# A dry run wrote nothing, so there is nothing to check. Validating
+	# absent files reported problems for work we had deliberately
+	# skipped, and made `--dry-run` exit 1 on any machine that did not
+	# already have Halcyon installed.
+	if [[ -n "${HALCYON_DRY_RUN:-}" ]]; then
+		log_step "Checking what was installed"
+		log_info "Nothing was written, so there is nothing to check."
+		return 0
+	fi
+
 	log_step "Checking what was installed"
 
 	local problems=0
 
 	# Lua: every configuration file has to compile.
-	if has luac5.4 || has luac; then
-		local luac
-		luac="$(command -v luac5.4 || command -v luac)"
+	local luac=""
+	if has luac5.4; then
+		luac="$(command -v luac5.4)"
+	elif has luac; then
+		luac="$(command -v luac)"
+	fi
+
+	# Prove the compiler works on something known-good before trusting
+	# it to judge our files. A luac that is present but broken would
+	# otherwise report every file as a syntax error, which reads as a
+	# catastrophically broken install rather than a missing tool.
+	if [[ -n "$luac" ]]; then
+		local probe
+		probe="$(mktemp)"
+		printf 'return 1\n' >"$probe"
+		"$luac" -p "$probe" >/dev/null 2>&1 || luac=""
+		rm -f "$probe"
+	fi
+
+	if [[ -n "$luac" ]]; then
 		local file
 		while IFS= read -r file; do
 			if ! "$luac" -p "$file" 2>/dev/null; then
@@ -596,20 +645,33 @@ step_validate() {
 			log_ok "Hyprland configuration parses"
 		fi
 	else
-		log_debug "No Lua interpreter; skipped the syntax check."
+		log_debug "No working Lua compiler; skipped the syntax check."
 	fi
 
 	# The generated Hyprland config against Hyprland's own option table.
+	# Exit 2 means the checker could not run — no Lua interpreter to
+	# drive the probe with, most likely. That is not evidence of a broken
+	# config, and treating it as one failed the install on any machine
+	# without a standalone lua binary.
 	if has python3 && [[ -f "$HALCYON_REPO_ROOT/scripts/dev/check-hypr-config.py" ]]; then
-		if python3 "$HALCYON_REPO_ROOT/scripts/dev/check-hypr-config.py" \
-			--config "$HYPR_CONFIG_DIR" --generated "$HALCYON_GENERATED_DIR" >/dev/null 2>&1; then
+		local config_rc=0
+		python3 "$HALCYON_REPO_ROOT/scripts/dev/check-hypr-config.py" \
+			--config "$HYPR_CONFIG_DIR" --generated "$HALCYON_GENERATED_DIR" \
+			>/dev/null 2>&1 || config_rc=$?
+		case "$config_rc" in
+		0)
 			log_ok "Every option, rule and bind is valid for this Hyprland"
-		else
+			;;
+		2)
+			log_debug "Config check skipped: no Lua interpreter."
+			;;
+		*)
 			log_warn "The configuration check found problems. Details:"
 			python3 "$HALCYON_REPO_ROOT/scripts/dev/check-hypr-config.py" \
 				--config "$HYPR_CONFIG_DIR" --generated "$HALCYON_GENERATED_DIR" || true
 			problems=$((problems + 1))
-		fi
+			;;
+		esac
 	fi
 
 	# JSON the bar and the shell read.

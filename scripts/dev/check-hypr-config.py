@@ -79,10 +79,23 @@ WORKSPACE_RULE_FIELDS = {
 RULE_META = {"name", "enabled", "match"}
 
 
+#: Exit code for "I could not run the check", as distinct from 1, which
+#: means "I ran it and the configuration is wrong". Conflating the two
+#: made a machine with no Lua interpreter look like a machine with a
+#: broken config, and failed the install over it.
+EXIT_CANNOT_CHECK = 2
+
+
+class CannotCheck(Exception):
+    """The check could not run. Not the same as the check failing."""
+
+
 def probe(config_dir: str, generated_dir: str) -> dict:
     lua = shutil.which("lua5.4") or shutil.which("lua") or shutil.which("luajit")
     if lua is None:
-        raise SystemExit("A Lua interpreter is needed to validate the config (lua5.4).")
+        raise CannotCheck(
+            "no Lua interpreter (lua5.4, lua or luajit) to run the probe with"
+        )
 
     script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hypr-config-probe.lua")
     done = subprocess.run(
@@ -90,11 +103,13 @@ def probe(config_dir: str, generated_dir: str) -> dict:
         capture_output=True, text=True, timeout=60, check=False,
     )
     if done.returncode != 0:
-        raise SystemExit(f"The config probe failed:\n{done.stderr.strip()}")
+        raise CannotCheck(
+            f"the probe did not run: {done.stderr.strip() or 'no output'}"
+        )
     try:
         return json.loads(done.stdout)
     except json.JSONDecodeError as exc:
-        raise SystemExit(f"The config probe produced invalid JSON: {exc}") from exc
+        raise CannotCheck(f"the probe produced invalid JSON: {exc}") from exc
 
 
 def check(recorded: dict) -> tuple[list[str], list[str]]:
@@ -190,7 +205,19 @@ def main() -> int:
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
-    recorded = probe(args.config, args.generated)
+    try:
+        recorded = probe(args.config, args.generated)
+    except CannotCheck as reason:
+        message = f"Skipped: {reason}"
+        if args.json:
+            json.dump(
+                {"ok": None, "skipped": str(reason)}, sys.stdout, indent=2
+            )
+            sys.stdout.write("\n")
+        else:
+            print(message)
+        return EXIT_CANNOT_CHECK
+
     problems, soft = check(recorded)
 
     if args.json:

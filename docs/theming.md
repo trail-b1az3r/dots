@@ -1,8 +1,8 @@
 # Theming
 
 Halcyon has one source of truth for every visual value. Change it in
-`settings.json`, and it lands in Hyprland, Quickshell, Waybar, hyprlock
-and hypridle together. There is no second place to keep in sync.
+`settings.json`, and it lands in Hyprland, the shell, the Ultra Bar,
+hyprlock and hypridle together. There is no second place to keep in sync.
 
 ## The colour system
 

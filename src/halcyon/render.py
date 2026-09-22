@@ -18,7 +18,7 @@ import tempfile
 import warnings
 from typing import Any, Iterable
 
-from . import hyprland, paths
+from . import hyprland, keybinds, paths
 
 
 class RenderError(RuntimeError):
@@ -186,12 +186,37 @@ def lua_value(value: Any, indent: int = 0) -> str:
     raise TypeError(f"Cannot express {type(value).__name__} in Lua")
 
 
+def lua_comment(text: str) -> str:
+    """One line of text, safe to place after `--` in generated Lua.
+
+    Diagnostics quote catalog and settings content back at the reader,
+    and a newline in that content would end the comment and make
+    everything after it live code. Control characters go too: a
+    generated file should be readable in any editor.
+    """
+    flattened = " ".join(str(text).split())
+    return "".join(ch for ch in flattened if ch.isprintable())
+
+
 def _lua_banner() -> str:
     return "".join(f"-- {line}\n" for line in BANNER.splitlines())
 
 
 def write_atomic(path: os.PathLike[str] | str, content: str) -> None:
+    """Write, replacing the file in one step — and only when it differs.
+
+    Skipping an identical write is not just an optimisation: the shell
+    watches these files, and rewriting one with the same bytes wakes
+    every binding that reads it for nothing.
+    """
     path = str(path)
+    try:
+        with open(path, "r", encoding="utf-8") as existing:
+            if existing.read() == content:
+                return
+    except (OSError, UnicodeDecodeError):
+        pass
+
     directory = os.path.dirname(path) or "."
     os.makedirs(directory, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=directory, prefix=".halcyon-", suffix=".tmp")
@@ -476,38 +501,62 @@ def halcyon_binary() -> str:
 
 
 def render_hypr_keybinds_lua(
-    settings: dict[str, Any], catalog: dict[str, Any]
+    settings: dict[str, Any],
+    catalog: dict[str, Any],
+    *,
+    registry: "keybinds.Registry | None" = None,
 ) -> str:
-    overrides = settings.get("keybinds") or {}
+    """Emit the bindings, and say in the file what was rejected and why.
+
+    The decisions are the registry's; this only writes them down. A
+    binding that did not make it leaves a comment naming the reason, so
+    the generated file answers "why does this key do nothing?" without
+    anyone having to re-run the generator.
+    """
     binary = halcyon_binary()
     workspaces = settings.get("workspaces", {})
     count = max(1, min(20, int(workspaces.get("count", 10))))
+
+    if registry is None:
+        registry = keybinds.build(catalog, settings.get("keybinds") or {})
 
     out: list[str] = [_lua_banner(), "\nlocal hl = hl\n\n"]
     out.append("-- Bindings come from settings.json layered over the shipped\n")
     out.append("-- catalog, so the Settings app can rebind anything without a\n")
     out.append("-- human editing Lua.\n\n")
 
-    seen: dict[str, str] = {}
-    for entry in catalog.get("binds", []):
-        bind_id = entry["id"]
-        binding = str(overrides.get(bind_id, entry.get("default", ""))).strip()
-        if not binding or binding.lower() in ("none", "unbound", "disabled"):
-            continue
-
-        normalised = binding.upper().replace(" ", "")
-        if normalised in seen:
+    if registry.diagnostics:
+        out.append("-- Diagnostics from this generation:\n")
+        for diagnostic in registry.diagnostics:
+            mark = "ERROR" if diagnostic.severity == "error" else "warning"
             out.append(
-                f"-- skipped {bind_id}: {binding} is already bound to "
-                f"{seen[normalised]}\n"
+                "--   [{}] {} ({}): {}\n".format(
+                    mark,
+                    lua_comment(diagnostic.binding),
+                    lua_comment(diagnostic.chord),
+                    lua_comment(diagnostic.message),
+                )
             )
-            continue
-        seen[normalised] = bind_id
+            if diagnostic.owner:
+                out.append(f"--            owner: {lua_comment(diagnostic.owner)}\n")
+            if diagnostic.resolution:
+                out.append(f"--            {lua_comment(diagnostic.resolution)}\n")
+        out.append("\n")
 
-        action = _bind_action(entry, binary)
-        options = _bind_options(entry)
+    claimed: set[str] = set()
+    for binding in registry.bindings:
+        if binding.mouse:
+            continue
+        claimed.add(keybinds.parse_chord(binding.chord).normalised)
+        action = _bind_action(
+            {"id": binding.id, "run": binding.action}, binary
+        )
+        options = _bind_options({
+            "flags": binding.flags,
+            "title": binding.description,
+        })
         suffix = f", {options}" if options else ""
-        out.append(f"hl.bind({lua_string(binding)}, {action}{suffix})\n")
+        out.append(f"hl.bind({lua_string(binding.chord)}, {action}{suffix})\n")
 
     # Workspace binds are generated here rather than as a Lua loop so they
     # go through the same duplicate check as everything else — which is
@@ -529,27 +578,28 @@ def render_hypr_keybinds_lua(
                 f"Move window to workspace {index}",
             ),
         ):
-            binding = f"{modifier} + {key}"
-            normalised = binding.upper().replace(" ", "")
-            if normalised in seen:
+            binding_text = f"{modifier} + {key}"
+            normalised = keybinds.parse_chord(binding_text).normalised
+            if normalised in claimed:
                 out.append(
-                    f"-- skipped {label}: {binding} is already bound to "
-                    f"{seen[normalised]}\n"
+                    f"-- skipped {lua_comment(label)}: "
+                    f"{lua_comment(binding_text)} is already bound\n"
                 )
                 continue
-            seen[normalised] = label
+            claimed.add(normalised)
             out.append(
-                f"hl.bind({lua_string(binding)}, {expression}, "
+                f"hl.bind({lua_string(binding_text)}, {expression}, "
                 f"{{ description = {lua_string(label)} }})\n"
             )
     out.append("\n")
 
-    for entry in catalog.get("mouseBinds", []):
-        binding = str(overrides.get(entry["id"], entry.get("default", ""))).strip()
-        if not binding:
+    for binding in registry.bindings:
+        if not binding.mouse:
             continue
-        action = _bind_action(entry, binary)
-        out.append(f"hl.bind({lua_string(binding)}, {action}, {{ mouse = true }})\n")
+        action = _bind_action({"id": binding.id, "run": binding.action}, binary)
+        out.append(
+            f"hl.bind({lua_string(binding.chord)}, {action}, {{ mouse = true }})\n"
+        )
 
     out.append(
         '\nhl.bind("SUPER + SHIFT + mouse_down", hl.dsp.focus({ workspace = "e+1" }))\n'
@@ -1139,8 +1189,16 @@ def write_all(
         write_atomic(path, content)
         written.append(str(path))
 
+    # Waybar is an opt-in second bar, not the bar. Writing its config
+    # unconditionally would leave files on disk that look live and are
+    # not — and a unit that starts on finding them.
+    waybar_wanted = str(
+        settings.get("bar", {}).get("fallbackBar", "none")
+    ).lower() == "waybar"
+
     emit("theme", paths.THEME_JSON, render_theme_json(tokens))
-    emit("waybar-css", paths.WAYBAR_CSS, render_waybar_css(tokens))
+    if waybar_wanted:
+        emit("waybar-css", paths.WAYBAR_CSS, render_waybar_css(tokens))
     emit("hypr-theme", paths.HYPR_THEME_LUA, render_hypr_theme_lua(tokens, settings))
     emit("hypr-animations", paths.HYPR_ANIM_LUA, render_hypr_animations_lua(tokens))
     emit(
@@ -1153,11 +1211,23 @@ def write_all(
         paths.GENERATED_DIR / "hypr-runtime.lua",
         render_hypr_runtime_lua(settings, tokens, environment),
     )
-    emit(
-        "waybar-config",
-        paths.GENERATED_DIR / "waybar-config.jsonc",
-        render_waybar_config(settings, tokens, waybar_base),
-    )
+    if waybar_wanted:
+        emit(
+            "waybar-config",
+            paths.GENERATED_DIR / "waybar-config.jsonc",
+            render_waybar_config(settings, tokens, waybar_base),
+        )
+    else:
+        # Leaving a stale config behind would keep halcyon-bar.service's
+        # ConditionPathExists satisfied and start a bar nobody asked for.
+        for stale in (
+            paths.GENERATED_DIR / "waybar-config.jsonc",
+            paths.WAYBAR_CSS,
+        ):
+            try:
+                os.unlink(stale)
+            except OSError:
+                pass
     emit(
         "hyprlock",
         paths.GENERATED_DIR / "hyprlock-colors.conf",

@@ -215,6 +215,19 @@ check_python() {
 		fi
 	fi
 
+	# The README promises Python 3.9. A union in a type *alias* is an
+	# ordinary expression, so `from __future__ import annotations` does
+	# not save it — the module imports here and fails for a user on 3.9.
+	if [[ -x scripts/dev/check-python-floor.py ]]; then
+		local floor_output
+		if floor_output="$(./scripts/dev/check-python-floor.py 2>&1)"; then
+			log_ok "Sources are valid on Python 3.9"
+		else
+			record_failure "Sources use syntax newer than Python 3.9"
+			printf '%s\n' "$floor_output" | head -10 | sed 's/^/      /'
+		fi
+	fi
+
 	if command -v pyright >/dev/null 2>&1; then
 		if pyright --outputjson src >/dev/null 2>&1; then
 			log_ok "Type check clean"
@@ -283,36 +296,67 @@ check_generated() {
 	fi
 	log_ok "Theme generation succeeds"
 
-	if ! python3 scripts/dev/check-hypr-config.py \
-		--config config/hypr --generated "$workdir/config/generated" >/dev/null 2>&1; then
+	# Exit 2 is "could not check" (no Lua interpreter), which is a gap in
+	# what we can verify, not a broken configuration.
+	local config_rc=0
+	python3 scripts/dev/check-hypr-config.py \
+		--config config/hypr --generated "$workdir/config/generated" \
+		>/dev/null 2>&1 || config_rc=$?
+	case "$config_rc" in
+	0)
+		log_ok "Every Hyprland option, rule, animation and bind is valid"
+		;;
+	2)
+		SKIPPED+=("Hyprland config probe (no Lua interpreter)")
+		;;
+	*)
 		record_failure "The generated Hyprland configuration is not valid"
 		python3 scripts/dev/check-hypr-config.py \
 			--config config/hypr --generated "$workdir/config/generated" 2>&1 |
 			sed 's/^/      /'
 		return 0
-	fi
-	log_ok "Every Hyprland option, rule, animation and bind is valid"
+		;;
+	esac
 
-	# Waybar's generated configuration has to reference only modules that
-	# have a definition, or the bar starts with gaps in it.
-	if ! PYTHONPATH=src python3 - "$workdir/config/generated/waybar-config.jsonc" <<'PY'; then
+	# The Ultra Bar's layout names modules by id; every id has to be one
+	# the bar can load, or that slot is a visible "unknown module" marker.
+	if ! PYTHONPATH=src python3 - <<'BARPY'; then
+import json
+import pathlib
+import re
 import sys
-from halcyon import jsonc
 
-config = jsonc.load_file(sys.argv[1])
-used = []
-for key in ("modules-left", "modules-center", "modules-right"):
-    used.extend(config.get(key, []))
+root = pathlib.Path("config/quickshell/halcyon/Modules/Bar")
+registry = (root / "BarModules.qml").read_text()
 
-missing = [name for name in used if name not in config]
-if missing:
-    print("modules with no definition: " + ", ".join(missing))
+known = set(re.findall(r'id:\s*"([\w.]+)"', registry))
+files = dict(re.findall(r'id:\s*"([\w.]+)"[^}]*?file:\s*"([^"]+)"', registry,
+                        re.S))
+
+missing_files = [
+    f"{name} -> {path}"
+    for name, path in files.items()
+    if not (root / path).is_file()
+]
+if missing_files:
+    print("bar modules with no file: " + ", ".join(missing_files))
     sys.exit(1)
-PY
-		record_failure "The generated Waybar configuration references undefined modules"
+
+with open("config/system/settings.default.json", encoding="utf-8") as handle:
+    settings = json.load(handle)
+
+bar = settings["bar"]
+used = bar["left"] + bar["center"] + bar["right"]
+unknown = [name for name in used if name not in known]
+if unknown:
+    print("bar layout names modules the registry does not have: "
+          + ", ".join(unknown))
+    sys.exit(1)
+BARPY
+		record_failure "The default bar layout references unknown modules"
 		return 0
 	fi
-	log_ok "Waybar configuration is complete"
+	log_ok "Ultra Bar layout resolves; every module has a file"
 }
 
 # ── Units ──────────────────────────────────────────────────────────────
@@ -370,62 +414,30 @@ check_consistency() {
 
 	((bad == 0)) && log_ok "Every role has an entry in every package map"
 
-	# Keybinds must not collide.
-	if ! PYTHONPATH=src python3 - <<'PY'; then
-import json
+	# The keybind registry decides what is valid; this asks it.
+	if ! PYTHONPATH=src python3 - <<'KEYBINDPY'; then
 import sys
 
-with open("config/system/keybinds.catalog.json", encoding="utf-8") as handle:
-    catalog = json.load(handle)
+from halcyon import keybinds, pipeline
 
-seen = {}
-clashes = []
-for bind in catalog["binds"] + catalog["mouseBinds"]:
-    key = bind["default"].upper().replace(" ", "")
-    if key in seen:
-        clashes.append(f"{bind['default']}: {seen[key]} and {bind['id']}")
-    seen[key] = bind["id"]
+registry = keybinds.build(
+    pipeline.load_catalog(), {}, check_executables=False
+)
 
-if clashes:
-    print("\n".join(clashes))
+if registry.errors:
+    print(keybinds.report(registry.errors))
     sys.exit(1)
-PY
-		record_failure "The keybind catalog has duplicate shortcuts"
+
+gaps = keybinds.emergency_gaps(registry)
+if gaps:
+    print("no working binding for recovery capability: " + ", ".join(gaps))
+    sys.exit(1)
+KEYBINDPY
+		record_failure "The keybind catalog has errors"
 		return 0
 	fi
-	log_ok "No duplicate shortcuts in the catalog"
+	log_ok "Keybind registry is valid; recovery bindings covered"
 
-	# Every Waybar module the default layout names must have a definition.
-	if ! PYTHONPATH=src python3 - <<'PY'; then
-import json
-import sys
-
-from halcyon import jsonc
-
-modules = jsonc.load_file("config/waybar/modules.jsonc")
-with open("config/system/settings.default.json", encoding="utf-8") as handle:
-    settings = json.load(handle)
-
-bar = settings["bar"]
-used = bar["left"] + bar["center"] + bar["right"]
-builtin = {
-    "battery", "backlight", "bluetooth", "clock", "cpu", "disk",
-    "idle_inhibitor", "memory", "mpris", "network", "privacy", "pulseaudio",
-    "temperature", "tray", "power-profiles-daemon", "keyboard-state", "user",
-    "load",
-}
-missing = [
-    name for name in used
-    if name not in modules and name.split("#")[0] not in builtin
-]
-if missing:
-    print("bar layout names modules with no definition: " + ", ".join(missing))
-    sys.exit(1)
-PY
-		record_failure "The default bar layout references undefined Waybar modules"
-		return 0
-	fi
-	log_ok "Default bar layout resolves"
 
 	# A setting that ships undocumented is a setting nobody finds.
 	local doc_output

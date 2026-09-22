@@ -1,0 +1,302 @@
+name: CI
+
+# The repository's own validator is the single source of truth for what
+# "correct" means, so CI runs that rather than a second list that can
+# drift from it. The jobs below add only what the validator cannot do
+# locally: a matrix of Python versions, and an install rehearsal in a
+# clean container.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate everything
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the tools the validator looks for
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            shellcheck lua5.4 qt6-declarative-dev-tools
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pyright
+        run: pip install --disable-pip-version-check pyright
+
+      - name: Validate
+        run: |
+          # qmlformat ships in Qt's libexec directory, not on PATH.
+          echo "/usr/lib/qt6/bin" >> "$GITHUB_PATH"
+          export PATH="/usr/lib/qt6/bin:$PATH"
+          ./scripts/dev/validate.sh
+
+  tests:
+    name: Tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.9 is the floor the code claims to support; if it does not
+        # run there, either the code or the claim is wrong.
+        python: ["3.9", "3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Unit tests
+        run: PYTHONPATH=src python -m unittest discover -t . -s tests -v
+
+  generated:
+    name: Generated configuration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Lua, for parsing what we generate
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y lua5.4
+
+      - name: Generate into a scratch home and parse the result
+        run: |
+          set -euo pipefail
+          scratch() {
+            # Halcyon is XDG-correct and the runner already sets
+            # XDG_CONFIG_HOME, which takes precedence over HOME. Moving
+            # HOME alone therefore redirects nothing.
+            export HOME="$1"
+            export XDG_CONFIG_HOME="$1/.config"
+            export XDG_DATA_HOME="$1/.local/share"
+            export XDG_STATE_HOME="$1/.local/state"
+            export XDG_CACHE_HOME="$1/.cache"
+            mkdir -p "$HOME"
+          }
+          scratch "$RUNNER_TEMP/fakehome"
+
+          PYTHONPATH=src python -m halcyon.cli theme apply --no-reload --json
+
+          generated="$XDG_CONFIG_HOME/halcyon/generated"
+          echo "Generated:"
+          ls -la "$generated"
+
+          # Nothing is accepted merely because a file exists.
+          for file in "$generated"/*.lua; do
+            luac5.4 -p "$file"
+          done
+          for file in "$generated"/*.json; do
+            python -c 'import json,sys; json.load(open(sys.argv[1]))' "$file"
+          done
+
+      - name: Keybind registry must be clean
+        run: PYTHONPATH=src python -m halcyon.cli keybinds --check
+
+      - name: QML references must resolve
+        run: ./scripts/dev/check-qml-refs.py
+
+      - name: Settings reference must be current
+        run: ./scripts/dev/gen-settings-doc.py --check
+
+      - name: Sources must be valid on the oldest Python we support
+        run: ./scripts/dev/check-python-floor.py
+
+  installer:
+    name: Installer rehearsal
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dry run changes nothing
+        run: |
+          set -euo pipefail
+          scratch() {
+            # Halcyon is XDG-correct and the runner already sets
+            # XDG_CONFIG_HOME, which takes precedence over HOME. Moving
+            # HOME alone therefore redirects nothing.
+            export HOME="$1"
+            export XDG_CONFIG_HOME="$1/.config"
+            export XDG_DATA_HOME="$1/.local/share"
+            export XDG_STATE_HOME="$1/.local/state"
+            export XDG_CACHE_HOME="$1/.cache"
+            mkdir -p "$HOME"
+          }
+          scratch "$RUNNER_TEMP/dryhome"
+
+          ./install.sh --dry-run -y
+          # A dry run that wrote something is not a dry run.
+          if [ -d "$XDG_CONFIG_HOME/halcyon" ]; then
+            echo "--dry-run created $XDG_CONFIG_HOME/halcyon" >&2
+            exit 1
+          fi
+
+      - name: Install, then install again and change nothing
+        run: |
+          set -euo pipefail
+          scratch() {
+            # Halcyon is XDG-correct and the runner already sets
+            # XDG_CONFIG_HOME, which takes precedence over HOME. Moving
+            # HOME alone therefore redirects nothing.
+            export HOME="$1"
+            export XDG_CONFIG_HOME="$1/.config"
+            export XDG_DATA_HOME="$1/.local/share"
+            export XDG_STATE_HOME="$1/.local/state"
+            export XDG_CACHE_HOME="$1/.cache"
+            mkdir -p "$HOME"
+          }
+          scratch "$RUNNER_TEMP/installhome"
+
+          ./install.sh --config-only --no-services -y
+
+          # ~/.local/state is deliberately excluded: it is the journal
+          # (install log, backup manifests, migration copies), and every
+          # run is supposed to add to it. Everything the desktop is
+          # actually made of has to be byte-identical.
+          fingerprint() {
+            # __pycache__ is the interpreter's, not ours: running the CLI
+            # writes bytecode into the installed tree, so its presence
+            # says nothing about whether the install changed anything.
+            find "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$HOME/.local/bin" \
+              -type f -not -path '*/__pycache__/*' \
+              -exec sha256sum {} + 2>/dev/null | sort
+          }
+
+          before="$(fingerprint)"
+          ./install.sh --config-only --no-services -y
+          after="$(fingerprint)"
+
+          if [ "$before" != "$after" ]; then
+            echo "The second install changed files:" >&2
+            diff <(echo "$before") <(echo "$after") >&2 || true
+            exit 1
+          fi
+          echo "Install is idempotent."
+
+      - name: Uninstall leaves only the user's own files
+        run: |
+          set -euo pipefail
+          scratch() {
+            # Halcyon is XDG-correct and the runner already sets
+            # XDG_CONFIG_HOME, which takes precedence over HOME. Moving
+            # HOME alone therefore redirects nothing.
+            export HOME="$1"
+            export XDG_CONFIG_HOME="$1/.config"
+            export XDG_DATA_HOME="$1/.local/share"
+            export XDG_STATE_HOME="$1/.local/state"
+            export XDG_CACHE_HOME="$1/.cache"
+            mkdir -p "$HOME"
+          }
+          scratch "$RUNNER_TEMP/installhome"
+
+          ./uninstall.sh -y
+          leftover="$(find "$XDG_CONFIG_HOME/halcyon" -type f 2>/dev/null || true)"
+          if [ -n "$leftover" ]; then
+            echo "Uninstall left files behind:" >&2
+            echo "$leftover" >&2
+            exit 1
+          fi
+
+  migration:
+    name: Migration from an older settings file
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: A version 1 file survives the upgrade
+        run: |
+          set -euo pipefail
+          scratch() {
+            # Halcyon is XDG-correct and the runner already sets
+            # XDG_CONFIG_HOME, which takes precedence over HOME. Moving
+            # HOME alone therefore redirects nothing.
+            export HOME="$1"
+            export XDG_CONFIG_HOME="$1/.config"
+            export XDG_DATA_HOME="$1/.local/share"
+            export XDG_STATE_HOME="$1/.local/state"
+            export XDG_CACHE_HOME="$1/.cache"
+            mkdir -p "$HOME"
+          }
+          scratch "$RUNNER_TEMP/migratehome"
+          mkdir -p "$XDG_CONFIG_HOME/halcyon"
+
+          cat > "$XDG_CONFIG_HOME/halcyon/settings.json" <<'JSON'
+          {
+            "version": 1,
+            "bar": {
+              "left": ["custom/menu", "hyprland/workspaces"],
+              "right": ["pulseaudio", "pulseaudio#microphone", "battery"]
+            },
+            "appearance": { "accentColor": "#ff8800" },
+            "somethingUnknown": { "keep": "me" }
+          }
+          JSON
+
+          PYTHONPATH=src python -m halcyon.cli migrate
+
+          python - <<'PY'
+          import json
+          import os
+
+          path = os.path.join(
+              os.environ["XDG_CONFIG_HOME"], "halcyon", "settings.json"
+          )
+          with open(path, encoding="utf-8") as handle:
+              data = json.load(handle)
+
+          assert data["version"] == 2, data["version"]
+          assert data["bar"]["left"] == ["launcher", "workspaces"], data["bar"]
+          assert data["bar"]["right"] == ["audio", "microphone", "battery"], data["bar"]
+          # The user's own values, and anything we did not recognise,
+          # have to survive untouched.
+          assert data["appearance"]["accentColor"] == "#ff8800"
+          assert data["somethingUnknown"] == {"keep": "me"}
+          print("migration preserved the user's settings")
+          PY
+
+      - name: The pre-migration file was kept
+        run: |
+          set -euo pipefail
+          scratch() {
+            # Halcyon is XDG-correct and the runner already sets
+            # XDG_CONFIG_HOME, which takes precedence over HOME. Moving
+            # HOME alone therefore redirects nothing.
+            export HOME="$1"
+            export XDG_CONFIG_HOME="$1/.config"
+            export XDG_DATA_HOME="$1/.local/share"
+            export XDG_STATE_HOME="$1/.local/state"
+            export XDG_CACHE_HOME="$1/.cache"
+            mkdir -p "$HOME"
+          }
+          scratch "$RUNNER_TEMP/migratehome"
+
+          ls -la "$XDG_STATE_HOME/halcyon/migrations/"
+          test -n "$(ls -A "$XDG_STATE_HOME/halcyon/migrations/")"

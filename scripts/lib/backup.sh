@@ -96,10 +96,20 @@ install_tree() {
 	fi
 	# -a keeps modes; --delete would be wrong here because the user may
 	# legitimately add files of their own next to ours.
+	#
+	# __pycache__ is excluded deliberately. It is bytecode built for
+	# whatever Python happened to be on the machine that produced the
+	# tarball — shipping it means installing a stranger's build
+	# artefacts, and because the interpreter writes fresh ones as soon
+	# as the CLI runs, it also made the installed tree differ from
+	# itself between runs.
 	if has rsync; then
-		rsync -a --exclude '.git' "$src/" "$dest/"
+		rsync -a --exclude '.git' --exclude '__pycache__' \
+			--exclude '*.pyc' --exclude '*.pyo' "$src/" "$dest/"
 	else
 		cp -a "$src/." "$dest/"
+		find "$dest" -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null || true
+		find "$dest" \( -name '*.pyc' -o -name '*.pyo' \) -delete 2>/dev/null || true
 	fi
 	# Show the path relative to $HOME: two different trees can share a
 	# basename ("halcyon" is both a library and a config directory), and
@@ -129,7 +139,12 @@ trees_identical() {
 	local a="$1" b="$2"
 	[[ -d "$a" && -d "$b" ]] || return 1
 	if has diff; then
-		diff -rq --exclude='.git' "$a" "$b" >/dev/null 2>&1
+		# Bytecode caches are ignored on both sides: they are not part
+		# of what we install, and the destination grows its own the
+		# moment the CLI runs, which would otherwise make an unchanged
+		# tree look modified on every install.
+		diff -rq --exclude='.git' --exclude='__pycache__' \
+			--exclude='*.pyc' --exclude='*.pyo' "$a" "$b" >/dev/null 2>&1
 	else
 		return 1
 	fi

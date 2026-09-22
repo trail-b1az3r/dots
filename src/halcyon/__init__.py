@@ -15,6 +15,6 @@ __version__ = "1.0.0"
 
 # Bumped whenever settings.json needs migrating. `halcyon.settings`
 # refuses to silently reinterpret a file from a newer schema.
-SETTINGS_SCHEMA_VERSION = 1
+SETTINGS_SCHEMA_VERSION = 2
 
 __all__ = ["__version__", "SETTINGS_SCHEMA_VERSION"]

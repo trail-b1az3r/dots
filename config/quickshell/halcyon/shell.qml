@@ -22,13 +22,16 @@ import qs.Modules.Settings
 import qs.Modules.Cheatsheet
 import qs.Modules.Capture
 import qs.Modules.Lock
+import qs.Modules.Bar
 
 /**
- * Halcyon — the Quickshell half of the desktop.
+ * Halcyon — the shell.
  *
- * Waybar owns the bar; this owns everything interactive: Spotlight,
- * Control Center, notifications, the HUD, Mission Control, the switcher,
- * the assistant, Settings and the lock screen.
+ * The Ultra Bar and every interactive surface: Spotlight, Control
+ * Center, notifications, the HUD, Mission Control, the switcher, the
+ * assistant, Settings and the lock screen. Waybar is no longer part of
+ * this; the bar is ours, so a bar module and a panel share one theme,
+ * one service layer and one definition of what a click does.
  *
  * Two rules shape the structure:
  *
@@ -51,6 +54,10 @@ ShellRoot {
     Osd { id: osd }
     Popups {}
     Lock { id: lockScreen }
+
+    // The bar is per-monitor and always present when enabled: it is the
+    // desktop's furniture, not a panel you open.
+    UltraBar {}
 
     // ── On demand ──────────────────────────────────────────────────────
 
@@ -151,6 +158,15 @@ ShellRoot {
         function clear(): void { Notifications.clearAll(); }
         function setDoNotDisturb(value: bool): void { Notifications.setDoNotDisturb(value); }
         function count(): int { return Notifications.unread; }
+    }
+
+    IpcHandler {
+        target: "bar"
+
+        function reload(): void { Config.reload(); }
+        function modules(): string {
+            return JSON.stringify(BarModules.catalogue.map(entry => entry.id));
+        }
     }
 
     IpcHandler {

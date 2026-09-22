@@ -102,13 +102,9 @@ hl.on("hyprland.start", function()
             hl.exec_cmd("quickshell -c halcyon --daemonize")
         end
 
-        if have("waybar") then
-            local config = (os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config"))
-            hl.exec_cmd(
-                "waybar -c " .. config .. "/halcyon/generated/waybar-config.jsonc" ..
-                " -s " .. config .. "/waybar/style.css"
-            )
-        end
+        -- The bar is the Ultra Bar, inside the shell process. Waybar
+        -- is started by its own systemd unit when someone opts into it
+        -- as a fallback, not from here.
 
         if have("hypridle") then
             hl.exec_cmd("hypridle")

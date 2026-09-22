@@ -565,6 +565,10 @@ def cmd_status(args: argparse.Namespace) -> int:
         payload = _notification_status(settings)
     elif args.what == "battery":
         payload = power_module.battery_state().as_dict()
+    elif args.what == "system":
+        from . import sysstat
+
+        payload = sysstat.snapshot().as_dict()
     else:
         return EXIT_USAGE
 
@@ -756,6 +760,102 @@ def cmd_version(_args: argparse.Namespace) -> int:
 # ── Parser ─────────────────────────────────────────────────────────────
 
 
+# ── keybinds ───────────────────────────────────────────────────────────
+
+
+def cmd_keybinds(args: argparse.Namespace) -> int:
+    """Inspect the keybind registry — what is bound, and what is not."""
+    from . import keybinds as keybinds_module
+    from . import pipeline, settings as settings_module
+
+    catalog = pipeline.load_catalog()
+    current = settings_module.load()
+    registry = keybinds_module.build(catalog, current.get("keybinds") or {})
+
+    if args.json:
+        payload = {
+            "bindings": [b.as_dict() for b in registry.bindings],
+            "diagnostics": [
+                {
+                    "severity": d.severity,
+                    "binding": d.binding,
+                    "chord": d.chord,
+                    "message": d.message,
+                    "owner": d.owner,
+                    "resolution": d.resolution,
+                    "source": d.source,
+                }
+                for d in registry.diagnostics
+            ],
+            "emergency": keybinds_module.emergency_coverage(registry),
+        }
+        print(json.dumps(payload, indent=2))
+        return 1 if registry.errors else 0
+
+    if args.check:
+        text = keybinds_module.report(registry.diagnostics)
+        gaps = keybinds_module.emergency_gaps(registry)
+        if text:
+            print(text)
+        if gaps:
+            print(
+                "\nNo working binding for: "
+                + ", ".join(gaps)
+                + "\nThese must work when the shell is down."
+            )
+        if not text and not gaps:
+            print(f"{len(registry.bindings)} bindings, no problems found.")
+        return 1 if (registry.errors or gaps) else 0
+
+    by_category: dict[str, list] = {}
+    for binding in registry.bindings:
+        by_category.setdefault(binding.category, []).append(binding)
+
+    for category in sorted(by_category):
+        print(f"\n{category}")
+        for binding in sorted(by_category[category], key=lambda b: b.id):
+            marks = []
+            if binding.destructive:
+                marks.append("destructive")
+            if binding.requires_shell and not keybinds_module.has_fallback(binding):
+                marks.append("needs shell")
+            suffix = f"  [{', '.join(marks)}]" if marks else ""
+            print(f"  {binding.chord:<26} {binding.description}{suffix}")
+
+    if registry.errors:
+        print(f"\n{len(registry.errors)} binding(s) are not active:")
+        for diagnostic in registry.errors:
+            print("  " + diagnostic.format().replace("\n", "\n  "))
+    return 0
+
+
+def cmd_migrate(args: argparse.Namespace) -> int:
+    """Bring an older settings file up to the current schema."""
+    from . import migrate as migrate_module
+
+    result = migrate_module.run(dry_run=args.dry_run)
+
+    if args.json:
+        print(json.dumps(result.as_dict(), indent=2))
+        return EXIT_OK
+
+    if not result.migrated and not result.notes:
+        _print(
+            f"Settings are already at schema version {result.to_version}."
+        )
+        return EXIT_OK
+
+    _print(
+        f"Migrated settings from version {result.from_version} to "
+        f"{result.to_version}."
+    )
+    if result.backup:
+        _print(f"The previous file is at {result.backup}")
+    for note in result.notes:
+        _print(f"  · {note}")
+    return EXIT_OK
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="halcyon",
@@ -889,7 +989,7 @@ def build_parser() -> argparse.ArgumentParser:
     status = sub.add_parser("status", help="status payloads for the bar")
     status.add_argument(
         "what",
-        choices=["power", "gpu", "hypernix", "assistant", "notifications", "battery"],
+        choices=["power", "gpu", "hypernix", "assistant", "notifications", "battery", "system"],
     )
     status.add_argument("--waybar", action="store_true")
     status.set_defaults(func=cmd_status)
@@ -922,6 +1022,26 @@ def build_parser() -> argparse.ArgumentParser:
     from .assistant import cli as assistant_cli
 
     assistant_cli.add_parser(sub)
+
+    keybinds_parser = sub.add_parser(
+        "keybinds", help="list and check keyboard shortcuts"
+    )
+    keybinds_parser.add_argument(
+        "--check", action="store_true",
+        help="report problems and exit non-zero if any are fatal",
+    )
+    keybinds_parser.add_argument("--json", action="store_true")
+    keybinds_parser.set_defaults(func=cmd_keybinds)
+
+    migrate_parser = sub.add_parser(
+        "migrate", help="upgrade settings written by an older Halcyon"
+    )
+    migrate_parser.add_argument(
+        "-n", "--dry-run", action="store_true",
+        help="say what would change without writing anything",
+    )
+    migrate_parser.add_argument("--json", action="store_true")
+    migrate_parser.set_defaults(func=cmd_migrate)
 
     doctor_parser = sub.add_parser("doctor", help="check the installation")
     doctor_parser.add_argument("--json", action="store_true")

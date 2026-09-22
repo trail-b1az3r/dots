@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import unittest
 
+from halcyon import SETTINGS_SCHEMA_VERSION
 from halcyon import settings as settings_module
 
 from .helpers import IsolatedHalcyon
@@ -46,7 +47,7 @@ class TestStore(IsolatedHalcyon):
         loaded = self.settings.load()
         self.assertIn("glass", loaded)
         self.assertIn("assistant", loaded)
-        self.assertEqual(loaded["version"], 1)
+        self.assertEqual(loaded["version"], SETTINGS_SCHEMA_VERSION)
 
     def test_set_coerces_to_the_declared_type(self) -> None:
         self.settings.set_value("glass.opacity", "0.42")
