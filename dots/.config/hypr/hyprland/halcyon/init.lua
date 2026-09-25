@@ -9,3 +9,11 @@
 
 require("hyprland.halcyon.general")
 require("hyprland.halcyon.keybinds")
+
+-- The active theme's window style, written by halcyon-theme. It exists only
+-- while a theme is active; see `halcyon-theme list`.
+local stateHome = os.getenv("XDG_STATE_HOME") or (HOME .. "/.local/state")
+local themeFile = stateHome .. "/halcyon/theme.lua"
+if is_file_exists(themeFile) then
+    dofile(themeFile)
+end

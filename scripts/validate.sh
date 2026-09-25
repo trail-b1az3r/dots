@@ -45,6 +45,20 @@ step "Halcyon layer is wired in"
 grep -qx 'require("hyprland.halcyon")' dots/.config/hypr/hyprland.lua ||
   fail "hyprland.lua does not require hyprland.halcyon"
 
+step "Themes are valid and render to parseable Lua"
+theme_tool=dots/.config/hypr/hyprland/halcyon/halcyon-theme
+python3 "$theme_tool" check || fail "theme check"
+render_dir="$(mktemp -d)"
+while IFS= read -r theme; do
+  python3 "$theme_tool" render "$theme" "$render_dir/$theme" >/dev/null || fail "render $theme"
+  [[ -n "$luac" ]] && { "$luac" -p -o /dev/null "$render_dir/$theme/theme.lua" || fail "$theme: theme.lua"; }
+  python3 -c 'import json, sys; json.load(open(sys.argv[1]))' "$render_dir/$theme/colors.json" || fail "$theme: colors.json"
+done < <(python3 -c 'import pathlib, sys; [print(p.stem) for p in sorted(pathlib.Path(sys.argv[1]).glob("*.json"))]' \
+  dots/.config/hypr/hyprland/halcyon/themes)
+rm -rf "$render_dir"
+grep -q 'halcyon-theme" detach' dots/.config/quickshell/ii/scripts/colors/switchwall.sh ||
+  fail "switchwall.sh no longer detaches the theme on wallpaper changes"
+
 step "Shapes submodule is registered"
 git ls-files -s dots/.config/quickshell/ii/modules/common/widgets/shapes | grep -q '^160000 ' ||
   fail "shapes submodule gitlink missing"

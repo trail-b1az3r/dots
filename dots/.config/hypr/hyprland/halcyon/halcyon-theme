@@ -1,0 +1,426 @@
+#!/usr/bin/env python3
+"""Halcyon themes: hand-made palettes on top of illogical-impulse's colours.
+
+    halcyon-theme list              the themes, and which one is active
+    halcyon-theme apply NAME        switch to a theme
+    halcyon-theme off               back to colours from the wallpaper
+    halcyon-theme menu              pick one with fuzzel
+    halcyon-theme check             validate every theme (used by CI)
+    halcyon-theme render NAME DIR   write what apply would, into DIR only
+
+A theme is a JSON file in themes/ next to this script. Applying one:
+
+1. Runs upstream's switchwall.sh twice: once to set the theme's wallpaper,
+   then once more to regenerate everything (GTK, Qt/KDE, fuzzel, hyprlock,
+   terminals) from the theme's seed colour. So the rest of the desktop
+   follows along through the same pipeline wallpapers use.
+2. Overlays the theme's own palette onto the shell's colors.json, and its
+   terminal colours onto the generated scheme, then re-applies terminals.
+3. Writes the theme's window style to $XDG_STATE_HOME/halcyon/theme.lua,
+   which hyprland/halcyon/init.lua loads, and reloads Hyprland.
+
+Picking a different wallpaper or accent colour afterwards leaves the theme:
+switchwall.sh calls `halcyon-theme detach`, which drops the window style
+so it cannot outlive the colours it was made for.
+"""
+
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+THEMES_DIR = HERE / "themes"
+
+HOME = Path.home()
+CONFIG = Path(os.environ.get("XDG_CONFIG_HOME") or HOME / ".config")
+STATE = Path(os.environ.get("XDG_STATE_HOME") or HOME / ".local/state")
+HALCYON_STATE = STATE / "halcyon"
+THEME_LUA = HALCYON_STATE / "theme.lua"
+ACTIVE_FILE = HALCYON_STATE / "active"
+GENERATED = STATE / "quickshell/user/generated"
+COLORS_SCRIPTS = CONFIG / "quickshell/ii/scripts/colors"
+SWITCHWALL = COLORS_SCRIPTS / "switchwall.sh"
+APPLYCOLOR = COLORS_SCRIPTS / "applycolor.sh"
+
+HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
+RGBA = r"rgba\([0-9A-Fa-f]{8}\)"
+BORDER = re.compile(rf"^{RGBA}( {RGBA})*( [0-9]{{1,3}}deg)?$")
+SCHEMES = {
+    "scheme-content", "scheme-expressive", "scheme-fidelity", "scheme-fruit-salad",
+    "scheme-monochrome", "scheme-neutral", "scheme-rainbow", "scheme-tonal-spot",
+}
+# The shell tokens a theme has to define. Everything else (the *_fixed
+# family) comes from the seed colour through matugen.
+SHELL_KEYS = [
+    "background", "on_background", "surface", "surface_dim", "surface_bright",
+    "surface_container_lowest", "surface_container_low", "surface_container",
+    "surface_container_high", "surface_container_highest", "surface_variant",
+    "on_surface", "on_surface_variant", "outline", "outline_variant",
+    "primary", "on_primary", "primary_container", "on_primary_container",
+    "secondary", "on_secondary", "secondary_container", "on_secondary_container",
+    "tertiary", "on_tertiary", "tertiary_container", "on_tertiary_container",
+    "error", "on_error", "error_container", "on_error_container",
+    "surface_tint", "inverse_surface", "inverse_on_surface", "inverse_primary",
+    "shadow", "scrim",
+]
+TERM_KEYS = [f"term{i}" for i in range(16)]
+HYPR_INTS = {"rounding": (0, 40), "gaps_in": (0, 40), "gaps_out": (0, 80),
+             "border_size": (0, 10), "blur_size": (1, 30), "blur_passes": (1, 8)}
+# Text/background pairs that must stay readable (WCAG AA for body text).
+CONTRAST_PAIRS = [
+    ("on_surface", "surface"), ("on_surface", "surface_container"),
+    ("on_surface", "surface_container_highest"), ("on_surface_variant", "surface_container"),
+    ("on_background", "background"), ("on_primary", "primary"),
+    ("on_primary_container", "primary_container"), ("on_secondary", "secondary"),
+    ("on_secondary_container", "secondary_container"), ("on_tertiary", "tertiary"),
+    ("on_tertiary_container", "tertiary_container"), ("on_error", "error"),
+    ("on_error_container", "error_container"), ("inverse_on_surface", "inverse_surface"),
+]
+
+
+class ThemeError(Exception):
+    pass
+
+
+# ----------------------------------------------------------------------------
+# Loading and validating
+# ----------------------------------------------------------------------------
+
+def theme_ids():
+    return sorted(p.stem for p in THEMES_DIR.glob("*.json"))
+
+
+def luminance(hex_colour):
+    def channel(c):
+        c /= 255
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+    r, g, b = (int(hex_colour[i:i + 2], 16) for i in (1, 3, 5))
+    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+
+
+def contrast(a, b):
+    la, lb = sorted((luminance(a), luminance(b)), reverse=True)
+    return (la + 0.05) / (lb + 0.05)
+
+
+def validate(theme_id, theme):
+    problems = []
+    for key in ("name", "description", "wallpaper", "seed", "scheme", "shell", "terminal", "hyprland"):
+        if key not in theme:
+            problems.append(f"missing '{key}'")
+    if problems:
+        return problems
+    if not HEX.match(theme["seed"]):
+        problems.append(f"seed {theme['seed']!r} is not #RRGGBB")
+    if theme["scheme"] not in SCHEMES:
+        problems.append(f"scheme {theme['scheme']!r} is not one switchwall.sh accepts")
+    for section, keys in (("shell", SHELL_KEYS), ("terminal", TERM_KEYS)):
+        for key in keys:
+            value = theme[section].get(key)
+            if value is None:
+                problems.append(f"{section}.{key} missing")
+            elif not HEX.match(value):
+                problems.append(f"{section}.{key} {value!r} is not #RRGGBB")
+        for key in set(theme[section]) - set(keys):
+            problems.append(f"{section}.{key} is not a known key")
+    hypr = theme["hyprland"]
+    for key, (low, high) in HYPR_INTS.items():
+        value = hypr.get(key)
+        if not isinstance(value, int) or isinstance(value, bool) or not low <= value <= high:
+            problems.append(f"hyprland.{key} must be an integer in {low}..{high}")
+    for key in ("active_border", "inactive_border"):
+        if not BORDER.match(str(hypr.get(key, ""))):
+            problems.append(f"hyprland.{key} must look like 'rgba(RRGGBBAA) [rgba(...)...] [NNdeg]'")
+    if not re.fullmatch(RGBA, str(hypr.get("shadow_color", ""))):
+        problems.append("hyprland.shadow_color must be rgba(RRGGBBAA)")
+    for key in set(hypr) - set(HYPR_INTS) - {"active_border", "inactive_border", "shadow_color"}:
+        problems.append(f"hyprland.{key} is not a known key")
+    shell = theme["shell"]
+    if all(HEX.match(str(shell.get(key, ""))) for key in SHELL_KEYS):
+        for fg, bg in CONTRAST_PAIRS:
+            ratio = contrast(shell[fg], shell[bg])
+            if ratio < 4.5:
+                problems.append(f"{fg} on {bg} has contrast {ratio:.2f}, needs 4.5")
+    wallpaper = resolve_wallpaper(theme)
+    if not str(theme["wallpaper"]).startswith("~") and not wallpaper.is_file():
+        problems.append(f"wallpaper {wallpaper} does not exist")
+    return problems
+
+
+def load(theme_id):
+    path = THEMES_DIR / f"{theme_id}.json"
+    if not path.is_file():
+        raise ThemeError(f"no theme called '{theme_id}'. Themes: {', '.join(theme_ids())}")
+    with path.open(encoding="utf-8") as handle:
+        theme = json.load(handle)
+    problems = validate(theme_id, theme)
+    if problems:
+        raise ThemeError(f"theme '{theme_id}' is invalid:\n  " + "\n  ".join(problems))
+    return theme
+
+
+def resolve_wallpaper(theme):
+    path = Path(os.path.expanduser(theme["wallpaper"]))
+    return path if path.is_absolute() else THEMES_DIR / path
+
+
+# ----------------------------------------------------------------------------
+# Rendering (pure: no side effects outside the directory given)
+# ----------------------------------------------------------------------------
+
+def render_lua(theme_id, theme):
+    h = theme["hyprland"]
+    return f"""-- Generated by halcyon-theme for the {theme['name']} theme. Do not edit:
+-- it is rewritten on every apply and deleted when you leave the theme.
+-- Your own overrides belong in ~/.config/hypr/custom, which loads later.
+
+hl.config({{
+    general = {{
+        gaps_in = {h['gaps_in']},
+        gaps_out = {h['gaps_out']},
+        border_size = {h['border_size']},
+        col = {{
+            active_border = "{h['active_border']}",
+            inactive_border = "{h['inactive_border']}"
+        }}
+    }},
+    decoration = {{
+        rounding = {h['rounding']},
+        blur = {{
+            size = {h['blur_size']},
+            passes = {h['blur_passes']}
+        }},
+        shadow = {{
+            color = "{h['shadow_color']}"
+        }}
+    }}
+}})
+"""
+
+
+def overlay_colors(colors_json_text, theme):
+    colors = json.loads(colors_json_text) if colors_json_text.strip() else {}
+    colors.update(theme["shell"])
+    return json.dumps(colors, indent=2) + "\n"
+
+
+def camel(key):
+    head, *rest = key.split("_")
+    return head + "".join(part.capitalize() for part in rest)
+
+
+def overlay_scss(scss_text, theme):
+    """Replace colours in material_colors.scss ($name: #hex; per line)."""
+    wanted = {camel(k): v for k, v in theme["shell"].items()}
+    wanted.update(theme["terminal"])
+    seen = set()
+    lines = []
+    for line in scss_text.splitlines():
+        match = re.match(r"^\$([A-Za-z0-9_]+):\s*#[0-9A-Fa-f]{6};\s*$", line)
+        if match and match.group(1) in wanted:
+            name = match.group(1)
+            seen.add(name)
+            line = f"${name}: {wanted[name]};"
+        lines.append(line)
+    # Terminal colours are required by applycolor.sh even if absent.
+    for name in TERM_KEYS:
+        if name not in seen:
+            lines.append(f"${name}: {theme['terminal'][name]};")
+    return "\n".join(lines) + "\n"
+
+
+def write_atomic(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, path)
+
+
+# ----------------------------------------------------------------------------
+# Commands
+# ----------------------------------------------------------------------------
+
+def active():
+    try:
+        return ACTIVE_FILE.read_text(encoding="utf-8").strip() or None
+    except OSError:
+        return None
+
+
+def run(cmd, **kwargs):
+    env = dict(os.environ, HALCYON_THEME_APPLYING="1")
+    result = subprocess.run(cmd, env=env, **kwargs)
+    if result.returncode != 0:
+        raise ThemeError(f"{' '.join(map(str, cmd))} failed with exit code {result.returncode}")
+
+
+def notify(summary, body=""):
+    if shutil.which("notify-send"):
+        subprocess.run(["notify-send", "-a", "Halcyon", summary, body], check=False)
+
+
+def reload_hyprland():
+    if shutil.which("hyprctl") and os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"):
+        subprocess.run(["hyprctl", "reload"], stdout=subprocess.DEVNULL, check=False)
+
+
+def cmd_list(_args):
+    current = active()
+    for theme_id in theme_ids():
+        theme = load(theme_id)
+        mark = "*" if theme_id == current else " "
+        print(f"{mark} {theme_id:<16} {theme['name']}: {theme['description']}")
+    if current is None:
+        print("\nNo theme active: colours follow the wallpaper.")
+    return 0
+
+
+def cmd_current(_args):
+    print(active() or "none")
+    return 0
+
+
+def cmd_check(_args):
+    failed = False
+    for theme_id in theme_ids():
+        try:
+            theme = load(theme_id)
+        except (ThemeError, json.JSONDecodeError) as error:
+            print(f"FAIL {theme_id}: {error}", file=sys.stderr)
+            failed = True
+            continue
+        print(f"ok   {theme_id} ({theme['name']})")
+    if not theme_ids():
+        print("FAIL no themes found", file=sys.stderr)
+        failed = True
+    return 1 if failed else 0
+
+
+def cmd_render(args):
+    if len(args) != 2:
+        raise ThemeError("usage: halcyon-theme render NAME DIR")
+    theme_id, out = args[0], Path(args[1])
+    theme = load(theme_id)
+    write_atomic(out / "theme.lua", render_lua(theme_id, theme))
+    write_atomic(out / "colors.json", overlay_colors("", theme))
+    write_atomic(out / "material_colors.scss", overlay_scss("", theme))
+    print(f"rendered {theme_id} into {out}")
+    return 0
+
+
+def cmd_apply(args):
+    if len(args) != 1:
+        raise ThemeError("usage: halcyon-theme apply NAME")
+    theme_id = args[0]
+    theme = load(theme_id)
+    if not SWITCHWALL.is_file():
+        raise ThemeError(f"{SWITCHWALL} not found. Is illogical-impulse installed?")
+
+    wallpaper = resolve_wallpaper(theme)
+    if wallpaper.is_file():
+        run([str(SWITCHWALL), "--mode", "dark", "--image", str(wallpaper)])
+    else:
+        print(f"note: wallpaper {wallpaper} not found, keeping the current one", file=sys.stderr)
+    run([str(SWITCHWALL), "--mode", "dark", "--noswitch",
+         "--type", theme["scheme"], "--color", theme["seed"]])
+
+    colors_json = GENERATED / "colors.json"
+    existing = colors_json.read_text(encoding="utf-8") if colors_json.is_file() else ""
+    write_atomic(colors_json, overlay_colors(existing, theme))
+
+    scss = GENERATED / "material_colors.scss"
+    existing = scss.read_text(encoding="utf-8") if scss.is_file() else ""
+    write_atomic(scss, overlay_scss(existing, theme))
+    if APPLYCOLOR.is_file():
+        run([str(APPLYCOLOR)])
+
+    write_atomic(THEME_LUA, render_lua(theme_id, theme))
+    write_atomic(ACTIVE_FILE, theme_id + "\n")
+    reload_hyprland()
+    notify(f"{theme['name']} theme", theme["description"])
+    print(f"applied {theme_id}")
+    return 0
+
+
+def cmd_detach(_args):
+    """Forget the active theme without touching colours (switchwall hook)."""
+    if os.environ.get("HALCYON_THEME_APPLYING"):
+        return 0
+    had_theme = active() is not None or THEME_LUA.exists()
+    for path in (THEME_LUA, ACTIVE_FILE):
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+    if had_theme:
+        reload_hyprland()
+    return 0
+
+
+def cmd_off(_args):
+    for path in (THEME_LUA, ACTIVE_FILE):
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+    if SWITCHWALL.is_file():
+        # Clearing the accent makes switchwall.sh derive colours from the
+        # current wallpaper again.
+        run([str(SWITCHWALL), "--noswitch", "--color", "clear"])
+    reload_hyprland()
+    notify("Theme off", "Colours follow the wallpaper again.")
+    print("theme off")
+    return 0
+
+
+def cmd_menu(_args):
+    if not shutil.which("fuzzel"):
+        raise ThemeError("fuzzel is not installed")
+    current = active()
+    entries = {}
+    for theme_id in theme_ids():
+        theme = load(theme_id)
+        label = f"{theme['name']}{'  (active)' if theme_id == current else ''}"
+        entries[label] = theme_id
+    off_label = "Off: follow the wallpaper"
+    entries[off_label] = None
+    choice = subprocess.run(
+        ["fuzzel", "--dmenu", "--prompt", "Theme  "],
+        input="\n".join(entries), capture_output=True, text=True, check=False,
+    ).stdout.strip()
+    if not choice:
+        return 0
+    if choice not in entries:
+        raise ThemeError(f"unknown choice {choice!r}")
+    return cmd_off([]) if entries[choice] is None else cmd_apply([entries[choice]])
+
+
+COMMANDS = {
+    "list": cmd_list, "current": cmd_current, "apply": cmd_apply, "off": cmd_off,
+    "menu": cmd_menu, "check": cmd_check, "render": cmd_render, "detach": cmd_detach,
+}
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        print(__doc__.strip())
+        return 0
+    command = COMMANDS.get(argv[0])
+    if command is None:
+        print(f"unknown command '{argv[0]}'\n\n{__doc__.strip()}", file=sys.stderr)
+        return 2
+    try:
+        return command(argv[1:])
+    except ThemeError as error:
+        print(f"halcyon-theme: {error}", file=sys.stderr)
+        if argv[0] in ("apply", "menu", "off"):
+            notify("Theme not applied", str(error))
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

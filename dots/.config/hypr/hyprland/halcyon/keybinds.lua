@@ -46,6 +46,10 @@ hl.bind("SUPER + SHIFT + 6", hl.dsp.exec_cmd(
     newScreenshotFile .. " && grim -g " .. activeWindowGeometry .. " \"$f\" && wl-copy < \"$f\""
 ), { description = "Utilities: Screenshot window >> clipboard & file" })
 
+--# Themes
+hl.bind("CTRL + SUPER + SHIFT + T", hl.dsp.exec_cmd("$HOME/.config/hypr/hyprland/halcyon/halcyon-theme menu"),
+    { description = "Shell: Pick a Halcyon theme" })
+
 --# HyperNix, when installed
 hl.bind("SUPER + SHIFT + H", hl.dsp.exec_cmd(
     "if command -v hypernix >/dev/null; then hypernix; else notify-send 'HyperNix is not installed' -a Hyprland; fi"

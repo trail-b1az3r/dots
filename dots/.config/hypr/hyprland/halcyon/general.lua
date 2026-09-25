@@ -1,18 +1,15 @@
 -- Halcyon look: a little more air between windows, softer corners and a
 -- deeper blur behind the shell's glass panels. Only keys that differ
 -- from hyprland/general.lua are set here.
+--
+-- Border colours are deliberately not set: they come from the wallpaper
+-- (hyprland/colors.lua, written by matugen) or from the active theme.
 
 hl.config({
     general = {
         gaps_in = 5,
         gaps_out = 10,
 
-        col = {
-            -- Warm amber, to match the default wallpaper. The shell's
-            -- wallpaper theming recolours this once a palette exists.
-            active_border = "rgba(E8894A66)",
-            inactive_border = "rgba(31313600)"
-        },
         snap = {
             window_gap = 5,
             monitor_gap = 10
