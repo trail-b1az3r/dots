@@ -18,6 +18,9 @@ require("hyprland.rules")
 require("hyprland.colors")
 require("hyprland.keybinds")
 
+-- Halcyon layer (see hyprland/halcyon/init.lua) --
+require("hyprland.halcyon")
+
 -- Custom configurations --
 if is_file_exists(HOME .. "/.config/hypr/custom/execs.lua") then
     require("custom.execs")

@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Lua
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y lua5.4
+
+      - name: Shapes submodule checked out
+        run: test -n "$(ls -A dots/.config/quickshell/ii/modules/common/widgets/shapes)"
+
+      - name: Static checks
+        run: ./scripts/validate.sh

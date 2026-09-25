@@ -7,10 +7,10 @@
 
 printf "${STY_CYAN}[$0]: Hi there! Before we start:${STY_RST}\n"
 printf "\n"
-printf "${STY_PURPLE}${STY_BOLD}[NEW] illogical-impulse is now powered by Quickshell.${STY_RST}\n"
+printf "${STY_PURPLE}${STY_BOLD}This installs Halcyon: end-4's illogical-impulse with a small layer on top.${STY_RST}\n"
 printf "${STY_PURPLE}"
-printf '# NOTE: illogical-impulse on AGS is no longer supported.\n'
-printf '# If you were using the old version with AGS and would like to keep it, do not run this script.\n'
+printf '# The layer lives in ~/.config/hypr/hyprland/halcyon and adds keybinds, looks and wallpapers.\n'
+printf '# Your own changes still belong in ~/.config/hypr/custom, which is never overwritten.\n'
 printf "\n"
 pause
 printf "${STY_CYAN}${STY_BOLD}Quick overview about what this script does:${STY_RST}\n"

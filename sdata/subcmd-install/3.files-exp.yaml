@@ -63,6 +63,11 @@ patterns:
   - from: "dots/.local/share/konsole"
     to: "$XDG_DATA_HOME/konsole"
     mode: "soft"
+  # Halcyon wallpapers. Paths only get envsubst here, so this assumes the
+  # default Pictures folder; the legacy script asks xdg-user-dir instead.
+  - from: "wallpapers"
+    to: "$HOME/Pictures/Wallpapers"
+    mode: "soft"
   # Fontconfig (default - fontsets handled separately if FONTSET_DIR_NAME is set)
   - from: "dots/.config/fontconfig"
     to: "$XDG_CONFIG_HOME/fontconfig"

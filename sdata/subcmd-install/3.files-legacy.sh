@@ -77,3 +77,13 @@ case "${SKIP_HYPRLAND}" in
 esac
 
 install_file "dots/.local/share/icons/illogical-impulse.svg" "${XDG_DATA_HOME}"/icons/illogical-impulse.svg
+
+# Halcyon wallpapers, into the folder the wallpaper selector opens.
+# Files already there are never overwritten, so your edits to them stick.
+case "${SKIP_WALLPAPERS}" in
+  true) true;;
+  *)
+    wallpaper_dir="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")/Wallpapers"
+    v rsync_dir__ignore_existing wallpapers "$wallpaper_dir"
+    ;;
+esac
