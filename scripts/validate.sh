@@ -114,6 +114,15 @@ else
   fail "Pillow not found (pip install pillow)"
 fi
 
+step "Voice assistant: tests pass and sources compile"
+python3 -m unittest discover -s tests >/dev/null 2>&1 || {
+  python3 -m unittest discover -s tests
+  fail "assistant tests"
+}
+python3 -m py_compile dots/.config/hypr/hyprland/halcyon/assistant/halcyon_assistant/*.py ||
+  fail "assistant sources"
+find dots/.config/hypr/hyprland/halcyon/assistant -name __pycache__ -prune -exec rm -rf {} +
+
 step "Cursor theme is complete and well formed"
 python3 scripts/check-cursors.py || fail "cursor theme"
 

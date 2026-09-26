@@ -96,6 +96,19 @@ Singleton {
                     property real inactiveWindowOpacity: 0.9 // Other windows
                     property int blurSize: 8 // Frost behind glass windows and panels
                 }
+                property JsonObject assistant: JsonObject {
+                    property bool enable: true // Start the voice assistant with Hyprland (Super+Shift+Space)
+                    property string provider: "auto" // "auto", "claude", "gemini", "ollama", "openai"
+                    property string model: "" // "" = the provider's default
+                    property string endpoint: "" // For "openai" (any OpenAI-compatible server) and "ollama"
+                    property string keyId: "" // Which stored key "openai" uses, e.g. "mistral"
+                    property bool wakeWord: false // Listen for the wake phrase (offline, on this computer)
+                    property string wakePhrase: "hey halcyon"
+                    property string speechModel: "base" // Whisper: "tiny", "base", "small"
+                    property string language: "" // "" = detect
+                    property bool speak: true // Read replies aloud
+                    property bool allowActions: true // Let it control the desktop
+                }
                 property JsonObject cursor: JsonObject {
                     property bool enable: true // Halcyon Glass cursor; off restores upstream's Bibata
                     property int size: 24
