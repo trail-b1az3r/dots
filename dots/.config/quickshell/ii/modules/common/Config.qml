@@ -80,6 +80,23 @@ Singleton {
 
             property string panelFamily: "ii" // "ii", "waffle"
 
+            // Halcyon themes. Settings > Halcyon edits these; halcyon-theme reads
+            // them. "theme" is written by halcyon-theme to show what is active.
+            property JsonObject halcyon: JsonObject {
+                property string theme: "" // Active theme id, "" for none
+                property string effects: "default" // "default" (theme's own), "full", "light", "off"
+                property JsonObject glass: JsonObject {
+                    property bool pointerLens: true // Glass lens that follows the pointer (full effects)
+                    property bool clickRipples: true // Clicks crack the glass (full effects)
+                    property bool edgeRefraction: false // Colour split at the screen edges (full effects)
+                    property real strength: 0.5 // 0-1, how strong the screen effects are
+                    property int lensSize: 90 // Radius of the pointer lens, in pixels
+                    property real windowOpacity: 0.96 // Focused windows, for themes with glass windows
+                    property real inactiveWindowOpacity: 0.9 // Other windows
+                    property int blurSize: 8 // Frost behind glass windows and panels
+                }
+            }
+
             property JsonObject policies: JsonObject {
                 property int ai: 1 // 0: No | 1: Yes | 2: Local
                 property int weeb: 1 // 0: No | 1: Open | 2: Closet

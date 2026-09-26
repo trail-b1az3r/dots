@@ -66,6 +66,10 @@ while IFS= read -r theme; do
     fail "$theme: colors.json"
 done < <(python3 -c 'import pathlib, sys; [print(p.stem) for p in sorted(pathlib.Path(sys.argv[1]).glob("*.json"))]' \
   "$halcyon_dir/themes")
+# luac only proves they are Lua; this checks Hyprland would accept them.
+mapfile -t rendered < <(find "$render_dir" -name theme.lua | sort)
+python3 scripts/check-theme-lua.py "${rendered[@]}" "$halcyon_dir/general.lua" ||
+  fail "theme.lua values Hyprland would reject"
 rm -rf "$render_dir"
 grep -q 'halcyon-theme" detach' dots/.config/quickshell/ii/scripts/colors/switchwall.sh ||
   fail "switchwall.sh no longer detaches the theme on wallpaper changes"

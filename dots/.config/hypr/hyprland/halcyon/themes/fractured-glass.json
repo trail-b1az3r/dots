@@ -1,0 +1,168 @@
+{
+  "name": "Fractured Glass",
+  "description": "Liquid glass, refraction only: a squircle glass lens follows the pointer and bends what is behind its rim, like Apple's Liquid Glass. No ripples. Over calm fragments of thick glass.",
+  "wallpaper": "wallpapers/fractured-glass.jpg",
+  "seed": "#9CC2FF",
+  "scheme": "scheme-tonal-spot",
+  "shell": {
+    "background": "#0C0E16",
+    "on_background": "#E7E9F2",
+    "surface": "#0C0E16",
+    "surface_dim": "#0C0E16",
+    "surface_bright": "#333645",
+    "surface_container_lowest": "#080A10",
+    "surface_container_low": "#141722",
+    "surface_container": "#191C28",
+    "surface_container_high": "#232633",
+    "surface_container_highest": "#2E3140",
+    "surface_variant": "#343849",
+    "on_surface": "#E7E9F2",
+    "on_surface_variant": "#C3C7D6",
+    "outline": "#8C91A3",
+    "outline_variant": "#424656",
+    "primary": "#9CC2FF",
+    "on_primary": "#0A2E64",
+    "primary_container": "#20457F",
+    "on_primary_container": "#D6E3FF",
+    "secondary": "#D0B8FF",
+    "on_secondary": "#372065",
+    "secondary_container": "#4E387D",
+    "on_secondary_container": "#EADDFF",
+    "tertiary": "#FFB0D6",
+    "on_tertiary": "#5A1140",
+    "tertiary_container": "#7A2A5A",
+    "on_tertiary_container": "#FFD8EA",
+    "error": "#FFB4AB",
+    "on_error": "#690005",
+    "error_container": "#93000A",
+    "on_error_container": "#FFDAD6",
+    "surface_tint": "#9CC2FF",
+    "inverse_surface": "#E7E9F2",
+    "inverse_on_surface": "#2C2F3A",
+    "inverse_primary": "#2F5EA8",
+    "shadow": "#000000",
+    "scrim": "#000000"
+  },
+  "terminal": {
+    "term0": "#10131C",
+    "term1": "#FF7A93",
+    "term2": "#8FE3B0",
+    "term3": "#F6D28A",
+    "term4": "#8FB8FF",
+    "term5": "#D0B8FF",
+    "term6": "#7FE0E6",
+    "term7": "#C3C7D6",
+    "term8": "#555A6E",
+    "term9": "#FF9DB0",
+    "term10": "#B2F0CC",
+    "term11": "#FFE3AE",
+    "term12": "#B6CFFF",
+    "term13": "#E3D6FF",
+    "term14": "#A8F0F3",
+    "term15": "#E7E9F2"
+  },
+  "hyprland": {
+    "rounding": 22,
+    "rounding_power": 3.0,
+    "gaps_in": 6,
+    "gaps_out": 12,
+    "border_size": 1,
+    "active_border": "rgba(FFFFFF40)",
+    "inactive_border": "rgba(FFFFFF14)",
+    "blur_size": 8,
+    "blur_passes": 3,
+    "blur_vibrancy": 0.4,
+    "blur_popups": true,
+    "shadow_color": "rgba(0000008C)",
+    "shadow_color_inactive": "rgba(00000050)",
+    "shadow_range": 40,
+    "shadow_render_power": 3,
+    "shadow_offset": [
+      0,
+      10
+    ],
+    "dim_inactive": false,
+    "window_opacity": [
+      0.96,
+      0.9
+    ],
+    "curves": {
+      "glassSpring": [
+        0.3,
+        1.25,
+        0.6,
+        1.0
+      ],
+      "glassOut": [
+        0.16,
+        1.0,
+        0.3,
+        1.0
+      ],
+      "glassIn": [
+        0.4,
+        0.0,
+        1.0,
+        1.0
+      ]
+    },
+    "animations": [
+      {
+        "leaf": "windowsIn",
+        "speed": 3.2,
+        "curve": "glassSpring",
+        "style": "popin 90%"
+      },
+      {
+        "leaf": "windowsOut",
+        "speed": 2.2,
+        "curve": "glassIn",
+        "style": "popin 94%"
+      },
+      {
+        "leaf": "windowsMove",
+        "speed": 3.4,
+        "curve": "glassOut",
+        "style": "slide"
+      },
+      {
+        "leaf": "layersIn",
+        "speed": 2.6,
+        "curve": "glassSpring",
+        "style": "popin 95%"
+      },
+      {
+        "leaf": "layersOut",
+        "speed": 2.0,
+        "curve": "glassIn",
+        "style": "popin 96%"
+      },
+      {
+        "leaf": "workspaces",
+        "speed": 4.5,
+        "curve": "glassOut",
+        "style": "slide"
+      }
+    ]
+  },
+  "effects": {
+    "default": "full",
+    "screen_shader": "shaders/liquid-glass.frag",
+    "native_blur": {
+      "variant": 8,
+      "options": {
+        "acrylic:refraction": 20,
+        "acrylic:bulb": 48,
+        "acrylic:clarity": 0.85,
+        "acrylic:aberration": 0.02,
+        "acrylic:tint": "rgba(FFFFFF10)"
+      }
+    }
+  },
+  "shell_config": {
+    "appearance.transparency.enable": true,
+    "appearance.transparency.automatic": false,
+    "appearance.transparency.backgroundTransparency": 0.25,
+    "appearance.transparency.contentTransparency": 0.55
+  }
+}
