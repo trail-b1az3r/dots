@@ -24,6 +24,12 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("sleep 1 && $HOME/.config/hypr/hyprland/halcyon/halcyon-theme cursor apply")
 end)
 
+-- The voice assistant daemon, if Settings > Halcyon > Assistant has it on.
+hl.on("hyprland.start", function()
+    hl.exec_cmd("log=\"${XDG_STATE_HOME:-$HOME/.local/state}/halcyon\"; mkdir -p \"$log\" && " ..
+        "$HOME/.config/hypr/hyprland/halcyon/assistant/halcyon-assistant autostart >> \"$log/assistant.log\" 2>&1")
+end)
+
 -- A `halcyon` command for any shell: link it into ~/.local/bin at startup
 -- (fish and zsh also get an alias). A real file already there is left alone.
 hl.on("hyprland.start", function()

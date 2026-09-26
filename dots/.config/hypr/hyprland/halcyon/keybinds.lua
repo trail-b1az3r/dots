@@ -50,6 +50,10 @@ hl.bind("SUPER + SHIFT + 6", hl.dsp.exec_cmd(
 hl.bind("CTRL + SUPER + SHIFT + T", hl.dsp.exec_cmd("$HOME/.config/hypr/hyprland/halcyon/halcyon-theme menu"),
     { description = "Shell: Pick a Halcyon theme" })
 
+--# Voice assistant: press, speak, and it answers (press again to cancel)
+hl.bind("SUPER + SHIFT + Space", hl.dsp.exec_cmd("$HOME/.config/hypr/hyprland/halcyon/assistant/halcyon-assistant listen"),
+    { description = "Shell: Voice assistant" })
+
 --# HyperNix, when installed
 hl.bind("SUPER + SHIFT + H", hl.dsp.exec_cmd(
     "if command -v hypernix >/dev/null; then hypernix; else notify-send 'HyperNix is not installed' -a Hyprland; fi"

@@ -23,7 +23,7 @@ precision highp float;
 #define LENS_ENABLED 1
 #define STRENGTH 0.5
 #define LENS_RADIUS 90.0
-#define BOUNCE 0.6
+#define BOUNCE 0.8
 
 in vec2 v_texcoord;
 uniform sampler2D tex;
@@ -49,18 +49,28 @@ const float SHADOW_WIDTH = 0.22;   // as a fraction of the radius
 const float IDLE_START = 1.2;      // s before the lens starts to fade
 const float IDLE_END = 2.6;
 
-// Jelly bounce. Screen shaders get no pointer velocity, only the time since
-// it last moved (t), so the bounce keys off that: while the pointer moves
-// (t near 0) the lens is pressed a little flatter and quivers; when it
-// stops, it springs back past its rest shape, trading width for height a
-// couple of times, and settles in about half a second.
+// Liquid bounce. Screen shaders get no pointer velocity, only the time since
+// it last moved (t), so the motion keys off that and the clock:
+//   * squash and stretch: while moving the lens is pressed flatter; when it
+//     stops, a soft spring sends it past its rest shape, trading width for
+//     height, for about a second;
+//   * slosh: waves travel round the rim in both directions, so the outline
+//     wobbles like a drop of liquid. Full strength while moving, dying away
+//     after the pointer stops.
 vec2 bounceScale(float t, float amount) {
-    float spring = exp(-6.5 * t) * cos(17.0 * t);
+    float spring = exp(-3.8 * t) * cos(13.0 * t);
     float moving = 1.0 - smoothstep(0.0, 0.12, t);
-    float quiver = sin(time * 21.0) * moving;
-    float size = -0.09 * spring;
-    float squash = 0.08 * spring + 0.03 * quiver;
+    float quiver = sin(time * 19.0) * moving;
+    float size = -0.12 * spring;
+    float squash = 0.14 * spring + 0.05 * quiver;
     return vec2(1.0 + (size + squash) * amount, 1.0 + (size - squash) * amount);
+}
+
+float liquidWave(float angle, float t, float amount) {
+    float energy = exp(-3.0 * t) * amount;
+    return energy * (0.075 * sin(3.0 * angle - time * 8.0 + 1.3)
+                   + 0.055 * sin(4.0 * angle + time * 6.5)
+                   + 0.035 * sin(5.0 * angle - time * 11.0 + 0.7));
 }
 
 void main() {
@@ -80,6 +90,7 @@ void main() {
         vec2 q = (px - pointer * size) / lensSize;  // lens space, rim at r = 1
         vec2 aq = abs(q);
         float r = pow(pow(aq.x, SQUIRCLE) + pow(aq.y, SQUIRCLE), 1.0 / SQUIRCLE);
+        r /= 1.0 + liquidWave(atan(q.y, q.x), pointer_last_active, clamp(BOUNCE, 0.0, 1.0));
 
         if (r < 1.0 + SHADOW_WIDTH) {
             // Outward normal of the squircle at this point.

@@ -91,10 +91,23 @@ Singleton {
                     property bool edgeRefraction: false // Colour split at the screen edges (full effects)
                     property real strength: 0.5 // 0-1, how strong the screen effects are
                     property int lensSize: 90 // Radius of the pointer lens, in pixels
-                    property real lensBounce: 0.6 // 0-1, how much the lens squashes and springs back as the pointer moves and stops
+                    property real lensBounce: 0.8 // 0-1, how much the lens sloshes, squashes and springs back as the pointer moves and stops
                     property real windowOpacity: 0.96 // Focused windows, for themes with glass windows
                     property real inactiveWindowOpacity: 0.9 // Other windows
                     property int blurSize: 8 // Frost behind glass windows and panels
+                }
+                property JsonObject assistant: JsonObject {
+                    property bool enable: true // Start the voice assistant with Hyprland (Super+Shift+Space)
+                    property string provider: "auto" // "auto", "claude-code" (Claude Pro/Max plan), "claude" (API key), "gemini", "ollama", "openai"
+                    property string model: "" // "" = the provider's default
+                    property string endpoint: "" // For "openai" (any OpenAI-compatible server) and "ollama"
+                    property string keyId: "" // Which stored key "openai" uses, e.g. "mistral"
+                    property bool wakeWord: false // Listen for the wake phrase (offline, on this computer)
+                    property string wakePhrase: "hey halcyon"
+                    property string speechModel: "base" // Whisper: "tiny", "base", "small"
+                    property string language: "" // "" = detect
+                    property bool speak: true // Read replies aloud
+                    property bool allowActions: true // Let it control the desktop
                 }
                 property JsonObject cursor: JsonObject {
                     property bool enable: true // Halcyon Glass cursor; off restores upstream's Bibata

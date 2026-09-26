@@ -46,6 +46,19 @@ ContentPage {
             cursorTimer.restart();
     }
 
+    readonly property string assistantTool: `${FileUtils.trimFileProtocol(Directories.config)}/hypr/hyprland/halcyon/assistant/halcyon-assistant`
+
+    Timer {
+        id: assistantTimer
+        interval: 700
+        onTriggered: Quickshell.execDetached([page.assistantTool, "reload"])
+    }
+
+    function reloadAssistant() {
+        if (page.ready)
+            assistantTimer.restart();
+    }
+
     function refresh() {
         if (page.ready)
             refreshTimer.restart();
@@ -144,6 +157,125 @@ ContentPage {
             color: Appearance.colors.colSubtext
             font.pixelSize: Appearance.font.pixelSize.smallie
             text: Translation.tr("Full adds screen effects that follow the pointer. Hyprland then redraws every frame, which uses noticeably more GPU; Light keeps the glass look without that cost.")
+        }
+    }
+
+    ContentSection {
+        icon: "mic"
+        title: Translation.tr("Assistant")
+
+        ConfigSwitch {
+            buttonIcon: "power_settings_new"
+            text: Translation.tr("Voice assistant (Super+Shift+Space)")
+            checked: Config.options.halcyon.assistant.enable
+            onCheckedChanged: {
+                Config.options.halcyon.assistant.enable = checked;
+                if (!page.ready)
+                    return;
+                if (checked)
+                    Quickshell.execDetached(["bash", "-c", `'${page.assistantTool}' autostart >/dev/null 2>&1 &`]);
+                else
+                    Quickshell.execDetached([page.assistantTool, "stop"]);
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("AI")
+            tooltip: Translation.tr("Auto uses an Anthropic API key if set, then your Claude plan, then Gemini, then a local Ollama model. Keys are shared with the AI sidebar.")
+            ConfigSelectionArray {
+                currentValue: Config.options.halcyon.assistant.provider
+                onSelected: newValue => {
+                    Config.options.halcyon.assistant.provider = newValue;
+                    page.reloadAssistant();
+                }
+                options: [
+                    { displayName: Translation.tr("Auto"), icon: "auto_mode", value: "auto" },
+                    { displayName: Translation.tr("Claude plan"), icon: "workspace_premium", value: "claude-code" },
+                    { displayName: Translation.tr("Claude API"), icon: "neurology", value: "claude" },
+                    { displayName: "Gemini", icon: "star", value: "gemini" },
+                    { displayName: Translation.tr("Ollama (local)"), icon: "computer", value: "ollama" },
+                    { displayName: Translation.tr("OpenAI-compatible"), icon: "api", value: "openai" }
+                ]
+            }
+        }
+
+        RowLayout {
+            StyledText {
+                Layout.leftMargin: 10
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                color: Appearance.colors.colSubtext
+                font.pixelSize: Appearance.font.pixelSize.smallie
+                text: Translation.tr("No API key? Use your Claude Pro or Max plan: sign in to Claude Code, Anthropic's own app, and the assistant uses it. Counts against your plan's usage.")
+            }
+            RippleButtonWithIcon {
+                buttonRadius: Appearance.rounding.full
+                materialIcon: "login"
+                mainText: Translation.tr("Sign in with Claude")
+                onClicked: {
+                    // A terminal, since signing in may ask to install Claude Code
+                    // and to paste a code back from the browser.
+                    Quickshell.execDetached(["bash", "-c", `${Config.options.apps.terminal} bash -c "'${page.assistantTool}' login; read -rp 'Press Enter to close. '"`]);
+                }
+                StyledToolTip {
+                    text: "halcyon assistant login"
+                }
+            }
+        }
+
+        ConfigRow {
+            uniform: true
+            ConfigSwitch {
+                buttonIcon: "record_voice_over"
+                text: Translation.tr("\"Hey Halcyon\"")
+                checked: Config.options.halcyon.assistant.wakeWord
+                onCheckedChanged: {
+                    Config.options.halcyon.assistant.wakeWord = checked;
+                    page.reloadAssistant();
+                }
+                StyledToolTip {
+                    text: Translation.tr("Listens for the wake phrase all the time, entirely on this computer. Needs: halcyon assistant setup --wake")
+                }
+            }
+            ConfigSwitch {
+                buttonIcon: "volume_up"
+                text: Translation.tr("Speak replies")
+                checked: Config.options.halcyon.assistant.speak
+                onCheckedChanged: {
+                    Config.options.halcyon.assistant.speak = checked;
+                    page.reloadAssistant();
+                }
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "touch_app"
+            text: Translation.tr("Let it control the desktop")
+            checked: Config.options.halcyon.assistant.allowActions
+            onCheckedChanged: {
+                Config.options.halcyon.assistant.allowActions = checked;
+                page.reloadAssistant();
+            }
+            StyledToolTip {
+                text: Translation.tr("Apps, volume, brightness, media, workspaces, themes, screenshots, lock, web search. Nothing else: it can't run commands.")
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("Speech recognition")
+            tooltip: Translation.tr("Whisper, running on this computer. Bigger is more accurate but slower. Set up with: halcyon assistant setup")
+            ConfigSelectionArray {
+                currentValue: Config.options.halcyon.assistant.speechModel
+                onSelected: newValue => {
+                    Config.options.halcyon.assistant.speechModel = newValue;
+                    page.reloadAssistant();
+                }
+                options: [
+                    { displayName: Translation.tr("Fast"), value: "tiny" },
+                    { displayName: Translation.tr("Balanced"), value: "base" },
+                    { displayName: Translation.tr("Accurate"), value: "small" }
+                ]
+            }
         }
     }
 
@@ -253,7 +385,7 @@ ContentPage {
                 value: Config.options.halcyon.glass.lensBounce
                 from: 0
                 to: 1
-                stopIndicatorValues: [0.6]
+                stopIndicatorValues: [0.8]
                 onValueChanged: {
                     Config.options.halcyon.glass.lensBounce = value;
                     page.refresh();
