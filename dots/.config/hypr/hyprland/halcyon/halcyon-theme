@@ -1,0 +1,958 @@
+#!/usr/bin/env python3
+"""Halcyon themes: hand-made palettes on top of illogical-impulse's colours.
+
+    halcyon-theme list                  the themes, and which one is active
+    halcyon-theme apply NAME            switch to a theme
+    halcyon-theme off                   back to colours from the wallpaper
+    halcyon-theme menu                  pick a theme or effects level with fuzzel
+
+    halcyon-theme effects               show the effects level
+    halcyon-theme effects LEVEL         full | light | off | default
+    halcyon-theme effects flip          mirror pointer effects vertically,
+                                        if the glass lens trails the pointer
+                                        upside down
+
+    halcyon-theme banner NAME IMAGE [--title T] [--subtitle S]
+                                        put character art on a theme's banner
+    halcyon-theme banner NAME --clear   remove it
+    halcyon-theme banner NAME           show what is set
+
+    halcyon-theme check                 validate every theme (used by CI)
+    halcyon-theme render NAME DIR [--effects LEVEL] [--native-blur]
+                                        write what apply would, into DIR only
+
+A theme is a JSON file in themes/ next to this script. Applying one:
+
+1. Runs upstream's switchwall.sh twice: once to set the theme's wallpaper,
+   then once more to regenerate everything (GTK, Qt/KDE, fuzzel, hyprlock,
+   terminals) from the theme's seed colour. So the rest of the desktop
+   follows along through the same pipeline wallpapers use.
+2. Overlays the theme's own palette onto the shell's colors.json, and its
+   terminal colours onto the generated scheme, then re-applies terminals.
+3. Changes the shell settings the theme asks for (the dock, the bar's
+   style...) in ~/.config/illogical-impulse/config.json, remembering what
+   they were.
+4. Writes the theme's window style, animations and effects to
+   $XDG_STATE_HOME/halcyon/theme.lua, which hyprland/halcyon/init.lua
+   loads, and reloads Hyprland.
+
+Leaving a theme (another theme, `off`, or a new wallpaper or accent colour,
+since switchwall.sh calls `halcyon-theme detach`) removes the window style
+and puts back every shell setting the theme changed, unless you changed
+that setting yourself in the meantime.
+
+Effects levels:
+    full    everything, including screen shaders. Shaders that follow the
+            pointer need Hyprland's damage tracking off, which costs a lot
+            more GPU time. Use `light` on battery.
+    light   no screen shader. Keeps glass materials, window translucency,
+            animations.
+    off     plain blur; no shader, translucency or native glass variants.
+"""
+
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+THEMES_DIR = HERE / "themes"
+BANNER_TOOL = HERE / "halcyon-banner"
+
+HOME = Path.home()
+CONFIG = Path(os.environ.get("XDG_CONFIG_HOME") or HOME / ".config")
+STATE = Path(os.environ.get("XDG_STATE_HOME") or HOME / ".local/state")
+DATA = Path(os.environ.get("XDG_DATA_HOME") or HOME / ".local/share")
+
+HALCYON_STATE = STATE / "halcyon"
+THEME_LUA = HALCYON_STATE / "theme.lua"
+ACTIVE_FILE = HALCYON_STATE / "active"
+EFFECTS_FILE = HALCYON_STATE / "effects"
+FLIP_FILE = HALCYON_STATE / "flip-pointer-y"
+SCREEN_SHADER = HALCYON_STATE / "screen-shader.frag"
+SHELL_RESTORE = HALCYON_STATE / "shell-restore.json"
+BANNERS = DATA / "halcyon/banners"
+
+GENERATED = STATE / "quickshell/user/generated"
+SHELL_CONFIG = CONFIG / "illogical-impulse/config.json"
+COLORS_SCRIPTS = CONFIG / "quickshell/ii/scripts/colors"
+SWITCHWALL = COLORS_SCRIPTS / "switchwall.sh"
+APPLYCOLOR = COLORS_SCRIPTS / "applycolor.sh"
+
+HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
+RGBA = r"rgba\([0-9A-Fa-f]{8}\)"
+RGBA_RE = re.compile(rf"^{RGBA}$")
+BORDER = re.compile(rf"^{RGBA}( {RGBA})*( [0-9]{{1,3}}deg)?$")
+NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,31}$")
+SHELL_KEY = re.compile(r"^[A-Za-z][A-Za-z0-9]*(\.[A-Za-z][A-Za-z0-9]*)*$")
+ANIMATION_STYLE = re.compile(r"^[a-z]+( -?[0-9]{1,3}%)?$")
+EFFECT_LEVELS = ("full", "light", "off")
+SCHEMES = {
+    "scheme-content", "scheme-expressive", "scheme-fidelity", "scheme-fruit-salad",
+    "scheme-monochrome", "scheme-neutral", "scheme-rainbow", "scheme-tonal-spot",
+}
+# The shell tokens a theme has to define. Everything else (the *_fixed
+# family) comes from the seed colour through matugen.
+SHELL_KEYS = [
+    "background", "on_background", "surface", "surface_dim", "surface_bright",
+    "surface_container_lowest", "surface_container_low", "surface_container",
+    "surface_container_high", "surface_container_highest", "surface_variant",
+    "on_surface", "on_surface_variant", "outline", "outline_variant",
+    "primary", "on_primary", "primary_container", "on_primary_container",
+    "secondary", "on_secondary", "secondary_container", "on_secondary_container",
+    "tertiary", "on_tertiary", "tertiary_container", "on_tertiary_container",
+    "error", "on_error", "error_container", "on_error_container",
+    "surface_tint", "inverse_surface", "inverse_on_surface", "inverse_primary",
+    "shadow", "scrim",
+]
+TERM_KEYS = [f"term{i}" for i in range(16)]
+# Required window settings, and their allowed ranges.
+HYPR_INTS = {"rounding": (0, 40), "gaps_in": (0, 40), "gaps_out": (0, 80),
+             "border_size": (0, 10), "blur_size": (1, 30), "blur_passes": (1, 8)}
+HYPR_REQUIRED = set(HYPR_INTS) | {"active_border", "inactive_border", "shadow_color"}
+# Optional window settings: name -> (kind, low, high).
+HYPR_OPTIONAL = {
+    "rounding_power": ("float", 1.0, 10.0),
+    "shadow_range": ("int", 0, 100),
+    "shadow_render_power": ("int", 1, 4),
+    "shadow_offset": ("pair_int", -60, 60),
+    "shadow_color_inactive": ("rgba", None, None),
+    "dim_inactive": ("bool", None, None),
+    "blur_vibrancy": ("float", 0.0, 1.0),
+    "blur_popups": ("bool", None, None),
+    "window_opacity": ("pair_float", 0.5, 1.0),
+    "curves": ("curves", None, None),
+    "animations": ("animations", None, None),
+}
+ANIMATION_LEAVES = {
+    "windowsIn", "windowsOut", "windowsMove", "fadeIn", "fadeOut", "border",
+    "layersIn", "layersOut", "fadeLayersIn", "fadeLayersOut", "workspaces",
+    "specialWorkspaceIn", "specialWorkspaceOut", "zoomFactor",
+}
+# Text/background pairs that must stay readable (WCAG AA for body text).
+CONTRAST_PAIRS = [
+    ("on_surface", "surface"), ("on_surface", "surface_container"),
+    ("on_surface", "surface_container_highest"), ("on_surface_variant", "surface_container"),
+    ("on_background", "background"), ("on_primary", "primary"),
+    ("on_primary_container", "primary_container"), ("on_secondary", "secondary"),
+    ("on_secondary_container", "secondary_container"), ("on_tertiary", "tertiary"),
+    ("on_tertiary_container", "tertiary_container"), ("on_error", "error"),
+    ("on_error_container", "error_container"), ("inverse_on_surface", "inverse_surface"),
+]
+MISSING = object()
+
+
+class ThemeError(Exception):
+    pass
+
+
+# ----------------------------------------------------------------------------
+# Loading and validating
+# ----------------------------------------------------------------------------
+
+def theme_ids():
+    return sorted(p.stem for p in THEMES_DIR.glob("*.json"))
+
+
+def luminance(hex_colour):
+    def channel(c):
+        c /= 255
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+    r, g, b = (int(hex_colour[i:i + 2], 16) for i in (1, 3, 5))
+    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+
+
+def contrast(a, b):
+    la, lb = sorted((luminance(a), luminance(b)), reverse=True)
+    return (la + 0.05) / (lb + 0.05)
+
+
+def is_int(value):
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def is_number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def check_optional(key, value, problems):
+    kind, low, high = HYPR_OPTIONAL[key]
+    where = f"hyprland.{key}"
+    if kind == "int" and not (is_int(value) and low <= value <= high):
+        problems.append(f"{where} must be an integer in {low}..{high}")
+    elif kind == "float" and not (is_number(value) and low <= value <= high):
+        problems.append(f"{where} must be a number in {low}..{high}")
+    elif kind == "bool" and not isinstance(value, bool):
+        problems.append(f"{where} must be true or false")
+    elif kind == "rgba" and not RGBA_RE.match(str(value)):
+        problems.append(f"{where} must be rgba(RRGGBBAA)")
+    elif kind in ("pair_int", "pair_float"):
+        test = is_int if kind == "pair_int" else is_number
+        if not (isinstance(value, list) and len(value) == 2
+                and all(test(v) and low <= v <= high for v in value)):
+            problems.append(f"{where} must be two numbers in {low}..{high}")
+    elif kind == "curves":
+        if not isinstance(value, dict):
+            problems.append(f"{where} must be an object of name: [x1, y1, x2, y2]")
+            return
+        for name, points in value.items():
+            if not NAME.match(name):
+                problems.append(f"{where}.{name}: curve names are letters, digits and _")
+            if not (isinstance(points, list) and len(points) == 4
+                    and all(is_number(p) and -2 <= p <= 3 for p in points)):
+                problems.append(f"{where}.{name} must be [x1, y1, x2, y2] within -2..3")
+    elif kind == "animations":
+        if not isinstance(value, list):
+            problems.append(f"{where} must be a list")
+            return
+        for index, anim in enumerate(value):
+            at = f"{where}[{index}]"
+            if not isinstance(anim, dict):
+                problems.append(f"{at} must be an object")
+                continue
+            if anim.get("leaf") not in ANIMATION_LEAVES:
+                problems.append(f"{at}.leaf must be one of {', '.join(sorted(ANIMATION_LEAVES))}")
+            if not (is_number(anim.get("speed")) and 0.1 <= anim["speed"] <= 20):
+                problems.append(f"{at}.speed must be a number in 0.1..20")
+            if not NAME.match(str(anim.get("curve", ""))):
+                problems.append(f"{at}.curve must name a curve")
+            if "style" in anim and not ANIMATION_STYLE.match(str(anim["style"])):
+                problems.append(f"{at}.style must look like 'popin 85%' or 'slide'")
+            for extra in set(anim) - {"leaf", "speed", "curve", "style"}:
+                problems.append(f"{at}.{extra} is not a known key")
+
+
+def validate(theme_id, theme):
+    problems = []
+    for key in ("name", "description", "wallpaper", "seed", "scheme", "shell", "terminal", "hyprland"):
+        if key not in theme:
+            problems.append(f"missing '{key}'")
+    if problems:
+        return problems
+    known_top = {"name", "description", "wallpaper", "seed", "scheme", "shell", "terminal",
+                 "hyprland", "effects", "shell_config", "banner"}
+    for key in set(theme) - known_top:
+        problems.append(f"'{key}' is not a known key")
+    if not HEX.match(str(theme["seed"])):
+        problems.append(f"seed {theme['seed']!r} is not #RRGGBB")
+    if theme["scheme"] not in SCHEMES:
+        problems.append(f"scheme {theme['scheme']!r} is not one switchwall.sh accepts")
+
+    for section, keys in (("shell", SHELL_KEYS), ("terminal", TERM_KEYS)):
+        for key in keys:
+            value = theme[section].get(key)
+            if value is None:
+                problems.append(f"{section}.{key} missing")
+            elif not HEX.match(str(value)):
+                problems.append(f"{section}.{key} {value!r} is not #RRGGBB")
+        for key in set(theme[section]) - set(keys):
+            problems.append(f"{section}.{key} is not a known key")
+
+    hypr = theme["hyprland"]
+    for key, (low, high) in HYPR_INTS.items():
+        value = hypr.get(key)
+        if not (is_int(value) and low <= value <= high):
+            problems.append(f"hyprland.{key} must be an integer in {low}..{high}")
+    for key in ("active_border", "inactive_border"):
+        if not BORDER.match(str(hypr.get(key, ""))):
+            problems.append(f"hyprland.{key} must look like 'rgba(RRGGBBAA) [rgba(...)...] [NNdeg]'")
+    if not RGBA_RE.match(str(hypr.get("shadow_color", ""))):
+        problems.append("hyprland.shadow_color must be rgba(RRGGBBAA)")
+    for key, value in hypr.items():
+        if key in HYPR_OPTIONAL:
+            check_optional(key, value, problems)
+        elif key not in HYPR_REQUIRED:
+            problems.append(f"hyprland.{key} is not a known key")
+    curves = hypr.get("curves", {}) if isinstance(hypr.get("curves"), dict) else {}
+    for anim in hypr.get("animations", []) if isinstance(hypr.get("animations"), list) else []:
+        if isinstance(anim, dict) and anim.get("curve") and anim["curve"] not in curves:
+            problems.append(f"animation for {anim.get('leaf')} uses curve '{anim['curve']}', "
+                            "which this theme does not define")
+
+    effects = theme.get("effects", {})
+    if not isinstance(effects, dict):
+        problems.append("effects must be an object")
+        effects = {}
+    for key in set(effects) - {"default", "screen_shader", "native_blur"}:
+        problems.append(f"effects.{key} is not a known key")
+    if effects.get("default", "light") not in EFFECT_LEVELS:
+        problems.append(f"effects.default must be one of {', '.join(EFFECT_LEVELS)}")
+    if "screen_shader" in effects:
+        shader = THEMES_DIR / str(effects["screen_shader"])
+        if not shader.is_file() or shader.suffix != ".frag":
+            problems.append(f"effects.screen_shader {shader} is not a .frag file")
+        elif not shader.read_text(encoding="utf-8").startswith("#version 300 es"):
+            problems.append("effects.screen_shader must start with '#version 300 es'")
+    native = effects.get("native_blur")
+    if native is not None:
+        if not (isinstance(native, dict) and is_int(native.get("variant"))
+                and 0 <= native["variant"] <= 10):
+            problems.append("effects.native_blur.variant must be an integer in 0..10")
+        options = native.get("options", {}) if isinstance(native, dict) else {}
+        for key, value in (options.items() if isinstance(options, dict) else []):
+            if not re.match(r"^[a-z_]+:[a-z_]+$", key):
+                problems.append(f"effects.native_blur.options.{key} must look like 'acrylic:refraction'")
+            if not (is_number(value) or RGBA_RE.match(str(value))):
+                problems.append(f"effects.native_blur.options.{key} must be a number or rgba(...)")
+
+    shell_config = theme.get("shell_config", {})
+    if not isinstance(shell_config, dict):
+        problems.append("shell_config must be an object of 'dotted.key': value")
+        shell_config = {}
+    for key, value in shell_config.items():
+        if not SHELL_KEY.match(key):
+            problems.append(f"shell_config key {key!r} must be dotted names like 'dock.enable'")
+        if not isinstance(value, (bool, int, float, str, list)):
+            problems.append(f"shell_config.{key} must be a boolean, number, string or list")
+
+    banner = theme.get("banner")
+    if banner is not None:
+        if not isinstance(banner, dict):
+            problems.append("banner must be an object")
+        else:
+            for key in ("frame", "glow"):
+                if key in banner and not HEX.match(str(banner[key])):
+                    problems.append(f"banner.{key} must be #RRGGBB")
+            for key in set(banner) - {"frame", "glow"}:
+                problems.append(f"banner.{key} is not a known key")
+
+    shell = theme["shell"]
+    if all(HEX.match(str(shell.get(key, ""))) for key in SHELL_KEYS):
+        for fg, bg in CONTRAST_PAIRS:
+            ratio = contrast(shell[fg], shell[bg])
+            if ratio < 4.5:
+                problems.append(f"{fg} on {bg} has contrast {ratio:.2f}, needs 4.5")
+    wallpaper = resolve_wallpaper(theme)
+    if not str(theme["wallpaper"]).startswith("~") and not wallpaper.is_file():
+        problems.append(f"wallpaper {wallpaper} does not exist")
+    return problems
+
+
+def load(theme_id):
+    path = THEMES_DIR / f"{theme_id}.json"
+    if not path.is_file():
+        raise ThemeError(f"no theme called '{theme_id}'. Themes: {', '.join(theme_ids())}")
+    with path.open(encoding="utf-8") as handle:
+        theme = json.load(handle)
+    problems = validate(theme_id, theme)
+    if problems:
+        raise ThemeError(f"theme '{theme_id}' is invalid:\n  " + "\n  ".join(problems))
+    return theme
+
+
+def resolve_wallpaper(theme):
+    path = Path(os.path.expanduser(theme["wallpaper"]))
+    return path if path.is_absolute() else THEMES_DIR / path
+
+
+# ----------------------------------------------------------------------------
+# Rendering (pure: no side effects outside the directory given)
+# ----------------------------------------------------------------------------
+
+def lua_value(value):
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if is_number(value):
+        return repr(round(float(value), 4)) if isinstance(value, float) else str(value)
+    # Strings reaching here have all been validated against strict patterns.
+    return f'"{value}"'
+
+
+def lua_table(mapping, indent=1):
+    pad = "    " * indent
+    lines = []
+    for key, value in mapping.items():
+        if isinstance(value, dict):
+            lines.append(f"{pad}{key} = {{\n{lua_table(value, indent + 1)}\n{pad}}}")
+        elif isinstance(value, (list, tuple)):
+            lines.append(f"{pad}{key} = {{{', '.join(lua_value(v) for v in value)}}}")
+        else:
+            lines.append(f"{pad}{key} = {lua_value(value)}")
+    return ",\n".join(lines)
+
+
+def render_lua(theme_id, theme, effects, native_blur, shader_path=None):
+    h = theme["hyprland"]
+    general = {
+        "gaps_in": h["gaps_in"], "gaps_out": h["gaps_out"], "border_size": h["border_size"],
+        "col": {"active_border": h["active_border"], "inactive_border": h["inactive_border"]},
+    }
+    decoration = {"rounding": h["rounding"]}
+    if "rounding_power" in h:
+        decoration["rounding_power"] = float(h["rounding_power"])
+    if "dim_inactive" in h:
+        decoration["dim_inactive"] = h["dim_inactive"]
+    blur = {"size": h["blur_size"], "passes": h["blur_passes"]}
+    if "blur_vibrancy" in h:
+        blur["vibrancy"] = float(h["blur_vibrancy"])
+    if "blur_popups" in h:
+        blur["popups"] = h["blur_popups"]
+    shadow = {"color": h["shadow_color"]}
+    for src, dst in (("shadow_range", "range"), ("shadow_render_power", "render_power"),
+                     ("shadow_offset", "offset"), ("shadow_color_inactive", "color_inactive")):
+        if src in h:
+            shadow[dst] = h[src]
+    decoration["blur"] = blur
+    decoration["shadow"] = shadow
+
+    translucent = effects != "off" and "window_opacity" in h
+    if translucent:
+        decoration["active_opacity"] = float(h["window_opacity"][0])
+        decoration["inactive_opacity"] = float(h["window_opacity"][1])
+
+    native = theme.get("effects", {}).get("native_blur")
+    use_native = native is not None and effects != "off" and native_blur
+    if use_native:
+        blur["variant"] = native["variant"]
+        for key, value in native.get("options", {}).items():
+            group, option = key.split(":")
+            blur.setdefault(group, {})[option] = value
+
+    config = {"general": general, "decoration": decoration}
+    use_shader = effects == "full" and shader_path is not None
+    if use_shader:
+        decoration["screen_shader"] = str(shader_path)
+        config["debug"] = {"damage_tracking": 0}
+
+    out = [
+        f"-- Generated by halcyon-theme for the {theme['name']} theme (effects: {effects}).",
+        "-- Do not edit: it is rewritten on every apply and deleted when you leave",
+        "-- the theme. Your own overrides belong in ~/.config/hypr/custom.",
+        "",
+        f"hl.config({{\n{lua_table(config)}\n}})",
+    ]
+    if use_shader:
+        out.insert(4, "-- The screen shader follows the pointer, which needs damage tracking off.\n"
+                      "-- `halcyon-theme effects light` turns both back.\n")
+    if translucent:
+        out += ["", "-- Translucent windows need blur behind them; upstream turns it off for all.",
+                'hl.window_rule({ match = { class = ".*" }, no_blur = false })']
+    curves = h.get("curves", {})
+    if curves and effects != "off":
+        out.append("")
+        for name, (x1, y1, x2, y2) in curves.items():
+            out.append(f'hl.curve("halcyon_{name}", {{ type = "bezier", points = '
+                       f"{{{{{lua_value(x1)}, {lua_value(y1)}}}, {{{lua_value(x2)}, {lua_value(y2)}}}}} }})")
+        for anim in h.get("animations", []):
+            fields = {"leaf": anim["leaf"], "enabled": True, "speed": anim["speed"],
+                      "bezier": f"halcyon_{anim['curve']}"}
+            if "style" in anim:
+                fields["style"] = anim["style"]
+            body = ", ".join(f"{k} = {lua_value(v)}" for k, v in fields.items())
+            out.append(f"hl.animation({{ {body} }})")
+    return "\n".join(out) + "\n"
+
+
+def render_shader(theme, flip):
+    shader = theme.get("effects", {}).get("screen_shader")
+    if not shader:
+        return None
+    text = (THEMES_DIR / shader).read_text(encoding="utf-8")
+    if flip:
+        text = text.replace("#define FLIP_POINTER_Y 0", "#define FLIP_POINTER_Y 1", 1)
+    return text
+
+
+def overlay_colors(colors_json_text, theme):
+    colors = json.loads(colors_json_text) if colors_json_text.strip() else {}
+    colors.update(theme["shell"])
+    return json.dumps(colors, indent=2) + "\n"
+
+
+def camel(key):
+    head, *rest = key.split("_")
+    return head + "".join(part.capitalize() for part in rest)
+
+
+def overlay_scss(scss_text, theme):
+    """Replace colours in material_colors.scss ($name: #hex; per line)."""
+    wanted = {camel(k): v for k, v in theme["shell"].items()}
+    wanted.update(theme["terminal"])
+    seen = set()
+    lines = []
+    for line in scss_text.splitlines():
+        match = re.match(r"^\$([A-Za-z0-9_]+):\s*#[0-9A-Fa-f]{6};\s*$", line)
+        if match and match.group(1) in wanted:
+            name = match.group(1)
+            seen.add(name)
+            line = f"${name}: {wanted[name]};"
+        lines.append(line)
+    # Terminal colours are required by applycolor.sh even if absent.
+    for name in TERM_KEYS:
+        if name not in seen:
+            lines.append(f"${name}: {theme['terminal'][name]};")
+    return "\n".join(lines) + "\n"
+
+
+def write_atomic(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, path)
+
+
+def remove(*paths):
+    for path in paths:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+
+
+# ----------------------------------------------------------------------------
+# Shell settings: change them for a theme, and put them back afterwards
+# ----------------------------------------------------------------------------
+
+def get_nested(data, dotted):
+    node = data
+    for part in dotted.split("."):
+        if not isinstance(node, dict) or part not in node:
+            return MISSING
+        node = node[part]
+    return node
+
+
+def set_nested(data, dotted, value):
+    parts = dotted.split(".")
+    node = data
+    for part in parts[:-1]:
+        if not isinstance(node.get(part), dict):
+            node[part] = {}
+        node = node[part]
+    node[parts[-1]] = value
+
+
+def delete_nested(data, dotted):
+    parts = dotted.split(".")
+    node = data
+    for part in parts[:-1]:
+        node = node.get(part)
+        if not isinstance(node, dict):
+            return
+    node.pop(parts[-1], None)
+
+
+def read_shell_config():
+    try:
+        return json.loads(SHELL_CONFIG.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def apply_shell_config(theme):
+    settings = theme.get("shell_config") or {}
+    if not settings:
+        return
+    data = read_shell_config()
+    restore = {}
+    for key, value in settings.items():
+        previous = get_nested(data, key)
+        restore[key] = {"had": previous is not MISSING,
+                        "previous": None if previous is MISSING else previous,
+                        "set": value}
+        set_nested(data, key, value)
+    write_atomic(SHELL_RESTORE, json.dumps(restore, indent=2) + "\n")
+    write_atomic(SHELL_CONFIG, json.dumps(data, indent=2) + "\n")
+
+
+def restore_shell_config():
+    try:
+        restore = json.loads(SHELL_RESTORE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    data = read_shell_config()
+    changed = False
+    for key, entry in restore.items():
+        # Only undo what is still the theme's doing; a setting you changed
+        # yourself since then stays as you left it.
+        if get_nested(data, key) != entry["set"]:
+            continue
+        if entry["had"]:
+            set_nested(data, key, entry["previous"])
+        else:
+            delete_nested(data, key)
+        changed = True
+    if changed:
+        write_atomic(SHELL_CONFIG, json.dumps(data, indent=2) + "\n")
+    remove(SHELL_RESTORE)
+
+
+# ----------------------------------------------------------------------------
+# State
+# ----------------------------------------------------------------------------
+
+def read_state(path):
+    try:
+        return path.read_text(encoding="utf-8").strip() or None
+    except OSError:
+        return None
+
+
+def active():
+    return read_state(ACTIVE_FILE)
+
+
+def effects_for(theme):
+    override = read_state(EFFECTS_FILE)
+    if override in EFFECT_LEVELS:
+        return override
+    return theme.get("effects", {}).get("default", "light")
+
+
+def hyprland_running():
+    return bool(shutil.which("hyprctl") and os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"))
+
+
+def hyprland_has_option(option):
+    if not hyprland_running():
+        return False
+    result = subprocess.run(["hyprctl", "getoption", option, "-j"],
+                            capture_output=True, text=True, check=False)
+    return result.returncode == 0 and "no such option" not in (result.stdout + result.stderr).lower()
+
+
+def run(cmd, **kwargs):
+    env = dict(os.environ, HALCYON_THEME_APPLYING="1")
+    result = subprocess.run(cmd, env=env, **kwargs)
+    if result.returncode != 0:
+        raise ThemeError(f"{' '.join(map(str, cmd))} failed with exit code {result.returncode}")
+
+
+def notify(summary, body=""):
+    if shutil.which("notify-send"):
+        subprocess.run(["notify-send", "-a", "Halcyon", summary, body], check=False)
+
+
+def reload_hyprland():
+    if hyprland_running():
+        subprocess.run(["hyprctl", "reload"], stdout=subprocess.DEVNULL, check=False)
+
+
+def write_window_style(theme_id, theme):
+    """(Re)write theme.lua and the shader for the active effects level."""
+    effects = effects_for(theme)
+    shader_text = render_shader(theme, bool(read_state(FLIP_FILE)))
+    shader_path = None
+    if shader_text is not None and effects == "full":
+        write_atomic(SCREEN_SHADER, shader_text)
+        shader_path = SCREEN_SHADER
+    else:
+        remove(SCREEN_SHADER)
+    native = hyprland_has_option("decoration:blur:variant")
+    write_atomic(THEME_LUA, render_lua(theme_id, theme, effects, native, shader_path))
+    return effects, native
+
+
+def leave_theme():
+    """Undo everything a theme changed except colours."""
+    restore_shell_config()
+    remove(THEME_LUA, ACTIVE_FILE, SCREEN_SHADER)
+
+
+# ----------------------------------------------------------------------------
+# Banners
+# ----------------------------------------------------------------------------
+
+def banner_files(theme_id):
+    meta = BANNERS / f"{theme_id}.json"
+    images = sorted(p for p in BANNERS.glob(f"{theme_id}.*") if p.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp"))
+    return meta, (images[0] if images else None)
+
+
+def banner_python():
+    """Pillow lives in illogical-impulse's virtual environment."""
+    venv = os.environ.get("ILLOGICAL_IMPULSE_VIRTUAL_ENV")
+    if venv:
+        candidate = Path(os.path.expanduser(venv)) / "bin/python"
+        if candidate.exists():
+            return str(candidate)
+    return sys.executable
+
+
+def compose_banner(theme_id, theme, wallpaper):
+    """Return the wallpaper to use: the theme's own, or it with a banner."""
+    if "banner" not in theme:
+        return wallpaper
+    meta_path, image = banner_files(theme_id)
+    if image is None:
+        return wallpaper
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        meta = {}
+    out = HALCYON_STATE / f"banner-{theme_id}.jpg"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [banner_python(), str(BANNER_TOOL), "--background", str(wallpaper), "--art", str(image),
+           "--out", str(out), "--frame", theme["banner"].get("frame", theme["shell"]["primary"]),
+           "--glow", theme["banner"].get("glow", theme["shell"]["secondary"])]
+    if meta.get("title"):
+        cmd += ["--title", meta["title"]]
+    if meta.get("subtitle"):
+        cmd += ["--subtitle", meta["subtitle"]]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if result.returncode != 0 or not out.is_file():
+        print(f"note: could not compose the banner, using the plain wallpaper\n{result.stderr}", file=sys.stderr)
+        return wallpaper
+    return out
+
+
+# ----------------------------------------------------------------------------
+# Commands
+# ----------------------------------------------------------------------------
+
+def cmd_list(_args):
+    current = active()
+    for theme_id in theme_ids():
+        theme = load(theme_id)
+        mark = "*" if theme_id == current else " "
+        print(f"{mark} {theme_id:<16} {theme['name']}: {theme['description']}")
+    if current is None:
+        print("\nNo theme active: colours follow the wallpaper.")
+    else:
+        print(f"\nEffects: {effects_for(load(current))}")
+    return 0
+
+
+def cmd_current(_args):
+    print(active() or "none")
+    return 0
+
+
+def cmd_check(_args):
+    failed = False
+    for theme_id in theme_ids():
+        try:
+            theme = load(theme_id)
+        except (ThemeError, json.JSONDecodeError) as error:
+            print(f"FAIL {theme_id}: {error}", file=sys.stderr)
+            failed = True
+            continue
+        print(f"ok   {theme_id} ({theme['name']})")
+    if not theme_ids():
+        print("FAIL no themes found", file=sys.stderr)
+        failed = True
+    return 1 if failed else 0
+
+
+def cmd_render(args):
+    positional = [a for a in args if not a.startswith("--")]
+    effects = "full"
+    if "--effects" in args:
+        effects = args[args.index("--effects") + 1]
+        positional.remove(effects)
+    if len(positional) != 2 or effects not in EFFECT_LEVELS:
+        raise ThemeError("usage: halcyon-theme render NAME DIR [--effects LEVEL] [--native-blur]")
+    theme_id, out = positional[0], Path(positional[1])
+    theme = load(theme_id)
+    shader = render_shader(theme, False)
+    shader_path = None
+    if shader is not None:
+        shader_path = out / "screen-shader.frag"
+        write_atomic(shader_path, shader)
+    write_atomic(out / "theme.lua", render_lua(theme_id, theme, effects, "--native-blur" in args, shader_path))
+    write_atomic(out / "colors.json", overlay_colors("", theme))
+    write_atomic(out / "material_colors.scss", overlay_scss("", theme))
+    print(f"rendered {theme_id} ({effects}) into {out}")
+    return 0
+
+
+def cmd_apply(args):
+    if len(args) != 1:
+        raise ThemeError("usage: halcyon-theme apply NAME")
+    theme_id = args[0]
+    theme = load(theme_id)
+    if not SWITCHWALL.is_file():
+        raise ThemeError(f"{SWITCHWALL} not found. Is illogical-impulse installed?")
+
+    # Fully leave the previous theme first, so a failure part way through
+    # leaves no theme half-applied.
+    leave_theme()
+
+    wallpaper = resolve_wallpaper(theme)
+    if wallpaper.is_file():
+        wallpaper = compose_banner(theme_id, theme, wallpaper)
+        run([str(SWITCHWALL), "--mode", "dark", "--image", str(wallpaper)])
+    else:
+        print(f"note: wallpaper {wallpaper} not found, keeping the current one", file=sys.stderr)
+    run([str(SWITCHWALL), "--mode", "dark", "--noswitch",
+         "--type", theme["scheme"], "--color", theme["seed"]])
+
+    colors_json = GENERATED / "colors.json"
+    existing = colors_json.read_text(encoding="utf-8") if colors_json.is_file() else ""
+    write_atomic(colors_json, overlay_colors(existing, theme))
+
+    scss = GENERATED / "material_colors.scss"
+    existing = scss.read_text(encoding="utf-8") if scss.is_file() else ""
+    write_atomic(scss, overlay_scss(existing, theme))
+    if APPLYCOLOR.is_file():
+        run([str(APPLYCOLOR)])
+
+    apply_shell_config(theme)
+    effects, native = write_window_style(theme_id, theme)
+    write_atomic(ACTIVE_FILE, theme_id + "\n")
+    reload_hyprland()
+
+    body = theme["description"]
+    if effects == "full" and theme.get("effects", {}).get("screen_shader"):
+        body += "\nScreen effects are on and use more GPU: `halcyon-theme effects light` to save power."
+    notify(f"{theme['name']} theme", body)
+    print(f"applied {theme_id} (effects: {effects}{', native glass' if native else ''})")
+    return 0
+
+
+def cmd_effects(args):
+    current = active()
+    if not args:
+        if current is None:
+            print(f"no theme active (effects setting: {read_state(EFFECTS_FILE) or 'theme default'})")
+        else:
+            print(effects_for(load(current)))
+        return 0
+    level = args[0]
+    if level == "flip":
+        if read_state(FLIP_FILE):
+            remove(FLIP_FILE)
+            print("pointer effects: normal")
+        else:
+            write_atomic(FLIP_FILE, "1\n")
+            print("pointer effects: flipped vertically")
+    elif level == "default":
+        remove(EFFECTS_FILE)
+    elif level in EFFECT_LEVELS:
+        write_atomic(EFFECTS_FILE, level + "\n")
+    else:
+        raise ThemeError("usage: halcyon-theme effects [full|light|off|default|flip]")
+    if current is not None:
+        effects, _native = write_window_style(current, load(current))
+        reload_hyprland()
+        notify("Effects", f"Now {effects}.")
+        print(f"effects: {effects}")
+    return 0
+
+
+def cmd_banner(args):
+    if not args:
+        raise ThemeError("usage: halcyon-theme banner NAME [IMAGE [--title T] [--subtitle S] | --clear]")
+    theme_id = args[0]
+    theme = load(theme_id)
+    if "banner" not in theme:
+        raise ThemeError(f"the {theme['name']} theme has no banner")
+    meta_path, image = banner_files(theme_id)
+    rest = args[1:]
+    if not rest:
+        if image is None:
+            print(f"no banner set for {theme_id}")
+        else:
+            meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.is_file() else {}
+            print(f"{image}\ntitle: {meta.get('title', '')}\nsubtitle: {meta.get('subtitle', '')}")
+        return 0
+    if rest[0] == "--clear":
+        remove(meta_path, *(p for p in BANNERS.glob(f"{theme_id}.*")))
+        print(f"banner cleared for {theme_id}")
+    else:
+        source = Path(os.path.expanduser(rest[0]))
+        if not source.is_file():
+            raise ThemeError(f"{source} does not exist")
+        if source.suffix.lower() not in (".png", ".jpg", ".jpeg", ".webp"):
+            raise ThemeError("the banner image must be PNG, JPEG or WebP")
+        meta = {}
+        for flag in ("--title", "--subtitle"):
+            if flag in rest:
+                index = rest.index(flag)
+                if index + 1 >= len(rest):
+                    raise ThemeError(f"{flag} needs a value")
+                meta[flag[2:]] = rest[index + 1]
+        BANNERS.mkdir(parents=True, exist_ok=True)
+        for old in BANNERS.glob(f"{theme_id}.*"):
+            old.unlink()
+        shutil.copyfile(source, BANNERS / f"{theme_id}{source.suffix.lower()}")
+        write_atomic(meta_path, json.dumps(meta, indent=2) + "\n")
+        print(f"banner set for {theme_id}")
+    if active() == theme_id:
+        return cmd_apply([theme_id])
+    print(f"it shows the next time you apply {theme_id}")
+    return 0
+
+
+def cmd_detach(_args):
+    """Leave the active theme without touching colours (switchwall hook)."""
+    if os.environ.get("HALCYON_THEME_APPLYING"):
+        return 0
+    had_theme = active() is not None or THEME_LUA.exists()
+    leave_theme()
+    if had_theme:
+        reload_hyprland()
+    return 0
+
+
+def cmd_off(_args):
+    leave_theme()
+    if SWITCHWALL.is_file():
+        # Clearing the accent makes switchwall.sh derive colours from the
+        # current wallpaper again.
+        run([str(SWITCHWALL), "--noswitch", "--color", "clear"])
+    reload_hyprland()
+    notify("Theme off", "Colours follow the wallpaper again.")
+    print("theme off")
+    return 0
+
+
+def cmd_menu(_args):
+    if not shutil.which("fuzzel"):
+        raise ThemeError("fuzzel is not installed")
+    current = active()
+    entries = {}
+    for theme_id in theme_ids():
+        theme = load(theme_id)
+        entries[f"{theme['name']}{'  (active)' if theme_id == current else ''}"] = ("apply", theme_id)
+    entries["Off: follow the wallpaper"] = ("off", None)
+    if current is not None:
+        level = effects_for(load(current))
+        for option in EFFECT_LEVELS:
+            label = f"Effects: {option}{'  (current)' if option == level else ''}"
+            entries[label] = ("effects", option)
+    choice = subprocess.run(
+        ["fuzzel", "--dmenu", "--prompt", "Theme  "],
+        input="\n".join(entries), capture_output=True, text=True, check=False,
+    ).stdout.strip()
+    if not choice:
+        return 0
+    if choice not in entries:
+        raise ThemeError(f"unknown choice {choice!r}")
+    action, value = entries[choice]
+    if action == "apply":
+        return cmd_apply([value])
+    if action == "effects":
+        return cmd_effects([value])
+    return cmd_off([])
+
+
+COMMANDS = {
+    "list": cmd_list, "current": cmd_current, "apply": cmd_apply, "off": cmd_off,
+    "menu": cmd_menu, "check": cmd_check, "render": cmd_render, "detach": cmd_detach,
+    "effects": cmd_effects, "banner": cmd_banner,
+}
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        print(__doc__.strip())
+        return 0
+    command = COMMANDS.get(argv[0])
+    if command is None:
+        print(f"unknown command '{argv[0]}'\n\n{__doc__.strip()}", file=sys.stderr)
+        return 2
+    try:
+        return command(argv[1:])
+    except ThemeError as error:
+        print(f"halcyon-theme: {error}", file=sys.stderr)
+        if argv[0] in ("apply", "menu", "off", "effects", "banner"):
+            notify("Theme not applied", str(error))
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

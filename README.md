@@ -1,882 +1,286 @@
 # Halcyon
 
-A desktop environment for Hyprland — not a theme on top of one.
+A Hyprland desktop built on [end-4's dots-hyprland](https://github.com/end-4/dots-hyprland)
+(illogical-impulse), with a small layer of our own on top.
 
-Halcyon takes the ideas behind Apple's Liquid Glass — layered
-translucency, material that responds to what is behind it, motion that
-carries meaning — and builds them natively on Wayland. Everything here
-is original: the colour system, the glass compositing, the shell, the
-search, the assistant. Nothing is copied from Apple, and no proprietary
-asset ships in this repository.
-
-The design principle throughout: **one set of tokens, every surface.**
-A colour, a radius or a duration is defined once and projected into
-Hyprland's Lua config, Quickshell's QML, hyprlock's hyprlang and the
-wallpaper daemon. There is no second place where a
-value can drift.
-
----
-
-## Contents
-
-- [What you get](#what-you-get)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Supported distributions](#supported-distributions)
-- [Keyboard shortcuts](#keyboard-shortcuts)
-- [The Ultra Bar](#the-ultra-bar)
-- [Architecture](#architecture)
-- [Customisation](#customisation)
-- [The AI assistant](#the-ai-assistant)
-- [HyperNix integration](#hypernix-integration)
-- [Battery and power](#battery-and-power)
-- [Environment variables](#environment-variables)
-- [Troubleshooting](#troubleshooting)
-- [Uninstalling and restoring](#uninstalling-and-restoring)
-- [Extending Halcyon](#extending-halcyon)
-- [Development](#development)
-- [Licence](#licence)
+The earlier Halcyon was a desktop written from scratch: a Python theme
+generator, its own Quickshell shell and its own installer. It broke, so
+this repository now starts from end-4's desktop, which is maintained and
+known to work, and keeps Halcyon's own changes in one place on top of it.
 
 ---
 
 ## What you get
 
-**A shell, written in Quickshell.** The Ultra Bar, Spotlight-style
-universal search, a Control Center, a notification centre with grouping
-and history, Mission Control, an application switcher, on-screen
-displays for volume and brightness, a lock screen with real PAM
-authentication, and desktop widgets. No placeholder components.
+Everything illogical-impulse provides: the Quickshell bar and sidebars,
+overview, search, notifications, lock screen, on-screen keyboard, AI
+sidebar, Material You colours taken from your wallpaper, and the
+installer for Arch, Fedora, Gentoo and Nix. See the
+[illogical-impulse docs](https://ii.clsty.link) for all of it. Those docs
+apply here unchanged.
 
-**The bar is ours.** The Halcyon Ultra Bar is part of the shell, not a
-third-party bar with a stylesheet on it — so a bar module and a panel
-share one theme, one service layer and one definition of what a click
-does. 25 modules, composed from three lists of ids in settings; one per
-monitor, floating or attached, with auto-hide. A module that fails
-leaves a marker naming itself rather than emptying the row, and a module
-with nothing true to report hides instead of showing a zero. Waybar is
-no longer required, and is off unless you ask for it.
-
-**Glass that is actually composited.** `GlassSurface` layers a tint, a
-specular highlight, an inner shadow, a hairline border and a drop shadow
-over Hyprland's blur, with the layer's own blur configured through
-`layerrule`. Six presets — `tinted`, `clear`, `ultra-clear`,
-`dark-glass`, `light-glass` and `oled` — each a different balance of
-opacity, blur radius, saturation and specular strength, not six opacity
-values.
-
-**Colour derived from your wallpaper.** Swatches are extracted (via
-ImageMagick, or a pure-Python PNG decoder when it is not installed),
-scored by chroma, area and mid-tone preference, then projected through
-OKLCh into a full tonal ramp. Out-of-gamut colours are mapped by
-reducing chroma at constant hue, the way CSS Color 4 specifies — so a
-ramp reads as one hue from end to end instead of drifting purple at the
-light end. Every foreground/background pair is checked against WCAG
-contrast ratios and corrected if it falls short.
-
-**Motion with a grammar.** Five presets — `macos`, `smooth`, `fast`,
-`minimal`, `disabled` — over seven named curves, with durations scaled
-from a single base. Windows, workspaces, layers and menus each
-use the curve that matches what they are doing. `prefers-reduced-motion`
-and the accessibility settings collapse the whole system to opacity
-fades without a separate code path.
-
-**Universal search.** 14 providers — applications, open windows,
-settings (searchable by their own labels), desktop actions, files,
-recent files, clipboard history, shell commands, power profiles,
-HyperNix, a safe calculator, unit and currency conversion, the
-assistant, and the web. Time-budgeted, so a slow provider cannot make
-the field stutter, and each one isolated so a broken provider cannot
-take Spotlight down.
-
-**A voice assistant with two real backends.** NixOrb if you have it, a
-local Whisper + Ollama + Piper stack if you do not, switchable from
-Settings with no config editing. Deterministic intent rules run before
-any model does, so "turn the volume down" never needs an LLM. Every
-effect goes through an allowlist of 33 typed actions — the model
-chooses an action and its parameters, never a shell command.
-
-**Power management that changes how the desktop looks.** Effects step
-down as the battery falls, polling slows, and the policy only ever
-reduces quality from what you chose — it will not decide you meant
-`high` when you set `low`.
-
----
-
-## Requirements
+On top of that, Halcyon adds:
 
 | | |
 |---|---|
-| Compositor | Hyprland **0.56 or newer** (Lua configuration) |
-| Shell | Quickshell **0.3 or newer** |
-| Bar | None — the Ultra Bar is part of the shell |
-| Session | Wayland, PipeWire, a working portal |
-| Python | 3.9 or newer, standard library only |
+| **Glass panels** | Shell transparency is on by default. It can still be turned off in Settings. |
+| **Softer layout** | Wider gaps, rounder corners, deeper blur (popups too), a softer shadow. |
+| **Wallpapers** | The hyperNeo fire wallpaper is the default. It and the three Halcyon wallpapers are copied into `~/Pictures/Wallpapers`, where the wallpaper picker looks. |
+| **Themes** | Three hand-made themes: HyperNeo, Star Rail and Shattered Glass. [More below.](#themes) |
+| **Keybinds** | Extra shortcuts, listed below. They only use key combinations upstream leaves free. |
 
-Hyprland 0.53 moved configuration to Lua and 0.56 is the version this
-targets. Halcyon reads the option table from your *installed* compositor
-via `hyprctl descriptions -j` and validates everything it generates
-against it before writing a file — so it adapts to your version rather
-than assuming one. When Hyprland is not running (during installation, or
-from a TTY) it falls back to a snapshot of 0.56.2's 353 options shipped
-in `deps/hyprland-options.json`, and says which source it used.
-
-Optional, by feature:
-
-| Feature | Needs |
-|---|---|
-| Clipboard history | `cliphist`, `wl-clipboard` |
-| Screen recording | `wf-recorder` or `gpu-screen-recorder` |
-| Wallpaper colours | `imagemagick` (falls back to a built-in PNG reader) |
-| Local assistant | `ollama`, `whisper.cpp`, `piper` |
-| NixOrb assistant | `nixorb` |
-| Power profiles | `power-profiles-daemon`, `tuned` or `tlp` — **one of them** |
-
-Run `./check-deps.sh` to see what is present on your machine, grouped by
-what it would enable.
-
----
-
-## Installation
+## Install
 
 ```sh
-git clone https://github.com/trail-b1az3r/dots.git halcyon
+git clone --recursive https://github.com/trail-b1az3r/dots.git halcyon
 cd halcyon
-./install.sh --dry-run     # see the plan for this machine first
-./install.sh
+./setup install
 ```
 
-`--dry-run` prints every package, every file and every service it would
-touch, and writes nothing.
-
-### Options
-
-| Flag | Effect |
-|---|---|
-| `-n`, `--dry-run` | Print the plan; change nothing. |
-| `-y`, `--yes` | Do not prompt. |
-| `--no-deps` | Do not install system packages. |
-| `--no-optional` | Only what the desktop cannot start without. |
-| `--with-ai` | Also install the local AI stack. |
-| `--no-services` | Do not enable systemd user units. |
-| `--no-build` | Never build from source; skip what has no package. |
-| `--config-only` | Dotfiles only — no packages, no builds. |
-| `--nix-imperative` | On NixOS, use `nix-env` instead of writing a module. |
-| `--prefix PATH` | Where built binaries go (default `~/.local`). |
-| `-v`, `--verbose` | Print every command. |
-
-### What the installer will not do
-
-It will not overwrite anything without saving it first. Before a single
-file is written it creates
-`~/.local/state/halcyon/backups/<timestamp>/` and records a manifest of
-every path it touches — including paths that did *not* exist, so a
-restore knows to remove them rather than leave them behind.
-
-It is idempotent. Running it twice backs up nothing the second time and
-reports zero files installed, because it compares content before
-writing.
-
-It never configures two power daemons at once — if it finds
-`power-profiles-daemon` and `tlp` both active it stops and tells you,
-rather than adding a third opinion.
-
-It does not apply GPU environment variables blindly. Hardware is
-detected from sysfs vendor IDs (with `lspci` as a fallback), and NVIDIA
-variables are only written when the proprietary driver is actually
-loaded.
-
-### After installing
-
-Log out and pick **Halcyon** from your display manager, or from a TTY:
+`--recursive` matters. The shell's shape widgets are a git submodule, and
+without them Quickshell fails to load. If you already cloned without it:
 
 ```sh
-Hyprland
+git submodule update --init --recursive
 ```
 
-Then `Super + /` for the shortcut reference, and `Super + ,` for
-Settings.
+Useful options (`./setup install -h` lists all of them):
 
----
-
-## Supported distributions
-
-| Family | Package manager | Notes |
-|---|---|---|
-| Arch, EndeavourOS, CachyOS | `pacman` + an AUR helper | Best coverage; Quickshell from AUR. |
-| Fedora, Nobara | `dnf` (+ COPR) | Quickshell built from source. |
-| Debian, Ubuntu, Pop!_OS | `apt` | Hyprland 0.56 usually needs a backport or a source build. |
-| NixOS | a generated module, or `nix-env -i` | See below. |
-| openSUSE Tumbleweed | `zypper` | |
-
-Every role in `deps/roles.conf` has an entry in every package map, and
-the validator fails if one is missing — so "supported" means the mapping
-exists, not that it was assumed.
-
-**On NixOS**, the installer writes a module to
-`~/.config/halcyon/nixos/halcyon.nix` and tells you how to import it,
-rather than mutating system state behind your back. `--nix-imperative`
-uses `nix-env` instead if you prefer.
-
-Building Quickshell from source is pinned to `v0.3.1` and probes for
-optional features with `pkg-config` first, disabling what is not
-available rather than failing the build.
-
----
-
-## Keyboard shortcuts
-
-A Linux-native layout. It borrows the macOS capture shortcuts because
-`Super+Shift+3/4/5` is genuinely good muscle memory, and it deliberately
-does not borrow anyone's tiling bindings.
-
-Because `Super+Shift+<digit>` is taken by capture, **move-to-workspace
-is `Super+Ctrl+<digit>`**, not `Super+Shift+<digit>`.
-
-### System
-
-| Shortcut | Action |
+| Option | Effect |
 |---|---|
-| `Super + Space` | Spotlight search |
-| `Super + Shift + Space` | Ask the assistant |
-| `Super + A` | Assistant push-to-talk |
-| `Super + Shift + A` | Cancel the assistant |
-| `Super + C` | Control Center |
-| `Super + N` | Notification centre |
-| `Super + E` | Mission Control |
-| `Super + Tab` | Application switcher |
-| `Super + K` | Calendar |
-| `Super + D` | Desktop widgets |
-| `Super + V` | Clipboard history |
+| `--skip-alldeps` | Only copy config. Don't install packages. |
+| `--skip-wallpapers` | Don't copy wallpapers into `~/Pictures/Wallpapers`. |
+| `--core` | Only Hyprland and Quickshell. Skip fish, fontconfig, misc app config and wallpapers. |
+
+When logging in from a display manager, choose **Hyprland**, not
+*Hyprland (uwsm)*.
+
+`./setup uninstall` removes what the installer put in place.
+
+## Themes
+
+By default, colours come from your wallpaper, as in upstream. A theme
+replaces that with a palette designed by hand, plus its own window
+style, animations, wallpaper and, for some, shell layout and effects:
+
+| Theme | Id | Look |
+|---|---|---|
+| **HyperNeo** | `hyperneo` | macOS-style, in ember and neon on near-black. A menu bar and a dock, squircle windows with deep soft shadows, springy animations, rounded screen corners. |
+| **Star Rail** | `hsr` | Astral gold and lavender on deep-space navy, over a golden rail curving through a nebula. Can show the current banner character. |
+| **Shattered Glass** | `shattered-glass` | Liquid glass: a glass lens follows the pointer, clicks crack the screen, windows turn to frosted glass. Ice blue and prism violet, sharp corners. |
+
+Pick one with **`Ctrl + Super + Shift + T`**, or from a terminal:
+
+```sh
+~/.config/hypr/hyprland/halcyon/halcyon-theme list
+~/.config/hypr/hyprland/halcyon/halcyon-theme apply shattered-glass
+~/.config/hypr/hyprland/halcyon/halcyon-theme off     # back to wallpaper colours
+```
+
+A theme recolours everything, not just the bar:
+
+- **Shell:** its palette goes straight into the Quickshell colours.
+- **Terminals:** its own 16-colour palette.
+- **GTK, Qt/KDE, fuzzel and the lock screen:** generated from the theme's
+  seed colour through upstream's own pipeline.
+- **Windows:** gaps, corners, borders, blur, shadows and animations.
+- **Shell layout:** some themes change shell settings too. HyperNeo turns
+  on the dock and restyles the bar, and Shattered Glass makes panels more
+  see-through. These are put back when you leave the theme, except any
+  you changed yourself in the meantime.
+
+Picking another wallpaper leaves the theme, and colours follow the new
+wallpaper. The themes are dark themes, so switching to light mode, or
+picking an accent colour, also leaves the theme. The colours are then
+generated from the theme's accent, not hand-made. `halcyon-theme off`
+makes colours follow the wallpaper again.
+
+### Effects
+
+| Level | What you get |
+|---|---|
+| `full` | Everything, including screen shaders. Shattered Glass's default. |
+| `light` | No screen shader. Glass materials, translucent windows and animations stay. The other themes' default. |
+| `off` | Plain blur, opaque windows, no native glass, stock animations. |
+
+```sh
+halcyon-theme effects light      # or full / off; sticks across themes
+halcyon-theme effects default    # back to each theme's own default
+```
+
+The menu (`Ctrl + Super + Shift + T`) has the levels too.
+
+**Shattered Glass at `full`** runs a screen shader
+(`themes/shaders/shattered-glass.frag`) that treats the screen as a
+pane of glass:
+
+- **Pointer lens:** a refracting glass lens follows the pointer, with
+  chromatic fringes and a lit rim. It fades when the pointer rests.
+- **Click cracks:** each click sends out a refraction wave and cracks the
+  glass around the click into shards, which then heal.
+- **Edges:** the screen's edges split colour slightly, as thick glass does.
+
+Mouse effects need Hyprland's damage tracking off, so the screen is
+redrawn every frame. That uses much more GPU than normal, so use `light`
+on battery. The shader needs Hyprland 0.56 or newer. It has been
+compile-checked and rendered offline, but not yet tried on a real
+display. If the lens looks mirrored vertically,
+`halcyon-theme effects flip` fixes it.
+
+**Native glass.** Hyprland's development version, which comes after
+0.56, adds built-in glass blur materials. When yours has them, HyperNeo and Shattered Glass switch to
+the `acrylic` material automatically, which gives a curved, refracting
+glass edge like macOS's Liquid Glass. On 0.56 they use tuned regular
+blur instead.
+
+**HyperNeo** has no traffic-light window buttons. Hyprland only draws
+those through the hyprbars plugin, which isn't set up here.
+
+### Banners (Star Rail)
+
+The Star Rail theme can show a character on its wallpaper, in a
+gacha-banner layout: the character on the right inside a gold frame, and
+their name lower left. Point it at art you've saved:
+
+```sh
+halcyon-theme banner hsr ~/Pictures/aventurine.png --title "Aventurine"
+halcyon-theme banner hsr ~/Pictures/pearl.jpg --title "Pearl" --subtitle "Version 4.6"
+halcyon-theme banner hsr --clear
+```
+
+- **Cut-out art:** a character with a transparent background stands full
+  height on the right.
+- **Full splash image:** it fills the right half and fades into the
+  nebula.
+
+If Star Rail is active, the banner updates right away.
+
+No character art ships with this repository. It belongs to HoYoverse,
+so it can't be released under this repo's GPL licence, and the banner
+changes every few weeks anyway. Use art you've saved yourself, for
+example the official wallpapers from the game's website.
+
+### Making your own
+
+Copy one of `dots/.config/hypr/hyprland/halcyon/themes/*.json`, rename it
+and edit it. The file name is the theme's id. It needs:
+
+- **Shell colours:** the full set, which `halcyon-theme check` lists if
+  any are missing.
+- **Terminal colours:** 16 of them.
+- **Seed colour and scheme:** for the generated app colours.
+- **Window settings:** as in the existing themes.
+- **Wallpaper:** a path relative to `themes/`, or starting with `~`.
+
+Optional sections, all shown in the shipped themes:
+
+- **More window settings:** squircle power, shadow shape, window opacity,
+  `curves` and `animations`.
+- **`effects`:** a default level, a screen shader, native glass settings.
+- **`shell_config`:** any setting from the shell's `Config.qml`, written
+  as dotted keys like `"dock.enable": true`.
+- **`banner`:** frame and glow colours.
+
+`halcyon-theme check` rejects a theme with a missing key or a malformed
+value, and one where any text colour falls below WCAG AA contrast (4.5:1)
+on its background. CI also checks that every `shell_config` key exists
+in the shell, and that shaders compile.
+
+The two new wallpapers are procedural and original. No game assets are
+used. `scripts/make-theme-wallpapers.py` redraws them.
+
+## Keybinds
+
+These are the ones Halcyon adds. Press `Super + /` in the desktop for the
+full list, including all of upstream's.
+
+| Keys | Action |
+|---|---|
+| `Super + Space` | Search |
+| `Super + Escape` | Session menu (lock, log out, power) |
 | `Super + ,` | Settings |
-| `Ctrl + /` | Shortcut reference (also `Super + /`) |
-| `Super + Escape` | Power menu |
-| `Super + Ctrl + Q` | Lock the screen |
-| `Super + Ctrl + R` | Reload the desktop |
-| `Super + Shift + T` | Toggle light / dark |
-| `Super + Shift + N` | Toggle Do Not Disturb |
-| `Super + Shift + W` | Next wallpaper |
-| `Super + Shift + P` | Cycle power profile |
+| `` Super + ` `` | Back to the previous workspace |
+| `Super + Shift + 3` | Screenshot the screen, to clipboard and `~/Pictures/Screenshots` |
+| `Super + Shift + 4` | Screenshot a region |
+| `Super + Shift + 5` | Record a region |
+| `Super + Shift + 6` | Screenshot the focused window, to clipboard and file |
+| `Ctrl + Super + Shift + T` | Pick a Halcyon theme |
+| `Super + Shift + H` | HyperNix (if installed) |
 
-### Windows
+Upstream's bindings are all still there. For example, `Super + Q` closes
+a window, `Super + Enter` opens a terminal, and `Super` on its own opens
+search.
 
-| Shortcut | Action |
-|---|---|
-| `Super + W` | Close |
-| `Super + Alt + W` | Force quit |
-| `Super + M` | Minimise |
-| `Super + H` | Hide application |
-| `Super + Shift + M` | Restore last minimised |
-| `Super + F` | Fullscreen |
-| `Super + Shift + F` | Maximise |
-| `Super + T` | Toggle floating |
-| `Super + Ctrl + C` | Centre |
-| `Super + Ctrl + P` | Pin above others |
-| `Super + J` | Toggle split direction |
-| `Super + ←→↑↓` | Focus |
-| `Super + Shift + ←→↑↓` | Move window |
-| `Super + Alt + ←→↑↓` | Resize |
+## How it's put together
 
-### Workspaces
+```
+dots/.config/hypr/
+├── hyprland.lua            entry point: upstream, then Halcyon, then yours
+├── hyprland/               upstream defaults (replaced on every install)
+│   └── halcyon/            ← the Halcyon layer
+│       ├── init.lua          what gets loaded; comment a line out to drop it
+│       ├── general.lua       gaps, rounding, blur, shadow
+│       ├── keybinds.lua      the extra shortcuts
+│       ├── halcyon-theme     the theme tool
+│       ├── halcyon-banner    composes banner art into a wallpaper
+│       └── themes/           one JSON per theme, their wallpapers and shaders
+└── custom/                 your own overrides (never overwritten)
+wallpapers/                 copied to ~/Pictures/Wallpapers on install
+```
 
-| Shortcut | Action |
-|---|---|
-| `Super + 1…0` | Switch to workspace |
-| `Super + Ctrl + 1…0` | Move window to workspace |
-| `Super + Ctrl + ←→` | Previous / next workspace |
-| `Super + \`` | Back and forth |
-| `Super + S` | Scratchpad |
-| `Super + Shift + S` | Move window to scratchpad |
-| `Super + Ctrl + ↑↓` | Focus next / previous monitor |
+Load order is **upstream defaults → Halcyon → active theme →
+`~/.config/hypr/custom`**. The active theme's window style is written to
+`~/.local/state/halcyon/theme.lua`.
+Anything you put in `custom/` wins over both, so put your changes there,
+not in `hyprland/`. The installer replaces `hyprland/` every time.
 
-### Capture
+Outside that folder, Halcyon changes very little in upstream's files:
 
-| Shortcut | Action |
-|---|---|
-| `Super + Shift + 3` | Screenshot the screen |
-| `Ctrl + Shift + S` | Screenshot a region (also `Super + Shift + 4`) |
-| `Super + Shift + 5` | Screenshot & recording panel |
-| `Super + Shift + 6` | Screenshot the window |
+- `quickshell/ii/modules/common/Config.qml`: transparency on by default
+- `quickshell/ii/services/FirstRunExperience.qml`: the welcome text
+- `quickshell/ii/assets/images/default_wallpaper.png`: the default wallpaper
+- `quickshell/ii/scripts/colors/switchwall.sh`: one line, so a wallpaper change leaves the active theme
+- `setup` and `sdata/subcmd-install/`: the wallpaper step, `--skip-wallpapers`, and Halcyon's name in the greeting
 
-### Applications
+Keeping it this small is deliberate: it keeps fixes from upstream easy
+to take.
 
-| Shortcut | Action |
-|---|---|
-| `Super + Return` | Terminal |
-| `Super + Shift + Return` | File manager |
-| `Super + B` | Browser |
-| `Super + Shift + H` | HyperNix |
-
-Media and brightness keys work as labelled. Every binding is defined in
-`config/system/keybinds.catalog.json` and can be overridden per-binding
-in Settings; set one to `"none"` to unbind it.
+## Taking updates from upstream
 
 ```sh
-halcyon keybinds              # everything bound, by category
-halcyon keybinds --check      # what is wrong, and why
-halcyon keybinds --json       # the registry, for scripting
+git remote add upstream https://github.com/end-4/dots-hyprland.git
+git fetch upstream
+git merge upstream/main
+git submodule update --init --recursive
+./setup install
 ```
 
-### When a binding does not work
-
-`halcyon keybinds --check` is the answer. Every binding is validated
-before it is generated — against Hyprland's own modifier list and
-libxkbcommon's keysym table — and anything rejected says so, naming the
-chord, the reason, what owns it if it collided, and the file it came
-from. The same diagnostics are written into the generated Lua, so the
-file answers the question on its own.
-
-An **error** means the binding is not emitted: an unknown action, a
-modifier that does not exist, a chord already taken. A **warning** means
-it is emitted anyway: a keysym our table does not list may still resolve
-on your keymap, and a tool that is not installed yet may be tomorrow.
-
-Five recovery capabilities — open a terminal, close a window, open
-settings, reload, exit — are checked for coverage on every generation,
-and a binding only counts if it still works with the shell down.
-
----
-
-## The Ultra Bar
-
-The bar is Halcyon's own. Its layout is three lists of module ids:
-
-```sh
-halcyon shell bar modules                      # every id it can load
-halcyon settings set bar.left '["launcher","workspaces","activeWindow"]'
-halcyon settings set bar.right '["audio","battery","systemMenu"]'
-halcyon theme apply
-```
-
-| Setting | Effect |
-|---|---|
-| `bar.position` | `top` or `bottom`. |
-| `bar.floating` | Detach from the screen edge. |
-| `bar.autoHide` | Slide away until the pointer reaches the edge. |
-| `bar.showOnAllMonitors` | One bar per monitor, or only the first. |
-| `bar.height`, `bar.sideMargin`, `bar.topMargin` | Geometry. |
-
-### Modules
-
-`launcher`, `workspaces`, `activeWindow`, `clock`, `date`, `media`,
-`tray`, `notifications`, `cpu`, `memory`, `temperature`, `gpu`,
-`network`, `bluetooth`, `audio`, `microphone`, `battery`,
-`powerProfile`, `clipboard`, `hypernix`, `assistant`, `settings`,
-`systemMenu`, `spacer`, `separator`.
-
-Each takes its options from its own settings subtree —
-`bar.clock.format`, `bar.audio.scrollStep`, `bar.temperature.warnAbove`
-and so on. See the [settings reference](docs/settings.md).
-
-Modules hide themselves when they have nothing true to say: no battery
-on a desktop, no temperature where there is no sensor, no GPU reading
-where the driver reports none, no clipboard button when you have turned
-history off. A module whose id the bar does not know, or whose file
-fails to load, shows a small `!` marker naming the problem rather than
-vanishing.
-
-### Waybar
-
-Not required, and not running. Halcyon generates nothing for it unless
-you opt in:
-
-```sh
-halcyon settings set bar.fallbackBar waybar
-halcyon theme apply
-systemctl --user enable --now halcyon-bar
-```
-
-That gives you a second bar which survives the shell restarting. Setting
-it back to `none` removes the generated files again.
-
----
-
-## Architecture
-
-```
-settings.json  ──┐
-wallpaper      ──┼──▶  palette  ──▶  tokens  ──┬──▶  hypr-theme.lua
-defaults       ──┘      (OKLCh)     (theme.py) ├──▶  hypr-runtime.lua
-                                               ├──▶  hypr-keybinds.lua
-                                               ├──▶  theme.json  ──▶ Quickshell
-                                               ├──▶  hyprlock-colors.conf
-                                               └──▶  hypridle-timeouts.conf
-```
-
-One function, `pipeline.apply()`, runs that whole chain and then reloads
-whatever is running. Everything that changes the desktop's appearance
-goes through it, so "did that take effect?" has one answer.
-
-| Directory | What is in it |
-|---|---|
-| `src/halcyon/` | The Python core: colour, tokens, renderers, actions, search, power, assistant. Standard library only. |
-| `config/hypr/` | Hyprland's Lua configuration, split into appearance, behaviour and autostart. |
-| `config/quickshell/` | The shell — `Config`, `Services`, `Components`, `Modules`. |
-| `config/quickshell/halcyon/Modules/Bar/` | The Ultra Bar: its module registry, and one file per module. |
-| `config/waybar/` | Only for the optional Waybar fallback. Nothing is generated for it unless you ask. |
-| `config/system/` | Settings defaults and the keybind catalog. |
-| `scripts/lib/` | Shell libraries: detection, packages, backup, build, menus. |
-| `deps/` | Per-distro package maps, role definitions, the Hyprland option snapshot. |
-| `services/` | systemd user units, bound to `halcyon-session.target`. |
-| `tests/` | 128 unit tests. |
-
-### Why Lua, and why split
-
-Hyprland 0.56 scopes errors per `require()`. Splitting the config means
-a typo in `appearance.lua` does not take `behaviour.lua` — and your
-keybinds — down with it. `generated.lua` goes further: if the generated
-files fail to load, it installs an emergency binding set so you can
-always open a terminal and fix it.
-
-Your own overrides go in `~/.config/hypr/local.lua`, loaded last through
-`pcall`. It is never overwritten and never backed up over.
-
-### The action allowlist
-
-The assistant cannot run commands. It can name one of 33 registered
-actions and supply parameters, which are then type-checked, range-
-checked, pattern-checked and — for paths — confined to your home
-directory and mounted volumes. `shell=True` appears nowhere. Undeclared
-parameters are rejected rather than ignored. Destructive actions
-(suspend, reboot, shut down, log out) require explicit confirmation,
-and web access is gated on a setting that is off by default.
-
-### Graceful degradation
-
-If Quickshell is not running, `Super + Space` still opens a search —
-`shell.call_or_fallback()` routes Spotlight, the power menu, network and
-audio to `fuzzel`/`wofi`/`rofi`/`tofi`/`bemenu`/`dmenu`, whichever is
-installed. The desktop stays usable while you fix the shell.
-
----
-
-## Customisation
-
-Everything is in `~/.config/halcyon/settings.json`, and every key has a
-typed default in `config/system/settings.default.json`. Only your
-overrides are written — the file stays small and readable.
-
-```sh
-halcyon settings get appearance.mode
-halcyon settings set glass.preset oled
-halcyon settings set motion.speedScale 0.8
-halcyon settings unset glass.preset      # back to the default
-halcyon theme apply                       # regenerate and reload
-```
-
-Invalid values are refused with the reason, not silently coerced.
-
-### The sections
-
-| Section | Controls |
-|---|---|
-| `appearance` | Light/dark, sunset following, accent source and colour, icon and cursor themes, fonts, corner style. |
-| `glass` | Preset, opacity, blur strength, saturation, tint, border opacity, corner radius, shadow, padding, specular, refraction, noise. |
-| `motion` | Preset, speed scale, reduced motion, overlay animations. |
-| `bar` | Position, height, margins, floating, per-monitor, and the module layout for each side. |
-| `workspaces` | Count, per-monitor, persistent, wrap-around, names, smart gaps. |
-| `input` | Keyboard layout and repeat, focus-follows-mouse, sensitivity, acceleration, natural scroll, tap-to-click, gestures. |
-| `displays` | Per-monitor mode/scale/position, VRR, tearing. |
-| `graphics` | Blur, shadow and animation quality; transparency; low-power mode; unfocused FPS cap; GPU overrides. |
-| `wallpaper` | Path, fit mode, dim, blur, per-monitor, rotation, colour derivation. |
-| `notifications` | Position, DND, per-urgency timeouts, grouping, history. |
-| `power` | Profile, backend, adaptive thresholds, idle timings, poll intervals. |
-| `assistant` | Provider, voice, microphone, wake word, privacy, local model settings, NixOrb settings. |
-| `hypernix` | Enable, widget, Spotlight, tray, job notifications, poll interval. |
-| `search` | Result limit, per-provider toggles, file roots and depth, web search engine. |
-| `applications` | Default terminal, browser, file manager, editor, capture directories. |
-| `accessibility` | Reduced motion, high contrast, large text, text scale, disable blur/animations, minimum transparency, focus ring. |
-| `privacy` | Clipboard history and limit, recent files, telemetry (off, and there is nothing to send). |
-| `keybinds` | Per-binding overrides, keyed by catalog ID. |
-
-### Presets
-
-A preset is a JSON file of settings overrides. Six ship with Halcyon:
-
-| Preset | What it is for |
-|---|---|
-| `tinted` | The default. Glass carries a wallpaper-derived tint. |
-| `clear` | Transparent but legible; the wallpaper stays part of the composition. |
-| `ultra-clear` | Almost invisible surfaces. Heaviest on the GPU — the blur has nothing to hide behind. |
-| `dark-glass` | Deep, smoky surfaces. For low-light rooms and bright wallpapers. |
-| `light-glass` | Frosted white surfaces with soft shadows. |
-| `oled` | True black, hairline borders, no blur on the largest surfaces. Saves panel power. |
-
-```sh
-halcyon theme list-presets
-halcyon theme preset oled
-```
-
-Applying a preset merges it into your overrides, so anything you set by
-hand afterwards still wins. Dropping a file into `themes/` (or
-`~/.local/share/halcyon/themes/`) makes it available immediately — there
-is no registry to update. The format is settings sections at the top
-level, plus a `name` and `description`:
-
-```jsonc
-// themes/midnight.json
-{
-  "name": "Midnight",
-  "description": "Indigo accent on near-black glass.",
-  "appearance": { "mode": "dark", "accentSource": "fixed",
-                  "accentColor": "#5E5CE6" },
-  "glass": { "preset": "dark-glass", "opacity": 0.62 }
-}
-```
-
----
-
-## The AI assistant
-
-Two backends, both real, both switchable from
-**Settings → AI Assistant → Provider** with no file editing:
-
-- **NixOrb** — a thin adapter over the NixOrb socket, falling back to
-  its CLI. It talks to whatever NixOrb exposes on your machine; nothing
-  about its interface is faked or stubbed.
-- **Local AI** — Whisper (or `whisper.cpp`) for speech, Ollama or any
-  OpenAI-compatible endpoint for language, Piper (falling back to
-  `espeak-ng`) for speech. Entirely offline.
-- **Automatic** — NixOrb when it answers, local otherwise.
-
-Both can be installed at once; they coexist and the daemon routes per
-request.
-
-### How a request is handled
-
-1. Audio is captured locally (`pw-record`, `parecord` or `arecord`) with
-   silence detection, so it stops when you do.
-2. Speech becomes text locally.
-3. **Deterministic rules run first.** "Set the volume to 30%", "open
-   Firefox", "go to the second workspace" match a rule, become a typed
-   action, and execute. No model runs and no text leaves the machine.
-4. Only if nothing matches does the model see the request.
-5. If the model wants to act, it names an allowlisted action with typed
-   parameters. Those are validated before anything happens.
-6. Destructive actions stop and ask.
-
-### Privacy
-
-Nothing is uploaded silently. Web access, screen context and clipboard
-context are each a separate setting, each **off by default**. With the
-local backend and those left off, no audio, text or screen content
-leaves the machine at all. Conversation history is local, capped, and
-can be cleared with `halcyon assistant clear`.
-
-The daemon listens on a Unix socket in `$XDG_RUNTIME_DIR`, mode `0600`
-— not a TCP port.
-
-### Setting up the local stack
-
-```sh
-./install.sh --with-ai
-ollama pull llama3.2:3b
-halcyon settings set assistant.provider local
-halcyon assistant status
-```
-
-Point it at a different model or an OpenAI-compatible server:
-
-```sh
-halcyon settings set assistant.local.llmModel qwen2.5:7b
-halcyon settings set assistant.local.llmBackend openai
-halcyon settings set assistant.local.llmHost http://127.0.0.1:8080
-```
-
-### Setting up NixOrb
-
-```sh
-halcyon settings set assistant.provider nixorb
-halcyon assistant status          # shows which backend answered
-```
-
-If NixOrb's socket is somewhere non-standard, set
-`assistant.nixorb.socketPath`.
-
-### Using it
-
-`Super + A` to talk, `Super + Shift + Space` to type, or from anywhere:
-
-```sh
-halcyon assistant ask "what's my battery at"
-halcyon assistant listen
-halcyon assistant providers
-```
-
----
-
-## HyperNix integration
-
-Off unless HyperNix is present. When it is, you get a Control Center
-widget with generation and job state, Spotlight entries for its
-commands, a tray item, and notifications when a job finishes.
-
-```sh
-halcyon settings set hypernix.enabled false   # turn it off entirely
-```
-
-Turning it off removes the widget, the Spotlight provider and the tray
-item, and changes nothing else. The rest of the desktop does not know it
-exists — no shared state, no shared code path.
-
----
-
-## Battery and power
-
-Halcyon drives exactly one power backend, preferring
-`power-profiles-daemon` (the only one of the three with a real switching
-API rather than a config file), then `tuned`, then `tlp`. If it finds
-two running it refuses to configure either and tells you which to
-disable. `halcyon doctor` reports conflicts.
-
-On battery, the adaptive policy steps effects down:
-
-| Battery | What changes |
-|---|---|
-| On AC | Nothing. Everything at your chosen quality. |
-| On battery, above the threshold | Blur drops one step. |
-| Below `batteryThreshold` (25%) | Blur down two steps, shadows and animations one, low-power graphics on, profile to battery-saver. |
-| Below `criticalThreshold` (10%) | Blur and shadows off, animations minimal. |
-
-The policy **only ever reduces**. Set blur to `low` on a desktop and
-nothing will raise it.
-
-Polling slows on battery too. The bar's system modules subscribe only
-while they are on screen, and the interval doubles on battery — the
-AC and battery intervals are separate settings.
-
-```sh
-halcyon power status
-halcyon power profile balanced
-halcyon settings set power.adaptive.enabled false
-halcyon settings set power.adaptive.batteryThreshold 15
-```
-
-Unfocused windows are capped to 10 FPS by default
-(`graphics.renderUnfocusedFps`), which is the single largest saving on a
-laptop.
-
----
-
-## Environment variables
-
-Read at startup; set them in your shell profile or the systemd user
-environment.
-
-### Paths
-
-| Variable | Default | Meaning |
-|---|---|---|
-| `HALCYON_CONFIG_DIR` | `~/.config/halcyon` | Settings and themes. |
-| `HALCYON_GENERATED_DIR` | `$HALCYON_CONFIG_DIR/generated` | Generated config. Do not edit; it is overwritten. |
-| `HALCYON_STATE_DIR` | `~/.local/state/halcyon` | Backups, history, logs. |
-| `HALCYON_CACHE_DIR` | `~/.cache/halcyon` | Palettes, thumbnails, exchange rates. |
-| `HALCYON_DATA_DIR` | `~/.local/share/halcyon` | Installed data files. |
-| `HALCYON_PREFIX` | `~/.local` | Where built binaries go. |
-| `HALCYON_WALLPAPER_DIR` | `~/Pictures/Wallpapers` | Wallpaper rotation source. |
-
-### Installer
-
-| Variable | Meaning |
-|---|---|
-| `HALCYON_DRY_RUN` | `1` changes nothing; same as `--dry-run`. |
-| `HALCYON_ASSUME_YES` | `1` skips prompts; same as `--yes`. |
-| `HALCYON_DEBUG` | `1` adds debug logging. |
-| `HALCYON_LOG_FILE` | Where to append the install log. |
-| `HALCYON_BACKUP_DIR` | Override the backup root. |
-| `HALCYON_PYTHON` | Python interpreter to use. |
-| `HALCYON_AUR_HELPER` | Force `paru`, `yay`, … |
-| `HALCYON_BUILD_ROOT` | Where source builds happen. |
-| `HALCYON_QUICKSHELL_REPO` / `_REF` | Build a different Quickshell (default `v0.3.1`). |
-
-### Detection overrides
-
-`HALCYON_DISTRO_ID`, `HALCYON_FAMILY`, `HALCYON_PKG_MANAGER`,
-`HALCYON_GPU_PRIMARY`, `HALCYON_GPU_VENDORS`, `HALCYON_POWER_BACKEND`.
-Set these only when detection gets it wrong — they bypass the checks
-that keep the installer safe.
-
-### Runtime
-
-| Variable | Meaning |
-|---|---|
-| `HALCYON_THEME` | Theme to apply at startup. |
-| `XDG_RUNTIME_DIR` | Where the assistant socket and IPC live. |
-
----
-
-## Troubleshooting
-
-Start here:
-
-```sh
-./diagnose.sh            # a full report: versions, services, config errors
-halcyon doctor           # the same checks, from the CLI
-hyprctl configerrors     # Hyprland's own view
-```
-
-**The bar or shell is missing.**
-
-```sh
-systemctl --user status halcyon-bar halcyon-shell
-journalctl --user -u halcyon-shell -n 50
-qs -c halcyon             # run the shell in the foreground to see errors
-```
-
-**Colours look wrong, or a change did not take.** The generated files
-are the source of truth for what is running:
-
-```sh
-halcyon theme apply --json     # what was written, and what reloaded
-ls ~/.config/halcyon/generated/
-```
-
-**Hyprland starts but the desktop is bare.** When the generated files
-fail to load, `generated.lua` binds `Super + Return` (a terminal),
-`Super + W` (close a window) and `Super + Ctrl + Escape` (log out), and
-raises a notification saying so — enough of a desktop to fix it from.
-Then:
-
-```sh
-hyprctl configerrors
-./scripts/dev/check-hypr-config.py
-```
-
-**Blur is heavy, or the desktop feels slow.**
-
-```sh
-halcyon settings set graphics.blurQuality low
-halcyon settings set glass.preset clear
-halcyon settings set graphics.lowPowerGraphics true
-```
-
-**Two power daemons.** `halcyon doctor` names them. Disable one:
-
-```sh
-systemctl disable --now tlp
-```
-
-**The assistant does not answer.**
-
-```sh
-halcyon assistant status        # which backend, and why
-journalctl --user -u halcyon-assistant -n 50
-```
-
-**NVIDIA.** GPU variables are only set when the proprietary driver is
-loaded. If you have just installed it, re-run `./install.sh
---config-only` so detection runs again.
-
-**Fractional scaling looks blurry.** Set the scale per monitor in
-`displays.monitors` rather than globally; Halcyon does not force
-`Text.NativeRendering`, which is what causes blurry text at fractional
-scales.
-
----
-
-## Uninstalling and restoring
-
-```sh
-./uninstall.sh --dry-run    # see what would be removed
-./uninstall.sh
-```
-
-Removes Halcyon's files, disables its services, and **restores your
-pre-Halcyon configuration from the newest backup** — so uninstalling
-puts the machine back, rather than just leaving a hole. Your own files,
-including `~/.config/hypr/local.lua`, are left alone either way. It does
-not remove packages it installed; it tells you which ones they were.
-
-| Flag | Effect |
-|---|---|
-| `-n`, `--dry-run` | Show what would be removed. |
-| `-y`, `--yes` | Do not prompt. |
-| `--keep-config` | Keep `~/.config/halcyon` — settings and generated files. |
-| `--no-restore` | Remove Halcyon without restoring what it replaced. |
-| `--purge` | Also delete the backups. Cannot be undone. |
-
-To go back to a specific install without uninstalling:
-
-```sh
-./restore.sh --list                 # every backup, with its timestamp
-./restore.sh --show latest          # what that backup contains
-./restore.sh latest
-./restore.sh 2026-01-15T09-31-02
-```
-
-The manifest records both files that were replaced and paths that did
-not exist before, so a restore removes what Halcyon added instead of
-leaving orphans behind. `--dry-run` works here too.
-
----
-
-## Extending Halcyon
-
-### A new AI provider
-
-Add a module to `src/halcyon/assistant/providers/` with a class exposing
-`available()`, `ask(text, context)` yielding events, and `status()`.
-Register it in `providers/__init__.py` and add its name to the
-`assistant.provider` enum in `settings.default.json`. It appears in
-Settings automatically. `providers/local.py` is the reference: intent
-parsing, tool calls, streaming.
-
-### A new search provider
-
-Write a function `(query, settings, limit) -> list[Result]` in
-`src/halcyon/search/providers.py` and add it to `REGISTRY`. It gets a
-time budget and is isolated — if it raises, the rest of the search still
-returns. Add a default to `search.providers` so it can be switched off.
-
-### A new widget
-
-Add a QML file under `config/quickshell/halcyon/Modules/`, build it on
-`GlassSurface` so it inherits the material, and read from `Theme` rather
-than hard-coding colours or durations. Register it in `shell.qml`. If it
-should be toggleable, add a setting and a keybind to the catalog.
-
-### A new desktop action
-
-Add an `Action` to `src/halcyon/actions.py` with typed `Param`s. It
-becomes available to the assistant, to Spotlight, and to `halcyon
-action` at once. Mark it `destructive=True` if it should ask first, and
-`requires_setting=` if it should be gated.
-
-### A new preset
-
-Drop a JSON file in `themes/`. See [Presets](#presets).
-
----
+Conflicts, if any, will be in the few files listed above.
 
 ## Development
 
 ```sh
-./scripts/dev/validate.sh
+./scripts/validate.sh
 ```
 
-Runs everything: `shellcheck` over 25 scripts, executable-bit checks,
-Lua parsing, QML parsing across 78 files, Python compilation, 128 unit
-tests, `pyright`, JSON and JSONC schema checks, a full theme generation
-validated against Hyprland's option table, systemd unit parsing, and
-cross-file consistency (every role present in every package map, no
-duplicate shortcuts, the default bar layout resolves).
+CI runs the same script. It checks that:
 
-```sh
-PYTHONPATH=src python3 -m unittest discover -t . -s tests
-./scripts/dev/check-hypr-config.py      # parse the Hyprland config without Hyprland
-```
+- every Lua file parses, and every shell script parses;
+- all JSON is valid;
+- the Halcyon layer is wired in, and the submodule and wallpapers are present;
+- every theme is complete, has readable contrast, and renders to valid Lua
+  at every effects level;
+- every shell setting a theme changes exists in the shell, with the right type;
+- screen shaders compile as GLSL ES 3.00, and the banner compositor runs;
+- no Halcyon keybind reuses a key combination upstream already binds.
 
-`scripts/dev/hypr-config-probe.lua` loads the real configuration against
-a stand-in `hl` table, so the whole thing — options, binds, animations,
-window/layer/workspace rules — can be checked on a machine where
-Hyprland is not running.
+That last check exists because Hyprland runs *every* action bound to a
+key combination. A clash would not replace upstream's action; both would
+fire at once.
 
----
+## Credits and licence
 
-## Licence
-
-MIT. See [LICENSE](LICENSE).
-
-Halcyon is an original work. It is inspired by Apple's design language;
-it contains none of Apple's assets, icons, fonts or code. The default
-typeface is Inter, an open font chosen for its similar feel. Icon
-glyphs come from Nerd Fonts' Material Design set.
+The desktop is [end-4](https://github.com/end-4)'s illogical-impulse and
+the work of its contributors. Halcyon is a small layer on top of it.
+Licensed under the GPL-3.0, like upstream. See [LICENSE](LICENSE). Some
+parts carry their own licences, listed in [licenses/](licenses/).

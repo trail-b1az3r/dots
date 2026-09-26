@@ -1,0 +1,187 @@
+{
+  "name": "HyperNeo",
+  "description": "macOS-style in ember and neon: a menu bar and a dock, squircle windows with deep soft shadows, springy animations.",
+  "wallpaper": "~/.config/quickshell/ii/assets/images/default_wallpaper.png",
+  "seed": "#FF9A5C",
+  "scheme": "scheme-fidelity",
+  "shell": {
+    "background": "#0F0A0A",
+    "on_background": "#F3DEDA",
+    "surface": "#0F0A0A",
+    "surface_dim": "#0F0A0A",
+    "surface_bright": "#3A2E2C",
+    "surface_container_lowest": "#0A0606",
+    "surface_container_low": "#1A1212",
+    "surface_container": "#1F1616",
+    "surface_container_high": "#2A1F1E",
+    "surface_container_highest": "#352928",
+    "surface_variant": "#3D2E2B",
+    "on_surface": "#F3DEDA",
+    "on_surface_variant": "#D9C0BA",
+    "outline": "#A08A84",
+    "outline_variant": "#54433F",
+    "primary": "#FF9A5C",
+    "on_primary": "#4A1C00",
+    "primary_container": "#7A3410",
+    "on_primary_container": "#FFDBC8",
+    "secondary": "#E7BDAA",
+    "on_secondary": "#442A1D",
+    "secondary_container": "#5D4032",
+    "on_secondary_container": "#FFDBCB",
+    "tertiary": "#FF6F9C",
+    "on_tertiary": "#5E0029",
+    "tertiary_container": "#8C1E4A",
+    "on_tertiary_container": "#FFD9E2",
+    "surface_tint": "#FF9A5C",
+    "inverse_surface": "#F3DEDA",
+    "inverse_on_surface": "#372E2C",
+    "inverse_primary": "#9A4618",
+    "error": "#FFB4AB",
+    "on_error": "#690005",
+    "error_container": "#93000A",
+    "on_error_container": "#FFDAD6",
+    "shadow": "#000000",
+    "scrim": "#000000"
+  },
+  "terminal": {
+    "term0": "#140E0E",
+    "term1": "#FF5C5C",
+    "term2": "#B8D86B",
+    "term3": "#FFB454",
+    "term4": "#8AA2FF",
+    "term5": "#FF6F9C",
+    "term6": "#5CD6C0",
+    "term7": "#D9C0BA",
+    "term8": "#6E5A55",
+    "term9": "#FF7B7B",
+    "term10": "#CFEA8A",
+    "term11": "#FFCB7A",
+    "term12": "#A8BCFF",
+    "term13": "#FF95B8",
+    "term14": "#86E8D6",
+    "term15": "#F3DEDA"
+  },
+  "hyprland": {
+    "rounding": 16,
+    "rounding_power": 3.2,
+    "gaps_in": 6,
+    "gaps_out": 14,
+    "border_size": 1,
+    "active_border": "rgba(FFD2B84D)",
+    "inactive_border": "rgba(FFFFFF14)",
+    "blur_size": 18,
+    "blur_passes": 3,
+    "blur_vibrancy": 0.35,
+    "blur_popups": true,
+    "shadow_color": "rgba(000000A6)",
+    "shadow_color_inactive": "rgba(00000059)",
+    "shadow_range": 48,
+    "shadow_render_power": 3,
+    "shadow_offset": [
+      0,
+      14
+    ],
+    "dim_inactive": false,
+    "curves": {
+      "macSpring": [
+        0.34,
+        1.36,
+        0.64,
+        1.0
+      ],
+      "macEaseOut": [
+        0.16,
+        1.0,
+        0.3,
+        1.0
+      ],
+      "macEaseIn": [
+        0.4,
+        0.0,
+        1.0,
+        1.0
+      ]
+    },
+    "animations": [
+      {
+        "leaf": "windowsIn",
+        "speed": 3.2,
+        "curve": "macSpring",
+        "style": "popin 88%"
+      },
+      {
+        "leaf": "windowsOut",
+        "speed": 2.2,
+        "curve": "macEaseIn",
+        "style": "popin 92%"
+      },
+      {
+        "leaf": "fadeIn",
+        "speed": 2.6,
+        "curve": "macEaseOut"
+      },
+      {
+        "leaf": "fadeOut",
+        "speed": 2.0,
+        "curve": "macEaseIn"
+      },
+      {
+        "leaf": "windowsMove",
+        "speed": 3.4,
+        "curve": "macEaseOut",
+        "style": "slide"
+      },
+      {
+        "leaf": "workspaces",
+        "speed": 4.5,
+        "curve": "macEaseOut",
+        "style": "slide"
+      },
+      {
+        "leaf": "layersIn",
+        "speed": 2.6,
+        "curve": "macSpring",
+        "style": "popin 94%"
+      },
+      {
+        "leaf": "layersOut",
+        "speed": 2.0,
+        "curve": "macEaseIn",
+        "style": "popin 96%"
+      },
+      {
+        "leaf": "specialWorkspaceIn",
+        "speed": 3.0,
+        "curve": "macEaseOut",
+        "style": "slidevert"
+      },
+      {
+        "leaf": "border",
+        "speed": 6.0,
+        "curve": "macEaseOut"
+      }
+    ]
+  },
+  "effects": {
+    "default": "light",
+    "native_blur": {
+      "variant": 8,
+      "options": {
+        "acrylic:refraction": 16,
+        "acrylic:bulb": 40,
+        "acrylic:clarity": 0.86,
+        "acrylic:aberration": 0.015,
+        "acrylic:tint": "rgba(FFFFFF14)"
+      }
+    }
+  },
+  "shell_config": {
+    "bar.cornerStyle": 2,
+    "bar.borderless": true,
+    "dock.enable": true,
+    "dock.pinnedOnStartup": true,
+    "dock.hoverToReveal": true,
+    "dock.monochromeIcons": false,
+    "appearance.fakeScreenRounding": 1
+  }
+}
