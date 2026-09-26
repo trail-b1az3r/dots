@@ -17,3 +17,11 @@ local themeFile = stateHome .. "/halcyon/theme.lua"
 if is_file_exists(themeFile) then
     dofile(themeFile)
 end
+
+-- A `halcyon` command for any shell: link it into ~/.local/bin at startup
+-- (fish and zsh also get an alias). A real file already there is left alone.
+hl.on("hyprland.start", function()
+    hl.exec_cmd("bin=\"$HOME/.local/bin/halcyon\"; " ..
+        "if [ ! -e \"$bin\" ] || [ -L \"$bin\" ]; then " ..
+        "mkdir -p \"$HOME/.local/bin\" && ln -sfn \"$HOME/.config/hypr/hyprland/halcyon/halcyon-theme\" \"$bin\"; fi")
+end)

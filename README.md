@@ -69,13 +69,26 @@ style, animations, wallpaper and, for some, shell layout and effects:
 | **Star Rail** | `hsr` | Astral gold and lavender on deep-space navy, over a golden rail curving through a nebula. Can show the current banner character. |
 | **Shattered Glass** | `shattered-glass` | Liquid glass: a glass lens follows the pointer, clicks crack the screen, windows turn to frosted glass. Ice blue and prism violet, sharp corners. |
 
-Pick one with **`Ctrl + Super + Shift + T`**, or from a terminal:
+Pick one in **Settings > Halcyon**, with **`Ctrl + Super + Shift + T`**,
+or from a terminal:
 
 ```sh
-~/.config/hypr/hyprland/halcyon/halcyon-theme list
-~/.config/hypr/hyprland/halcyon/halcyon-theme apply shattered-glass
-~/.config/hypr/hyprland/halcyon/halcyon-theme off     # back to wallpaper colours
+halcyon list
+halcyon apply shattered-glass
+halcyon off        # back to wallpaper colours
+halcyon help       # everything else
 ```
+
+`halcyon` is an alias in fish and zsh, and a link in `~/.local/bin`
+(created when Hyprland starts) for other shells. Open a new terminal
+after installing. Until then, the full path is
+`~/.config/hypr/hyprland/halcyon/halcyon-theme`.
+
+Applying prints one line. Output from upstream's colour scripts goes to
+`~/.local/state/halcyon/apply.log` instead. On Hyprland that log
+includes a traceback from end-4's KDE colour syncer
+(kde-material-you-colors) about KWin not running. It's harmless: KWin is
+KDE's compositor, and Hyprland is doing that job instead.
 
 A theme recolours everything, not just the bar:
 
@@ -92,7 +105,7 @@ A theme recolours everything, not just the bar:
 Picking another wallpaper leaves the theme, and colours follow the new
 wallpaper. The themes are dark themes, so switching to light mode, or
 picking an accent colour, also leaves the theme. The colours are then
-generated from the theme's accent, not hand-made. `halcyon-theme off`
+generated from the theme's accent, not hand-made. `halcyon off`
 makes colours follow the wallpaper again.
 
 ### Effects
@@ -103,29 +116,49 @@ makes colours follow the wallpaper again.
 | `light` | No screen shader. Glass materials, translucent windows and animations stay. The other themes' default. |
 | `off` | Plain blur, opaque windows, no native glass, stock animations. |
 
+Set the level in **Settings > Halcyon > Effects**, from the
+`Ctrl + Super + Shift + T` menu, or with:
+
 ```sh
-halcyon-theme effects light      # or full / off; sticks across themes
-halcyon-theme effects default    # back to each theme's own default
+halcyon effects light      # or full / off; sticks across themes
+halcyon effects default    # back to each theme's own default
 ```
 
-The menu (`Ctrl + Super + Shift + T`) has the levels too.
+**Settings > Halcyon > Glass** tunes the glass. Changes apply to the
+active theme straight away:
+
+| Setting | Default | What it does |
+|---|---|---|
+| Pointer lens | on | The glass lens that follows the pointer (Full only) |
+| Click ripples | on | A soft ripple and faint cracks where you click (Full only) |
+| Colour fringe at screen edges | off | Slight colour split at the edges (Full only) |
+| Strength | 0.5 | Scales all the screen effects; 0 turns them to nothing |
+| Lens size | 90 px | Radius of the pointer lens |
+| Focused / other windows | 0.96 / 0.9 | Opacity of glass windows (Light and Full) |
+| Frost | 8 | Blur size behind glass windows |
+
+They're stored under `halcyon` in `~/.config/illogical-impulse/config.json`,
+which `halcyon refresh` re-reads.
 
 **Shattered Glass at `full`** runs a screen shader
 (`themes/shaders/shattered-glass.frag`) that treats the screen as a
 pane of glass:
 
-- **Pointer lens:** a refracting glass lens follows the pointer, with
-  chromatic fringes and a lit rim. It fades when the pointer rests.
-- **Click cracks:** each click sends out a refraction wave and cracks the
-  glass around the click into shards, which then heal.
-- **Edges:** the screen's edges split colour slightly, as thick glass does.
+- **Pointer lens:** a liquid-glass lens follows the pointer. Its middle
+  stays clear; light bends in its rounded rim, which catches a soft
+  highlight on top and a faint shadow below. It fades when the pointer
+  rests.
+- **Click ripples:** each click sends a gentle ripple through the glass,
+  with faint cracks around the click that heal as it passes.
+- **Edges (off by default):** the screen's edges split colour slightly,
+  as thick glass does.
 
 Mouse effects need Hyprland's damage tracking off, so the screen is
 redrawn every frame. That uses much more GPU than normal, so use `light`
 on battery. The shader needs Hyprland 0.56 or newer. It has been
 compile-checked and rendered offline, but not yet tried on a real
 display. If the lens looks mirrored vertically,
-`halcyon-theme effects flip` fixes it.
+`halcyon effects flip` fixes it.
 
 **Native glass.** Hyprland's development version, which comes after
 0.56, adds built-in glass blur materials. When yours has them, HyperNeo and Shattered Glass switch to
@@ -143,9 +176,9 @@ gacha-banner layout: the character on the right inside a gold frame, and
 their name lower left. Point it at art you've saved:
 
 ```sh
-halcyon-theme banner hsr ~/Pictures/aventurine.png --title "Aventurine"
-halcyon-theme banner hsr ~/Pictures/pearl.jpg --title "Pearl" --subtitle "Version 4.6"
-halcyon-theme banner hsr --clear
+halcyon banner hsr ~/Pictures/aventurine.png --title "Aventurine"
+halcyon banner hsr ~/Pictures/pearl.jpg --title "Pearl" --subtitle "Version 4.6"
+halcyon banner hsr --clear
 ```
 
 - **Cut-out art:** a character with a transparent background stands full
@@ -165,7 +198,7 @@ example the official wallpapers from the game's website.
 Copy one of `dots/.config/hypr/hyprland/halcyon/themes/*.json`, rename it
 and edit it. The file name is the theme's id. It needs:
 
-- **Shell colours:** the full set, which `halcyon-theme check` lists if
+- **Shell colours:** the full set, which `halcyon check` lists if
   any are missing.
 - **Terminal colours:** 16 of them.
 - **Seed colour and scheme:** for the generated app colours.
@@ -181,7 +214,7 @@ Optional sections, all shown in the shipped themes:
   as dotted keys like `"dock.enable": true`.
 - **`banner`:** frame and glow colours.
 
-`halcyon-theme check` rejects a theme with a missing key or a malformed
+`halcyon check` rejects a theme with a missing key or a malformed
 value, and one where any text colour falls below WCAG AA contrast (4.5:1)
 on its background. CI also checks that every `shell_config` key exists
 in the shell, and that shaders compile.
@@ -221,7 +254,7 @@ dots/.config/hypr/
 │       ├── init.lua          what gets loaded; comment a line out to drop it
 │       ├── general.lua       gaps, rounding, blur, shadow
 │       ├── keybinds.lua      the extra shortcuts
-│       ├── halcyon-theme     the theme tool
+│       ├── halcyon-theme     the theme tool (the `halcyon` command)
 │       ├── halcyon-banner    composes banner art into a wallpaper
 │       └── themes/           one JSON per theme, their wallpapers and shaders
 └── custom/                 your own overrides (never overwritten)
@@ -240,6 +273,8 @@ Outside that folder, Halcyon changes very little in upstream's files:
 - `quickshell/ii/services/FirstRunExperience.qml`: the welcome text
 - `quickshell/ii/assets/images/default_wallpaper.png`: the default wallpaper
 - `quickshell/ii/scripts/colors/switchwall.sh`: one line, so a wallpaper change leaves the active theme
+- `quickshell/ii/modules/common/Config.qml`: the `halcyon` settings, and `settings.qml` plus `modules/settings/HalcyonConfig.qml` for the Halcyon settings page
+- `fish/config.fish` and `zshrc.d/dots-hyprland.zsh`: the `halcyon` alias
 - `setup` and `sdata/subcmd-install/`: the wallpaper step, `--skip-wallpapers`, and Halcyon's name in the greeting
 
 Keeping it this small is deliberate: it keeps fixes from upstream easy
@@ -270,6 +305,9 @@ CI runs the same script. It checks that:
 - the Halcyon layer is wired in, and the submodule and wallpapers are present;
 - every theme is complete, has readable contrast, and renders to valid Lua
   at every effects level;
+- every setting in the rendered Lua exists in Hyprland 0.56.2 with a value
+  of the right type, using the option table in `scripts/data/`, which was
+  extracted from Hyprland's source;
 - every shell setting a theme changes exists in the shell, with the right type;
 - screen shaders compile as GLSL ES 3.00, and the banner compositor runs;
 - no Halcyon keybind reuses a key combination upstream already binds.

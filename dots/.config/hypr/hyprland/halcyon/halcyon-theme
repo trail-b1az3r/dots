@@ -8,6 +8,10 @@
 
     halcyon-theme effects               show the effects level
     halcyon-theme effects LEVEL         full | light | off | default
+    halcyon-theme refresh               re-apply Settings > Halcyon to the
+                                        active theme (the Settings page runs
+                                        this for you)
+    halcyon-theme settings              open the Settings app
     halcyon-theme effects flip          mirror pointer effects vertically,
                                         if the glass lens trails the pointer
                                         upside down
@@ -41,6 +45,13 @@ since switchwall.sh calls `halcyon-theme detach`) removes the window style
 and puts back every shell setting the theme changed, unless you changed
 that setting yourself in the meantime.
 
+Settings > Halcyon in the Settings app stores the effects level and the
+glass options in ~/.config/illogical-impulse/config.json, under "halcyon".
+This command reads the same place, so both stay in sync.
+
+Output from upstream's colour scripts (matugen, kde-material-you-colors)
+goes to $XDG_STATE_HOME/halcyon/apply.log rather than the terminal.
+
 Effects levels:
     full    everything, including screen shaders. Shaders that follow the
             pointer need Hyprland's damage tracking off, which costs a lot
@@ -70,7 +81,7 @@ DATA = Path(os.environ.get("XDG_DATA_HOME") or HOME / ".local/share")
 HALCYON_STATE = STATE / "halcyon"
 THEME_LUA = HALCYON_STATE / "theme.lua"
 ACTIVE_FILE = HALCYON_STATE / "active"
-EFFECTS_FILE = HALCYON_STATE / "effects"
+APPLY_LOG = HALCYON_STATE / "apply.log"
 FLIP_FILE = HALCYON_STATE / "flip-pointer-y"
 SCREEN_SHADER = HALCYON_STATE / "screen-shader.frag"
 SHELL_RESTORE = HALCYON_STATE / "shell-restore.json"
@@ -374,11 +385,61 @@ def lua_table(mapping, indent=1):
     return ",\n".join(lines)
 
 
-def render_lua(theme_id, theme, effects, native_blur, shader_path=None):
+def lua_gradient(value):
+    """A border as Hyprland's Lua config takes it.
+
+    Themes write borders the familiar hyprlang way, "rgba(..) rgba(..) 45deg",
+    but the Lua config only accepts a single colour string; a gradient has
+    to be a table of colours and an angle in degrees.
+    """
+    parts = value.split()
+    angle = None
+    if parts[-1].endswith("deg"):
+        angle = int(parts.pop()[:-3])
+    if len(parts) == 1 and angle is None:
+        return parts[0]
+    gradient = {"colors": parts}
+    if angle is not None:
+        gradient["angle"] = angle
+    return gradient
+
+
+# Settings > Halcyon > Glass, with the ranges the page offers.
+GLASS_DEFAULTS = {
+    "pointerLens": True, "clickRipples": True, "edgeRefraction": False,
+    "strength": 0.5, "lensSize": 90, "windowOpacity": 0.96,
+    "inactiveWindowOpacity": 0.9, "blurSize": 8,
+}
+GLASS_RANGES = {
+    "strength": (0.0, 1.0), "lensSize": (30, 300), "windowOpacity": (0.5, 1.0),
+    "inactiveWindowOpacity": (0.5, 1.0), "blurSize": (1, 30),
+}
+
+
+def glass_settings(config=None):
+    """The glass options from config.json, falling back to defaults."""
+    config = read_shell_config() if config is None else config
+    stored = (config.get("halcyon") or {}).get("glass") or {}
+    glass = dict(GLASS_DEFAULTS)
+    for key, default in GLASS_DEFAULTS.items():
+        value = stored.get(key) if isinstance(stored, dict) else None
+        if isinstance(default, bool):
+            if isinstance(value, bool):
+                glass[key] = value
+        elif is_number(value):
+            low, high = GLASS_RANGES[key]
+            value = min(max(value, low), high)
+            glass[key] = round(value) if isinstance(default, int) else float(value)
+    return glass
+
+
+def render_lua(theme_id, theme, effects, native_blur, shader_path=None, glass=None):
     h = theme["hyprland"]
+    glass = glass or dict(GLASS_DEFAULTS)
     general = {
         "gaps_in": h["gaps_in"], "gaps_out": h["gaps_out"], "border_size": h["border_size"],
-        "col": {"active_border": h["active_border"], "inactive_border": h["inactive_border"]},
+        "col": {"active_border": lua_gradient(h["active_border"]),
+                "inactive_border": lua_gradient(h["inactive_border"])},
     }
     decoration = {"rounding": h["rounding"]}
     if "rounding_power" in h:
@@ -398,10 +459,13 @@ def render_lua(theme_id, theme, effects, native_blur, shader_path=None):
     decoration["blur"] = blur
     decoration["shadow"] = shadow
 
+    # Themes with glass windows take their opacity and frost from
+    # Settings > Halcyon > Glass.
     translucent = effects != "off" and "window_opacity" in h
     if translucent:
-        decoration["active_opacity"] = float(h["window_opacity"][0])
-        decoration["inactive_opacity"] = float(h["window_opacity"][1])
+        decoration["active_opacity"] = float(glass["windowOpacity"])
+        decoration["inactive_opacity"] = float(glass["inactiveWindowOpacity"])
+        blur["size"] = int(glass["blurSize"])
 
     native = theme.get("effects", {}).get("native_blur")
     use_native = native is not None and effects != "off" and native_blur
@@ -446,13 +510,24 @@ def render_lua(theme_id, theme, effects, native_blur, shader_path=None):
     return "\n".join(out) + "\n"
 
 
-def render_shader(theme, flip):
+def render_shader(theme, flip, glass=None):
+    """The theme's shader, with its #define knobs set from the settings."""
     shader = theme.get("effects", {}).get("screen_shader")
     if not shader:
         return None
+    glass = glass or dict(GLASS_DEFAULTS)
     text = (THEMES_DIR / shader).read_text(encoding="utf-8")
-    if flip:
-        text = text.replace("#define FLIP_POINTER_Y 0", "#define FLIP_POINTER_Y 1", 1)
+    knobs = {
+        "FLIP_POINTER_Y": "1" if flip else "0",
+        "LENS_ENABLED": "1" if glass["pointerLens"] else "0",
+        "RIPPLES_ENABLED": "1" if glass["clickRipples"] else "0",
+        "EDGE_ENABLED": "1" if glass["edgeRefraction"] else "0",
+        "STRENGTH": f"{float(glass['strength']):.3f}",
+        "LENS_RADIUS": f"{float(glass['lensSize']):.1f}",
+    }
+    for name, value in knobs.items():
+        # Shaders without a knob simply don't get it.
+        text = re.sub(rf"^#define {name} .*$", f"#define {name} {value}", text, count=1, flags=re.M)
     return text
 
 
@@ -595,11 +670,25 @@ def active():
     return read_state(ACTIVE_FILE)
 
 
+def effects_setting(config=None):
+    config = read_shell_config() if config is None else config
+    value = (config.get("halcyon") or {}).get("effects", "default")
+    return value if value in EFFECT_LEVELS else "default"
+
+
 def effects_for(theme):
-    override = read_state(EFFECTS_FILE)
+    override = effects_setting()
     if override in EFFECT_LEVELS:
         return override
     return theme.get("effects", {}).get("default", "light")
+
+
+def set_shell_value(key, value):
+    data = read_shell_config()
+    if get_nested(data, key) == value:
+        return
+    set_nested(data, key, value)
+    write_atomic(SHELL_CONFIG, json.dumps(data, indent=2) + "\n")
 
 
 def hyprland_running():
@@ -614,11 +703,24 @@ def hyprland_has_option(option):
     return result.returncode == 0 and "no such option" not in (result.stdout + result.stderr).lower()
 
 
-def run(cmd, **kwargs):
+def run(cmd):
+    """Run an upstream script, with its chatter going to the apply log.
+
+    Upstream's colour scripts print a lot, and start background helpers
+    (kde-material-you-colors) that keep printing after they return; on
+    Hyprland that includes a harmless traceback about KWin not running.
+    None of it belongs in the terminal of someone who typed a command.
+    """
     env = dict(os.environ, HALCYON_THEME_APPLYING="1")
-    result = subprocess.run(cmd, env=env, **kwargs)
+    APPLY_LOG.parent.mkdir(parents=True, exist_ok=True)
+    with APPLY_LOG.open("a", encoding="utf-8") as log:
+        log.write(f"\n$ {' '.join(map(str, cmd))}\n")
+        log.flush()
+        result = subprocess.run(cmd, env=env, stdin=subprocess.DEVNULL, stdout=log,
+                                stderr=subprocess.STDOUT, start_new_session=True)
     if result.returncode != 0:
-        raise ThemeError(f"{' '.join(map(str, cmd))} failed with exit code {result.returncode}")
+        raise ThemeError(f"{Path(str(cmd[0])).name} failed with exit code {result.returncode}; "
+                         f"details in {APPLY_LOG}")
 
 
 def notify(summary, body=""):
@@ -634,7 +736,8 @@ def reload_hyprland():
 def write_window_style(theme_id, theme):
     """(Re)write theme.lua and the shader for the active effects level."""
     effects = effects_for(theme)
-    shader_text = render_shader(theme, bool(read_state(FLIP_FILE)))
+    glass = glass_settings()
+    shader_text = render_shader(theme, bool(read_state(FLIP_FILE)), glass)
     shader_path = None
     if shader_text is not None and effects == "full":
         write_atomic(SCREEN_SHADER, shader_text)
@@ -642,7 +745,7 @@ def write_window_style(theme_id, theme):
     else:
         remove(SCREEN_SHADER)
     native = hyprland_has_option("decoration:blur:variant")
-    write_atomic(THEME_LUA, render_lua(theme_id, theme, effects, native, shader_path))
+    write_atomic(THEME_LUA, render_lua(theme_id, theme, effects, native, shader_path, glass))
     return effects, native
 
 
@@ -650,6 +753,7 @@ def leave_theme():
     """Undo everything a theme changed except colours."""
     restore_shell_config()
     remove(THEME_LUA, ACTIVE_FILE, SCREEN_SHADER)
+    set_shell_value("halcyon.theme", "")
 
 
 # ----------------------------------------------------------------------------
@@ -770,6 +874,7 @@ def cmd_apply(args):
     # Fully leave the previous theme first, so a failure part way through
     # leaves no theme half-applied.
     leave_theme()
+    write_atomic(APPLY_LOG, f"halcyon-theme apply {theme_id}\n")
 
     wallpaper = resolve_wallpaper(theme)
     if wallpaper.is_file():
@@ -793,11 +898,12 @@ def cmd_apply(args):
     apply_shell_config(theme)
     effects, native = write_window_style(theme_id, theme)
     write_atomic(ACTIVE_FILE, theme_id + "\n")
+    set_shell_value("halcyon.theme", theme_id)
     reload_hyprland()
 
     body = theme["description"]
     if effects == "full" and theme.get("effects", {}).get("screen_shader"):
-        body += "\nScreen effects are on and use more GPU: `halcyon-theme effects light` to save power."
+        body += "\nScreen effects use more GPU. Settings > Halcyon to tone them down."
     notify(f"{theme['name']} theme", body)
     print(f"applied {theme_id} (effects: {effects}{', native glass' if native else ''})")
     return 0
@@ -807,7 +913,7 @@ def cmd_effects(args):
     current = active()
     if not args:
         if current is None:
-            print(f"no theme active (effects setting: {read_state(EFFECTS_FILE) or 'theme default'})")
+            print(f"no theme active (effects setting: {effects_setting()})")
         else:
             print(effects_for(load(current)))
         return 0
@@ -819,10 +925,8 @@ def cmd_effects(args):
         else:
             write_atomic(FLIP_FILE, "1\n")
             print("pointer effects: flipped vertically")
-    elif level == "default":
-        remove(EFFECTS_FILE)
-    elif level in EFFECT_LEVELS:
-        write_atomic(EFFECTS_FILE, level + "\n")
+    elif level == "default" or level in EFFECT_LEVELS:
+        set_shell_value("halcyon.effects", level)
     else:
         raise ThemeError("usage: halcyon-theme effects [full|light|off|default|flip]")
     if current is not None:
@@ -830,6 +934,27 @@ def cmd_effects(args):
         reload_hyprland()
         notify("Effects", f"Now {effects}.")
         print(f"effects: {effects}")
+    return 0
+
+
+def cmd_refresh(_args):
+    """Re-render the active theme's window style from the current settings."""
+    current = active()
+    if current is None:
+        print("no theme active")
+        return 0
+    effects, native = write_window_style(current, load(current))
+    reload_hyprland()
+    print(f"refreshed {current} (effects: {effects}{', native glass' if native else ''})")
+    return 0
+
+
+def cmd_settings(_args):
+    settings_qml = CONFIG / "quickshell/ii/settings.qml"
+    if not shutil.which("qs") or not settings_qml.is_file():
+        raise ThemeError("the Settings app (qs -p ~/.config/quickshell/ii/settings.qml) is not available")
+    subprocess.Popen(["qs", "-p", str(settings_qml)], stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, start_new_session=True)
     return 0
 
 
@@ -933,7 +1058,8 @@ def cmd_menu(_args):
 COMMANDS = {
     "list": cmd_list, "current": cmd_current, "apply": cmd_apply, "off": cmd_off,
     "menu": cmd_menu, "check": cmd_check, "render": cmd_render, "detach": cmd_detach,
-    "effects": cmd_effects, "banner": cmd_banner,
+    "effects": cmd_effects, "banner": cmd_banner, "refresh": cmd_refresh,
+    "settings": cmd_settings,
 }
 
 

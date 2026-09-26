@@ -29,6 +29,11 @@ ApplicationWindow {
             component: "modules/settings/QuickConfig.qml"
         },
         {
+            name: Translation.tr("Halcyon"),
+            icon: "auto_awesome",
+            component: "modules/settings/HalcyonConfig.qml"
+        },
+        {
             name: Translation.tr("General"),
             icon: "browse",
             component: "modules/settings/GeneralConfig.qml"

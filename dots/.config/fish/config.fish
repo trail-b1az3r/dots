@@ -24,6 +24,8 @@ if status is-interactive
     alias claer "printf '\033[2J\033[3J\033[1;1H'"
     alias pamcan pacman
     alias q 'qs -c ii'
+    # Halcyon: themes, effects and banners (`halcyon help`)
+    alias halcyon ~/.config/hypr/hyprland/halcyon/halcyon-theme
     if test "$TERM" != "linux"
         alias ls 'eza --icons=auto'
     end
