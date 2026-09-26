@@ -1,6 +1,6 @@
 {
   "name": "HyperNeo",
-  "description": "Ember and neon on near-black, after the hyperNeo fire wallpaper.",
+  "description": "macOS-style in ember and neon: a menu bar and a dock, squircle windows with deep soft shadows, springy animations.",
   "wallpaper": "~/.config/quickshell/ii/assets/images/default_wallpaper.png",
   "seed": "#FF9A5C",
   "scheme": "scheme-fidelity",
@@ -62,14 +62,126 @@
     "term15": "#F3DEDA"
   },
   "hyprland": {
-    "rounding": 14,
-    "gaps_in": 5,
-    "gaps_out": 10,
-    "border_size": 2,
-    "active_border": "rgba(FF9A5CEE) rgba(FF6F9CEE) 45deg",
-    "inactive_border": "rgba(54433F55)",
-    "blur_size": 10,
+    "rounding": 16,
+    "rounding_power": 3.2,
+    "gaps_in": 6,
+    "gaps_out": 14,
+    "border_size": 1,
+    "active_border": "rgba(FFD2B84D)",
+    "inactive_border": "rgba(FFFFFF14)",
+    "blur_size": 18,
     "blur_passes": 3,
-    "shadow_color": "rgba(FF6A2A26)"
+    "blur_vibrancy": 0.35,
+    "blur_popups": true,
+    "shadow_color": "rgba(000000A6)",
+    "shadow_color_inactive": "rgba(00000059)",
+    "shadow_range": 48,
+    "shadow_render_power": 3,
+    "shadow_offset": [
+      0,
+      14
+    ],
+    "dim_inactive": false,
+    "curves": {
+      "macSpring": [
+        0.34,
+        1.36,
+        0.64,
+        1.0
+      ],
+      "macEaseOut": [
+        0.16,
+        1.0,
+        0.3,
+        1.0
+      ],
+      "macEaseIn": [
+        0.4,
+        0.0,
+        1.0,
+        1.0
+      ]
+    },
+    "animations": [
+      {
+        "leaf": "windowsIn",
+        "speed": 3.2,
+        "curve": "macSpring",
+        "style": "popin 88%"
+      },
+      {
+        "leaf": "windowsOut",
+        "speed": 2.2,
+        "curve": "macEaseIn",
+        "style": "popin 92%"
+      },
+      {
+        "leaf": "fadeIn",
+        "speed": 2.6,
+        "curve": "macEaseOut"
+      },
+      {
+        "leaf": "fadeOut",
+        "speed": 2.0,
+        "curve": "macEaseIn"
+      },
+      {
+        "leaf": "windowsMove",
+        "speed": 3.4,
+        "curve": "macEaseOut",
+        "style": "slide"
+      },
+      {
+        "leaf": "workspaces",
+        "speed": 4.5,
+        "curve": "macEaseOut",
+        "style": "slide"
+      },
+      {
+        "leaf": "layersIn",
+        "speed": 2.6,
+        "curve": "macSpring",
+        "style": "popin 94%"
+      },
+      {
+        "leaf": "layersOut",
+        "speed": 2.0,
+        "curve": "macEaseIn",
+        "style": "popin 96%"
+      },
+      {
+        "leaf": "specialWorkspaceIn",
+        "speed": 3.0,
+        "curve": "macEaseOut",
+        "style": "slidevert"
+      },
+      {
+        "leaf": "border",
+        "speed": 6.0,
+        "curve": "macEaseOut"
+      }
+    ]
+  },
+  "effects": {
+    "default": "light",
+    "native_blur": {
+      "variant": 8,
+      "options": {
+        "acrylic:refraction": 16,
+        "acrylic:bulb": 40,
+        "acrylic:clarity": 0.86,
+        "acrylic:aberration": 0.015,
+        "acrylic:tint": "rgba(FFFFFF14)"
+      }
+    }
+  },
+  "shell_config": {
+    "bar.cornerStyle": 2,
+    "bar.borderless": true,
+    "dock.enable": true,
+    "dock.pinnedOnStartup": true,
+    "dock.hoverToReveal": true,
+    "dock.monochromeIcons": false,
+    "appearance.fakeScreenRounding": 1
   }
 }

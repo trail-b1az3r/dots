@@ -1,6 +1,6 @@
 {
   "name": "Star Rail",
-  "description": "Astral gold and lavender on deep space navy, with a golden rail through a nebula.",
+  "description": "Astral gold and lavender on deep space navy, with a golden rail through a nebula. Can show the current banner character.",
   "wallpaper": "wallpapers/star-rail.jpg",
   "seed": "#F2C879",
   "scheme": "scheme-expressive",
@@ -71,5 +71,9 @@
     "blur_size": 12,
     "blur_passes": 4,
     "shadow_color": "rgba(0000003A)"
+  },
+  "banner": {
+    "frame": "#F2C879",
+    "glow": "#C8B8FF"
   }
 }

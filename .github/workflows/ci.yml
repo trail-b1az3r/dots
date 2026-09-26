@@ -22,10 +22,10 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Lua
+      - name: Install Lua, glslang and Pillow
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y lua5.4
+          sudo apt-get install --no-install-recommends -y lua5.4 glslang-tools python3-pil
 
       - name: Shapes submodule checked out
         run: test -n "$(ls -A dots/.config/quickshell/ii/modules/common/widgets/shapes)"

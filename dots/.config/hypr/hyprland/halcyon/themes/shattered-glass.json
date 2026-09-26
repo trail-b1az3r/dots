@@ -1,6 +1,6 @@
 {
   "name": "Shattered Glass",
-  "description": "Ice blue and prism violet, sharp corners and crisp frost, over a broken pane.",
+  "description": "Liquid glass over a broken pane: a glass lens follows the pointer, clicks crack the screen, windows turn to frosted glass.",
   "wallpaper": "wallpapers/shattered-glass.jpg",
   "seed": "#9ED8FF",
   "scheme": "scheme-tonal-spot",
@@ -68,8 +68,93 @@
     "border_size": 2,
     "active_border": "rgba(9ED8FFEE) rgba(D3B8FFEE) rgba(9ED8FFEE) 135deg",
     "inactive_border": "rgba(3E4A5644)",
-    "blur_size": 6,
+    "blur_size": 7,
     "blur_passes": 4,
-    "shadow_color": "rgba(9ED8FF1A)"
+    "shadow_color": "rgba(9ED8FF1A)",
+    "blur_vibrancy": 0.45,
+    "blur_popups": true,
+    "dim_inactive": false,
+    "window_opacity": [
+      0.9,
+      0.8
+    ],
+    "shadow_range": 30,
+    "shadow_render_power": 3,
+    "shadow_offset": [
+      0,
+      6
+    ],
+    "curves": {
+      "glassPop": [
+        0.22,
+        1.28,
+        0.36,
+        1.0
+      ],
+      "glassOut": [
+        0.5,
+        0.0,
+        0.75,
+        0.0
+      ],
+      "glassSlide": [
+        0.2,
+        0.9,
+        0.2,
+        1.0
+      ]
+    },
+    "animations": [
+      {
+        "leaf": "windowsIn",
+        "speed": 3.0,
+        "curve": "glassPop",
+        "style": "popin 90%"
+      },
+      {
+        "leaf": "windowsOut",
+        "speed": 2.2,
+        "curve": "glassOut",
+        "style": "popin 94%"
+      },
+      {
+        "leaf": "windowsMove",
+        "speed": 3.2,
+        "curve": "glassSlide",
+        "style": "slide"
+      },
+      {
+        "leaf": "layersIn",
+        "speed": 2.6,
+        "curve": "glassPop",
+        "style": "popin 94%"
+      },
+      {
+        "leaf": "workspaces",
+        "speed": 4.5,
+        "curve": "glassSlide",
+        "style": "slide"
+      }
+    ]
+  },
+  "effects": {
+    "default": "full",
+    "screen_shader": "shaders/shattered-glass.frag",
+    "native_blur": {
+      "variant": 8,
+      "options": {
+        "acrylic:refraction": 22,
+        "acrylic:bulb": 56,
+        "acrylic:clarity": 0.78,
+        "acrylic:aberration": 0.04,
+        "acrylic:tint": "rgba(9ED8FF22)"
+      }
+    }
+  },
+  "shell_config": {
+    "appearance.transparency.enable": true,
+    "appearance.transparency.automatic": false,
+    "appearance.transparency.backgroundTransparency": 0.28,
+    "appearance.transparency.contentTransparency": 0.6
   }
 }

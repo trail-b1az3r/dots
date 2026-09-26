@@ -1,0 +1,177 @@
+#!/usr/bin/env python3
+"""Compose a character banner into a theme wallpaper.
+
+Called by `halcyon-theme apply` when a banner is set; not usually run by
+hand. Needs Pillow, which illogical-impulse's virtual environment has.
+
+    halcyon-banner --background BG --art ART --out OUT
+                   [--title T] [--subtitle S] [--frame #RRGGBB] [--glow #RRGGBB]
+
+The art can be any size. With transparency (a cut-out character), it is
+used as is; without, its left edge and bottom are feathered into the
+background so a full splash image blends in too. The character stands on
+the right, behind a slanted frame, with the name plate lower left.
+"""
+
+import argparse
+import subprocess
+from pathlib import Path
+
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
+
+W, H = 2560, 1440
+
+
+def hex_rgb(value):
+    value = value.lstrip("#")
+    return tuple(int(value[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def cover(image, size):
+    """Scale and centre-crop to fill size exactly."""
+    w, h = size
+    scale = max(w / image.width, h / image.height)
+    resized = image.resize((round(image.width * scale), round(image.height * scale)), Image.LANCZOS)
+    left = (resized.width - w) // 2
+    top = (resized.height - h) // 2
+    return resized.crop((left, top, left + w, top + h))
+
+
+def ramp(length, start, end, reverse=False):
+    """A 1-D smoothstep ramp as an 'L' image strip, 0 before start, 255 after end."""
+    values = []
+    for i in range(length):
+        t = min(max((i - start) / max(end - start, 1), 0.0), 1.0)
+        t = t * t * (3 - 2 * t)
+        values.append(round((1 - t if reverse else t) * 255))
+    strip = Image.new("L", (length, 1))
+    strip.putdata(values)
+    return strip
+
+
+def has_transparency(art):
+    return art.getchannel("A").getextrema()[0] < 250
+
+
+def vertical_ramp(w, h, start, end, reverse=False):
+    return ramp(h, start, end, reverse).resize((h, 1)).rotate(-90, expand=True).resize((w, h))
+
+
+def cutout_mask(art):
+    """A cut-out keeps its own alpha, softened where it meets the bottom edge."""
+    w, h = art.size
+    return ImageChops.multiply(art.getchannel("A"), vertical_ramp(w, h, h * 0.9, h, reverse=True))
+
+
+def splash_mask(size):
+    """An opaque splash fades in from the left and softly at top and bottom."""
+    w, h = size
+    horizontal = ramp(w, 0, w * 0.45).resize((w, h))
+    top = vertical_ramp(w, h, 0, h * 0.08)
+    bottom = vertical_ramp(w, h, h * 0.9, h, reverse=True)
+    return ImageChops.multiply(ImageChops.multiply(horizontal, top), bottom)
+
+
+def find_font(family, weight):
+    try:
+        path = subprocess.run(["fc-match", "-f", "%{file}", f"{family}:weight={weight}"],
+                              capture_output=True, text=True, check=False, timeout=5).stdout.strip()
+        if path and Path(path).is_file():
+            return path
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return None
+
+
+def font(size, weight=200):
+    for family in ("Google Sans Flex", "Readex Pro", "Space Grotesk", "DejaVu Sans"):
+        path = find_font(family, weight)
+        if path:
+            try:
+                return ImageFont.truetype(path, size)
+            except OSError:
+                continue
+    return ImageFont.load_default(size=size)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--background", required=True)
+    parser.add_argument("--art", required=True)
+    parser.add_argument("--out", required=True)
+    parser.add_argument("--title", default="")
+    parser.add_argument("--subtitle", default="Now on banner")
+    parser.add_argument("--frame", default="#F2C879")
+    parser.add_argument("--glow", default="#C8B8FF")
+    args = parser.parse_args()
+
+    frame, glow = hex_rgb(args.frame), hex_rgb(args.glow)
+    canvas = cover(Image.open(args.background).convert("RGB"), (W, H)).convert("RGBA")
+
+    # Light behind the character: a soft glow and a slanted frame panel.
+    backdrop = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(backdrop)
+    draw.ellipse((W * 0.52, H * 0.05, W * 1.05, H * 1.05), fill=glow + (70,))
+    backdrop = backdrop.filter(ImageFilter.GaussianBlur(160))
+    panel = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    pdraw = ImageDraw.Draw(panel)
+    slant = W * 0.08
+    pdraw.polygon([(W * 0.55 + slant, 0), (W, 0), (W, H), (W * 0.55, H)], fill=(8, 10, 26, 110))
+    canvas = Image.alpha_composite(canvas, backdrop)
+    canvas = Image.alpha_composite(canvas, panel)
+
+    art = Image.open(args.art).convert("RGBA")
+    if has_transparency(art):
+        # A cut-out character: as tall as the screen, standing on the right.
+        scale = min(H * 1.02 / art.height, W * 0.62 / art.width)
+        art = art.resize((max(1, round(art.width * scale)), max(1, round(art.height * scale))), Image.LANCZOS)
+        mask = cutout_mask(art)
+        x, y = W - art.width - round(W * 0.02), H - art.height
+    else:
+        # A full splash image: fill the right half, cropped around its
+        # centre (where splash art puts the character), fading in from the
+        # left so it melts into the nebula.
+        region = (round(W * 0.52), H)
+        art = cover(art, region)
+        mask = splash_mask(region)
+        x, y = W - region[0], 0
+    layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    layer.paste(art, (x, y), mask)
+    # A rim of frame colour around a cut-out, so it sits in the light.
+    rim_alpha = layer.getchannel("A").filter(ImageFilter.GaussianBlur(10))
+    rim = Image.new("RGBA", (W, H), frame + (0,))
+    rim.putalpha(rim_alpha.point(lambda a: a * 0.35))
+    canvas = Image.alpha_composite(canvas, rim)
+    canvas = Image.alpha_composite(canvas, layer)
+
+    # The frame's gold edge goes over the art, so the art sits inside it.
+    edge = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    edraw = ImageDraw.Draw(edge)
+    edraw.line([(W * 0.55 + slant, 0), (W * 0.55, H)], fill=frame + (210,), width=4)
+    edraw.line([(W * 0.535 + slant, 0), (W * 0.535, H)], fill=frame + (90,), width=2)
+    canvas = Image.alpha_composite(canvas, edge)
+
+    # Name plate, lower left, clear of the dock and of tiled windows' edge.
+    plate = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    tdraw = ImageDraw.Draw(plate)
+    left, baseline = round(W * 0.055), round(H * 0.74)
+    if args.subtitle:
+        tdraw.text((left, baseline - 150), args.subtitle.upper(), font=font(34, 500), fill=frame + (235,))
+        tdraw.line([(left, baseline - 100), (left + 420, baseline - 100)], fill=frame + (200,), width=3)
+    if args.title:
+        title_font = font(128, 300)
+        shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        ImageDraw.Draw(shadow).text((left, baseline - 80), args.title, font=title_font, fill=(0, 0, 0, 170))
+        plate = Image.alpha_composite(plate, shadow.filter(ImageFilter.GaussianBlur(12)))
+        ImageDraw.Draw(plate).text((left, baseline - 80), args.title, font=title_font, fill=(246, 240, 255, 255))
+    for i, (sx, sy) in enumerate([(left + 440, baseline - 104), (left + 470, baseline - 104)]):
+        r = 7 - i * 3
+        ImageDraw.Draw(plate).polygon([(sx, sy - r), (sx + r, sy), (sx, sy + r), (sx - r, sy)], fill=frame + (230,))
+    canvas = Image.alpha_composite(canvas, plate)
+
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    canvas.convert("RGB").save(args.out, quality=92)
+
+
+if __name__ == "__main__":
+    main()
