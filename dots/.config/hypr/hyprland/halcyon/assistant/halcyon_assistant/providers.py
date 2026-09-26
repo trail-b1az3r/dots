@@ -16,6 +16,9 @@ them.
 
 import json
 import os
+import shutil
+import subprocess
+import sys
 import urllib.error
 import urllib.request
 import uuid
@@ -123,6 +126,100 @@ class Claude:
         calls = [{"id": b.id, "name": b.name, "args": b.input}
                  for b in response.content if b.type == "tool_use"]
         return {"text": text, "calls": calls, "raw": response.content}
+
+
+# ---------------------------------------------------------------------------
+# Claude with a Pro or Max plan, through Claude Code
+# ---------------------------------------------------------------------------
+
+def claude_code_signed_in():
+    """Whether Claude Code has a subscription login it can use."""
+    if not shutil.which("claude"):
+        return False
+    if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+        return True
+    config_dir = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
+    return (config_dir / ".credentials.json").is_file()
+
+
+class ClaudeCode:
+    """Claude on your own Pro/Max plan, by running Claude Code headless.
+
+    Anthropic doesn't let other apps sign in with a claude.ai account or
+    reuse its login, so this doesn't: it runs Anthropic's own Claude Code
+    CLI (`claude -p`), which you sign in to yourself. Its built-in tools are
+    all switched off; the only tools it gets are Halcyon's desktop actions,
+    served by mcp_server.py. Requests count against your plan's usage.
+    """
+
+    name = "claude-code"
+    ENV_CREDENTIALS = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_PROFILE")
+    DESKTOP_ENV = ("PATH", "HOME", "USER", "LANG", "HYPRLAND_INSTANCE_SIGNATURE", "WAYLAND_DISPLAY",
+                   "DISPLAY", "XDG_RUNTIME_DIR", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME",
+                   "XDG_DATA_DIRS", "XDG_CURRENT_DESKTOP", "DBUS_SESSION_BUS_ADDRESS")
+
+    def __init__(self, model="", run=subprocess.run, workdir=None):
+        self.model = model or "your plan's default"
+        self._model_flag = model
+        self.run = run
+        self.session = None
+        self.workdir = workdir or config.ASSISTANT_STATE
+
+    def command(self, prompt, system, tools):
+        package_root = str(Path(__file__).resolve().parent.parent)
+        # What the actions need to reach the desktop, passed through
+        # explicitly in case MCP servers get a trimmed environment.
+        env = {k: os.environ[k] for k in self.DESKTOP_ENV if k in os.environ}
+        env["PYTHONPATH"] = package_root
+        mcp = {"mcpServers": {"halcyon": {
+            "command": sys.executable, "args": ["-m", "halcyon_assistant.mcp_server"], "env": env}}}
+        allowed = [f"mcp__halcyon__{name}" for name in tools]
+        # No built-in tools at all (no shell, no files), and no MCP servers
+        # but ours: Halcyon's actions are the only things it can do.
+        argv = ["claude", "-p", "--output-format", "json", "--system-prompt", system,
+                "--tools", "", "--strict-mcp-config"]
+        if allowed:
+            argv += ["--mcp-config", json.dumps(mcp), "--allowedTools", *allowed]
+        if self._model_flag:
+            argv += ["--model", self._model_flag]
+        if self.session:
+            argv += ["--resume", self.session]
+        return argv + ["--", prompt]
+
+    def chat(self, history, system, tools):
+        # A fresh conversation (the first turn, or after memory lapsed)
+        # starts a fresh Claude Code session; otherwise continue the last.
+        if sum(1 for t in history if t["role"] == "user") <= 1:
+            self.session = None
+        prompt = next(t["text"] for t in reversed(history) if t["role"] == "user")
+        # Claude Code prefers an API key over your subscription login when
+        # one is in the environment; this provider exists to use the plan.
+        env = {k: v for k, v in os.environ.items() if k not in self.ENV_CREDENTIALS}
+        Path(self.workdir).mkdir(parents=True, exist_ok=True)
+        try:
+            done = self.run(self.command(prompt, system, tools), capture_output=True, text=True,
+                            timeout=150, env=env, cwd=str(self.workdir), stdin=subprocess.DEVNULL)
+        except FileNotFoundError:
+            raise ProviderError("Claude Code isn't installed: run `halcyon assistant login`") from None
+        except subprocess.TimeoutExpired:
+            raise ProviderError("Claude Code took too long to answer") from None
+        try:
+            data = json.loads(done.stdout.strip().splitlines()[-1]) if done.stdout.strip() else {}
+        except ValueError:
+            data = {}
+        if not data:
+            detail = (done.stderr or done.stdout or "no output").strip().splitlines()[-1:] or ["no output"]
+            if "login" in detail[0].lower() or "log in" in detail[0].lower():
+                raise ProviderError("Claude Code isn't signed in: run `halcyon assistant login`")
+            raise ProviderError(f"Claude Code failed: {detail[0][:200]}")
+        self.session = data.get("session_id") or self.session
+        text = (data.get("result") or "").strip()
+        if data.get("is_error"):
+            if "login" in text.lower():
+                raise ProviderError("your Claude login has expired: run `halcyon assistant login`")
+            raise ProviderError(f"Claude Code: {text[:200] or 'error'}")
+        # Tools ran inside Claude Code already; nothing left for our loop.
+        return {"text": text, "calls": [], "raw": None}
 
 
 # ---------------------------------------------------------------------------
@@ -285,11 +382,17 @@ def resolve(settings):
     if provider == "auto":
         if _anthropic_credentials():
             provider = "claude"
+        elif claude_code_signed_in():
+            provider = "claude-code"
         elif config.api_key("gemini"):
             provider = "gemini"
         else:
             provider = "ollama"
     model = settings["model"] or config.DEFAULT_MODELS[provider]
+    if provider == "claude-code":
+        if not shutil.which("claude"):
+            raise ProviderError("Claude Code isn't installed: run `halcyon assistant login`")
+        return ClaudeCode(model)
     if provider == "claude":
         try:
             return Claude(model, key=config.api_key("anthropic"))

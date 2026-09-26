@@ -181,7 +181,7 @@ ContentPage {
 
         ContentSubsection {
             title: Translation.tr("AI")
-            tooltip: Translation.tr("Auto uses Claude if an Anthropic key is set, then Gemini, then a local Ollama model. Keys are shared with the AI sidebar; add one with: halcyon assistant key anthropic")
+            tooltip: Translation.tr("Auto uses an Anthropic API key if set, then your Claude plan, then Gemini, then a local Ollama model. Keys are shared with the AI sidebar.")
             ConfigSelectionArray {
                 currentValue: Config.options.halcyon.assistant.provider
                 onSelected: newValue => {
@@ -190,11 +190,36 @@ ContentPage {
                 }
                 options: [
                     { displayName: Translation.tr("Auto"), icon: "auto_mode", value: "auto" },
-                    { displayName: "Claude", icon: "neurology", value: "claude" },
+                    { displayName: Translation.tr("Claude plan"), icon: "workspace_premium", value: "claude-code" },
+                    { displayName: Translation.tr("Claude API"), icon: "neurology", value: "claude" },
                     { displayName: "Gemini", icon: "star", value: "gemini" },
                     { displayName: Translation.tr("Ollama (local)"), icon: "computer", value: "ollama" },
                     { displayName: Translation.tr("OpenAI-compatible"), icon: "api", value: "openai" }
                 ]
+            }
+        }
+
+        RowLayout {
+            StyledText {
+                Layout.leftMargin: 10
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                color: Appearance.colors.colSubtext
+                font.pixelSize: Appearance.font.pixelSize.smallie
+                text: Translation.tr("No API key? Use your Claude Pro or Max plan: sign in to Claude Code, Anthropic's own app, and the assistant uses it. Counts against your plan's usage.")
+            }
+            RippleButtonWithIcon {
+                buttonRadius: Appearance.rounding.full
+                materialIcon: "login"
+                mainText: Translation.tr("Sign in with Claude")
+                onClicked: {
+                    // A terminal, since signing in may ask to install Claude Code
+                    // and to paste a code back from the browser.
+                    Quickshell.execDetached(["bash", "-c", `${Config.options.apps.terminal} bash -c "'${page.assistantTool}' login; read -rp 'Press Enter to close. '"`]);
+                }
+                StyledToolTip {
+                    text: "halcyon assistant login"
+                }
             }
         }
 

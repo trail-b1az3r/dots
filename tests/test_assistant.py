@@ -9,6 +9,7 @@ import random
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -180,6 +181,95 @@ class ProvidersTest(unittest.TestCase):
         self.assertIs(messages[1]["content"], raw)
         self.assertEqual([b["tool_use_id"] for b in messages[2]["content"]], ["t1", "t2"])
         self.assertTrue(messages[2]["content"][1]["is_error"])
+
+
+class ClaudeCodeTest(unittest.TestCase):
+    """The Claude Pro/Max provider, which runs Anthropic's Claude Code CLI."""
+
+    class Run:
+        def __init__(self, *outputs):
+            self.outputs = list(outputs)
+            self.calls = []
+
+        def __call__(self, argv, **kwargs):
+            self.calls.append((argv, kwargs))
+            stdout, stderr = self.outputs.pop(0)
+
+            class Done:
+                pass
+            done = Done()
+            done.stdout, done.stderr, done.returncode = stdout, stderr, 0
+            return done
+
+    def test_command_line_locks_it_down_to_halcyon_actions(self):
+        run = self.Run((json.dumps({"result": "Done.", "session_id": "s1", "is_error": False}), ""))
+        provider = providers.ClaudeCode(run=run, workdir=tempfile.mkdtemp())
+        with unittest.mock.patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-should-not-be-used",
+                                                     "HYPRLAND_INSTANCE_SIGNATURE": "abc"}):
+            answer = provider.chat([{"role": "user", "text": "mute"}], "be brief", actions.ACTIONS)
+        argv, kwargs = run.calls[0]
+        self.assertEqual(argv[:4], ["claude", "-p", "--output-format", "json"])
+        # No built-in tools, only our MCP server, only our actions allowed.
+        self.assertEqual(argv[argv.index("--tools") + 1], "")
+        self.assertIn("--strict-mcp-config", argv)
+        allowed = argv[argv.index("--allowedTools") + 1:argv.index("--")]
+        self.assertEqual(allowed, [f"mcp__halcyon__{n}" for n in actions.ACTIONS])
+        mcp = json.loads(argv[argv.index("--mcp-config") + 1])["mcpServers"]["halcyon"]
+        self.assertEqual(mcp["args"], ["-m", "halcyon_assistant.mcp_server"])
+        self.assertEqual(mcp["env"]["HYPRLAND_INSTANCE_SIGNATURE"], "abc")
+        self.assertEqual(argv[-2:], ["--", "mute"])
+        self.assertNotIn("--model", argv)
+        # The plan is the point: an API key in the environment must not win.
+        self.assertNotIn("ANTHROPIC_API_KEY", kwargs["env"])
+        self.assertEqual(answer, {"text": "Done.", "calls": [], "raw": None})
+
+    def test_follow_ups_resume_the_session_and_new_conversations_do_not(self):
+        reply = json.dumps({"result": "Ok.", "session_id": "s1"})
+        run = self.Run((reply, ""), (reply, ""), (reply, ""))
+        provider = providers.ClaudeCode(run=run, workdir=tempfile.mkdtemp())
+        first = [{"role": "user", "text": "hi"}]
+        provider.chat(first, "", {})
+        provider.chat(first + [{"role": "assistant", "text": "Ok."}, {"role": "user", "text": "and?"}], "", {})
+        provider.chat([{"role": "user", "text": "new topic"}], "", {})
+        self.assertNotIn("--resume", run.calls[0][0])
+        self.assertEqual(run.calls[1][0][run.calls[1][0].index("--resume") + 1], "s1")
+        self.assertNotIn("--resume", run.calls[2][0])
+
+    def test_without_actions_it_gets_no_tools(self):
+        run = self.Run((json.dumps({"result": "Hi."}), ""))
+        providers.ClaudeCode(run=run, workdir=tempfile.mkdtemp()).chat([{"role": "user", "text": "hi"}], "", {})
+        argv = run.calls[0][0]
+        self.assertNotIn("--mcp-config", argv)
+        self.assertNotIn("--allowedTools", argv)
+
+    def test_errors_explain_what_to_do(self):
+        cases = [(("", "Not logged in · Please run /login"), "halcyon assistant login"),
+                 ((json.dumps({"result": "Login expired", "is_error": True}), ""), "expired"),
+                 ((json.dumps({"result": "overloaded", "is_error": True}), ""), "overloaded")]
+        for output, expected in cases:
+            provider = providers.ClaudeCode(run=self.Run(output), workdir=tempfile.mkdtemp())
+            with self.assertRaises(providers.ProviderError) as caught:
+                provider.chat([{"role": "user", "text": "x"}], "", {})
+            self.assertIn(expected, str(caught.exception))
+
+
+class McpServerTest(unittest.TestCase):
+    def test_handshake_list_and_call(self):
+        from halcyon_assistant import mcp_server
+        init = mcp_server.handle({"jsonrpc": "2.0", "id": 1, "method": "initialize",
+                                  "params": {"protocolVersion": "2025-06-18"}})
+        self.assertEqual(init["result"]["protocolVersion"], "2025-06-18")
+        self.assertIn("tools", init["result"]["capabilities"])
+        self.assertIsNone(mcp_server.handle({"jsonrpc": "2.0", "method": "notifications/initialized"}))
+        listed = mcp_server.handle({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})["result"]["tools"]
+        self.assertEqual({t["name"] for t in listed}, set(actions.ACTIONS))
+        called = mcp_server.handle({"jsonrpc": "2.0", "id": 3, "method": "tools/call",
+                                    "params": {"name": "set_volume", "arguments": {"percent": 20}}},
+                                   run=lambda name, args: f"ran {name} {args['percent']}")
+        self.assertEqual(called["result"]["content"][0]["text"], "ran set_volume 20")
+        self.assertFalse(called["result"]["isError"])
+        unknown = mcp_server.handle({"jsonrpc": "2.0", "id": 4, "method": "resources/list"})
+        self.assertEqual(unknown["error"]["code"], -32601)
 
 
 class ConversationTest(unittest.TestCase):

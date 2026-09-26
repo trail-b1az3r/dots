@@ -20,10 +20,10 @@ SOCKET = RUNTIME / "halcyon-assistant.sock"
 if len(str(SOCKET)) > 100:  # Unix socket paths are limited to ~108 bytes
     SOCKET = Path(f"/tmp/halcyon-assistant-{os.getuid()}.sock")
 
-PROVIDERS = ("auto", "claude", "gemini", "ollama", "openai")
+PROVIDERS = ("auto", "claude", "claude-code", "gemini", "ollama", "openai")
 DEFAULTS = {
     "enable": True,          # start the assistant with Hyprland
-    "provider": "auto",      # auto: Claude if a key is set, else Gemini, else local Ollama
+    "provider": "auto",      # auto: Claude API key, else Claude plan (Claude Code), else Gemini, else Ollama
     "model": "",             # "" = the provider's default below
     "endpoint": "",          # for "openai" (any OpenAI-compatible server) and "ollama"
     "keyId": "",             # which stored key "openai" uses (e.g. "mistral", "openrouter")
@@ -36,6 +36,7 @@ DEFAULTS = {
 }
 DEFAULT_MODELS = {
     "claude": "claude-opus-5",
+    "claude-code": "",       # "" = whatever your plan's Claude Code uses
     "gemini": "gemini-2.5-flash",
     "ollama": "llama3.2",
     "openai": "gpt-4o-mini",

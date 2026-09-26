@@ -21,6 +21,7 @@ USAGE = """Halcyon's voice assistant.
     halcyon assistant setup         install speech recognition (one time, ~300 MB)
           --wake                    ...and the offline "hey halcyon" wake word model
           --piper                   ...and a natural Piper voice instead of espeak-ng
+    halcyon assistant login         use your Claude Pro/Max plan instead of an API key
     halcyon assistant key ID [KEY]  store an API key: anthropic, gemini, openai, mistral...
     halcyon assistant set NAME VALUE  change a setting (provider, model, wakeWord, speak...)
 
@@ -103,6 +104,40 @@ def setup(args):
     return 0
 
 
+CLAUDE_CODE_INSTALLER = "https://claude.ai/install.sh"
+
+
+def login(_args):
+    """Use a Claude Pro/Max plan, through Anthropic's own Claude Code."""
+    print("Halcyon uses your Claude plan through Claude Code, Anthropic's official CLI.\n"
+          "You sign in to Claude Code yourself; Halcyon never sees your login.\n"
+          "Requests count against your plan's usage limits.\n")
+    if not providers.shutil.which("claude"):
+        print(f"Claude Code isn't installed. Anthropic's installer is:\n  curl -fsSL {CLAUDE_CODE_INSTALLER} | bash")
+        if not sys.stdin.isatty() or input("Run it now? [y/N] ").strip().lower() != "y":
+            print("Install it, then run `halcyon assistant login` again.")
+            return 1
+        subprocess.run(["bash", "-c", f"curl -fsSL {CLAUDE_CODE_INSTALLER} | bash"], check=False)
+        local_bin = str(config.HOME / ".local/bin")
+        os.environ["PATH"] = local_bin + os.pathsep + os.environ.get("PATH", "")
+        if not providers.shutil.which("claude"):
+            print("Claude Code still isn't on PATH; open a new terminal and try again.")
+            return 1
+    if providers.claude_code_signed_in():
+        print("Claude Code is already signed in.")
+    else:
+        env = {k: v for k, v in os.environ.items() if k not in providers.ClaudeCode.ENV_CREDENTIALS}
+        # Without --console this signs in with a claude.ai (Pro/Max) account.
+        if subprocess.run(["claude", "auth", "login"], env=env).returncode != 0 \
+                or not providers.claude_code_signed_in():
+            print("Sign-in didn't finish. Run `halcyon assistant login` to try again.")
+            return 1
+    config.write_setting("provider", "claude-code")
+    daemon.send("reload")
+    print("\nDone: the assistant now uses your Claude plan. Press Super + Shift + Space and speak.")
+    return 0
+
+
 def doctor(_args):
     settings = config.settings()
     rows = [
@@ -118,6 +153,9 @@ def doctor(_args):
         rows.append(("AI", f"{provider.name}, model {provider.model}"))
     except providers.ProviderError as error:
         rows.append(("AI", f"not ready: {error}"))
+    rows.append(("Claude plan", "signed in (Claude Code)" if providers.claude_code_signed_in() else
+                 ("Claude Code installed, not signed in" if providers.shutil.which("claude") else
+                  "-  (halcyon assistant login)")))
     for key_id in ("anthropic", "gemini", "openai", "mistral"):
         rows.append((f"{key_id} key", "set" if config.api_key(key_id) else "-"))
     width = max(len(r[0]) for r in rows)
@@ -182,6 +220,8 @@ def main(argv):
         return ask(args)
     if command == "setup":
         return setup(args)
+    if command == "login":
+        return login(args)
     if command == "doctor":
         return doctor(args)
     if command == "key" and args:

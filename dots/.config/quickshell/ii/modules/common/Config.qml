@@ -98,7 +98,7 @@ Singleton {
                 }
                 property JsonObject assistant: JsonObject {
                     property bool enable: true // Start the voice assistant with Hyprland (Super+Shift+Space)
-                    property string provider: "auto" // "auto", "claude", "gemini", "ollama", "openai"
+                    property string provider: "auto" // "auto", "claude-code" (Claude Pro/Max plan), "claude" (API key), "gemini", "ollama", "openai"
                     property string model: "" // "" = the provider's default
                     property string endpoint: "" // For "openai" (any OpenAI-compatible server) and "ollama"
                     property string keyId: "" // Which stored key "openai" uses, e.g. "mistral"
