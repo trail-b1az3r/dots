@@ -135,6 +135,7 @@ active theme straight away:
 | Colour fringe at screen edges | off | Slight colour split at the edges (Full only) |
 | Strength | 0.5 | Scales all the screen effects; 0 turns them to nothing |
 | Lens size | 90 px | Radius of the pointer lens |
+| Lens bounce | 0.6 | How much the lens squashes and springs back; 0 turns it off |
 | Focused / other windows | 0.96 / 0.9 | Opacity of glass windows (Light and Full) |
 | Frost | 8 | Blur size behind glass windows |
 
@@ -179,6 +180,37 @@ blur instead.
 
 **HyperNeo** has no traffic-light window buttons. Hyprland only draws
 those through the hyprbars plugin, which isn't set up here.
+
+**Lens bounce.** Both glass lenses are a little springy:
+- **While moving:** the lens is pressed slightly flatter and quivers.
+- **When the pointer stops:** it springs back past its rest shape, trading
+  width for height a couple of times, then settles in about half a second.
+
+Hyprland gives screen shaders the time since the pointer last moved, but
+not its speed or direction, so the bounce follows that timing. It doesn't
+lean into the direction of travel.
+
+### Cursor
+
+Halcyon has its own cursor, **Halcyon Glass**. It matches the glass
+themes: a dark glass body, a white outline, a blue-to-lavender glint
+inside the rim, and a soft shadow. There are 24 shapes (arrow, hand,
+text, resize arrows, grab, zoom, and more), with an animated spinner for
+busy and progress, covering 117 cursor names in all. It ships in both
+formats: XCursor for X11/XWayland and GTK apps, and hyprcursor for
+Hyprland itself.
+
+It's on by default and follows any theme, including wallpaper colours.
+Turn it off, or change its size, in **Settings > Halcyon > Cursor**, or:
+
+```sh
+halcyon cursor off        # back to illogical-impulse's Bibata cursor
+halcyon cursor size 32
+```
+
+Every shape is drawn from scratch in `scripts/make-cursors.py`, which
+rebuilds the theme into `dots/.local/share/icons/Halcyon-Glass`
+(it needs cairosvg and Pillow).
 
 ### Banners (Star Rail)
 
@@ -321,6 +353,7 @@ CI runs the same script. It checks that:
   extracted from Hyprland's source;
 - every shell setting a theme changes exists in the shell, with the right type;
 - screen shaders compile as GLSL ES 3.00, and the banner compositor runs;
+- the cursor theme's XCursor files, hyprcursor zips and aliases are well formed and cover the essential names;
 - no Halcyon keybind reuses a key combination upstream already binds.
 
 That last check exists because Hyprland runs *every* action bound to a

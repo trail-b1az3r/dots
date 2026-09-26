@@ -12,6 +12,11 @@
                                         active theme (the Settings page runs
                                         this for you)
     halcyon-theme settings              open the Settings app
+
+    halcyon-theme cursor                show the cursor setting
+    halcyon-theme cursor on|off         the Halcyon Glass cursor, or upstream's
+    halcyon-theme cursor size N         cursor size in pixels (16-96)
+    halcyon-theme cursor apply          apply the setting (run at startup)
     halcyon-theme effects flip          mirror pointer effects vertically,
                                         if the glass lens trails the pointer
                                         upside down
@@ -407,11 +412,11 @@ def lua_gradient(value):
 # Settings > Halcyon > Glass, with the ranges the page offers.
 GLASS_DEFAULTS = {
     "pointerLens": True, "clickRipples": True, "edgeRefraction": False,
-    "strength": 0.5, "lensSize": 90, "windowOpacity": 0.96,
+    "strength": 0.5, "lensSize": 90, "lensBounce": 0.6, "windowOpacity": 0.96,
     "inactiveWindowOpacity": 0.9, "blurSize": 8,
 }
 GLASS_RANGES = {
-    "strength": (0.0, 1.0), "lensSize": (30, 300), "windowOpacity": (0.5, 1.0),
+    "strength": (0.0, 1.0), "lensSize": (30, 300), "lensBounce": (0.0, 1.0), "windowOpacity": (0.5, 1.0),
     "inactiveWindowOpacity": (0.5, 1.0), "blurSize": (1, 30),
 }
 
@@ -524,6 +529,7 @@ def render_shader(theme, flip, glass=None):
         "EDGE_ENABLED": "1" if glass["edgeRefraction"] else "0",
         "STRENGTH": f"{float(glass['strength']):.3f}",
         "LENS_RADIUS": f"{float(glass['lensSize']):.1f}",
+        "BOUNCE": f"{float(glass['lensBounce']):.3f}",
     }
     for name, value in knobs.items():
         # Shaders without a knob simply don't get it.
@@ -949,6 +955,52 @@ def cmd_refresh(_args):
     return 0
 
 
+CURSOR_THEME = "Halcyon-Glass"
+UPSTREAM_CURSOR = "Bibata-Modern-Classic"   # what illogical-impulse ships
+
+
+def cursor_settings():
+    stored = (read_shell_config().get("halcyon") or {}).get("cursor") or {}
+    enable = stored.get("enable", True)
+    size = stored.get("size", 24)
+    enable = enable if isinstance(enable, bool) else True
+    size = min(max(int(size), 16), 96) if is_number(size) else 24
+    return enable, size
+
+
+def apply_cursor():
+    enable, size = cursor_settings()
+    name = CURSOR_THEME if enable else UPSTREAM_CURSOR
+    if hyprland_running():
+        # Also sets XCURSOR_THEME/SIZE for apps started from now on.
+        subprocess.run(["hyprctl", "setcursor", name, str(size)], stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL, check=False)
+    if shutil.which("gsettings"):
+        # GTK apps read the cursor from here.
+        for key, value in (("cursor-theme", name), ("cursor-size", str(size))):
+            subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", key, value],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+    return name, size
+
+
+def cmd_cursor(args):
+    if args and args[0] in ("on", "off"):
+        set_shell_value("halcyon.cursor.enable", args[0] == "on")
+    elif len(args) == 2 and args[0] == "size":
+        if not args[1].isdigit() or not 16 <= int(args[1]) <= 96:
+            raise ThemeError("cursor size must be a whole number of pixels, 16-96")
+        set_shell_value("halcyon.cursor.size", int(args[1]))
+    elif not args:
+        enable, size = cursor_settings()
+        print(f"{CURSOR_THEME if enable else UPSTREAM_CURSOR} at {size}px")
+        return 0
+    elif args != ["apply"]:
+        raise ThemeError("usage: halcyon-theme cursor [on|off|size N|apply]")
+    name, size = apply_cursor()
+    print(f"cursor: {name} at {size}px")
+    return 0
+
+
 def cmd_settings(_args):
     settings_qml = CONFIG / "quickshell/ii/settings.qml"
     if not shutil.which("qs") or not settings_qml.is_file():
@@ -1059,7 +1111,7 @@ COMMANDS = {
     "list": cmd_list, "current": cmd_current, "apply": cmd_apply, "off": cmd_off,
     "menu": cmd_menu, "check": cmd_check, "render": cmd_render, "detach": cmd_detach,
     "effects": cmd_effects, "banner": cmd_banner, "refresh": cmd_refresh,
-    "settings": cmd_settings,
+    "settings": cmd_settings, "cursor": cmd_cursor,
 }
 
 

@@ -18,6 +18,12 @@ if is_file_exists(themeFile) then
     dofile(themeFile)
 end
 
+-- The Halcyon Glass cursor (Settings > Halcyon > Cursor). Upstream sets its
+-- own cursor at startup too, so wait a moment and apply ours after it.
+hl.on("hyprland.start", function()
+    hl.exec_cmd("sleep 1 && $HOME/.config/hypr/hyprland/halcyon/halcyon-theme cursor apply")
+end)
+
 -- A `halcyon` command for any shell: link it into ~/.local/bin at startup
 -- (fish and zsh also get an alias). A real file already there is left alone.
 hl.on("hyprland.start", function()

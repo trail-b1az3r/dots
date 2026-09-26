@@ -114,6 +114,9 @@ else
   fail "Pillow not found (pip install pillow)"
 fi
 
+step "Cursor theme is complete and well formed"
+python3 scripts/check-cursors.py || fail "cursor theme"
+
 step "Shapes submodule is registered"
 git ls-files -s dots/.config/quickshell/ii/modules/common/widgets/shapes | grep -q '^160000 ' ||
   fail "shapes submodule gitlink missing"

@@ -77,6 +77,8 @@ case "${SKIP_HYPRLAND}" in
 esac
 
 install_file "dots/.local/share/icons/illogical-impulse.svg" "${XDG_DATA_HOME}"/icons/illogical-impulse.svg
+# Halcyon Glass cursors (XCursor and hyprcursor, one folder; aliases are symlinks)
+install_dir__sync "dots/.local/share/icons/Halcyon-Glass" "${XDG_DATA_HOME}"/icons/Halcyon-Glass
 
 # Halcyon wallpapers, into the folder the wallpaper selector opens.
 # Files already there are never overwritten, so your edits to them stick.
