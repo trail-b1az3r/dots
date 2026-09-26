@@ -73,6 +73,11 @@ ContentPage {
                     displayName: "Shattered Glass",
                     icon: "broken_image",
                     value: "shattered-glass"
+                },
+                {
+                    displayName: "Fractured Glass",
+                    icon: "lens_blur",
+                    value: "fractured-glass"
                 }
             ]
         }
@@ -137,7 +142,7 @@ ContentPage {
 
         ContentSubsection {
             title: Translation.tr("Screen effects")
-            tooltip: Translation.tr("Only at the Full effects level, with a theme that has them (Shattered Glass)")
+            tooltip: Translation.tr("Only at the Full effects level, with a glass theme. Fractured Glass has the lens only: no ripples or edge fringe")
 
             ConfigRow {
                 uniform: true
@@ -201,7 +206,7 @@ ContentPage {
 
         ContentSubsection {
             title: Translation.tr("Glass windows")
-            tooltip: Translation.tr("For themes with translucent windows (Shattered Glass), at Light or Full")
+            tooltip: Translation.tr("For themes with translucent windows (Shattered Glass, Fractured Glass), at Light or Full")
 
             ConfigSlider {
                 buttonIcon: "opacity"

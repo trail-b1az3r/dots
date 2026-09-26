@@ -26,7 +26,7 @@ On top of that, Halcyon adds:
 | **Glass panels** | Shell transparency is on by default. It can still be turned off in Settings. |
 | **Softer layout** | Wider gaps, rounder corners, deeper blur (popups too), a softer shadow. |
 | **Wallpapers** | The hyperNeo fire wallpaper is the default. It and the three Halcyon wallpapers are copied into `~/Pictures/Wallpapers`, where the wallpaper picker looks. |
-| **Themes** | Three hand-made themes: HyperNeo, Star Rail and Shattered Glass. [More below.](#themes) |
+| **Themes** | Four hand-made themes: HyperNeo, Star Rail, Shattered Glass and Fractured Glass. [More below.](#themes) |
 | **Keybinds** | Extra shortcuts, listed below. They only use key combinations upstream leaves free. |
 
 ## Install
@@ -68,6 +68,7 @@ style, animations, wallpaper and, for some, shell layout and effects:
 | **HyperNeo** | `hyperneo` | macOS-style, in ember and neon on near-black. A menu bar and a dock, squircle windows with deep soft shadows, springy animations, rounded screen corners. |
 | **Star Rail** | `hsr` | Astral gold and lavender on deep-space navy, over a golden rail curving through a nebula. Can show the current banner character. |
 | **Shattered Glass** | `shattered-glass` | Liquid glass: a glass lens follows the pointer, clicks crack the screen, windows turn to frosted glass. Ice blue and prism violet, sharp corners. |
+| **Fractured Glass** | `fractured-glass` | Refraction only, like Apple's Liquid Glass: a squircle glass lens follows the pointer and bends what's behind its rim. No ripples or cracks. Soft blue, lavender and pink over calm fragments of thick glass. |
 
 Pick one in **Settings > Halcyon**, with **`Ctrl + Super + Shift + T`**,
 or from a terminal:
@@ -112,7 +113,7 @@ makes colours follow the wallpaper again.
 
 | Level | What you get |
 |---|---|
-| `full` | Everything, including screen shaders. Shattered Glass's default. |
+| `full` | Everything, including screen shaders. The glass themes' default. |
 | `light` | No screen shader. Glass materials, translucent windows and animations stay. The other themes' default. |
 | `off` | Plain blur, opaque windows, no native glass, stock animations. |
 
@@ -159,6 +160,16 @@ on battery. The shader needs Hyprland 0.56 or newer. It has been
 compile-checked and rendered offline, but not yet tried on a real
 display. If the lens looks mirrored vertically,
 `halcyon effects flip` fixes it.
+
+**Fractured Glass at `full`** runs `themes/shaders/liquid-glass.frag`: a
+lens shaped and lit like Apple's Liquid Glass controls. It is a squircle,
+with an almost untouched middle and a rounded bezel that bends light more
+and more towards the edge, so content wraps around the rim. The rim
+catches light facing the top-left, with a dimmer reflection opposite and
+a little colour in the inner bezel. The glass lifts saturation slightly
+and sits on a soft shadow. Nothing reacts to clicks. Strength and lens
+size come from Settings > Halcyon > Glass, like Shattered Glass; the
+ripple and edge-fringe switches don't apply to it.
 
 **Native glass.** Hyprland's development version, which comes after
 0.56, adds built-in glass blur materials. When yours has them, HyperNeo and Shattered Glass switch to
@@ -219,7 +230,7 @@ value, and one where any text colour falls below WCAG AA contrast (4.5:1)
 on its background. CI also checks that every `shell_config` key exists
 in the shell, and that shaders compile.
 
-The two new wallpapers are procedural and original. No game assets are
+The theme wallpapers are procedural and original. No game assets are
 used. `scripts/make-theme-wallpapers.py` redraws them.
 
 ## Keybinds

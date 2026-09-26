@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the wallpapers for the Star Rail and Shattered Glass themes.
+"""Draw the wallpapers for the Star Rail, Shattered Glass and Fractured Glass themes.
 
 Both are procedural and original: nothing here is taken from a game or
 any other artwork. Output is deterministic for a given seed, so running
@@ -256,12 +256,78 @@ def shattered_glass(seed=11):
     return to_image(rgb)
 
 
+# --------------------------------------------------------------------------
+# Fractured Glass: a few large, calm fragments of thick glass over a soft,
+# vivid backdrop, each refracting it by its own amount, with dispersion
+# along the fracture lines. No impact point, nothing violent.
+# --------------------------------------------------------------------------
+
+def fractured_glass(seed=23):
+    rng = np.random.default_rng(seed)
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    u, v = xx / W, yy / H
+
+    # The backdrop: soft blobs of colour on deep indigo.
+    base = hex_rgb("#0B0C1A")[None, None] * np.ones((H, W, 1), dtype=np.float32)
+    blobs = [((0.22, 0.30), 0.30, "#3A6BFF"), ((0.70, 0.22), 0.28, "#9B5CFF"),
+             ((0.82, 0.78), 0.30, "#FF6FB1"), ((0.30, 0.82), 0.26, "#2FD3C8"),
+             ((0.52, 0.52), 0.22, "#5B7CFF")]
+    backdrop = base.copy()
+    for (cx, cy), radius, colour in blobs:
+        falloff = np.exp(-(((u - cx) / radius) ** 2 + ((v - cy) / (radius * 1.1)) ** 2))
+        backdrop += falloff[..., None] * hex_rgb(colour)[None, None] * 0.75
+    backdrop = np.clip(backdrop, 0, 255)
+
+    # Fragments: a sparse Voronoi, so there are only a dozen or so pieces.
+    points = np.column_stack([rng.random(16) * W, rng.random(16) * H]).astype(np.float32)
+    label = np.empty((H, W), dtype=np.int32)
+    for y0 in range(0, H, 120):
+        sub_x, sub_y = xx[y0:y0 + 120], yy[y0:y0 + 120]
+        d = (sub_x[..., None] - points[:, 0]) ** 2 + (sub_y[..., None] - points[:, 1]) ** 2
+        label[y0:y0 + 120] = np.argmin(d, axis=-1)
+    n = len(points)
+
+    # Each fragment is a slightly different thickness: it shifts and
+    # magnifies what is behind it around its own centre.
+    counts = np.bincount(label.ravel(), minlength=n).astype(np.float32) + 1
+    cx = np.bincount(label.ravel(), weights=xx.ravel(), minlength=n) / counts
+    cy = np.bincount(label.ravel(), weights=yy.ravel(), minlength=n) / counts
+    shift = rng.normal(0, 38, (n, 2)).astype(np.float32)
+    zoom = (1.0 + rng.random(n) * 0.10).astype(np.float32)
+    sx = cx[label] + (xx - cx[label]) / zoom[label] + shift[label, 0]
+    sy = cy[label] + (yy - cy[label]) / zoom[label] + shift[label, 1]
+    sx = np.clip(sx, 0, W - 1).astype(np.int32)
+    sy = np.clip(sy, 0, H - 1).astype(np.int32)
+    rgb = backdrop[sy, sx]
+
+    # A soft sheen across each fragment, like light on a glass face.
+    angle = rng.random(n).astype(np.float32) * math.pi
+    along = ((xx - cx[label]) * np.cos(angle[label]) + (yy - cy[label]) * np.sin(angle[label])) / 900
+    rgb += (np.clip(1 - np.abs(along - 0.1) * 3, 0, 1) ** 3)[..., None] * 28
+    rgb *= (0.92 + rng.random(n) * 0.14).astype(np.float32)[label][..., None]
+
+    # Fracture lines, with dispersion: red and blue fringes either side.
+    edge = np.zeros((H, W), dtype=bool)
+    edge[:, 1:] |= label[:, 1:] != label[:, :-1]
+    edge[1:, :] |= label[1:, :] != label[:-1, :]
+    line = Image.fromarray((edge * 255).astype(np.uint8))
+    core = np.asarray(line.filter(ImageFilter.GaussianBlur(0.8)), dtype=np.float32) / 255
+    glow = np.asarray(line.filter(ImageFilter.GaussianBlur(4)), dtype=np.float32) / 255
+    rgb += core[..., None] * 170 + glow[..., None] * 45
+    rgb[..., 0] += np.roll(glow, 3, axis=1) * 60
+    rgb[..., 2] += np.roll(glow, -3, axis=1) * 70
+
+    rgb += rng.normal(0, 1.8, (H, W, 1)).astype(np.float32)
+    return to_image(rgb)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
-    for name, draw in (("star-rail.jpg", star_rail), ("shattered-glass.jpg", shattered_glass)):
+    for name, draw in (("star-rail.jpg", star_rail), ("shattered-glass.jpg", shattered_glass),
+                       ("fractured-glass.jpg", fractured_glass)):
         path = args.out / name
         draw().save(path, quality=92, optimize=True, progressive=True)
         print(f"wrote {path} ({path.stat().st_size // 1024} KiB)")
