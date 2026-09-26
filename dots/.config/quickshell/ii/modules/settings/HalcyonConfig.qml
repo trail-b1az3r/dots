@@ -253,7 +253,7 @@ ContentPage {
                 value: Config.options.halcyon.glass.lensBounce
                 from: 0
                 to: 1
-                stopIndicatorValues: [0.6]
+                stopIndicatorValues: [0.8]
                 onValueChanged: {
                     Config.options.halcyon.glass.lensBounce = value;
                     page.refresh();

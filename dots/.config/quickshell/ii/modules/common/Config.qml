@@ -91,7 +91,7 @@ Singleton {
                     property bool edgeRefraction: false // Colour split at the screen edges (full effects)
                     property real strength: 0.5 // 0-1, how strong the screen effects are
                     property int lensSize: 90 // Radius of the pointer lens, in pixels
-                    property real lensBounce: 0.6 // 0-1, how much the lens squashes and springs back as the pointer moves and stops
+                    property real lensBounce: 0.8 // 0-1, how much the lens sloshes, squashes and springs back as the pointer moves and stops
                     property real windowOpacity: 0.96 // Focused windows, for themes with glass windows
                     property real inactiveWindowOpacity: 0.9 // Other windows
                     property int blurSize: 8 // Frost behind glass windows and panels

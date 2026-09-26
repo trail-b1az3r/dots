@@ -412,7 +412,7 @@ def lua_gradient(value):
 # Settings > Halcyon > Glass, with the ranges the page offers.
 GLASS_DEFAULTS = {
     "pointerLens": True, "clickRipples": True, "edgeRefraction": False,
-    "strength": 0.5, "lensSize": 90, "lensBounce": 0.6, "windowOpacity": 0.96,
+    "strength": 0.5, "lensSize": 90, "lensBounce": 0.8, "windowOpacity": 0.96,
     "inactiveWindowOpacity": 0.9, "blurSize": 8,
 }
 GLASS_RANGES = {
