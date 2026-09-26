@@ -35,6 +35,17 @@ ContentPage {
         onTriggered: Quickshell.execDetached([page.tool, "refresh"])
     }
 
+    Timer {
+        id: cursorTimer
+        interval: 700
+        onTriggered: Quickshell.execDetached([page.tool, "cursor", "apply"])
+    }
+
+    function applyCursor() {
+        if (page.ready)
+            cursorTimer.restart();
+    }
+
     function refresh() {
         if (page.ready)
             refreshTimer.restart();
@@ -137,6 +148,39 @@ ContentPage {
     }
 
     ContentSection {
+        icon: "arrow_selector_tool"
+        title: Translation.tr("Cursor")
+
+        ConfigSwitch {
+            buttonIcon: "arrow_selector_tool"
+            text: Translation.tr("Halcyon Glass cursor")
+            checked: Config.options.halcyon.cursor.enable
+            onCheckedChanged: {
+                Config.options.halcyon.cursor.enable = checked;
+                page.applyCursor();
+            }
+            StyledToolTip {
+                text: Translation.tr("Off uses illogical-impulse's Bibata cursor")
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("Size")
+            ConfigSelectionArray {
+                currentValue: Config.options.halcyon.cursor.size
+                onSelected: newValue => {
+                    Config.options.halcyon.cursor.size = newValue;
+                    page.applyCursor();
+                }
+                options: [24, 32, 48, 64].map(size => ({
+                    displayName: `${size}px`,
+                    value: size
+                }))
+            }
+        }
+    }
+
+    ContentSection {
         icon: "water_drop"
         title: Translation.tr("Glass")
 
@@ -199,6 +243,19 @@ ContentPage {
                 stopIndicatorValues: [90]
                 onValueChanged: {
                     Config.options.halcyon.glass.lensSize = Math.round(value);
+                    page.refresh();
+                }
+            }
+
+            ConfigSlider {
+                buttonIcon: "animation"
+                text: Translation.tr("Lens bounce")
+                value: Config.options.halcyon.glass.lensBounce
+                from: 0
+                to: 1
+                stopIndicatorValues: [0.6]
+                onValueChanged: {
+                    Config.options.halcyon.glass.lensBounce = value;
                     page.refresh();
                 }
             }

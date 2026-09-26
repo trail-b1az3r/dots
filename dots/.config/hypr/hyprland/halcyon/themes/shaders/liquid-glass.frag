@@ -23,11 +23,13 @@ precision highp float;
 #define LENS_ENABLED 1
 #define STRENGTH 0.5
 #define LENS_RADIUS 90.0
+#define BOUNCE 0.6
 
 in vec2 v_texcoord;
 uniform sampler2D tex;
 
 uniform vec2 screen_size;
+uniform float time;                 // seconds, for the quiver
 uniform vec2 pointer_position;      // 0..1, top-left origin
 uniform float pointer_last_active;  // seconds since the pointer moved
 uniform int pointer_hidden;
@@ -47,6 +49,20 @@ const float SHADOW_WIDTH = 0.22;   // as a fraction of the radius
 const float IDLE_START = 1.2;      // s before the lens starts to fade
 const float IDLE_END = 2.6;
 
+// Jelly bounce. Screen shaders get no pointer velocity, only the time since
+// it last moved (t), so the bounce keys off that: while the pointer moves
+// (t near 0) the lens is pressed a little flatter and quivers; when it
+// stops, it springs back past its rest shape, trading width for height a
+// couple of times, and settles in about half a second.
+vec2 bounceScale(float t, float amount) {
+    float spring = exp(-6.5 * t) * cos(17.0 * t);
+    float moving = 1.0 - smoothstep(0.0, 0.12, t);
+    float quiver = sin(time * 21.0) * moving;
+    float size = -0.09 * spring;
+    float squash = 0.08 * spring + 0.03 * quiver;
+    return vec2(1.0 + (size + squash) * amount, 1.0 + (size - squash) * amount);
+}
+
 void main() {
     vec2 size = max(screen_size, vec2(1.0));
     vec2 px = v_texcoord * size;
@@ -60,7 +76,8 @@ void main() {
 #if FLIP_POINTER_Y
         pointer.y = 1.0 - pointer.y;
 #endif
-        vec2 q = (px - pointer * size) / LENS_RADIUS;  // lens space, rim at r = 1
+        vec2 lensSize = LENS_RADIUS * bounceScale(pointer_last_active, clamp(BOUNCE, 0.0, 1.0));
+        vec2 q = (px - pointer * size) / lensSize;  // lens space, rim at r = 1
         vec2 aq = abs(q);
         float r = pow(pow(aq.x, SQUIRCLE) + pow(aq.y, SQUIRCLE), 1.0 / SQUIRCLE);
 
