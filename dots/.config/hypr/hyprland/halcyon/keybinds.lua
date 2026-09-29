@@ -58,3 +58,13 @@ hl.bind("SUPER + SHIFT + Space", hl.dsp.exec_cmd("$HOME/.config/hypr/hyprland/ha
 hl.bind("SUPER + SHIFT + H", hl.dsp.exec_cmd(
     "if command -v hypernix >/dev/null; then hypernix; else notify-send 'HyperNix is not installed' -a Hyprland; fi"
 ), { description = "App: HyperNix" })
+
+--# Windows: minimise, hide and restore (halcyon-windows), and the Windows panel
+local halcyonWindows = "$HOME/.config/hypr/hyprland/halcyon/halcyon-windows"
+hl.bind("SUPER + SHIFT + W", hl.dsp.global("quickshell:windowManagerToggle"), { description = "Window: Windows panel" })
+hl.bind("CTRL + SUPER + M", hl.dsp.exec_cmd(halcyonWindows .. " minimise"), { description = "Window: Minimise" })
+hl.bind("CTRL + SUPER + SHIFT + M", hl.dsp.exec_cmd(halcyonWindows .. " restore"),
+    { description = "Window: Restore last minimised" })
+hl.bind("CTRL + SUPER + H", hl.dsp.exec_cmd(halcyonWindows .. " hide"), { description = "Window: Hide app" })
+hl.bind("CTRL + SUPER + ALT + H", hl.dsp.exec_cmd(halcyonWindows .. " hide-others"),
+    { description = "Window: Hide others" })

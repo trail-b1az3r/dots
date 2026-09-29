@@ -1,0 +1,285 @@
+#!/usr/bin/env python3
+"""Halcyon's mini window manager: minimise, hide and restore on Hyprland.
+
+    halcyon-windows minimise [ADDRESS]   send a window (default: focused) away
+    halcyon-windows hide [ADDRESS]       minimise every window of the focused app (or that window's)
+    halcyon-windows hide-others          minimise everything else on this workspace
+    halcyon-windows restore [ADDRESS]    bring back the last minimised, or that one
+    halcyon-windows restore --all        bring them all back
+    halcyon-windows list [--json]        open and minimised windows
+    halcyon-windows focus|close|float|pin|centre ADDRESS
+
+Hyprland has no minimised state, and faking one badly (moving windows off
+screen, or to a workspace you can wander into) loses windows. This does it
+the way the original Halcyon did: minimised windows go to a special
+workspace, which Hyprland already treats as "present but not shown", and
+an explicit stack remembers where each came from, so restoring is
+predictable rather than "whatever comes back first".
+
+The Windows panel (Super + Shift + W) is a view on top of this.
+"""
+
+import json
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+MINIMISED = "special:minimised"
+STATE = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local/state") / "halcyon/minimised.json"
+ADDRESS = re.compile(r"^0x[0-9a-fA-F]{1,16}$")
+MAX_STACK = 40
+
+
+class WindowError(Exception):
+    pass
+
+
+# ---------------------------------------------------------------------------
+# Talking to Hyprland. With the Lua config (0.53+), `hyprctl dispatch` takes a
+# Lua dispatcher expression and answers "ok" or an error message.
+# ---------------------------------------------------------------------------
+
+def hyprctl(*args):
+    try:
+        done = subprocess.run(["hyprctl", *args], capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.SubprocessError) as error:
+        raise WindowError(f"can't reach Hyprland: {error}") from None
+    return done.stdout.strip()
+
+
+def clients():
+    try:
+        data = json.loads(hyprctl("-j", "clients") or "[]")
+    except ValueError:
+        return []
+    return [c for c in data if isinstance(c, dict) and c.get("address") and c.get("mapped", True)]
+
+
+def active():
+    try:
+        data = json.loads(hyprctl("-j", "activewindow") or "{}")
+    except ValueError:
+        return None
+    return data if isinstance(data, dict) and data.get("address") else None
+
+
+def dispatch(expression):
+    out = hyprctl("dispatch", expression)
+    if not out.startswith("ok"):
+        raise WindowError(f"Hyprland refused: {out.splitlines()[0] if out else 'no answer'}")
+
+
+def selector(address):
+    if not ADDRESS.match(address or ""):
+        raise WindowError(f"not a window address: {address!r}")
+    return f'"address:{address}"'
+
+
+def workspace_literal(workspace):
+    """A workspace for a Lua dispatcher: a number, or a quoted name."""
+    if isinstance(workspace, int):
+        return str(workspace)
+    name = str(workspace)
+    if not re.match(r"^[A-Za-z0-9:_+\-. ]{1,64}$", name):
+        raise WindowError(f"odd workspace name: {name!r}")
+    return json.dumps(name)
+
+
+# ---------------------------------------------------------------------------
+# The minimised stack
+# ---------------------------------------------------------------------------
+
+def read_stack():
+    try:
+        entries = json.loads(STATE.read_text(encoding="utf-8")).get("windows", [])
+    except (OSError, ValueError, AttributeError):
+        return []
+    return [e for e in entries if isinstance(e, dict) and ADDRESS.match(str(e.get("address", "")))]
+
+
+def write_stack(entries):
+    STATE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = STATE.with_name(STATE.name + ".tmp")
+    tmp.write_text(json.dumps({"windows": entries[-MAX_STACK:]}, indent=1), encoding="utf-8")
+    os.replace(tmp, STATE)
+
+
+def live_stack(all_clients=None):
+    """The stack, without windows that closed while minimised."""
+    live = {c["address"] for c in (all_clients if all_clients is not None else clients())}
+    entries = read_stack()
+    kept = [e for e in entries if e["address"] in live]
+    if len(kept) != len(entries):
+        write_stack(kept)
+    return kept
+
+
+# ---------------------------------------------------------------------------
+# Actions
+# ---------------------------------------------------------------------------
+
+def _home_workspace(window):
+    ws = window.get("workspace") or {}
+    name, ident = str(ws.get("name", "")), ws.get("id")
+    if name == MINIMISED:
+        return None
+    if isinstance(ident, int) and ident > 0:
+        return ident
+    return name or None
+
+
+def minimise(address=None):
+    window = active() if address is None else next((c for c in clients() if c["address"] == address), None)
+    if window is None:
+        raise WindowError("no window is focused" if address is None else "no such window")
+    if (window.get("workspace") or {}).get("name") == MINIMISED:
+        return f"{window.get('title') or 'window'} is already minimised"
+    home = _home_workspace(window)
+    dispatch(f'hl.dsp.window.move({{ window = {selector(window["address"])}, '
+             f'workspace = "{MINIMISED}", follow = false }})')
+    entries = [e for e in read_stack() if e["address"] != window["address"]]
+    entries.append({"address": window["address"], "workspace": home,
+                    "title": str(window.get("title") or window.get("class") or "window"),
+                    "class": str(window.get("class") or "")})
+    write_stack(entries)
+    return f"minimised {entries[-1]['title']}"
+
+
+def hide(address=None):
+    """Minimise every window of the focused app (or of that window's), as ⌘H does."""
+    if address is None:
+        window = active()
+    else:
+        selector(address)
+        window = next((c for c in clients() if c["address"] == address), None)
+    if window is None:
+        raise WindowError("no window is focused" if address is None else "no such window")
+    app = window.get("class")
+    if not app:
+        return minimise(window["address"])
+    targets = [c for c in clients() if c.get("class") == app
+               and (c.get("workspace") or {}).get("name") != MINIMISED]
+    for client in targets:
+        minimise(client["address"])
+    return f"hid {len(targets)} {app} window{'s' if len(targets) != 1 else ''}"
+
+
+def hide_others():
+    """Minimise every other window on the focused window's workspace (⌥⌘H)."""
+    window = active()
+    if window is None:
+        raise WindowError("no window is focused")
+    workspace = (window.get("workspace") or {}).get("id")
+    targets = [c for c in clients() if c["address"] != window["address"]
+               and (c.get("workspace") or {}).get("id") == workspace]
+    for client in targets:
+        minimise(client["address"])
+    return f"hid {len(targets)} other window{'s' if len(targets) != 1 else ''}"
+
+
+def restore(address=None):
+    all_clients = clients()
+    entries = live_stack(all_clients)
+    if not entries:
+        raise WindowError("nothing is minimised")
+    if address is None:
+        entry = entries[-1]
+    else:
+        entry = next((e for e in entries if e["address"] == address), None)
+        if entry is None:
+            raise WindowError("that window isn't minimised")
+    home = entry.get("workspace")
+    # Back where it came from; if that's gone, to the workspace you're on.
+    target = workspace_literal(home) if home not in (None, "") else '"e+0"'
+    dispatch(f'hl.dsp.window.move({{ window = {selector(entry["address"])}, workspace = {target}, follow = true }})')
+    dispatch(f'hl.dsp.focus({{ window = {selector(entry["address"])} }})')
+    write_stack([e for e in entries if e["address"] != entry["address"]])
+    return f"restored {entry.get('title', 'window')}"
+
+
+def restore_all():
+    entries = live_stack()
+    if not entries:
+        raise WindowError("nothing is minimised")
+    for entry in reversed(entries):
+        restore(entry["address"])
+    return f"restored {len(entries)} window{'s' if len(entries) != 1 else ''}"
+
+
+def simple(action, address):
+    sel = selector(address)
+    expressions = {
+        "focus": f"hl.dsp.focus({{ window = {sel} }})",
+        "close": f"hl.dsp.window.close({{ window = {sel} }})",
+        "float": f'hl.dsp.window.float({{ window = {sel}, action = "toggle" }})',
+        "pin": f'hl.dsp.window.pin({{ window = {sel}, action = "toggle" }})',
+        "centre": f"hl.dsp.window.center({{ window = {sel} }})",
+    }
+    if action == "focus" and any(e["address"] == address for e in read_stack()):
+        return restore(address)  # focusing a minimised window brings it back
+    dispatch(expressions[action])
+    return f"{action} done"
+
+
+def listing():
+    all_clients = clients()
+    stack = live_stack(all_clients)
+    minimised_order = {e["address"]: i for i, e in enumerate(reversed(stack))}
+    focused = (active() or {}).get("address")
+    windows = []
+    for c in all_clients:
+        ws = c.get("workspace") or {}
+        minimised = ws.get("name") == MINIMISED
+        windows.append({
+            "address": c["address"], "title": str(c.get("title") or ""), "class": str(c.get("class") or ""),
+            "workspace": ws.get("id"), "workspaceName": str(ws.get("name", "")),
+            "floating": bool(c.get("floating")), "pinned": bool(c.get("pinned")),
+            "fullscreen": bool(c.get("fullscreen")), "focused": c["address"] == focused,
+            "minimised": minimised, "minimisedOrder": minimised_order.get(c["address"], -1),
+            "focusHistory": c.get("focusHistoryID", 999),
+        })
+    windows.sort(key=lambda w: (w["minimised"], w["minimisedOrder"] if w["minimised"] else w["focusHistory"]))
+    return windows
+
+
+# ---------------------------------------------------------------------------
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        print(__doc__.strip())
+        return 0
+    command, args = argv[0], argv[1:]
+    try:
+        if command in ("minimise", "minimize"):
+            message = minimise(args[0] if args else None)
+        elif command == "hide":
+            message = hide(args[0] if args else None)
+        elif command == "hide-others":
+            message = hide_others()
+        elif command == "restore":
+            message = restore_all() if args == ["--all"] else restore(args[0] if args else None)
+        elif command == "list":
+            windows = listing()
+            if "--json" in args:
+                print(json.dumps(windows))
+            else:
+                for w in windows:
+                    where = "minimised" if w["minimised"] else f"workspace {w['workspaceName']}"
+                    print(f"{w['address']}  {where:<16} {w['class']:<20} {w['title'][:60]}")
+            return 0
+        elif command in ("focus", "close", "float", "pin", "centre", "center") and len(args) == 1:
+            message = simple("centre" if command == "center" else command, args[0])
+        else:
+            print(f"unknown command. {__doc__.strip()}", file=sys.stderr)
+            return 2
+    except WindowError as error:
+        print(f"halcyon-windows: {error}", file=sys.stderr)
+        return 1
+    print(message)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

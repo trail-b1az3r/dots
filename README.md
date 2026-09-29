@@ -27,6 +27,7 @@ On top of that, Halcyon adds:
 | **Softer layout** | Wider gaps, rounder corners, deeper blur (popups too), a softer shadow. |
 | **Wallpapers** | The hyperNeo fire wallpaper is the default. It and the three Halcyon wallpapers are copied into `~/Pictures/Wallpapers`, where the wallpaper picker looks. |
 | **Themes** | Four hand-made themes: HyperNeo, Star Rail, Shattered Glass and Fractured Glass. [More below.](#themes) |
+| **Windows** | Minimise, hide an app, and restore, plus a Windows panel with live previews (`Super + Shift + W`). [More below.](#windows) |
 | **Voice assistant** | Press `Super + Shift + Space` and speak. It answers aloud and can run the desktop. [More below.](#voice-assistant) |
 | **Keybinds** | Extra shortcuts, listed below. They only use key combinations upstream leaves free. |
 
@@ -266,6 +267,48 @@ in the shell, and that shaders compile.
 The theme wallpapers are procedural and original. No game assets are
 used. `scripts/make-theme-wallpapers.py` redraws them.
 
+## Windows
+
+Hyprland has no "minimised" state, so Halcyon adds one. It is a better
+version of the original Halcyon's window manager. Minimised windows go to
+a hidden special workspace, and a stack remembers where each one came
+from, so restoring puts a window back on its own workspace. If that
+workspace is gone, the window comes back to the one you're on.
+
+| Keys | Action |
+|---|---|
+| `Super + Shift + W` | Windows panel |
+| `Ctrl + Super + M` | Minimise the focused window |
+| `Ctrl + Super + Shift + M` | Restore the last minimised window |
+| `Ctrl + Super + H` | Hide the focused app (all its windows), like ⌘H |
+| `Ctrl + Super + Alt + H` | Hide every other window on this workspace, like ⌥⌘H |
+
+**The Windows panel** shows every open window as a live preview, most
+recently used first. Minimised windows sit on a shelf underneath.
+
+- Typing filters by title or app.
+- The arrows or Tab move the selection. Enter focuses the window, or
+  restores it if it was minimised.
+- `Ctrl` + `M` minimises, `H` hides the app, `F` floats or tiles, `P`
+  pins to every workspace, `C` centres, and `Q` closes. `Delete` also
+  closes when the filter is empty.
+- Hovering a preview shows the same actions as buttons. Middle-click
+  closes a window.
+- On the shelf, click a window to restore it, or right-click to close it.
+  **Restore all** brings every minimised window back.
+
+The same actions work from a terminal, or from your own binds in
+`~/.config/hypr/custom`:
+
+```sh
+halcyon windows list            # open and minimised windows (--json for scripts)
+halcyon windows minimise        # or: hide, hide-others, restore, restore --all
+halcyon windows close 0x5d3a...  # focus, close, float, pin or centre by address
+```
+
+The voice assistant can do this too ("minimise this", "bring my windows
+back").
+
 ## Voice assistant
 
 Press **`Super + Shift + Space`**, say what you want, and stop talking.
@@ -332,6 +375,7 @@ schema before anything runs:
 - set or change volume, mute speakers or the microphone, set brightness;
 - control media;
 - switch workspace;
+- minimise, hide or restore windows, or open the Windows panel;
 - change the Halcyon theme or effects level;
 - take a screenshot, lock the screen, or search the web.
 
@@ -371,6 +415,7 @@ full list, including all of upstream's.
 | `Super + Shift + 6` | Screenshot the focused window, to clipboard and file |
 | `Ctrl + Super + Shift + T` | Pick a Halcyon theme |
 | `Super + Shift + Space` | Voice assistant (again to cancel) |
+| `Super + Shift + W` | Windows panel ([minimise, hide and restore keys](#windows)) |
 | `Super + Shift + H` | HyperNix (if installed) |
 
 Upstream's bindings are all still there. For example, `Super + Q` closes
@@ -389,6 +434,7 @@ dots/.config/hypr/
 │       ├── keybinds.lua      the extra shortcuts
 │       ├── halcyon-theme     the theme tool (the `halcyon` command)
 │       ├── halcyon-banner    composes banner art into a wallpaper
+│       ├── halcyon-windows   minimise, hide and restore (`halcyon windows`)
 │       ├── assistant/        the voice assistant (halcyon-assistant + its Python package)
 │       └── themes/           one JSON per theme, their wallpapers and shaders
 └── custom/                 your own overrides (never overwritten)
@@ -408,6 +454,7 @@ Outside that folder, Halcyon changes very little in upstream's files:
 - `quickshell/ii/assets/images/default_wallpaper.png`: the default wallpaper
 - `quickshell/ii/scripts/colors/switchwall.sh`: one line, so a wallpaper change leaves the active theme
 - `quickshell/ii/modules/common/Config.qml`: the `halcyon` settings, and `settings.qml` plus `modules/settings/HalcyonConfig.qml` for the Halcyon settings page
+- `quickshell/ii/modules/ii/windowManager/` (new), plus one line each in `GlobalStates.qml` and `panelFamilies/IllogicalImpulseFamily.qml`: the Windows panel
 - `fish/config.fish` and `zshrc.d/dots-hyprland.zsh`: the `halcyon` alias
 - `setup` and `sdata/subcmd-install/`: the wallpaper step, `--skip-wallpapers`, and Halcyon's name in the greeting
 

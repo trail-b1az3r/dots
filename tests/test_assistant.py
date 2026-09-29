@@ -65,6 +65,7 @@ class ActionsTest(unittest.TestCase):
         samples = {"open_app": None, "set_volume": {"percent": 40}, "change_volume": {"delta": -5},
                    "toggle_mute": {"device": "microphone"}, "set_brightness": {"percent": 70},
                    "media": {"command": "next"}, "switch_workspace": {"number": 3},
+                   "windows": {"command": "hide_others"},
                    "apply_theme": {"theme": "hsr"}, "set_effects": {"level": "light"},
                    "screenshot": {}, "lock_screen": {}, "web_search": {"query": "weather"}}
         self.assertEqual(set(samples), set(actions.ACTIONS))
@@ -76,6 +77,13 @@ class ActionsTest(unittest.TestCase):
                 commands, result = actions.plan(name, samples[name])
                 self.assertTrue(commands and all(isinstance(c, list) for c in commands))
                 self.assertIsInstance(result, str)
+
+    def test_workspace_and_window_plans_use_lua_dispatchers(self):
+        commands, _ = actions.plan("switch_workspace", {"number": 3})
+        self.assertEqual(commands, [["hyprctl", "dispatch", "hl.dsp.focus({ workspace = 3 })"]])
+        commands, _ = actions.plan("windows", {"command": "restore_all"})
+        self.assertEqual(commands, [[str(actions.WINDOWS_TOOL), "restore", "--all"]])
+        self.assertTrue(actions.WINDOWS_TOOL.is_file())
 
     def test_rejects_anything_outside_the_schema(self):
         bad = [("set_volume", {"percent": 101}), ("set_volume", {"percent": True}),

@@ -16,6 +16,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 THEME_TOOL = HERE.parent.parent / "halcyon-theme"
+WINDOWS_TOOL = HERE.parent.parent / "halcyon-windows"
 THEMES = ["hyperneo", "hsr", "shattered-glass", "fractured-glass"]
 
 
@@ -53,6 +54,13 @@ ACTIONS = {
     "switch_workspace": {
         "description": "Switch to a numbered workspace.",
         "parameters": _schema({"number": {"type": "integer", "minimum": 1, "maximum": 99}}, ["number"]),
+    },
+    "windows": {
+        "description": "Manage windows: minimise the focused window, hide every window of the focused app, "
+                       "hide the other windows on this workspace, restore the last minimised window, restore "
+                       "all minimised windows, or open the Windows panel.",
+        "parameters": _schema({"command": {"type": "string", "enum": [
+            "minimise", "hide", "hide_others", "restore", "restore_all", "show_panel"]}}, ["command"]),
     },
     "apply_theme": {
         "description": "Switch the Halcyon theme: hyperneo (macOS-style ember and neon), hsr (Star Rail), "
@@ -184,7 +192,17 @@ def plan(name, args):
         command = {"play_pause": "play-pause", "next": "next", "previous": "previous", "stop": "stop"}[args["command"]]
         return [["playerctl", command]], f"media {command}"
     if name == "switch_workspace":
-        return [["hyprctl", "dispatch", "workspace", str(args["number"])]], f"workspace {args['number']}"
+        # The Lua config (Hyprland 0.53+) takes a dispatcher expression, not "workspace N".
+        return [["hyprctl", "dispatch", f"hl.dsp.focus({{ workspace = {args['number']} }})"]], \
+            f"workspace {args['number']}"
+    if name == "windows":
+        command = args["command"]
+        if command == "show_panel":
+            return [["qs", "-c", os.environ.get("qsConfig", "ii"), "ipc", "call", "windowManager", "open"]], \
+                "windows panel open"
+        argv = {"minimise": ["minimise"], "hide": ["hide"], "hide_others": ["hide-others"],
+                "restore": ["restore"], "restore_all": ["restore", "--all"]}[command]
+        return [[str(WINDOWS_TOOL), *argv]], command.replace("_", " ") + " done"
     if name == "apply_theme":
         if args["theme"] == "off":
             return [[str(THEME_TOOL), "off"]], "theme off"
