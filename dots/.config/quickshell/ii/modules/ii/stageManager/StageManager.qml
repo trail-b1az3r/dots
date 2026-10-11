@@ -22,7 +22,7 @@ Scope {
 
     readonly property int stripWidth: 180
     readonly property int cardHeight: 110
-    readonly property string settingsTitle: "illogical-impulse Settings"
+    readonly property string settingsTitle: "Halcyon Settings"
 
     Variants {
         model: Quickshell.screens
