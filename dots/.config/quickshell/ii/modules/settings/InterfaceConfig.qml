@@ -8,6 +8,38 @@ ContentPage {
     forceWidth: true
 
     ContentSection {
+        icon: "web_asset"
+        title: Translation.tr("Floating windows")
+
+        ConfigSwitch {
+            buttonIcon: "tab"
+            text: Translation.tr("Title bars on floating windows")
+            checked: Config.options.floatingTitleBars.enable
+            onCheckedChanged: {
+                Config.options.floatingTitleBars.enable = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("Drag the bar to move a floating window, or close it with the button")
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("Apps with their own title bar")
+            tooltip: Translation.tr("Comma-separated window classes that draw their own title bar. Those get none from here")
+
+            MaterialTextArea {
+                Layout.fillWidth: true
+                placeholderText: Translation.tr("e.g. steam, firefox")
+                text: Config.options.floatingTitleBars.skipClasses
+                wrapMode: TextEdit.NoWrap
+                onTextChanged: {
+                    Config.options.floatingTitleBars.skipClasses = text;
+                }
+            }
+        }
+    }
+
+    ContentSection {
         icon: "auto_awesome"
         title: Translation.tr("Halcyon logo")
 

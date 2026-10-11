@@ -648,6 +648,13 @@ Singleton {
                 property bool centerTitle: true
             }
 
+            // Title bars drawn over floating windows, for apps that don't draw their own.
+            property JsonObject floatingTitleBars: JsonObject {
+                property bool enable: false
+                // Comma-separated window classes that draw their own title bar, e.g. "steam, firefox"
+                property string skipClasses: ""
+            }
+
             property JsonObject hacks: JsonObject {
                 property int arbitraryRaceConditionDelay: 20 // milliseconds
             }
