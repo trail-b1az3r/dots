@@ -5,6 +5,7 @@ import array
 import importlib.util
 import json
 import math
+import os
 import random
 import sys
 import tempfile
@@ -252,6 +253,35 @@ class ClaudeCodeTest(unittest.TestCase):
                 provider.chat([{"role": "user", "text": "x"}], "", {})
             self.assertIn(expected, str(caught.exception))
 
+    def test_the_saved_login_directory_reaches_claude(self):
+        # Hyprland starts the daemon without the terminal's environment, so
+        # the directory recorded at sign-in is passed on to Claude Code.
+        run = self.Run((json.dumps({"result": "Hi."}), ""))
+        with unittest.mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("CLAUDE_CONFIG_DIR", None)
+            providers.ClaudeCode(run=run, workdir=tempfile.mkdtemp(),
+                                 config_dir="/home/x/alt-claude").chat(
+                [{"role": "user", "text": "hi"}], "", {})
+        self.assertEqual(run.calls[0][1]["env"]["CLAUDE_CONFIG_DIR"], "/home/x/alt-claude")
+
+    def test_a_terminal_environment_wins_over_the_saved_directory(self):
+        run = self.Run((json.dumps({"result": "Hi."}), ""))
+        with unittest.mock.patch.dict(os.environ, {"CLAUDE_CONFIG_DIR": "/from/terminal"}):
+            providers.ClaudeCode(run=run, workdir=tempfile.mkdtemp(),
+                                 config_dir="/home/x/alt-claude").chat(
+                [{"role": "user", "text": "hi"}], "", {})
+        self.assertEqual(run.calls[0][1]["env"]["CLAUDE_CONFIG_DIR"], "/from/terminal")
+
+    def test_signed_in_checks_the_saved_directory(self):
+        with tempfile.TemporaryDirectory() as home, \
+                unittest.mock.patch.dict(os.environ, {}, clear=False), \
+                unittest.mock.patch.object(providers.shutil, "which", return_value="/usr/bin/claude"):
+            os.environ.pop("CLAUDE_CONFIG_DIR", None)
+            os.environ.pop("CLAUDE_CODE_OAUTH_TOKEN", None)
+            Path(home, ".credentials.json").write_text("{}")
+            self.assertTrue(providers.claude_code_signed_in(home))
+            self.assertFalse(providers.claude_code_signed_in(tempfile.mkdtemp()))
+
 
 class McpServerTest(unittest.TestCase):
     def test_handshake_list_and_call(self):
@@ -335,9 +365,11 @@ class ConfigTest(unittest.TestCase):
         spec.loader.exec_module(module)
         options = module.option_tree()
         qml = {k.rsplit(".", 1)[1]: v for k, v in options.items() if k.startswith("halcyon.assistant.")}
-        self.assertEqual(set(qml), set(config.DEFAULTS))
+        # claudeConfigDir is written by `login`, not chosen in Settings.
+        shown = {k: v for k, v in config.DEFAULTS.items() if k != "claudeConfigDir"}
+        self.assertEqual(set(qml), set(shown))
         types = {"bool": bool, "string": str}
-        for key, default in config.DEFAULTS.items():
+        for key, default in shown.items():
             self.assertIs(types[qml[key]], type(default), key)
 
     def test_wake_phrase_matching(self):
