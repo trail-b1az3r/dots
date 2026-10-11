@@ -78,13 +78,15 @@ ContentPage {
         ConfigSlider {
             buttonIcon: "speed"
             text: Translation.tr("Preview refresh rate")
-            value: Config.options.stageManager.previewFps
+            // The range comes before the value, or the value is clamped to the default 0-1 and written back.
             from: 1
             to: 50
+            value: Config.options.stageManager.previewFps
             stopIndicatorValues: [18]
             usePercentTooltip: false
             onValueChanged: {
-                Config.options.stageManager.previewFps = Math.round(value);
+                if (Math.round(value) !== Config.options.stageManager.previewFps)
+                    Config.options.stageManager.previewFps = Math.round(value);
             }
             StyledToolTip {
                 text: Translation.tr("Frames a second for the strip's previews. Higher looks smoother and costs more")
@@ -198,6 +200,18 @@ ContentPage {
             checked: Config.options.dock.enable
             onCheckedChanged: {
                 Config.options.dock.enable = checked;
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "vertical_align_bottom"
+            text: Translation.tr("Auto-hide")
+            checked: Config.options.dock.autoHide
+            onCheckedChanged: {
+                Config.options.dock.autoHide = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("Hides while a window is focused. Move the mouse to the bottom edge to bring it back")
             }
         }
 
