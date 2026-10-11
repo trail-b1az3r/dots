@@ -54,6 +54,42 @@ ContentPage {
                 text: Translation.tr("Keeps the other windows on this workspace as live previews down the left edge. Click one to bring it forward")
             }
         }
+        ConfigSwitch {
+            buttonIcon: "tab_group"
+            text: Translation.tr("Show windows from other workspaces")
+            checked: Config.options.stageManager.crossWorkspace
+            onCheckedChanged: {
+                Config.options.stageManager.crossWorkspace = checked;
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "desktop_windows"
+            text: Translation.tr("Show windows from other monitors")
+            checked: Config.options.stageManager.crossMonitor
+            onCheckedChanged: {
+                Config.options.stageManager.crossMonitor = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("All the windows go in one strip, on the focused monitor")
+            }
+        }
+
+        ConfigSlider {
+            buttonIcon: "speed"
+            text: Translation.tr("Preview refresh rate")
+            value: Config.options.stageManager.previewFps
+            from: 1
+            to: 50
+            stopIndicatorValues: [18]
+            usePercentTooltip: false
+            onValueChanged: {
+                Config.options.stageManager.previewFps = Math.round(value);
+            }
+            StyledToolTip {
+                text: Translation.tr("Frames a second for the strip's previews. Higher looks smoother and costs more")
+            }
+        }
     }
 
     ContentSection {
