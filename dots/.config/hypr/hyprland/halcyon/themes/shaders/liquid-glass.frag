@@ -41,6 +41,7 @@ layout(location = 0) out vec4 fragColor;
 // At STRENGTH 1; STRENGTH scales the optical effects, not the shape.
 const float SQUIRCLE = 4.0;        // superellipse exponent (2 = circle)
 const float BEZEL = 0.32;          // bezel width, as a fraction of the radius
+const float CURSOR_BEZEL = 0.5;    // wider for the arrow: its whole body is rim
 const float BEND = 30.0;           // px of refraction at the outer rim
 const float MAGNIFY = 0.07;        // in the flat middle
 const float DISPERSION = 0.9;      // px of colour split in the bezel
@@ -121,6 +122,7 @@ void main() {
         pointer.y = 1.0 - pointer.y;
 #endif
         vec2 normal = vec2(0.0, 1.0);
+        float bezel = BEZEL;
 #if LENS_CURSOR
         // The arrow cursor. Its outline is the rim (r = 1), so the bezel,
         // refraction and shadow below follow its shape. It never bounces.
@@ -130,6 +132,7 @@ void main() {
         // The bezel is wider than the squircle's (0.4 of the lens size, not 0.25), so the
         // cursor's bend and rim are big enough to see on a 24px arrow.
         float r = 1.0 + outline * unit / (0.4 * LENS_RADIUS);
+        bezel = CURSOR_BEZEL;
 #else
         vec2 lensSize = LENS_RADIUS * bounceScale(pointer_last_active, clamp(BOUNCE, 0.0, 1.0));
         vec2 q = (px - pointer * size) / lensSize;  // lens space, rim at r = 1
@@ -145,7 +148,7 @@ void main() {
             if (r < 1.0) {
                 float k = awake * strength;
                 // 0 across the flat middle, 1 at the rim.
-                float t = smoothstep(1.0 - BEZEL, 1.0, r);
+                float t = smoothstep(1.0 - bezel, 1.0, r);
                 // A rounded bezel: refraction grows steeply towards the edge,
                 // so what is just outside the lens wraps into it.
                 float bend = t * t * (3.0 - 2.0 * t) * t;
