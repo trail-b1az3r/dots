@@ -880,6 +880,38 @@ def cmd_render(args):
     return 0
 
 
+def ensure_starrail_banner():
+    """The Star Rail theme shows a character. Applying it is the request for one.
+
+    With a banner already set, nothing happens. Otherwise a character is
+    picked from the cache, or the index is fetched first if the cache is empty.
+    A failure leaves the plain wallpaper in place, with a note.
+    """
+    meta_path, image = banner_files("hsr")
+    if image is not None:
+        return
+    sys.path.insert(0, str(HERE))
+    import starrail
+
+    try:
+        if not starrail.load_characters():
+            starrail.refresh()
+        char = starrail.choose_next() or starrail.current()
+        if char is None:
+            raise starrail.StarRailError("no characters are available")
+        portrait = Path(starrail.portrait(char))
+        BANNERS.mkdir(parents=True, exist_ok=True)
+        for old in BANNERS.glob("hsr.*"):
+            old.unlink()
+        shutil.copyfile(portrait, BANNERS / f"hsr{portrait.suffix.lower()}")
+        write_atomic(meta_path, json.dumps(
+            {"title": char.name, "subtitle": f"{char.element} · {char.path}"},
+            indent=2, ensure_ascii=False) + "\n")
+    except starrail.StarRailError as error:
+        print(f"note: no Star Rail character yet ({error}); the plain wallpaper is used",
+              file=sys.stderr)
+
+
 def cmd_apply(args):
     if len(args) != 1:
         raise ThemeError("usage: halcyon-theme apply NAME")
@@ -895,6 +927,8 @@ def cmd_apply(args):
 
     wallpaper = resolve_wallpaper(theme)
     if wallpaper.is_file():
+        if theme_id == "hsr":
+            ensure_starrail_banner()
         wallpaper = compose_banner(theme_id, theme, wallpaper)
         run([str(SWITCHWALL), "--mode", "dark", "--image", str(wallpaper)])
     else:

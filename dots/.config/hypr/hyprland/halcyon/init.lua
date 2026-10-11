@@ -37,3 +37,13 @@ hl.on("hyprland.start", function()
         "if [ ! -e \"$bin\" ] || [ -L \"$bin\" ]; then " ..
         "mkdir -p \"$HOME/.local/bin\" && ln -sfn \"$HOME/.config/hypr/hyprland/halcyon/halcyon-theme\" \"$bin\"; fi")
 end)
+
+-- Safety net for the shell: a few seconds after login, start Quickshell if
+-- nothing has yet. The shell is also started by hyprland/execs.lua; this only
+-- covers the case where that start happened before the display was ready.
+-- Output goes to ~/.local/state/halcyon/quickshell-start.log.
+hl.on("hyprland.start", function()
+    hl.exec_cmd("log=\"${XDG_STATE_HOME:-$HOME/.local/state}/halcyon\"; mkdir -p \"$log\"; " ..
+        "sleep 4; pgrep -x quickshell >/dev/null || " ..
+        "{ echo \"$(date): quickshell was not running, starting it\"; qs -c $qsConfig; } >> \"$log/quickshell-start.log\" 2>&1")
+end)
