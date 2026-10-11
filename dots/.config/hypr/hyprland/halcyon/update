@@ -4,8 +4,8 @@
 # changed. Anything under sdata/ or setup needs ./setup install instead, and
 # this says so.
 #
-#   update check    look for new commits; notify once for each new one (the default)
-#   update apply    pull, copy the changed dots/ files into $HOME, then reload
+#   update check    look for new commits on main; one notification for them, at most one an hour (the default)
+#   update apply    pull, copy the changed dots/ files into $HOME, then reload only what they change
 #   update status   show what is installed and what is waiting
 #
 # Files being replaced are backed up first, under ~/.local/state/halcyon/backups.
@@ -15,6 +15,7 @@ STATE="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon"
 REPO_FILE="$STATE/repo"          # written by ./setup install
 SEEN_FILE="$STATE/update-seen"   # the last upstream commit already announced
 AVAILABLE_FILE="$STATE/update-available"
+NOTIFIED_FILE="$STATE/update-notified"  # when the last notification went out (epoch seconds)
 BACKUPS="$STATE/backups"
 
 die() { echo "halcyon update: $*" >&2; exit 1; }
@@ -32,7 +33,10 @@ notify() {
 
 check() {
     repo
-    git -C "$REPO" fetch --quiet 2>/dev/null || die "couldn't reach the repository to check for updates"
+    # Only main is followed. Any other branch, or a detached HEAD, gets no notification.
+    [[ "$(git -C "$REPO" symbolic-ref --quiet --short HEAD 2>/dev/null)" == "main" ]] || return 0
+    # Offline is not an error: say nothing, and the next check tries again.
+    git -C "$REPO" fetch --quiet 2>/dev/null || { echo "no network: the update check will try again later"; return 0; }
     local upstream local_head behind
     upstream="$(git -C "$REPO" rev-parse --verify --quiet '@{u}')" || die "the repository has no upstream branch"
     local_head="$(git -C "$REPO" rev-parse HEAD)"
@@ -47,19 +51,31 @@ check() {
     behind="$(git -C "$REPO" rev-list --count "HEAD..$upstream")"
     echo "$behind" > "$AVAILABLE_FILE"
     if [[ "$(cat "$SEEN_FILE" 2>/dev/null)" != "$upstream" ]]; then
-        local body="$behind new change(s). Run: ~/.config/hypr/hyprland/halcyon/update apply"
+        # One notification however many commits came in. If one was sent within the hour, this
+        # one waits for the next check: SEEN_FILE is only written once something was shown.
+        local now last subject plural=""
+        now="$(date +%s)"
+        last="$(cat "$NOTIFIED_FILE" 2>/dev/null || echo 0)"
+        if (( now - last < 3600 )); then
+            echo "update available; already notified within the hour"
+            return 0
+        fi
+        (( behind > 1 )) && plural="s"
+        subject="$(git -C "$REPO" log -1 --format=%s "$upstream")"
+        local body="$behind new commit$plural on main: $subject. Run: ~/.config/hypr/hyprland/halcyon/update apply"
         if [[ -n "$(git -C "$REPO" diff --name-only HEAD "$upstream" -- sdata setup)" ]]; then
             body+=" (then ./setup install, since install steps or packages changed)"
         fi
         notify "Halcyon update available" "$body"
         echo "$upstream" > "$SEEN_FILE"
+        echo "$now" > "$NOTIFIED_FILE"
     fi
 }
 
 apply() {
     repo
     git -C "$REPO" diff --quiet || die "the repository has uncommitted changes; commit or stash them first"
-    local before after changed ts backup copied=0 needs_install=0 hypr_changed=0
+    local before after changed ts backup copied=0 needs_install=0 hypr_changed=0 shell_changed=0
     before="$(git -C "$REPO" rev-parse HEAD)"
     git -C "$REPO" pull --ff-only --quiet || die "couldn't fast-forward the repository; see: git -C $REPO status"
     after="$(git -C "$REPO" rev-parse HEAD)"
@@ -87,11 +103,16 @@ apply() {
         cp -p "$src" "$dest"
         copied=$((copied + 1))
         [[ "$rel" == .config/hypr/* ]] && hypr_changed=1
+        [[ "$rel" == .config/quickshell/* ]] && shell_changed=1
     done <<< "$changed"
 
-    # Hyprland reads its config once; Quickshell reloads its own files as they change.
+    # Only what changed is reloaded: Hyprland reads its config once, and the shell's QML is
+    # restarted (not the whole session) so new files are compiled.
     if (( hypr_changed )) && pgrep -x Hyprland >/dev/null; then
         hyprctl reload >/dev/null 2>&1 || true
+    fi
+    if (( shell_changed )) && systemctl --user is-active --quiet halcyon-quickshell.service 2>/dev/null; then
+        systemctl --user restart halcyon-quickshell.service || true
     fi
     echo "$after" > "$SEEN_FILE"
     rm -f "$AVAILABLE_FILE"
