@@ -64,6 +64,21 @@ Scope {
         Hyprland.dispatch(`hl.dsp.window.move({ x = ${Math.round(x)}, y = ${Math.round(y)}, relative = false, window = "address:${address}" })`);
     }
 
+    // The window's position, kept so the window and its bar stay on the monitor: the bar
+    // is always visible, and the window never goes off the edge.
+    function clampToMonitor(win, monitor, x, y) {
+        if (!monitor)
+            return { x: x, y: y };
+        const left = monitor.x;
+        const top = monitor.y + root.barHeight;
+        const right = monitor.x + monitor.width / monitor.scale - win.size[0];
+        const bottom = monitor.y + monitor.height / monitor.scale - win.size[1];
+        return {
+            x: Math.round(Math.min(Math.max(x, left), Math.max(left, right))),
+            y: Math.round(Math.min(Math.max(y, top), Math.max(top, bottom)))
+        };
+    }
+
     function resizeWindow(address, width, height) {
         Hyprland.dispatch(`hl.dsp.window.resize({ x = ${Math.round(width)}, y = ${Math.round(height)}, relative = false, window = "address:${address}" })`);
     }
@@ -307,6 +322,7 @@ Scope {
                             property real startY: 0
                             property real windowX: 0
                             property real windowY: 0
+                            property bool dragging: false
 
                             onPressed: mouse => {
                                 const p = mapToItem(stage, mouse.x, mouse.y);
@@ -314,25 +330,36 @@ Scope {
                                 mover.startY = p.y;
                                 mover.windowX = bar.win.at[0];
                                 mover.windowY = bar.win.at[1];
-                                settle.stop();
-                                bar.movedX = mover.windowX;
-                                bar.movedY = mover.windowY;
-                                bar.moving = true;
-                                Hyprland.dispatch(`hl.dsp.focus({ window = "address:${bar.win.address}" })`);
+                                mover.dragging = false;
                             }
 
+                            // The bar only starts following once the pointer really moves, so a click doesn't move the window.
                             onPositionChanged: mouse => {
                                 if (!mover.pressed)
                                     return;
                                 const p = mapToItem(stage, mouse.x, mouse.y);
-                                const x = mover.windowX + p.x - mover.startX;
-                                const y = mover.windowY + p.y - mover.startY;
-                                bar.movedX = x;
-                                bar.movedY = y;
-                                root.moveWindow(bar.win.address, x, y);
+                                if (!mover.dragging) {
+                                    if (Math.abs(p.x - mover.startX) < 3 && Math.abs(p.y - mover.startY) < 3)
+                                        return;
+                                    mover.dragging = true;
+                                    settle.stop();
+                                    bar.moving = true;
+                                }
+                                const target = root.clampToMonitor(bar.win, overlay.monitorInfo,
+                                    mover.windowX + p.x - mover.startX, mover.windowY + p.y - mover.startY);
+                                bar.movedX = target.x;
+                                bar.movedY = target.y;
+                                root.moveWindow(bar.win.address, target.x, target.y);
                             }
 
-                            onReleased: settle.restart()
+                            // A click without a drag focuses the window; the end of a drag hands the position back to Hyprland.
+                            onReleased: {
+                                if (!mover.dragging)
+                                    Hyprland.dispatch(`hl.dsp.focus({ window = "address:${bar.win.address}" })`);
+                                mover.dragging = false;
+                                if (bar.moving)
+                                    settle.restart();
+                            }
                         }
                     }
                 }
