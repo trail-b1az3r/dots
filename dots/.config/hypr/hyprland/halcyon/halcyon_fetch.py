@@ -16,6 +16,7 @@ import getpass
 import json
 import os
 import platform
+import re
 import shutil
 import socket
 import subprocess
@@ -284,9 +285,35 @@ def _colour_enabled(stream: TextIO) -> bool:
 # ── Output ─────────────────────────────────────────────────────────────
 
 
-def print_static(fields: Sequence[Field], out: TextIO, *, colour: bool) -> None:
+_ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+
+
+def fastfetch_lines() -> Optional[list[str]]:
+    """fastfetch's own summary, without its logo, as plain text lines.
+
+    None when fastfetch is not installed or does not run, so the caller can
+    fall back to the built-in summary rather than show nothing.
+    """
+    exe = shutil.which("fastfetch")
+    if not exe:
+        return None
+    try:
+        result = subprocess.run([exe, "--logo", "none"], capture_output=True, text=True,
+                                timeout=10, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0 or not result.stdout.strip():
+        return None
+    # Colour codes are stripped so each line's width can be measured for
+    # placing the mark beside it.
+    return [_ANSI.sub("", line) for line in result.stdout.splitlines() if line.strip()]
+
+
+def print_static(fields: Sequence[Field], out: TextIO, *, colour: bool,
+                 text: Optional[list[str]] = None) -> None:
     frame = logo3d.render_frame(SETTLED_YAW)
-    for line in compose(frame, info_lines(fields, colour=colour)):
+    info = text if text is not None else info_lines(fields, colour=colour)
+    for line in compose(frame, info):
         out.write(line + "\n")
     out.flush()
 
@@ -298,10 +325,11 @@ def spin(
     colour: bool,
     seconds: float = SPIN_SECONDS,
     sleep: Callable[[float], None] = time.sleep,
+    text: Optional[list[str]] = None,
 ) -> None:
     """Turn the mark for `seconds`, redrawing in place, then settle on the
     resting angle. Assumes `out` is a terminal."""
-    info = info_lines(fields, colour=colour)
+    info = text if text is not None else info_lines(fields, colour=colour)
     frames = max(1, int(seconds / FRAME_SECONDS))
     height = max(len(logo3d.render_frame(0.0)), len(info))
     out.write("\x1b[?25l")  # hide the cursor while the mark moves
@@ -328,14 +356,20 @@ def _pad(lines: list[str], height: int) -> list[str]:
 
 
 def run(*, spin_seconds: Optional[float], as_json_out: bool, reduce_motion: bool = False,
-        out: TextIO = sys.stdout) -> int:
+        use_fastfetch: bool = False, out: TextIO = sys.stdout) -> int:
     fields = collect()
     if as_json_out:
         out.write(json.dumps(as_json(fields), ensure_ascii=False, indent=2) + "\n")
         return 0
+    text: Optional[list[str]] = None
+    if use_fastfetch:
+        text = fastfetch_lines()
+        if text is None:
+            print("halcyon fetch: fastfetch is not available, showing the built-in summary",
+                  file=sys.stderr)
     colour = _colour_enabled(out)
     if spin_seconds and out.isatty() and not reduce_motion:
-        spin(fields, out, colour=colour, seconds=spin_seconds)
+        spin(fields, out, colour=colour, seconds=spin_seconds, text=text)
     else:
-        print_static(fields, out, colour=colour)
+        print_static(fields, out, colour=colour, text=text)
     return 0

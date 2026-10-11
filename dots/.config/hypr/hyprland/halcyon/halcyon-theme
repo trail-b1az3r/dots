@@ -20,6 +20,7 @@
     halcyon-theme fetch [--spin [S]]    a system summary beside the mark; --spin
                                         turns it for S seconds (default 3)
     halcyon-theme fetch --json          the same fields as JSON
+    halcyon-theme fetch --fastfetch [--spin [S]]   fastfetch's summary, beside the turning mark
 
     halcyon-theme cursor                show the cursor setting
     halcyon-theme cursor on|off         the Halcyon Glass cursor, or upstream's
@@ -1129,8 +1130,11 @@ def cmd_fetch(args):
                         default=None, metavar="SECONDS",
                         help="turn the mark for SECONDS before it settles (terminal only)")
     parser.add_argument("--json", action="store_true", help="print the fields as JSON")
+    parser.add_argument("--fastfetch", action="store_true",
+                        help="take the text beside the mark from fastfetch, when it is installed")
     options = parser.parse_args(args)
-    return halcyon_fetch.run(spin_seconds=options.spin, as_json_out=options.json)
+    return halcyon_fetch.run(spin_seconds=options.spin, as_json_out=options.json,
+                             use_fastfetch=options.fastfetch)
 
 
 def cmd_starrail(args):

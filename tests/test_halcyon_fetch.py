@@ -7,6 +7,7 @@ import math
 import os
 import sys
 import unittest
+import unittest.mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "dots", ".config", "hypr", "hyprland", "halcyon"))
 
@@ -158,6 +159,39 @@ class TestFetch(unittest.TestCase):
         status = fetch.run(spin_seconds=2.0, as_json_out=False, out=out)
         self.assertEqual(status, 0)
         self.assertNotIn("\x1b[?25l", out.getvalue())
+
+
+class TestFastfetchSource(unittest.TestCase):
+    def test_a_missing_fastfetch_gives_no_text(self) -> None:
+        import tempfile
+        with tempfile.TemporaryDirectory() as empty, \
+             unittest.mock.patch.dict(os.environ, {"PATH": empty}):
+            self.assertIsNone(fetch.fastfetch_lines())
+
+    def test_fastfetch_output_is_stripped_of_colour_and_blank_lines(self) -> None:
+        import stat
+        import tempfile
+        with tempfile.TemporaryDirectory() as bindir:
+            script = os.path.join(bindir, "fastfetch")
+            with open(script, "w", encoding="utf-8") as handle:
+                handle.write("#!/bin/sh\n"
+                             "printf '\\033[1;34mOS\\033[0m  Linux\\n\\n'\n"
+                             "printf 'Kernel  6.1\\n'\n")
+            os.chmod(script, os.stat(script).st_mode | stat.S_IEXEC)
+            with unittest.mock.patch.dict(os.environ, {"PATH": bindir}):
+                lines = fetch.fastfetch_lines()
+        self.assertEqual(lines, ["OS  Linux", "Kernel  6.1"])
+
+    def test_a_failing_fastfetch_falls_back(self) -> None:
+        import stat
+        import tempfile
+        with tempfile.TemporaryDirectory() as bindir:
+            script = os.path.join(bindir, "fastfetch")
+            with open(script, "w", encoding="utf-8") as handle:
+                handle.write("#!/bin/sh\nexit 3\n")
+            os.chmod(script, os.stat(script).st_mode | stat.S_IEXEC)
+            with unittest.mock.patch.dict(os.environ, {"PATH": bindir}):
+                self.assertIsNone(fetch.fastfetch_lines())
 
 
 if __name__ == "__main__":
