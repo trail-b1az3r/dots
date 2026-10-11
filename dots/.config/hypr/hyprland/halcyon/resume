@@ -14,6 +14,14 @@ restart_network() {
     nmcli networking off && sleep 2 && nmcli networking on
 }
 
+# If the network still isn't up a while after that, reconnect the last Wi-Fi
+# by hand (wifi-reconnect). It runs detached, so the watcher keeps listening.
+reconnect_wifi_if_down() {
+    sleep 15
+    nmcli -t -f STATE general status 2>/dev/null | grep -qx connected && return 0
+    setsid "$(dirname "$0")/wifi-reconnect" >/dev/null 2>&1 &
+}
+
 restart_razer() {
     systemctl --user restart openrazer-daemon.service 2>/dev/null || true
     if command -v polychromatic-tray-applet >/dev/null && ! pgrep -f polychromatic-tray-applet >/dev/null; then
@@ -27,6 +35,7 @@ while read -r line; do
         *"boolean false"*)
             sleep 3  # give the hardware a moment to come back
             restart_network
+            ( reconnect_wifi_if_down ) &
             restart_razer
             ;;
     esac

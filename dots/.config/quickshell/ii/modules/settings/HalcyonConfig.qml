@@ -157,10 +157,74 @@ ContentPage {
         page.pendingDelete = "";
     }
 
+    // Auto-apply: the card under the built-in rows, for one theme's time and days.
+    property string autoEditing: "" // Id of the theme being scheduled; "" when the card is closed
+    property int autoHour: 8
+    property int autoMinute: 0
+    property var autoDays: [] // ISO weekdays, 1 = Monday. Empty means every day.
+    property bool autoUseTime: true
+    property string autoWeather: "" // "" for any weather, else a group from halcyon-theme
+    readonly property bool autoCanSave: page.autoUseTime || page.autoWeather !== ""
+    readonly property var autoWeatherChoices: [
+        { value: "", text: Translation.tr("Any") },
+        { value: "clear", text: Translation.tr("Clear") },
+        { value: "cloudy", text: Translation.tr("Cloudy") },
+        { value: "rain", text: Translation.tr("Rain") },
+        { value: "snow", text: Translation.tr("Snow") },
+        { value: "storm", text: Translation.tr("Storm") },
+        { value: "fog", text: Translation.tr("Fog") }
+    ]
+
+    function autoEntry(id) {
+        return Config.options.halcyon.autoApply.find(entry => entry.theme === id) ?? null;
+    }
+
+    function themeName(id) {
+        return page.builtinThemes.find(theme => theme.id === id)?.name ?? id;
+    }
+
+    function openAuto(id) {
+        const entry = page.autoEntry(id);
+        page.autoHour = entry ? parseInt(entry.time.slice(0, 2)) : 8;
+        page.autoMinute = entry ? parseInt(entry.time.slice(3, 5)) : 0;
+        page.autoDays = entry?.days ? entry.days.slice() : [];
+        page.autoUseTime = entry ? "time" in entry : true;
+        page.autoWeather = entry?.weather ?? "";
+        page.autoEditing = id;
+    }
+
+    function toggleAutoDay(day) {
+        page.autoDays = page.autoDays.includes(day)
+            ? page.autoDays.filter(d => d !== day)
+            : page.autoDays.concat([day]).sort((a, b) => a - b);
+    }
+
+    function saveAuto() {
+        if (!page.autoCanSave)
+            return;
+        // Only the conditions that are on are saved. Days narrow the time or the weather.
+        const entry = { theme: page.autoEditing };
+        if (page.autoUseTime)
+            entry.time = `${String(page.autoHour).padStart(2, "0")}:${String(page.autoMinute).padStart(2, "0")}`;
+        if (page.autoDays.length > 0)
+            entry.days = page.autoDays.slice().sort((a, b) => a - b);
+        if (page.autoWeather !== "")
+            entry.weather = page.autoWeather;
+        const others = Config.options.halcyon.autoApply.filter(saved => saved.theme !== page.autoEditing);
+        Config.options.halcyon.autoApply = others.concat([entry]);
+        page.autoEditing = "";
+    }
+
+    function removeAuto() {
+        Config.options.halcyon.autoApply = Config.options.halcyon.autoApply.filter(entry => entry.theme !== page.autoEditing);
+        page.autoEditing = "";
+    }
+
     function themeMenu(id) {
         if (page.builtinThemes.some(theme => theme.id === id)) {
             const hidden = Config.options.halcyon.hiddenThemes.includes(id);
             return [
+                { key: "auto", text: Translation.tr("Auto-apply"), icon: "schedule" },
                 { key: "up", text: Translation.tr("Move up"), icon: "arrow_upward" },
                 { key: "down", text: Translation.tr("Move down"), icon: "arrow_downward" },
                 hidden ? { key: "show", text: Translation.tr("Show"), icon: "visibility" }
@@ -202,6 +266,9 @@ ContentPage {
             // The tool leaves the theme first if it is the active one.
             Quickshell.execDetached([page.tool, "custom", "delete", id]);
             customListRefresh.restart();
+            break;
+        case "auto":
+            page.openAuto(id);
             break;
         case "up":
             page.moveBuiltin(id, -1);
@@ -262,6 +329,154 @@ ContentPage {
                 onApplied: page.applyTheme(modelData.id)
                 onMenuToggled: page.toggleThemeMenu(modelData.id)
                 onItemChosen: key => page.runThemeAction(modelData.id, key)
+            }
+        }
+
+        // Auto-apply card, opened from a built-in theme's menu.
+        ColumnLayout {
+            visible: page.autoEditing !== ""
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            spacing: 8
+
+            StyledText {
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                color: Appearance.colors.colOnLayer1
+                font.pixelSize: Appearance.font.pixelSize.small
+                text: Translation.tr("Apply %1 at").arg(page.themeName(page.autoEditing))
+            }
+
+            ConfigSwitch {
+                buttonIcon: "schedule"
+                text: Translation.tr("At a time")
+                checked: page.autoUseTime
+                onCheckedChanged: page.autoUseTime = checked
+            }
+
+            RowLayout {
+                visible: page.autoUseTime
+                spacing: 6
+                StyledSpinBox {
+                    from: 0
+                    to: 23
+                    value: page.autoHour
+                    onValueModified: page.autoHour = value
+                }
+                StyledText {
+                    text: ":"
+                    font.pixelSize: Appearance.font.pixelSize.larger
+                    color: Appearance.colors.colOnLayer1
+                }
+                StyledSpinBox {
+                    from: 0
+                    to: 59
+                    stepSize: 5
+                    value: page.autoMinute
+                    onValueModified: page.autoMinute = value
+                }
+            }
+
+            Flow {
+                Layout.fillWidth: true
+                spacing: 4
+
+                Repeater {
+                    model: [
+                        Translation.tr("Mon"), Translation.tr("Tue"), Translation.tr("Wed"), Translation.tr("Thu"),
+                        Translation.tr("Fri"), Translation.tr("Sat"), Translation.tr("Sun")
+                    ]
+
+                    delegate: RippleButton {
+                        required property string modelData
+                        required property int index
+                        readonly property int day: index + 1
+
+                        implicitHeight: 34
+                        implicitWidth: 52
+                        buttonRadius: Appearance.rounding.small
+                        toggled: page.autoDays.includes(day)
+                        onClicked: page.toggleAutoDay(day)
+
+                        contentItem: StyledText {
+                            anchors.centerIn: parent
+                            text: modelData
+                            font.pixelSize: Appearance.font.pixelSize.small
+                            color: parent.toggled ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer1
+                        }
+                    }
+                }
+            }
+
+            StyledText {
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                color: Appearance.colors.colSubtext
+                font.pixelSize: Appearance.font.pixelSize.smallie
+                text: page.autoDays.length === 0 ? Translation.tr("No days picked: every day.") : Translation.tr("Only on the days picked.")
+            }
+
+            Flow {
+                Layout.fillWidth: true
+                spacing: 4
+
+                Repeater {
+                    model: page.autoWeatherChoices
+
+                    delegate: RippleButton {
+                        required property var modelData
+
+                        implicitHeight: 34
+                        buttonRadius: Appearance.rounding.small
+                        toggled: page.autoWeather === modelData.value
+                        onClicked: page.autoWeather = modelData.value
+
+                        contentItem: StyledText {
+                            anchors.centerIn: parent
+                            text: modelData.text
+                            font.pixelSize: Appearance.font.pixelSize.small
+                            color: parent.toggled ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer1
+                        }
+                    }
+                }
+            }
+
+            StyledText {
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                color: Appearance.colors.colSubtext
+                font.pixelSize: Appearance.font.pixelSize.smallie
+                text: Translation.tr("Weather uses what the bar's Weather fetches, so it needs Weather turned on there. The theme applies when the weather changes to this.")
+            }
+
+            StyledText {
+                visible: !page.autoCanSave
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                color: Appearance.colors.colError
+                font.pixelSize: Appearance.font.pixelSize.smallie
+                text: Translation.tr("Pick a time, a weather, or both.")
+            }
+
+            RowLayout {
+                spacing: 8
+                RippleButtonWithIcon {
+                    materialIcon: "check"
+                    mainText: Translation.tr("Save")
+                    enabled: page.autoCanSave
+                    onClicked: page.saveAuto()
+                }
+                RippleButtonWithIcon {
+                    visible: page.autoEntry(page.autoEditing) !== null
+                    materialIcon: "delete"
+                    mainText: Translation.tr("Remove")
+                    onClicked: page.removeAuto()
+                }
+                RippleButtonWithIcon {
+                    materialIcon: "close"
+                    mainText: Translation.tr("Cancel")
+                    onClicked: page.autoEditing = ""
+                }
             }
         }
 

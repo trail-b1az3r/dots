@@ -1,0 +1,6 @@
+[Unit]
+Description=Halcyon: apply the theme scheduled for this time, if any
+
+[Service]
+Type=oneshot
+ExecStart=%h/.config/hypr/hyprland/halcyon/halcyon-theme auto
