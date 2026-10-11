@@ -469,6 +469,19 @@ def glass_settings(config=None):
     return glass
 
 
+# Themes whose windows stay as they are: no rounder corners or darker edges on floating windows.
+PLAIN_WINDOW_THEMES = ("hyperneo", "hsr")
+
+
+def darker_rgba(colour, amount=0.35):
+    """The first rgba(RRGGBBAA) in a border colour, with its colour `amount` darker."""
+    found = re.search(r"rgba\(([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?\)", colour)
+    if not found:
+        return None
+    channels = [round(int(found.group(1)[i:i + 2], 16) * (1 - amount)) for i in (0, 2, 4)]
+    return "rgba(%02X%02X%02X%s)" % (channels[0], channels[1], channels[2], found.group(2) or "FF")
+
+
 def render_lua(theme_id, theme, effects, native_blur, shader_path=None, glass=None):
     h = theme["hyprland"]
     glass = glass or dict(GLASS_DEFAULTS)
@@ -527,6 +540,15 @@ def render_lua(theme_id, theme, effects, native_blur, shader_path=None, glass=No
     if use_shader:
         out.insert(4, "-- The screen shader follows the pointer, which needs damage tracking off.\n"
                       "-- `halcyon-theme effects light` turns both back.\n")
+    # Floating windows get rounder corners and an edge a shade darker than their
+    # own colour. Themes that keep their plain windows (HyperNeo, Star Rail) don't.
+    if theme_id not in PLAIN_WINDOW_THEMES:
+        float_rules = [f"{{ match = {{ float = true }}, rounding = {int(h.get('float_rounding', h['rounding'] + 6))}"]
+        edge = darker_rgba(h["active_border"])
+        if edge:
+            float_rules.append(f', border_color = "{edge}"')
+        out += ["", "-- Floating windows: rounder, with a darker edge in their own colour.",
+                "hl.window_rule(" + "".join(float_rules) + " })"]
     if translucent:
         out += ["", "-- Translucent windows need blur behind them; upstream turns it off for all.",
                 'hl.window_rule({ match = { class = ".*" }, no_blur = false })']
@@ -868,6 +890,62 @@ def custom_themes():
     return found
 
 
+def user_theme_path(theme_id):
+    """The file of one of your own themes. Only plain ids: no paths, so nothing outside your folder."""
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,40}", theme_id or ""):
+        raise ThemeError(f"'{theme_id}' isn't the id of one of your themes")
+    path = USER_THEMES_DIR / f"{theme_id}.json"
+    if not path.is_file():
+        raise ThemeError(f"no custom theme called '{theme_id}'. The built-in themes can't be changed")
+    return path
+
+
+def custom_change(args):
+    """Duplicate or delete one of your own themes."""
+    if len(args) < 2:
+        raise ThemeError("usage: halcyon-theme custom duplicate ID | delete ID")
+    path = user_theme_path(args[1])
+    if args[0] == "delete":
+        if active() == args[1]:
+            leave_theme()
+        path.unlink()
+        print(f"deleted {args[1]}")
+        return 0
+    theme = json.loads(path.read_text(encoding="utf-8"))
+    number = next(n for n in itertools.count(1) if not (USER_THEMES_DIR / f"custom-{n}.json").exists())
+    theme["name"] = f"Copy of {theme.get('name', args[1])}"
+    new_id = f"custom-{number}"
+    write_atomic(USER_THEMES_DIR / f"{new_id}.json", json.dumps(theme, indent=2, ensure_ascii=False) + "\n")
+    print(new_id)
+    return 0
+
+
+def hidden_themes():
+    """Built-in themes hidden from Settings > Halcyon. Your own themes are never hidden."""
+    value = get_nested(read_shell_config(), "halcyon.hiddenThemes")
+    if not isinstance(value, list):
+        return []
+    builtin = {p.stem for p in THEMES_DIR.glob("*.json")}
+    return [theme_id for theme_id in value if theme_id in builtin]
+
+
+def cmd_show(args):
+    """List hidden themes, or show one again (or `all`)."""
+    hidden = hidden_themes()
+    if not args:
+        print("\n".join(hidden) if hidden else "No hidden themes.")
+        return 0
+    if args == ["all"]:
+        remaining = []
+    elif len(args) == 1 and args[0] in hidden:
+        remaining = [theme_id for theme_id in hidden if theme_id != args[0]]
+    else:
+        raise ThemeError("usage: halcyon-theme show [ID|all]. Hidden now: " + (", ".join(hidden) or "none"))
+    set_shell_value("halcyon.hiddenThemes", remaining)
+    print("showing " + ("all themes" if args == ["all"] else args[0]))
+    return 0
+
+
 def cmd_custom(args):
     """Make your own themes. `new` copies the active theme (or Fractured Glass) to edit."""
     if not args or args[0] == "list":
@@ -876,8 +954,20 @@ def cmd_custom(args):
     if args[0] == "path":
         print(USER_THEMES_DIR)
         return 0
+    if args[0] in ("duplicate", "delete"):
+        return custom_change(args)
+    if args[0] == "open":
+        if len(args) != 2:
+            raise ThemeError("usage: halcyon-theme custom open ID")
+        path = user_theme_path(args[1])
+        if not shutil.which("xdg-open"):
+            raise ThemeError(f"xdg-open not found. Open {path} in your editor")
+        # The default app for .json, which is the editor for most people.
+        subprocess.Popen(["xdg-open", str(path)], start_new_session=True,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return 0
     if args[0] != "new":
-        raise ThemeError("usage: halcyon-theme custom [list|new [NAME]|path]")
+        raise ThemeError("usage: halcyon-theme custom [list|new [NAME]|duplicate ID|delete ID|open ID|path]")
     base_id = active() or "fractured-glass"
     base = load(base_id)
     number = next(n for n in itertools.count(1) if not (USER_THEMES_DIR / f"custom-{n}.json").exists())
@@ -1340,6 +1430,7 @@ def cmd_revolver(args):
 COMMANDS = {
     "revolver": cmd_revolver,
     "custom": cmd_custom,
+    "show": cmd_show,
     "starrail": cmd_starrail,
     "fetch": cmd_fetch,
     "list": cmd_list, "current": cmd_current, "apply": cmd_apply, "off": cmd_off,

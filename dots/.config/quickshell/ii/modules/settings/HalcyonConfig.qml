@@ -87,6 +87,147 @@ ContentPage {
         onTriggered: customList.running = true
     }
 
+    // Makes a custom theme. Its id comes back on stdout, and it is asked about
+    // (what to open) unless "Do not show again" was chosen before.
+    Process {
+        id: newTheme
+        command: [page.tool, "custom", "new"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const id = this.text.trim();
+                customListRefresh.restart();
+                page.askOpenFor = id !== "" && !Config.options.halcyon.customThemeHelpDismissed ? id : "";
+            }
+        }
+    }
+
+    readonly property string halcyonDocsUrl: "https://trail-b1az3r.github.io/dots/"
+    readonly property string hyprlandDocsUrl: "https://wiki.hypr.land"
+    readonly property string iiDocsUrl: "https://ii.clsty.link"
+    // The custom theme just made, while the "what to open" question is showing.
+    property string askOpenFor: ""
+
+    // Built-in themes. Their order, and which are hidden, are the user's (Config).
+    readonly property var builtinThemes: [
+        { id: "hyperneo", name: "HyperNeo", icon: "desktop_mac" },
+        { id: "hsr", name: "Star Rail", icon: "train" },
+        { id: "shattered-glass", name: "Shattered Glass", icon: "broken_image" },
+        { id: "fractured-glass", name: "Fractured Glass", icon: "lens_blur" }
+    ]
+    property bool showHidden: false
+    property string openThemeMenu: "" // Id of the row whose menu is dropped down
+    property string pendingDelete: "" // Id of the custom theme waiting for a second click on Delete
+
+    // Built-in themes in the saved order. Ones missing from it go last, in the default order.
+    function orderedBuiltins() {
+        const ids = Config.options.halcyon.themeOrder.filter(id => page.builtinThemes.some(theme => theme.id === id));
+        for (const theme of page.builtinThemes) {
+            if (!ids.includes(theme.id))
+                ids.push(theme.id);
+        }
+        return ids.map(id => page.builtinThemes.find(theme => theme.id === id));
+    }
+
+    function builtinRows() {
+        const hidden = Config.options.halcyon.hiddenThemes;
+        return page.orderedBuiltins().filter(theme => page.showHidden || !hidden.includes(theme.id));
+    }
+
+    function moveBuiltin(id, step) {
+        const ids = page.orderedBuiltins().map(theme => theme.id);
+        const from = ids.indexOf(id);
+        const to = from + step;
+        if (to < 0 || to >= ids.length)
+            return;
+        ids.splice(from, 1);
+        ids.splice(to, 0, id);
+        Config.options.halcyon.themeOrder = ids;
+    }
+
+    function applyTheme(id) {
+        Config.options.halcyon.theme = id;
+        if (id === "")
+            Quickshell.execDetached([page.tool, "off"]);
+        else
+            Quickshell.execDetached([page.tool, "apply", id]);
+    }
+
+    function toggleThemeMenu(id) {
+        page.openThemeMenu = page.openThemeMenu === id ? "" : id;
+        page.pendingDelete = "";
+    }
+
+    function themeMenu(id) {
+        if (page.builtinThemes.some(theme => theme.id === id)) {
+            const hidden = Config.options.halcyon.hiddenThemes.includes(id);
+            return [
+                { key: "up", text: Translation.tr("Move up"), icon: "arrow_upward" },
+                { key: "down", text: Translation.tr("Move down"), icon: "arrow_downward" },
+                hidden ? { key: "show", text: Translation.tr("Show"), icon: "visibility" }
+                       : { key: "hide", text: Translation.tr("Hide"), icon: "visibility_off" }
+            ];
+        }
+        return [
+            { key: "apply", text: Translation.tr("Apply"), icon: "check" },
+            { key: "duplicate", text: Translation.tr("Duplicate"), icon: "content_copy" },
+            { key: "open", text: Translation.tr("Open file"), icon: "open_in_new" },
+            {
+                key: "delete",
+                text: page.pendingDelete === id ? Translation.tr("Click again to delete") : Translation.tr("Delete"),
+                icon: "delete"
+            }
+        ];
+    }
+
+    function runThemeAction(id, key) {
+        if (key === "delete" && page.pendingDelete !== id) {
+            // Deleting needs a second click. The menu stays open until then.
+            page.pendingDelete = id;
+            return;
+        }
+        page.openThemeMenu = "";
+        page.pendingDelete = "";
+        switch (key) {
+        case "apply":
+            page.applyTheme(id);
+            break;
+        case "duplicate":
+            Quickshell.execDetached([page.tool, "custom", "duplicate", id]);
+            customListRefresh.restart();
+            break;
+        case "open":
+            Quickshell.execDetached([page.tool, "custom", "open", id]);
+            break;
+        case "delete":
+            // The tool leaves the theme first if it is the active one.
+            Quickshell.execDetached([page.tool, "custom", "delete", id]);
+            customListRefresh.restart();
+            break;
+        case "up":
+            page.moveBuiltin(id, -1);
+            break;
+        case "down":
+            page.moveBuiltin(id, 1);
+            break;
+        case "hide":
+            Config.options.halcyon.hiddenThemes = Config.options.halcyon.hiddenThemes.concat([id]);
+            break;
+        case "show":
+            Config.options.halcyon.hiddenThemes = Config.options.halcyon.hiddenThemes.filter(hidden => hidden !== id);
+            break;
+        }
+    }
+
+    // What to open after a custom theme is made. Each choice closes the question.
+    readonly property var openChoices: [
+        { text: Translation.tr("Halcyon docs"), icon: "menu_book", run: () => Qt.openUrlExternally(page.halcyonDocsUrl) },
+        { text: Translation.tr("Open the config in your default editor"), icon: "edit_document", run: () => Quickshell.execDetached([page.tool, "custom", "open", page.askOpenFor]) },
+        { text: Translation.tr("Hyprland docs"), icon: "menu_book", run: () => Qt.openUrlExternally(page.hyprlandDocsUrl) },
+        { text: Translation.tr("illogical impulse docs"), icon: "menu_book", run: () => Qt.openUrlExternally(page.iiDocsUrl) },
+        { text: Translation.tr("No"), icon: "close", run: () => {} },
+        { text: Translation.tr("Do not show again"), icon: "do_not_disturb_on", run: () => { Config.options.halcyon.customThemeHelpDismissed = true; } }
+    ]
+
     function refresh() {
         if (page.ready)
             refreshTimer.restart();
@@ -96,67 +237,89 @@ ContentPage {
         icon: "palette"
         title: Translation.tr("Theme")
 
-        ConfigSelectionArray {
-            currentValue: Config.options.halcyon.theme
-            onSelected: newValue => {
-                Config.options.halcyon.theme = newValue;
-                if (newValue === "")
-                    Quickshell.execDetached([page.tool, "off"]);
-                else
-                    Quickshell.execDetached([page.tool, "apply", newValue]);
-            }
-            options: [
-                {
-                    displayName: Translation.tr("Wallpaper colours"),
-                    icon: "wallpaper",
-                    value: ""
-                },
-                {
-                    displayName: "HyperNeo",
-                    icon: "desktop_mac",
-                    value: "hyperneo"
-                },
-                {
-                    displayName: "Star Rail",
-                    icon: "train",
-                    value: "hsr"
-                },
-                {
-                    displayName: "Shattered Glass",
-                    icon: "broken_image",
-                    value: "shattered-glass"
-                },
-                {
-                    displayName: "Fractured Glass",
-                    icon: "lens_blur",
-                    value: "fractured-glass"
-                }
-            ]
+        HalcyonThemeRow {
+            themeId: ""
+            label: Translation.tr("Wallpaper colours")
+            icon: "wallpaper"
+            isActive: Config.options.halcyon.theme === ""
+            onApplied: page.applyTheme("")
         }
 
-        ConfigSelectionArray {
-            visible: page.customThemes.length > 0
-            currentValue: Config.options.halcyon.theme
-            onSelected: newValue => {
-                Config.options.halcyon.theme = newValue;
-                Quickshell.execDetached([page.tool, "apply", newValue]);
+        Repeater {
+            model: page.builtinRows()
+
+            delegate: HalcyonThemeRow {
+                required property var modelData
+                readonly property bool hiddenTheme: Config.options.halcyon.hiddenThemes.includes(modelData.id)
+
+                themeId: modelData.id
+                label: modelData.name
+                icon: modelData.icon
+                isActive: Config.options.halcyon.theme === modelData.id
+                opacity: hiddenTheme ? 0.5 : 1
+                menuItems: page.themeMenu(modelData.id)
+                menuOpen: page.openThemeMenu === modelData.id
+                onApplied: page.applyTheme(modelData.id)
+                onMenuToggled: page.toggleThemeMenu(modelData.id)
+                onItemChosen: key => page.runThemeAction(modelData.id, key)
             }
-            options: page.customThemes.map(theme => ({
-                displayName: theme.name,
-                icon: "edit",
-                value: theme.id
-            }))
+        }
+
+        Repeater {
+            model: page.customThemes
+
+            delegate: HalcyonThemeRow {
+                required property var modelData
+
+                themeId: modelData.id
+                label: modelData.name
+                icon: "edit"
+                isActive: Config.options.halcyon.theme === modelData.id
+                menuItems: page.themeMenu(modelData.id)
+                menuOpen: page.openThemeMenu === modelData.id
+                onApplied: page.applyTheme(modelData.id)
+                onMenuToggled: page.toggleThemeMenu(modelData.id)
+                onItemChosen: key => page.runThemeAction(modelData.id, key)
+            }
         }
 
         RippleButtonWithIcon {
             materialIcon: "add"
             mainText: Translation.tr("New custom theme")
-            onClicked: {
-                Quickshell.execDetached([page.tool, "custom", "new"]);
-                customListRefresh.restart();
-            }
+            onClicked: newTheme.running = true
             StyledToolTip {
                 text: Translation.tr("Makes a copy of the current theme to change. Make as many as you like; they are JSON files in ~/.config/halcyon/themes")
+            }
+        }
+
+        // Asked after a custom theme is made, until "Do not show again".
+        ColumnLayout {
+            visible: page.askOpenFor !== ""
+            Layout.fillWidth: true
+            spacing: 4
+
+            StyledText {
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                wrapMode: Text.Wrap
+                color: Appearance.colors.colOnLayer1
+                font.pixelSize: Appearance.font.pixelSize.small
+                text: Translation.tr("What would you like to open?")
+            }
+
+            Repeater {
+                model: page.openChoices
+
+                delegate: RippleButtonWithIcon {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    materialIcon: modelData.icon
+                    mainText: modelData.text
+                    onClicked: {
+                        modelData.run();
+                        page.askOpenFor = "";
+                    }
+                }
             }
         }
 
@@ -538,6 +701,16 @@ ContentPage {
                     page.refresh();
                 }
             }
+        }
+    }
+
+    // At the very bottom. Hidden themes come back here, or with `halcyon-theme show all`.
+    RippleButtonWithIcon {
+        materialIcon: page.showHidden ? "visibility_off" : "visibility"
+        mainText: page.showHidden ? Translation.tr("Hide hidden themes") : Translation.tr("Show hidden themes")
+        onClicked: page.showHidden = !page.showHidden
+        StyledToolTip {
+            text: Translation.tr("Hidden themes show dimmed in the theme list. Right-click one and choose Show to bring it back.")
         }
     }
 }

@@ -52,7 +52,7 @@ Rectangle {
             sourceSize.width: width
             sourceSize.height: height
             fillMode: Image.PreserveAspectFit
-            source: Qt.resolvedUrl("../../../assets/icons/halcyon-mono.svg")
+            source: Qt.resolvedUrl("../../../assets/icons/halcyon-key.svg")
         }
     }
 }

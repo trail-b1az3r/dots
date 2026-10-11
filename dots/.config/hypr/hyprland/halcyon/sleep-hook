@@ -1,25 +1,47 @@
 #!/usr/bin/env bash
 # Halcyon: a systemd sleep hook, run as root after the computer resumes.
 #
-# It is the fallback for halcyon-resume.service, the user's own wake-up
-# watcher. While that service is running it handles the wake-up itself, so
-# this does nothing. Only when the watcher is stopped, failed, or missing does
-# this restart NetworkManager and the Razer daemon.
+# The user's halcyon-resume watcher is tried first. This is the fallback: a few
+# seconds after resume, if NetworkManager still isn't "connected", it restarts
+# NetworkManager itself, then checks again. A working network is left alone.
+#
+# The check runs as a detached unit, so the resume isn't held up waiting for it.
+# Every step is allowed to fail: a sleep hook must never block suspend or wake.
 #
 # ./setup install fills in the user name and copies this to
 # /usr/lib/systemd/system-sleep/halcyon-resume.
 set -u
 
-# Always exit 0. A hook that fails can get in the way of the sleep itself, so
-# nothing here may fail the transition: every command below is allowed to fail.
 [ "${1:-}" = post ] || exit 0
 
 USER_NAME="__USER__"
 
-if systemctl --machine="${USER_NAME}@" --user is-active --quiet halcyon-resume.service 2>/dev/null; then
+RECHECK='
+network_up() { nmcli -t -f STATE general status 2>/dev/null | grep -qx connected; }
+wait_for_network() {
+    for _ in $(seq 1 "$1"); do
+        network_up && return 0
+        sleep 1
+    done
+    network_up
+}
+
+sleep 6
+if wait_for_network 12; then
+    logger -t halcyon-resume "network is up after resume"
     exit 0
 fi
+logger -t halcyon-resume "network still down after resume; restarting NetworkManager"
+systemctl restart NetworkManager.service || logger -t halcyon-resume "could not restart NetworkManager"
+if wait_for_network 25; then
+    logger -t halcyon-resume "network is up again"
+else
+    logger -t halcyon-resume "network is still down after restarting NetworkManager"
+fi
+systemctl --machine="__USER__@" --user restart openrazer-daemon.service 2>/dev/null || true
+'
 
-systemctl restart NetworkManager.service || true
-systemctl --machine="${USER_NAME}@" --user restart openrazer-daemon.service 2>/dev/null || true
+systemd-run --no-block --collect --unit="halcyon-resume-check-$(date +%s)" \
+    /bin/bash -c "$RECHECK" >/dev/null 2>&1 || true
+
 exit 0

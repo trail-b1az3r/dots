@@ -114,7 +114,7 @@ ContentPage {
                   }
                 }).concat([{
                   displayName: "",
-                  iconSource: Qt.resolvedUrl("../../assets/icons/halcyon-mono.svg"),
+                  iconSource: Qt.resolvedUrl("../../assets/icons/halcyon-key.svg"),
                   value: "halcyon"
                 }])
             }
