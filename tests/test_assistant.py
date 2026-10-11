@@ -285,6 +285,48 @@ class ClaudeCodeTest(unittest.TestCase):
             self.assertFalse(providers.claude_code_signed_in(tempfile.mkdtemp()))
 
 
+class SpeechTest(unittest.TestCase):
+    def _layout(self, root, *, piper=True, voice=True):
+        from halcyon_assistant import config
+        if piper:
+            Path(root, "venv/bin").mkdir(parents=True)
+            Path(root, "venv/bin/piper").write_text("")
+        if voice:
+            Path(root, "models/piper").mkdir(parents=True)
+            Path(root, "models/piper/voice.onnx").write_text("")
+        return [unittest.mock.patch.object(config, "VENV", Path(root, "venv")),
+                unittest.mock.patch.object(config, "MODELS", Path(root, "models")),
+                unittest.mock.patch.object(config, "HOME", Path(root, "home")),
+                # Hyprland's PATH may lack the place setup put piper.
+                unittest.mock.patch("shutil.which", return_value=None)]
+
+    def test_piper_is_found_in_the_venv_when_it_is_off_the_path(self):
+        from halcyon_assistant import speech
+        with tempfile.TemporaryDirectory() as root:
+            patches = self._layout(root)
+            for p in patches:
+                p.start()
+            try:
+                self.assertEqual(speech.engine(), "piper")
+                self.assertEqual(speech.piper_binary(), str(Path(root, "venv/bin/piper")))
+            finally:
+                for p in patches:
+                    p.stop()
+
+    def test_no_voice_means_no_engine(self):
+        from halcyon_assistant import speech
+        with tempfile.TemporaryDirectory() as root:
+            patches = self._layout(root, piper=False, voice=False)
+            for p in patches:
+                p.start()
+            try:
+                self.assertIsNone(speech.engine())
+                self.assertFalse(speech.say("hello"))
+            finally:
+                for p in patches:
+                    p.stop()
+
+
 class McpServerTest(unittest.TestCase):
     def test_handshake_list_and_call(self):
         from halcyon_assistant import mcp_server

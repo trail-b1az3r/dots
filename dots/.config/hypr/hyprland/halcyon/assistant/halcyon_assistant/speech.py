@@ -11,8 +11,19 @@ def piper_voice():
     return voices[0] if voices else None
 
 
+def piper_binary():
+    """The piper program. Hyprland's PATH may not include the place setup put it, so look there too."""
+    found = shutil.which("piper")
+    if found:
+        return found
+    for candidate in (config.VENV / "bin/piper", config.HOME / ".local/bin/piper"):
+        if candidate.exists():
+            return str(candidate)
+    return None
+
+
 def engine():
-    if shutil.which("piper") and piper_voice():
+    if piper_binary() and piper_voice():
         return "piper"
     if shutil.which("espeak-ng"):
         return "espeak-ng"
@@ -27,7 +38,7 @@ def say(text, should_stop=lambda: False):
     if which == "piper":
         player = shutil.which("pw-play") and ["pw-play", "--rate", "22050", "--format", "s16", "--channels", "1", "-"] \
             or ["aplay", "-q", "-r", "22050", "-f", "S16_LE", "-c", "1", "-t", "raw"]
-        synth = subprocess.Popen(["piper", "--model", str(piper_voice()), "--output-raw"],
+        synth = subprocess.Popen([piper_binary(), "--model", str(piper_voice()), "--output-raw"],
                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         play = subprocess.Popen(player, stdin=synth.stdout, stderr=subprocess.DEVNULL)
         synth.stdin.write(text.encode())
