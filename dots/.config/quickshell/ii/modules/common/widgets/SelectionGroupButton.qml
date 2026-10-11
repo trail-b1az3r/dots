@@ -14,6 +14,8 @@ GroupButton {
     verticalPadding: 8
     bounce: false
     property string buttonIcon
+    // An image instead of a material icon, e.g. a logo.
+    property url iconSource
     property bool leftmost: false
     property bool rightmost: false
     leftRadius: (toggled || leftmost) ? (height / 2) : Appearance.rounding.unsharpenmore
@@ -39,6 +41,17 @@ GroupButton {
                     color: root.toggled ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSecondaryContainer
                 }
             }
+        }
+
+        Image {
+            Layout.alignment: Qt.AlignVCenter
+            visible: root.iconSource.toString().length > 0
+            source: root.iconSource
+            width: Appearance.font.pixelSize.larger * 1.4
+            height: width
+            sourceSize.width: width
+            sourceSize.height: height
+            fillMode: Image.PreserveAspectFit
         }
 
         Item {
