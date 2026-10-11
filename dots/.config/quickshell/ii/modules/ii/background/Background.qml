@@ -265,6 +265,36 @@ Variants {
                     }
                 }
 
+                // The revolver is loaded by file path rather than by type. A fault
+                // in the widget then stays inside its own Loader, and the rest
+                // of the background still loads.
+                Loader {
+                    id: revolverLoader
+
+                    function reload(): void {
+                        if (!Config.options.background.widgets.revolver.enable) {
+                            source = "";
+                            return;
+                        }
+                        setSource(Qt.resolvedUrl("widgets/revolver/RevolverWidget.qml"), {
+                            screenWidth: bgRoot.screen.width,
+                            screenHeight: bgRoot.screen.height,
+                            scaledScreenWidth: bgRoot.screen.width,
+                            scaledScreenHeight: bgRoot.screen.height,
+                            wallpaperScale: 1
+                        });
+                    }
+
+                    Component.onCompleted: reload()
+
+                    Connections {
+                        target: Config.options.background.widgets.revolver
+                        function onEnableChanged(): void {
+                            revolverLoader.reload();
+                        }
+                    }
+                }
+
                 FadeLoader {
                     shown: Config.options.background.widgets.clock.enable
                     sourceComponent: ClockWidget {

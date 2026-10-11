@@ -244,6 +244,17 @@ Singleton {
                         property real x: 400
                         property real y: 100
                     }
+                    // The revolver: a drum of installed games. Off until enabled.
+                    // Games are read from local files only, by halcyon-theme.
+                    property JsonObject revolver: JsonObject {
+                        property bool enable: false
+                        property string placementStrategy: "free"
+                        property real x: 1400
+                        property real y: 520
+                        property string source: "steam" // "steam" or "prismlauncher"
+                        property string mode: "recent" // "recent", "random" or "recommended"
+                        property int size: 300
+                    }
                 }
                 property string wallpaperPath: ""
                 property string thumbnailPath: ""
