@@ -85,6 +85,10 @@ Singleton {
             property JsonObject halcyon: JsonObject {
                 property string theme: "" // Active theme id, "" for none
                 property string effects: "default" // "default" (theme's own), "full", "light", "off"
+                // Star Rail characters: the random pick and the list refresh only work when on.
+                property JsonObject starRail: JsonObject {
+                    property bool enable: false
+                }
                 property JsonObject glass: JsonObject {
                     property bool pointerLens: true // Glass lens that follows the pointer (full effects)
                     property bool clickRipples: true // Clicks crack the glass (full effects)

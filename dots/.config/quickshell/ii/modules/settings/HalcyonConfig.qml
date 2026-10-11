@@ -319,18 +319,29 @@ ContentPage {
         }
 
         ContentSubsection {
-            title: Translation.tr("Star Rail theme")
+            title: Translation.tr("Star Rail characters")
+            ConfigSwitch {
+                buttonIcon: "auto_awesome"
+                text: Translation.tr("Star Rail characters on the wallpaper")
+                checked: Config.options.halcyon.starRail.enable
+                onCheckedChanged: Config.options.halcyon.starRail.enable = checked
+                StyledToolTip {
+                    text: Translation.tr("Off by default. When on, a random character can be picked. Refreshing the list downloads the public index.")
+                }
+            }
             RowLayout {
                 spacing: 8
                 RippleButtonWithIcon {
                     materialIcon: "shuffle"
-                    mainText: Translation.tr("Show another character")
+                    mainText: Translation.tr("Random character")
+                    enabled: Config.options.halcyon.starRail.enable
                     // Runs the Halcyon tool directly, with its arguments as a list.
                     onClicked: Quickshell.execDetached([page.tool, "starrail", "next"])
                 }
                 RippleButtonWithIcon {
                     materialIcon: "sync"
                     mainText: Translation.tr("Refresh the list")
+                    enabled: Config.options.halcyon.starRail.enable
                     onClicked: Quickshell.execDetached([page.tool, "starrail", "refresh"])
                 }
             }

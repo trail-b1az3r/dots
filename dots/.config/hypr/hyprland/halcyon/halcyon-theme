@@ -880,6 +880,15 @@ def cmd_render(args):
     return 0
 
 
+def starrail_enabled():
+    """Whether the user has turned Star Rail characters on in Settings."""
+    try:
+        data = json.loads(SHELL_CONFIG.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return data.get("halcyon", {}).get("starRail", {}).get("enable") is True
+
+
 def ensure_starrail_banner():
     """The Star Rail theme shows a character. Applying it is the request for one.
 
@@ -888,7 +897,7 @@ def ensure_starrail_banner():
     A failure leaves the plain wallpaper in place, with a note.
     """
     meta_path, image = banner_files("hsr")
-    if image is not None:
+    if image is not None or not starrail_enabled():
         return
     sys.path.insert(0, str(HERE))
     import starrail
@@ -1187,6 +1196,8 @@ def cmd_starrail(args):
     status.add_argument("--json", action="store_true")
     options = parser.parse_args(args)
 
+    if options.action in ("refresh", "next") and not starrail_enabled():
+        raise ThemeError("Star Rail characters are off; turn them on in Settings > Halcyon")
     try:
         if options.action == "refresh":
             count = starrail.refresh(force=options.force)
