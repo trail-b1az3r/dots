@@ -313,6 +313,46 @@ class SpeechTest(unittest.TestCase):
                 for p in patches:
                     p.stop()
 
+    def _fake_piper(self, root, body):
+        Path(root, "venv/bin").mkdir(parents=True, exist_ok=True)
+        script = Path(root, "venv/bin/piper")
+        script.write_text("#!/bin/sh\n" + body)
+        script.chmod(0o755)
+        Path(root, "bin").mkdir(exist_ok=True)
+        aplay = Path(root, "bin/aplay")
+        aplay.write_text("#!/bin/sh\ncat > /dev/null\nexit 0\n")
+        aplay.chmod(0o755)
+
+    def test_a_failing_piper_is_reported_with_its_reason(self):
+        from halcyon_assistant import speech
+        with tempfile.TemporaryDirectory() as root:
+            patches = self._layout(root)
+            for p in patches:
+                p.start()
+            self._fake_piper(root, "echo 'voice model unreadable' >&2\nexit 3\n")
+            try:
+                with unittest.mock.patch.dict(os.environ, {"PATH": f"{root}/bin:{os.environ['PATH']}"}):
+                    with self.assertLogs("halcyon.speech", level="ERROR") as logs:
+                        self.assertFalse(speech.say("hello"))
+                self.assertIn("voice model unreadable", "\n".join(logs.output))
+            finally:
+                for p in patches:
+                    p.stop()
+
+    def test_a_working_piper_reports_success(self):
+        from halcyon_assistant import speech
+        with tempfile.TemporaryDirectory() as root:
+            patches = self._layout(root)
+            for p in patches:
+                p.start()
+            self._fake_piper(root, "cat > /dev/null\nexit 0\n")
+            try:
+                with unittest.mock.patch.dict(os.environ, {"PATH": f"{root}/bin:{os.environ['PATH']}"}):
+                    self.assertTrue(speech.say("hello"))
+            finally:
+                for p in patches:
+                    p.stop()
+
     def test_no_voice_means_no_engine(self):
         from halcyon_assistant import speech
         with tempfile.TemporaryDirectory() as root:
@@ -321,7 +361,8 @@ class SpeechTest(unittest.TestCase):
                 p.start()
             try:
                 self.assertIsNone(speech.engine())
-                self.assertFalse(speech.say("hello"))
+                with self.assertLogs("halcyon.speech", level="ERROR"):
+                    self.assertFalse(speech.say("hello"))
             finally:
                 for p in patches:
                     p.stop()
