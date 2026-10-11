@@ -397,6 +397,23 @@ ContentPage {
                 }
             }
 
+            ContentSubsection {
+                title: Translation.tr("Lens shape")
+                tooltip: Translation.tr("The arrow cursor's own shape takes the refraction instead of a round lens, and it doesn't bounce")
+
+                ConfigSelectionArray {
+                    currentValue: Config.options.halcyon.glass.lensShape
+                    onSelected: newValue => {
+                        Config.options.halcyon.glass.lensShape = newValue;
+                        page.refresh();
+                    }
+                    options: [
+                        { displayName: Translation.tr("Round"), value: "round" },
+                        { displayName: Translation.tr("Cursor"), value: "cursor" }
+                    ]
+                }
+            }
+
             ConfigSlider {
                 buttonIcon: "circle"
                 text: Translation.tr("Lens size")

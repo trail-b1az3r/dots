@@ -425,11 +425,14 @@ GLASS_DEFAULTS = {
     "pointerLens": True, "clickRipples": True, "edgeRefraction": False,
     "strength": 0.5, "lensSize": 90, "lensBounce": 0.8, "windowOpacity": 0.96,
     "inactiveWindowOpacity": 0.9, "blurSize": 8,
+    # "round": a squircle around the pointer. "cursor": the arrow cursor's own shape, never bouncing.
+    "lensShape": "round",
 }
 GLASS_RANGES = {
     "strength": (0.0, 1.0), "lensSize": (30, 300), "lensBounce": (0.0, 1.0), "windowOpacity": (0.5, 1.0),
     "inactiveWindowOpacity": (0.5, 1.0), "blurSize": (1, 30),
 }
+GLASS_CHOICES = {"lensShape": ("round", "cursor")}
 
 
 def glass_settings(config=None):
@@ -441,6 +444,9 @@ def glass_settings(config=None):
         value = stored.get(key) if isinstance(stored, dict) else None
         if isinstance(default, bool):
             if isinstance(value, bool):
+                glass[key] = value
+        elif key in GLASS_CHOICES:
+            if value in GLASS_CHOICES[key]:
                 glass[key] = value
         elif is_number(value):
             low, high = GLASS_RANGES[key]
@@ -533,6 +539,7 @@ def render_shader(theme, flip, glass=None):
         return None
     glass = glass or dict(GLASS_DEFAULTS)
     text = (THEMES_DIR / shader).read_text(encoding="utf-8")
+    cursor_shape = glass.get("lensShape") == "cursor"
     knobs = {
         "FLIP_POINTER_Y": "1" if flip else "0",
         "LENS_ENABLED": "1" if glass["pointerLens"] else "0",
@@ -540,7 +547,11 @@ def render_shader(theme, flip, glass=None):
         "EDGE_ENABLED": "1" if glass["edgeRefraction"] else "0",
         "STRENGTH": f"{float(glass['strength']):.3f}",
         "LENS_RADIUS": f"{float(glass['lensSize']):.1f}",
-        "BOUNCE": f"{float(glass['lensBounce']):.3f}",
+        # The cursor's shape never wobbles, so its bounce is off.
+        "BOUNCE": "0.000" if cursor_shape else f"{float(glass['lensBounce']):.3f}",
+        "LENS_CURSOR": "1" if cursor_shape else "0",
+        # The rim refraction is scaled down for the cursor's small outline.
+        "SHAPE_BEND": "0.2" if cursor_shape else "1.0",
     }
     for name, value in knobs.items():
         # Shaders without a knob simply don't get it.
