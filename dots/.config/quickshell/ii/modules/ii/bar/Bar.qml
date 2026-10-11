@@ -9,20 +9,10 @@ import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
-import qs.modules.common.functions
 
 Scope {
     id: bar
     property bool showBarBackground: Config.options.bar.showBackground
-    // The bar's fill, from bar.background. Upstream's is the layer colour.
-    readonly property color barFill: {
-        const mode = Config.options.bar.background;
-        if (mode === "glass")
-            return ColorUtils.transparentize(Appearance.colors.colLayer0, 0.35);
-        if (mode === "outline" || mode === "clear")
-            return "transparent";
-        return Appearance.colors.colLayer0;
-    }
 
     Variants {
         // For each monitor
@@ -188,7 +178,7 @@ Scope {
                                 }
 
                                 implicitSize: Appearance.rounding.screenRounding
-                                color: showBarBackground ? barFill : "transparent"
+                                color: showBarBackground ? Appearance.colors.colLayer0 : "transparent"
 
                                 corner: RoundCorner.CornerEnum.TopLeft
                                 states: State {
@@ -207,7 +197,7 @@ Scope {
                                     bottom: Config.options.bar.bottom ? parent.bottom : undefined
                                 }
                                 implicitSize: Appearance.rounding.screenRounding
-                                color: showBarBackground ? barFill : "transparent"
+                                color: showBarBackground ? Appearance.colors.colLayer0 : "transparent"
 
                                 corner: RoundCorner.CornerEnum.TopRight
                                 states: State {

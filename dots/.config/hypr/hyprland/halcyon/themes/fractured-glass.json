@@ -163,11 +163,6 @@
     "appearance.transparency.enable": true,
     "appearance.transparency.automatic": false,
     "appearance.transparency.backgroundTransparency": 0.25,
-    "appearance.transparency.contentTransparency": 0.55,
-    "dock.style": "island",
-    "dock.background": "glass",
-    "bar.background": "glass",
-    "dock.enable": true,
-    "dock.hoverToReveal": false
+    "appearance.transparency.contentTransparency": 0.55
   }
 }

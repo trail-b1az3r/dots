@@ -155,11 +155,6 @@
     "appearance.transparency.enable": true,
     "appearance.transparency.automatic": false,
     "appearance.transparency.backgroundTransparency": 0.28,
-    "appearance.transparency.contentTransparency": 0.6,
-    "dock.style": "squircle",
-    "dock.background": "glass",
-    "bar.background": "clear",
-    "dock.enable": true,
-    "dock.hoverToReveal": false
+    "appearance.transparency.contentTransparency": 0.6
   }
 }

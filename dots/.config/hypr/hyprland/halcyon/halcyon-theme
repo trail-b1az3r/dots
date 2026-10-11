@@ -12,11 +12,6 @@
                                         active theme (the Settings page runs
                                         this for you)
     halcyon-theme settings              open the Settings app
-    halcyon-theme starrail next         another Star Rail character on the banner
-    halcyon-theme starrail refresh      download the public character index now
-    halcyon-theme starrail status       what is cached and what is showing
-    halcyon-theme revolver scan         the revolver's games and their weights
-    halcyon-theme revolver fire SOURCE ID   start one of them
     halcyon-theme fetch [--spin [S]]    a system summary beside the mark; --spin
                                         turns it for S seconds (default 3)
     halcyon-theme fetch --json          the same fields as JSON
@@ -1133,88 +1128,7 @@ def cmd_fetch(args):
     return halcyon_fetch.run(spin_seconds=options.spin, as_json_out=options.json)
 
 
-def cmd_starrail(args):
-    """Star Rail characters: refresh the index, or put another character on the banner."""
-    import argparse
-
-    sys.path.insert(0, str(HERE))
-    import starrail
-
-    parser = argparse.ArgumentParser(prog="halcyon-theme starrail")
-    sub = parser.add_subparsers(dest="action", required=True)
-    refresh = sub.add_parser("refresh", help="download the public character index now")
-    refresh.add_argument("--force", action="store_true")
-    sub.add_parser("next", help="show another character on the Star Rail banner")
-    status = sub.add_parser("status", help="what is cached and what is showing")
-    status.add_argument("--json", action="store_true")
-    options = parser.parse_args(args)
-
-    try:
-        if options.action == "refresh":
-            count = starrail.refresh(force=options.force)
-            print(f"character index is current: {count} characters")
-            return 0
-        if options.action == "next":
-            char = starrail.choose_next()
-            if char is None:
-                starrail.refresh()
-                char = starrail.choose_next()
-            if char is None:
-                raise ThemeError("no characters are cached; run `halcyon-theme starrail refresh`")
-            portrait = starrail.portrait(char)
-            cmd_banner(["hsr", portrait, "--title", char.name,
-                        "--subtitle", f"{char.element} · {char.path}"])
-            print(f"showing {char.name} ({char.element}, {char.path})")
-            return 0
-        payload = starrail.status()
-        if options.json:
-            print(json.dumps(payload, indent=2, ensure_ascii=False))
-            return 0
-        current = payload["current"]
-        print(f"characters cached: {payload['characters']}")
-        print("showing: " + (f"{current['name']} ({current['element']})" if current else "nothing yet"))
-        return 0
-    except starrail.StarRailError as error:
-        raise ThemeError(str(error)) from None
-
-
-def cmd_revolver(args):
-    """The revolver widget's games: list the chambers, or start one."""
-    import argparse
-
-    sys.path.insert(0, str(HERE))
-    import revolver
-
-    parser = argparse.ArgumentParser(prog="halcyon-theme revolver")
-    sub = parser.add_subparsers(dest="action", required=True)
-    scan = sub.add_parser("scan", help="list the chambers and their weights")
-    scan.add_argument("--source", choices=revolver.SOURCES, default="steam")
-    scan.add_argument("--mode", choices=revolver.MODES, default="recent")
-    scan.add_argument("--json", action="store_true")
-    fire = sub.add_parser("fire", help="start one game")
-    fire.add_argument("source", choices=revolver.SOURCES)
-    fire.add_argument("game_id")
-    options = parser.parse_args(args)
-
-    if options.action == "scan":
-        chambers = revolver.pool(options.source, options.mode)
-        if options.json:
-            print(json.dumps([c.as_dict() for c in chambers], ensure_ascii=False))
-        else:
-            for chamber in chambers:
-                print(f"{chamber.name}  [{chamber.id}]  weight {chamber.weight:.2f}")
-        return 0
-    try:
-        argv = revolver.fire(options.source, options.game_id)
-    except revolver.LaunchError as error:
-        raise ThemeError(str(error)) from None
-    print("started: " + " ".join(argv))
-    return 0
-
-
 COMMANDS = {
-    "revolver": cmd_revolver,
-    "starrail": cmd_starrail,
     "fetch": cmd_fetch,
     "list": cmd_list, "current": cmd_current, "apply": cmd_apply, "off": cmd_off,
     "menu": cmd_menu, "check": cmd_check, "render": cmd_render, "detach": cmd_detach,

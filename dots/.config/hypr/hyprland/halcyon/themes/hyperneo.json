@@ -182,9 +182,6 @@
     "dock.pinnedOnStartup": true,
     "dock.hoverToReveal": true,
     "dock.monochromeIcons": false,
-    "appearance.fakeScreenRounding": 1,
-    "dock.style": "pill",
-    "dock.background": "glass",
-    "bar.background": "glass"
+    "appearance.fakeScreenRounding": 1
   }
 }
