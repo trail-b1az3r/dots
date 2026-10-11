@@ -38,12 +38,12 @@ hl.on("hyprland.start", function()
         "mkdir -p \"$HOME/.local/bin\" && ln -sfn \"$HOME/.config/hypr/hyprland/halcyon/halcyon-theme\" \"$bin\"; fi")
 end)
 
--- Safety net for the shell: a few seconds after login, start Quickshell if
--- nothing has yet. The shell is also started by hyprland/execs.lua; this only
--- covers the case where that start happened before the display was ready.
--- Output goes to ~/.local/state/halcyon/quickshell-start.log.
+-- The shell and the GPU guard run as systemd user services, so they restart
+-- if they exit. The environment Hyprland set up is handed to systemd first, so
+-- the services can find the display. Units live in ~/.config/systemd/user.
 hl.on("hyprland.start", function()
-    hl.exec_cmd("log=\"${XDG_STATE_HOME:-$HOME/.local/state}/halcyon\"; mkdir -p \"$log\"; " ..
-        "sleep 4; pgrep -x quickshell >/dev/null || " ..
-        "{ echo \"$(date): quickshell was not running, starting it\"; qs -c $qsConfig; } >> \"$log/quickshell-start.log\" 2>&1")
+    hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE " ..
+        "XDG_RUNTIME_DIR DISPLAY XDG_CURRENT_DESKTOP; " ..
+        "systemctl --user daemon-reload; " ..
+        "systemctl --user restart halcyon-quickshell.service halcyon-gpu-guard.service")
 end)

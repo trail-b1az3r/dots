@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+"""Turn the glass refraction off while a game is using the GPU hard.
+
+Watches the GPU every couple of seconds. When the GPU is above HOT_UTIL, or
+less than LOW_FREE_MIB of video memory is free, for a few samples in a row,
+the glass effects are switched off with `halcyon-theme effects off`. They are
+switched back to the level the user chose once the GPU has been quiet for a
+while. The two thresholds are separated, so the effects do not flicker on and
+off around one value.
+
+Reads NVIDIA through nvidia-smi, and AMD through sysfs. With neither, it does
+nothing and says so. Runs as the halcyon-gpu-guard user service.
+"""
+
+from __future__ import annotations
+
+import glob
+import json
+import os
+import signal
+import subprocess
+import sys
+import time
+from pathlib import Path
+from typing import Optional
+
+HOT_UTIL = 81          # percent: GPU busy above this
+LOW_FREE_MIB = 2048    # MiB: less video memory free than this
+CALM_UTIL = 70         # percent: below this (and enough memory) counts as calm
+CALM_FREE_MIB = 3072
+HOT_SAMPLES = 2        # consecutive hot samples before the effects go off
+CALM_SAMPLES = 15      # consecutive calm samples before they come back
+INTERVAL = 2.0         # seconds between samples
+
+HALCYON = Path(__file__).resolve().parent / "halcyon-theme"
+STATE_FILE = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local/state") / "halcyon/gpu-guard.json"
+
+
+# ── Sampling ───────────────────────────────────────────────────────────
+
+def parse_nvidia(text: str) -> Optional[tuple[float, float]]:
+    """(utilisation %, free MiB) from nvidia-smi's csv output, or None."""
+    line = next((l for l in text.splitlines() if l.strip()), "")
+    parts = [p.strip() for p in line.split(",")]
+    if len(parts) < 3:
+        return None
+    try:
+        util, used, total = float(parts[0]), float(parts[1]), float(parts[2])
+    except ValueError:
+        return None
+    return util, total - used
+
+
+def sample_nvidia() -> Optional[tuple[float, float]]:
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=utilization.gpu,memory.used,memory.total",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=5, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    return parse_nvidia(result.stdout)
+
+
+def sample_amd() -> Optional[tuple[float, float]]:
+    for card in sorted(glob.glob("/sys/class/drm/card[0-9]*/device")):
+        try:
+            busy = float(Path(card, "gpu_busy_percent").read_text().strip())
+            used = float(Path(card, "mem_info_vram_used").read_text().strip())
+            total = float(Path(card, "mem_info_vram_total").read_text().strip())
+        except (OSError, ValueError):
+            continue
+        return busy, (total - used) / (1024 * 1024)
+    return None
+
+
+def sample() -> Optional[tuple[float, float]]:
+    return sample_nvidia() or sample_amd()
+
+
+# ── Deciding ───────────────────────────────────────────────────────────
+
+def decide(state: dict, util: float, free_mib: float) -> tuple[dict, Optional[str]]:
+    """The next state, and the action to take ("off", "restore" or None).
+
+    `state` holds the counters and whether the effects are currently
+    suppressed. The thresholds apply to a single sample; the counters stop
+    one noisy sample from changing anything.
+    """
+    hot = util > HOT_UTIL or free_mib < LOW_FREE_MIB
+    calm = util < CALM_UTIL and free_mib >= CALM_FREE_MIB
+    hot_run = state.get("hot", 0) + 1 if hot else 0
+    calm_run = state.get("calm", 0) + 1 if calm else 0
+    new = dict(state, hot=hot_run, calm=calm_run)
+    if not state.get("suppressed") and hot_run >= HOT_SAMPLES:
+        new["suppressed"] = True
+        return new, "off"
+    if state.get("suppressed") and calm_run >= CALM_SAMPLES:
+        new["suppressed"] = False
+        return new, "restore"
+    return new, None
+
+
+# ── Acting ─────────────────────────────────────────────────────────────
+
+def load_state() -> dict:
+    try:
+        return json.loads(STATE_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def save_state(state: dict) -> None:
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    STATE_FILE.write_text(json.dumps(state), encoding="utf-8")
+
+
+def read_level() -> str:
+    """The effects level the user chose, from the shell settings."""
+    config = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "illogical-impulse/config.json"
+    try:
+        data = json.loads(config.read_text(encoding="utf-8"))
+        return str(data.get("halcyon", {}).get("effects", "default"))
+    except (OSError, ValueError):
+        return "default"
+
+
+def set_effects(level: str) -> None:
+    subprocess.run([str(HALCYON), "effects", level], check=False,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def main() -> int:
+    if sample() is None:
+        print("gpu-guard: no GPU statistics here (no nvidia-smi, no AMD sysfs); nothing to do",
+              file=sys.stderr)
+        return 0
+    state = load_state()
+
+    def stop(_signum, _frame):
+        # Leaving the effects off after a stop would be a surprise, so put them back.
+        if state.get("suppressed"):
+            set_effects(state.get("level", "default"))
+            state["suppressed"] = False
+            save_state(state)
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
+    while True:
+        reading = sample()
+        if reading is not None:
+            util, free = reading
+            state, action = decide(state, util, free)
+            if action == "off":
+                state["level"] = read_level()
+                set_effects("off")
+            elif action == "restore":
+                set_effects(state.get("level", "default"))
+            save_state(state)
+        time.sleep(INTERVAL)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

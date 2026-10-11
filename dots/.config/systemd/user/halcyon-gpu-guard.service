@@ -1,0 +1,10 @@
+[Unit]
+Description=Halcyon GPU guard: turns the glass refraction off under heavy GPU load
+
+[Service]
+ExecStart=%h/.config/hypr/hyprland/halcyon/gpu-guard
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

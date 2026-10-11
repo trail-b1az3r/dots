@@ -1,0 +1,13 @@
+[Unit]
+Description=Halcyon desktop shell (Quickshell)
+Documentation=file://%h/.config/quickshell/ii/shell.qml
+
+[Service]
+# Started by Hyprland at login (see hyprland/halcyon/init.lua). Restarted
+# if it exits, so a crash does not leave the desktop without its bar.
+ExecStart=/usr/bin/env qs -c ii
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target
