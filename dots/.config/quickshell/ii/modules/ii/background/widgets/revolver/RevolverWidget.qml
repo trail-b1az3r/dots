@@ -20,10 +20,10 @@ import qs.modules.ii.background.widgets
  * scan`, which reads the local Steam library or PrismLauncher.
  *
  * Dragging spins the drum with flick inertia, and the chamber that stops
- * under the pin is the one loaded. Firing is deliberately a click on the
- * hub, not the spin's end, so a stray drag can never launch a game. The
- * click plays the fire sequence: the clip slides in, the hammer strikes,
- * the game starts, and the spent shell is ejected and a new one loaded.
+ * under the pin is the one loaded. A spin that lands on a loaded chamber
+ * fires it: the clip slides in, the hammer strikes, the game starts, and
+ * the spent shell is ejected and a new one loaded. A slow nudge settles
+ * the drum without firing, so only a deliberate spin launches a game.
  *
  * Its place is set by background.widgets.revolver.x and .y, and its size
  * by .size. The drawing is laid out on a 230 × 268 stage and scaled.
@@ -50,6 +50,8 @@ AbstractBackgroundWidget {
     property bool loading: false
     property bool spinning: false
     property bool firing: false
+    /** True when the spin being released was a flick, not a nudge, so it may fire. */
+    property bool landing: false
     /** False until a spin has landed on a loaded chamber. */
     property bool committedSpin: false
     /** [{id, name, source, weight}]: the chambers under the drum, one per slot. */
@@ -149,6 +151,7 @@ AbstractBackgroundWidget {
 
         root.committedSpin = root.chambers.length >= root.chamberCount;
         root.landedIndex = root.chamberAtRotation(target);
+        root.landing = root.committedSpin && vAbs >= 0.03;
         root.spinning = true;
         root.statusText = root.committedSpin ? Translation.tr("Spinning...") : Translation.tr("Still chambering...");
 
@@ -159,19 +162,21 @@ AbstractBackgroundWidget {
 
     function onSpinStopped(): void {
         root.spinning = false;
-        const chosen = root.chambers[root.landedIndex];
-        if (!root.committedSpin || !chosen) {
+        if (!root.landing) {
             root.statusText = Translation.tr("Drag to spin");
             return;
         }
-        root.statusText = Translation.tr("Click the hub to fire");
+        root.landing = false;
+        root.fire();
     }
 
+    // Fires the chamber under the pin: the fire sequence, then the game starts.
     function fire(): void {
         const chosen = root.chambers[root.landedIndex];
         if (!chosen || root.firing || root.spinning)
             return;
         root.pendingChosen = chosen;
+        root.statusText = Translation.tr("Firing...");
         fireSequence.start();
     }
 
@@ -447,7 +452,14 @@ AbstractBackgroundWidget {
                                     NumberAnimation { target: shell; property: "fallY"; to: 0; duration: 260; easing.type: Easing.OutBack }
                                     NumberAnimation { target: shell; property: "opacity"; to: 1; duration: 200 }
                                 }
-                                ScriptAction { script: if (root.ejectingIndex === chamberSlot.index) root.ejectingIndex = -1 }
+                                ScriptAction {
+                    script: {
+                        if (root.ejectingIndex === chamberSlot.index) {
+                            root.ejectingIndex = -1;
+                            root.statusText = Translation.tr("Drag to spin");
+                        }
+                    }
+                }
                             }
                         }
                     }
@@ -651,7 +663,8 @@ AbstractBackgroundWidget {
                 property real velocity: 0 // degrees per ms, smoothed
 
                 anchors.fill: parent
-                enabled: !GlobalStates.screenLocked && !root.firing
+                // Spinning waits for a spent shell to be reloaded.
+                enabled: !GlobalStates.screenLocked && !root.firing && root.ejectingIndex < 0
                 preventStealing: true
 
                 function angleAt(mx: real, my: real): real {
@@ -688,19 +701,6 @@ AbstractBackgroundWidget {
                         return;
                     root.releaseSpin(dragArea.velocity);
                 }
-            }
-
-            // The trigger. A click on the hub fires the chamber under the pin,
-            // and only once a spin has landed on a loaded chamber.
-            MouseArea {
-                anchors.centerIn: parent
-                width: 46
-                height: 46
-                z: 30
-                enabled: root.committedSpin && !root.spinning && !root.firing
-                    && root.ejectingIndex < 0 && !GlobalStates.screenLocked
-                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                onClicked: root.fire()
             }
         }
 
