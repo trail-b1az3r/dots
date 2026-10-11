@@ -32,6 +32,15 @@ Singleton {
         })
     }
 
+    // Whether a window on the monitor's active workspace is fullscreen (2). That includes one
+    // Hyprland made fullscreen for an app that didn't ask (fullscreen_state with client = 0).
+    function fullscreenOnMonitor(monitorName) {
+        const workspaceId = root.monitors.find(monitor => monitor.name === monitorName)?.activeWorkspace?.id;
+        if (workspaceId === undefined)
+            return false;
+        return root.windowList.some(win => win.workspace?.id === workspaceId && win.fullscreen === 2);
+    }
+
     function hyprlandClientsForWorkspace(workspace) {
         return root.windowList.filter(win => win.workspace.id === workspace);
     }

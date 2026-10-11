@@ -282,6 +282,7 @@ Singleton {
             property JsonObject bar: JsonObject {
                 property JsonObject autoHide: JsonObject {
                     property bool enable: false
+                    property bool hideInFullscreen: true // Hide while a window is fullscreen, so it can use the whole screen
                     property int hoverRegionWidth: 2
                     property bool pushWindows: false
                     property JsonObject showWhenPressingSuper: JsonObject {
@@ -384,6 +385,7 @@ Singleton {
                 property real height: 60
                 property real hoverRegionHeight: 2
                 property bool pinnedOnStartup: false
+                property bool autoHide: true // Hides while a window is focused. Off: always shown
                 property bool hoverToReveal: true // When false, only reveals on empty workspace
                 property list<string> pinnedApps: [ // IDs of pinned entries
                     "org.kde.dolphin", "kitty",]

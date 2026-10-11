@@ -52,8 +52,12 @@ Scope {
                 }
                 property bool superShow: false
                 property bool mustShow: hoverRegion.containsMouse || superShow
+                // A fullscreen window (Hyprland's, even when the app didn't ask) gets the whole screen, so the bar steps aside.
+                readonly property bool fullscreenHere: (Config.options.bar.autoHide.hideInFullscreen ?? true)
+                    && HyprlandData.fullscreenOnMonitor(barRoot.screen?.name ?? "")
+                readonly property bool autoHidden: (Config?.options.bar.autoHide.enable ?? false) || fullscreenHere
                 exclusionMode: ExclusionMode.Ignore
-                exclusiveZone: (Config?.options.bar.autoHide.enable && (!mustShow || !Config?.options.bar.autoHide.pushWindows)) ? 0 :
+                exclusiveZone: (autoHidden && (!mustShow || !Config?.options.bar.autoHide.pushWindows || fullscreenHere)) ? 0 :
                     Appearance.sizes.baseBarHeight + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)
                 WlrLayershell.namespace: "quickshell:bar"
                 implicitHeight: Appearance.sizes.barHeight + Appearance.rounding.screenRounding
@@ -110,7 +114,7 @@ Scope {
                             left: parent.left
                             top: parent.top
                             bottom: undefined
-                            topMargin: (Config?.options.bar.autoHide.enable && !mustShow) ? -Appearance.sizes.barHeight : 0
+                            topMargin: (barRoot.autoHidden && !barRoot.mustShow) ? -Appearance.sizes.barHeight : 0
                             bottomMargin: (Config.options.interactions.deadPixelWorkaround.enable && barRoot.anchors.bottom) * -1
                             rightMargin: (Config.options.interactions.deadPixelWorkaround.enable && barRoot.anchors.right) * -1
                         }
@@ -136,7 +140,7 @@ Scope {
                             PropertyChanges {
                                 target: barContent
                                 anchors.topMargin: 0
-                                anchors.bottomMargin: (Config?.options.bar.autoHide.enable && !mustShow) ? -Appearance.sizes.barHeight : 0
+                                anchors.bottomMargin: (barRoot.autoHidden && !barRoot.mustShow) ? -Appearance.sizes.barHeight : 0
                             }
                         }
                     }
