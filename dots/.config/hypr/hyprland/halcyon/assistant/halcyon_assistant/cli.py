@@ -123,15 +123,14 @@ def login(_args):
         if not providers.shutil.which("claude"):
             print("Claude Code still isn't on PATH; open a new terminal and try again.")
             return 1
-    if providers.claude_code_signed_in():
-        print("Claude Code is already signed in.")
-    else:
-        env = {k: v for k, v in os.environ.items() if k not in providers.ClaudeCode.ENV_CREDENTIALS}
-        # Without --console this signs in with a claude.ai (Pro/Max) account.
-        if subprocess.run(["claude", "auth", "login"], env=env).returncode != 0 \
-                or not providers.claude_code_signed_in():
-            print("Sign-in didn't finish. Run `halcyon assistant login` to try again.")
-            return 1
+    # Always run the sign-in, even when a login file is there: the file can
+    # outlive its session, and signing in again is what refreshes it.
+    env = {k: v for k, v in os.environ.items() if k not in providers.ClaudeCode.ENV_CREDENTIALS}
+    # Without --console this signs in with a claude.ai (Pro/Max) account.
+    if subprocess.run(["claude", "auth", "login"], env=env).returncode != 0 \
+            or not providers.claude_code_signed_in():
+        print("Sign-in didn't finish. Run `halcyon assistant login` to try again.")
+        return 1
     # The daemon doesn't see this terminal's environment, so it is told where
     # the login is, and the voice path uses the same directory.
     config.write_setting("claudeConfigDir", str(providers.claude_config_dir()))

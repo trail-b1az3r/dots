@@ -151,6 +151,13 @@ def claude_code_signed_in(saved=""):
     return (claude_config_dir(saved) / ".credentials.json").is_file()
 
 
+def _needs_sign_in(message):
+    """Whether Claude Code's error means the login is missing, expired or refused."""
+    text = message.lower()
+    return any(word in text for word in (
+        "login", "log in", "not signed in", "authenticat", "oauth", "expired", "unauthorized"))
+
+
 class ClaudeCode:
     """Claude on your own Pro/Max plan, by running Claude Code headless.
 
@@ -223,14 +230,14 @@ class ClaudeCode:
             data = {}
         if not data:
             detail = (done.stderr or done.stdout or "no output").strip().splitlines()[-1:] or ["no output"]
-            if "login" in detail[0].lower() or "log in" in detail[0].lower():
+            if _needs_sign_in(detail[0]):
                 raise ProviderError("Claude Code isn't signed in where the assistant looks "
                                     f"({claude_config_dir(self.config_dir)}): run `halcyon assistant login`")
             raise ProviderError(f"Claude Code failed: {detail[0][:200]}")
         self.session = data.get("session_id") or self.session
         text = (data.get("result") or "").strip()
         if data.get("is_error"):
-            if "login" in text.lower():
+            if _needs_sign_in(text):
                 raise ProviderError("your Claude login has expired: run `halcyon assistant login`")
             raise ProviderError(f"Claude Code: {text[:200] or 'error'}")
         # Tools ran inside Claude Code already; nothing left for our loop.
