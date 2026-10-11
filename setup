@@ -88,6 +88,7 @@ case ${SUBCMD_NAME} in
     if [[ "${SKIP_ALLFILES}" != true ]]; then
       source ${SUBCMD_DIR}/3.files.sh
     fi
+    source ${SUBCMD_DIR}/4.animated-fetch.sh
     ;;
   install-deps)
     for function in ${print_os_group_id_functions[@]}; do
