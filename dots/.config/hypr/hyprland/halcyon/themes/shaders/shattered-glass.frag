@@ -84,10 +84,10 @@ vec2 bounceScale(float t, float amount) {
     // Starts from rest, then springs: the lens swells and wobbles, and the
     // wobble dies away. Nothing jumps when the pointer moves.
     float rise = 1.0 - exp(-14.0 * t);
-    float spring = 2.5 * rise * exp(-2.4 * t) * cos(12.0 * t);
+    float spring = 5.0 * rise * exp(-2.4 * t) * cos(12.0 * t);
     // A quiver on top while the pointer is moving, faded in and out so it never steps.
     float moving = 1.0 - smoothstep(0.0, 0.3, t);
-    float quiver = sin(time * 19.0) * moving * 0.4;
+    float quiver = sin(time * 19.0) * moving * 1.0;
     float size = -0.12 * spring;
     float squash = 0.14 * spring + 0.05 * quiver;
     return vec2(1.0 + (size + squash) * amount, 1.0 + (size - squash) * amount);
@@ -95,7 +95,7 @@ vec2 bounceScale(float t, float amount) {
 
 float liquidWave(float angle, float t, float amount) {
     // Rises from rest, peaks about a third of a second after the event, then dies away.
-    float energy = 8.0 * t * exp(-3.0 * t) * amount;
+    float energy = 14.0 * t * exp(-3.0 * t) * amount;
     return energy * (0.075 * sin(3.0 * angle - time * 8.0 + 1.3)
                    + 0.055 * sin(4.0 * angle + time * 6.5)
                    + 0.035 * sin(5.0 * angle - time * 11.0 + 0.7));
