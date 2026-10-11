@@ -50,6 +50,18 @@ ColumnLayout {
             anchors.top: parent.top
             spacing: Theme.spacingXs
 
+            Image {
+                source: Paths.logo
+                sourceSize.width: 112
+                sourceSize.height: 112
+                implicitWidth: 56
+                implicitHeight: 56
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                // Hidden rather than broken when the file is not installed.
+                visible: status === Image.Ready
+            }
+
             Label {
                 Layout.fillWidth: true
                 text: "Halcyon " + (root.report.version ?? "")

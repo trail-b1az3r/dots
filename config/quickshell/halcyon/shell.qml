@@ -227,6 +227,14 @@ ShellRoot {
                 Overlays.open("settings", { section: section });
         }
         function close(): void { Overlays.close("settings"); }
+        // The bar's Settings button and `halcyon shell settings toggle`
+        // both call this. Without it they did nothing at all.
+        function toggle(): void {
+            if (Overlays.isOpen("settings"))
+                Overlays.close("settings");
+            else
+                Overlays.open("settings", ({}));
+        }
     }
 
     IpcHandler {
