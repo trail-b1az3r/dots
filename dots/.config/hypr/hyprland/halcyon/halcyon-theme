@@ -782,6 +782,13 @@ def leave_theme():
     restore_shell_config()
     remove(THEME_LUA, ACTIVE_FILE, SCREEN_SHADER)
     set_shell_value("halcyon.theme", "")
+    set_shell_value("halcyon.glassTheme", False)
+
+
+def is_glass(theme):
+    """Whether a theme has glass windows or a glass screen shader (what the revolver follows)."""
+    effects = theme.get("effects", {})
+    return bool(effects.get("screen_shader") or effects.get("native_blur"))
 
 
 # ----------------------------------------------------------------------------
@@ -970,6 +977,7 @@ def cmd_apply(args):
     effects, native = write_window_style(theme_id, theme)
     write_atomic(ACTIVE_FILE, theme_id + "\n")
     set_shell_value("halcyon.theme", theme_id)
+    set_shell_value("halcyon.glassTheme", is_glass(theme))
     reload_hyprland()
 
     body = theme["description"]

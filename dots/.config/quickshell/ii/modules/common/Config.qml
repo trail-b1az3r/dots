@@ -84,6 +84,7 @@ Singleton {
             // them. "theme" is written by halcyon-theme to show what is active.
             property JsonObject halcyon: JsonObject {
                 property string theme: "" // Active theme id, "" for none
+                property bool glassTheme: false // Written by halcyon-theme: the active theme has glass windows or a glass shader
                 property string effects: "default" // "default" (theme's own), "full", "light", "off"
                 // Star Rail characters: the random pick and the list refresh only work when on.
                 property JsonObject starRail: JsonObject {
