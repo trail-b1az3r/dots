@@ -127,8 +127,8 @@ class Assistant:
         self.state = "speaking"
         notify.show(f"“{text}”", reply, icon="audio-input-microphone", timeout_ms=max(6000, 90 * len(reply)))
         if self.settings["speak"] and not speech.say(reply, should_stop=self.cancel.is_set):
-            # Without this the reply just goes silent, with nothing to say why.
-            notify.show("The assistant has no voice", "Run `halcyon assistant setup --piper` to set one up.",
+            # Without this the reply just goes silent. The reason is in the log.
+            notify.show("The reply couldn't be spoken", f"The reason is in {config.LOG}",
                         icon="dialog-warning", timeout_ms=10000)
 
     # -- wake word ------------------------------------------------------------
