@@ -22,4 +22,7 @@ hl.on("hyprland.start", function ()
 
     -- Cursor
     hl.exec_cmd("hyprctl setcursor Bibata-Modern-Classic 24")
+
+    -- Razer devices: the Polychromatic tray applet, if OpenRazer and Polychromatic are installed.
+    hl.exec_cmd("command -v polychromatic-tray-applet >/dev/null && polychromatic-tray-applet")
 end)

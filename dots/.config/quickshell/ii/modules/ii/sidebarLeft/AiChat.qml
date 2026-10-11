@@ -58,6 +58,22 @@ Item {
             }
         },
         {
+            name: "claude",
+            description: Translation.tr("Open Claude Code in a terminal to sign in and chat there. \"%1claude login\" only signs in.").arg(root.commandPrefix),
+            execute: args => {
+                // Only these two fixed commands ever reach the shell; the arguments are never run.
+                const signIn = args[0] === "login";
+                const command = signIn
+                    ? "$HOME/.config/hypr/hyprland/halcyon/assistant/halcyon-assistant login"
+                    : "claude";
+                Quickshell.execDetached(["bash", "-c",
+                    `${Config.options.apps.terminal} bash -c "${command}; read -rp 'Press Enter to close. '"`]);
+                Ai.addMessage(signIn
+                    ? Translation.tr("Opening the Claude sign-in in a terminal.")
+                    : Translation.tr("Opening Claude Code in a terminal."), Ai.interfaceRole);
+            }
+        },
+        {
             name: "tool",
             description: Translation.tr("Set the tool to use for the model."),
             execute: args => {
