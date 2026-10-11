@@ -84,6 +84,7 @@ import re
 import shutil
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -929,6 +930,37 @@ def hidden_themes():
     return [theme_id for theme_id in value if theme_id in builtin]
 
 
+def scheduled_themes():
+    """Auto-apply entries from Settings: theme, time as HH:MM, days as ISO weekdays (empty: every day)."""
+    value = get_nested(read_shell_config(), "halcyon.autoApply")
+    if not isinstance(value, list):
+        return []
+    return [entry for entry in value if isinstance(entry, dict) and entry.get("theme")]
+
+
+def cmd_auto(args):
+    """Run once a minute by halcyon-auto-theme.timer: applies the theme whose time and day have come. `auto list` shows them."""
+    if args == ["list"]:
+        for entry in scheduled_themes():
+            days = entry.get("days") or []
+            when = ",".join(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][day - 1] for day in days) or "every day"
+            print(f"{entry['theme']:<16} {entry.get('time', '?')}  {when}")
+        return 0
+    if args:
+        raise ThemeError("usage: halcyon-theme auto [list]")
+    now = datetime.now()
+    due = [entry for entry in scheduled_themes()
+           if entry.get("time") == now.strftime("%H:%M")
+           and (not entry.get("days") or now.isoweekday() in entry["days"])]
+    if not due or active() == due[-1]["theme"]:
+        return 0
+    try:
+        return cmd_apply([due[-1]["theme"]])
+    except ThemeError as error:
+        notify("Auto-apply didn't apply the theme", str(error))
+        return 1
+
+
 def cmd_show(args):
     """List hidden themes, or show one again (or `all`)."""
     hidden = hidden_themes()
@@ -1431,6 +1463,7 @@ COMMANDS = {
     "revolver": cmd_revolver,
     "custom": cmd_custom,
     "show": cmd_show,
+    "auto": cmd_auto,
     "starrail": cmd_starrail,
     "fetch": cmd_fetch,
     "list": cmd_list, "current": cmd_current, "apply": cmd_apply, "off": cmd_off,
