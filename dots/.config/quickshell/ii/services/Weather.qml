@@ -78,6 +78,8 @@ Singleton {
         }
         temp.lastRefresh = DateTime.time + " • " + DateTime.date;
         root.data = temp;
+        // Halcyon's auto-apply reads the condition from here, so it needs no fetch of its own.
+        Quickshell.execDetached(["sh", "-c", 'd="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon"; mkdir -p "$d" && printf "%s" "$1" > "$d/weather.json"', "sh", JSON.stringify({ code: String(temp.wCode), time: Math.floor(Date.now() / 1000) })]);
     }
 
     function getData() {
