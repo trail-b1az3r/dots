@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import getpass
 import json
+import math
 import os
 import platform
 import re
@@ -31,6 +32,10 @@ __version__ = "1.0.0"
 
 #: Gap between the mark and the text beside it, in columns.
 GAP = 3
+
+#: The mark's size in characters: 96 wide and 52 tall.
+FRAME_COLS = 96
+FRAME_ROWS = 52
 
 #: Angle the settled mark rests at, in radians: a three-quarter view.
 SETTLED_YAW = 0.55
@@ -311,7 +316,7 @@ def fastfetch_lines() -> Optional[list[str]]:
 
 def print_static(fields: Sequence[Field], out: TextIO, *, colour: bool,
                  text: Optional[list[str]] = None) -> None:
-    frame = logo3d.render_frame(SETTLED_YAW)
+    frame = logo3d.render_frame(SETTLED_YAW, cols=FRAME_COLS, rows=FRAME_ROWS)
     info = text if text is not None else info_lines(fields, colour=colour)
     for line in compose(frame, info):
         out.write(line + "\n")
@@ -323,29 +328,28 @@ def spin(
     out: TextIO,
     *,
     colour: bool,
-    seconds: float = SPIN_SECONDS,
+    seconds: Optional[float] = None,
     sleep: Callable[[float], None] = time.sleep,
     text: Optional[list[str]] = None,
 ) -> None:
-    """Turn the mark for `seconds`, redrawing in place, then settle on the
-    resting angle. Assumes `out` is a terminal."""
+    """Turn the mark in a loop, redrawing in place: for `seconds`, or until
+    interrupted when `seconds` is None. Assumes `out` is a terminal."""
     info = text if text is not None else info_lines(fields, colour=colour)
-    frames = max(1, int(seconds / FRAME_SECONDS))
-    height = max(len(logo3d.render_frame(0.0)), len(info))
+    height = max(FRAME_ROWS, len(info))
+    total = None if seconds is None else max(1, int(seconds / FRAME_SECONDS))
     out.write("\x1b[?25l")  # hide the cursor while the mark moves
     try:
-        for step in range(frames + 1):
-            if step == frames:
-                yaw = SETTLED_YAW
-            else:
-                yaw = step * SPIN_RATE * FRAME_SECONDS
-            lines = compose(logo3d.render_frame(yaw), info)
+        step = 0
+        while total is None or step < total:
+            # One full turn every 2π / SPIN_RATE seconds, so the loop is seamless.
+            yaw = (step * SPIN_RATE * FRAME_SECONDS) % (2 * math.pi)
+            lines = compose(logo3d.render_frame(yaw, cols=FRAME_COLS, rows=FRAME_ROWS), info)
             if step:
                 out.write(f"\x1b[{height}A\r")
             out.write("\n".join(line + "\x1b[K" for line in _pad(lines, height)) + "\n")
             out.flush()
-            if step < frames:
-                sleep(FRAME_SECONDS)
+            sleep(FRAME_SECONDS)
+            step += 1
     finally:
         out.write("\x1b[?25h")
         out.flush()
@@ -368,8 +372,9 @@ def run(*, spin_seconds: Optional[float], as_json_out: bool, reduce_motion: bool
             print("halcyon fetch: fastfetch is not available, showing the built-in summary",
                   file=sys.stderr)
     colour = _colour_enabled(out)
-    if spin_seconds and out.isatty() and not reduce_motion:
-        spin(fields, out, colour=colour, seconds=spin_seconds, text=text)
+    # spin_seconds of 0 means loop until interrupted; None means not to spin.
+    if spin_seconds is not None and out.isatty() and not reduce_motion:
+        spin(fields, out, colour=colour, seconds=(spin_seconds or None), text=text)
     else:
         print_static(fields, out, colour=colour, text=text)
     return 0

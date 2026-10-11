@@ -1126,9 +1126,9 @@ def cmd_fetch(args):
     import halcyon_fetch
 
     parser = argparse.ArgumentParser(prog="halcyon-theme fetch")
-    parser.add_argument("--spin", nargs="?", type=float, const=halcyon_fetch.SPIN_SECONDS,
+    parser.add_argument("--spin", nargs="?", type=float, const=0.0,
                         default=None, metavar="SECONDS",
-                        help="turn the mark for SECONDS before it settles (terminal only)")
+                        help="turn the mark in a loop, for SECONDS or until Ctrl+C (terminal only)")
     parser.add_argument("--json", action="store_true", help="print the fields as JSON")
     parser.add_argument("--fastfetch", action="store_true",
                         help="take the text beside the mark from fastfetch, when it is installed")

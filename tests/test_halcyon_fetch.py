@@ -135,7 +135,7 @@ class TestFetch(unittest.TestCase):
         self.assertNotIn("\x1b", out.getvalue())
         self.assertIn("OS", out.getvalue())
 
-    def test_spin_redraws_in_place_and_restores_the_cursor(self) -> None:
+    def test_spin_loops_for_the_given_time_and_restores_the_cursor(self) -> None:
         out = io.StringIO()
         fetch.spin(
             [fetch.Field("OS", "Linux")],
@@ -148,7 +148,23 @@ class TestFetch(unittest.TestCase):
         self.assertTrue(text.startswith("\x1b[?25l"), "cursor should be hidden first")
         self.assertTrue(text.endswith("\x1b[?25h"), "cursor should be restored last")
         self.assertGreater(text.count("\x1b["), 3)
-        self.assertIn("\x1b[18A", text, "frames after the first should move back up")
+        self.assertIn(f"\x1b[{fetch.FRAME_ROWS}A", text, "frames after the first should move back up")
+
+    def test_an_endless_spin_stops_cleanly_on_interrupt(self) -> None:
+        out = io.StringIO()
+        calls = {"n": 0}
+
+        def interrupt_after_a_few(_seconds: float) -> None:
+            calls["n"] += 1
+            if calls["n"] >= 5:
+                raise KeyboardInterrupt
+
+        with self.assertRaises(KeyboardInterrupt):
+            fetch.spin([fetch.Field("OS", "Linux")], out, colour=False, seconds=None,
+                       sleep=interrupt_after_a_few)
+        text = out.getvalue()
+        self.assertGreaterEqual(text.count(f"\x1b[{fetch.FRAME_ROWS}A"), 3, "the frame should redraw in place")
+        self.assertTrue(text.endswith("\x1b[?25h"), "the cursor should be restored on interrupt")
 
     def test_reduced_motion_or_no_terminal_prints_once(self) -> None:
         out = io.StringIO()  # not a terminal
