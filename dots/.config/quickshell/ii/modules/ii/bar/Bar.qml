@@ -52,13 +52,39 @@ Scope {
                 }
                 property bool superShow: false
                 property bool mustShow: hoverRegion.containsMouse || superShow
-                // A fullscreen window (Hyprland's, even when the app didn't ask) gets the whole screen, so the bar steps aside.
-                readonly property bool fullscreenHere: (Config.options.bar.autoHide.hideInFullscreen ?? true)
-                    && HyprlandData.fullscreenOnMonitor(barRoot.screen?.name ?? "")
-                readonly property bool autoHidden: (Config?.options.bar.autoHide.enable ?? false) || fullscreenHere
+                // Fullscreen. The bar steps aside, so a window gets the whole screen.
+                // A window Hyprland made fullscreen for an app that didn't ask (fullscreenClient 0) is made
+                // maximized while the bar is shown, so the bar's space comes out of the window, and made
+                // fullscreen again when the bar hides. An app's own fullscreen (a video) is left alone:
+                // changing it would make the app leave fullscreen, so the bar only overlays it on hover.
+                readonly property var fullscreenWindow: (Config.options.bar.autoHide.hideInFullscreen ?? true)
+                    ? HyprlandData.fullscreenWindowOnMonitor(barRoot.screen?.name ?? "") : null
+                readonly property bool forcedHere: fullscreenWindow !== null && fullscreenWindow.fullscreenClient === 0
+                // The window this bar made maximized, until the bar hides.
+                property string resizedAddress: ""
+                readonly property bool resizedNow: resizedAddress !== ""
+                    && HyprlandData.windowList.some(win => win.address === resizedAddress)
+                readonly property bool fullscreenMode: fullscreenWindow !== null || resizedNow
+                readonly property bool autoHidden: (Config?.options.bar.autoHide.enable ?? false) || fullscreenMode
+                // Whether the bar currently takes up space that windows must give way to.
+                readonly property bool pushing: mustShow && (Config?.options.bar.autoHide.pushWindows || forcedHere || resizedNow)
                 exclusionMode: ExclusionMode.Ignore
-                exclusiveZone: (autoHidden && (!mustShow || !Config?.options.bar.autoHide.pushWindows || fullscreenHere)) ? 0 :
+                exclusiveZone: (autoHidden && !pushing) ? 0 :
                     Appearance.sizes.baseBarHeight + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)
+
+                onMustShowChanged: {
+                    if (mustShow && forcedHere) {
+                        resizeWindow(fullscreenWindow.address, "maximized");
+                        resizedAddress = fullscreenWindow.address;
+                    } else if (!mustShow && resizedNow) {
+                        resizeWindow(resizedAddress, "fullscreen");
+                        resizedAddress = "";
+                    }
+                }
+
+                function resizeWindow(address, mode) {
+                    Hyprland.dispatch(`hl.dsp.window.fullscreen({ mode = "${mode}", action = "set", window = "address:${address}" })`);
+                }
                 WlrLayershell.namespace: "quickshell:bar"
                 implicitHeight: Appearance.sizes.barHeight + Appearance.rounding.screenRounding
                 mask: Region {
