@@ -34,6 +34,11 @@ ApplicationWindow {
             component: "modules/settings/HalcyonConfig.qml"
         },
         {
+            name: Translation.tr("Revolver"),
+            icon: "casino",
+            component: "modules/settings/RevolverConfig.qml"
+        },
+        {
             name: Translation.tr("General"),
             icon: "browse",
             component: "modules/settings/GeneralConfig.qml"
