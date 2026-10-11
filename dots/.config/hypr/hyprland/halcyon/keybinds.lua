@@ -20,6 +20,11 @@ hl.bind("SUPER + Comma", hl.dsp.exec_cmd(settingsApp), { description = "App: Set
 --# Workspaces
 hl.bind("SUPER + grave", hl.dsp.focus({ workspace = "previous" }), { description = "Workspace: Back and forth" })
 
+--# Windows
+-- Minimise everything on this workspace, or bring it all back.
+hl.bind("SUPER + Backspace", hl.dsp.exec_cmd("$HOME/.config/hypr/hyprland/halcyon/minimize-all"),
+    { description = "Window: Minimise all, or restore them" })
+
 --# Capture, macOS-style
 -- Sets $f to a fresh file in ~/Pictures/Screenshots, quoted for paths with spaces
 local newScreenshotFile = "d=\"$(xdg-user-dir PICTURES)/Screenshots\" && mkdir -p \"$d\" && " ..
