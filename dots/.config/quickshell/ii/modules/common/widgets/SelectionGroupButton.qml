@@ -48,7 +48,7 @@ GroupButton {
             Layout.alignment: Qt.AlignVCenter
             visible: root.iconSource.toString().length > 0
             // About the height of the text symbols beside it, so the picker stays even.
-            implicitWidth: Appearance.font.pixelSize.larger * 1.1
+            implicitWidth: Appearance.font.pixelSize.larger
             implicitHeight: implicitWidth
 
             Rectangle {

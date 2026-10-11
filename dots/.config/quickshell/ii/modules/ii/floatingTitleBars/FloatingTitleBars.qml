@@ -64,6 +64,63 @@ Scope {
         Hyprland.dispatch(`hl.dsp.window.move({ x = ${Math.round(x)}, y = ${Math.round(y)}, relative = false, window = "address:${address}" })`);
     }
 
+    // Eased moves: a window moved to its mini place, or back to its full place, follows the
+    // average of a sine curve and a cubic Bezier curve, so it starts and stops gently.
+    readonly property int moveDuration: 320
+    property var tweens: []
+
+    function sineEase(t) {
+        return (1 - Math.cos(Math.PI * t)) / 2;
+    }
+
+    // Cubic Bezier from (0, 0) to (1, 1), control points (0.4, 0) and (0.2, 1): find the
+    // curve's parameter for this time by bisection, then read the height there.
+    function bezierEase(t) {
+        const x = s => 3 * (1 - s) * (1 - s) * s * 0.4 + 3 * (1 - s) * s * s * 0.2 + s * s * s;
+        const y = s => 3 * (1 - s) * s * s + s * s * s;
+        let low = 0;
+        let high = 1;
+        for (let i = 0; i < 24; i++) {
+            const mid = (low + high) / 2;
+            if (x(mid) < t)
+                low = mid;
+            else
+                high = mid;
+        }
+        return y((low + high) / 2);
+    }
+
+    function moveEase(t) {
+        return (root.sineEase(t) + root.bezierEase(t)) / 2;
+    }
+
+    function animateMove(address, fromX, fromY, toX, toY) {
+        root.cancelTween(address);
+        root.tweens = root.tweens.concat([{ address: address, fromX: fromX, fromY: fromY, toX: toX, toY: toY, start: Date.now() }]);
+        tweenTimer.restart();
+    }
+
+    function cancelTween(address) {
+        root.tweens = root.tweens.filter(tween => tween.address !== address);
+    }
+
+    Timer {
+        id: tweenTimer
+        interval: 16
+        repeat: true
+        onTriggered: {
+            const now = Date.now();
+            root.tweens.forEach(tween => {
+                const e = root.moveEase(Math.min(1, (now - tween.start) / root.moveDuration));
+                root.moveWindow(tween.address, tween.fromX + (tween.toX - tween.fromX) * e,
+                    tween.fromY + (tween.toY - tween.fromY) * e);
+            });
+            root.tweens = root.tweens.filter(tween => now - tween.start < root.moveDuration);
+            if (root.tweens.length === 0)
+                tweenTimer.stop();
+        }
+    }
+
     // The window's position, kept so the window and its bar stay on the monitor: the bar
     // is always visible, and the window never goes off the edge.
     function clampToMonitor(win, monitor, x, y) {
@@ -95,7 +152,7 @@ Scope {
         copy[win.address] = origin;
         root.minis = copy;
         root.resizeWindow(win.address, root.miniWidth, root.miniHeight);
-        root.moveWindow(win.address, x, y);
+        root.animateMove(win.address, win.at[0], win.at[1], x, y);
     }
 
     // Brings a mini window back to the size and place it had before.
@@ -107,7 +164,8 @@ Scope {
         delete copy[address];
         root.minis = copy;
         root.resizeWindow(address, origin.width, origin.height);
-        root.moveWindow(address, origin.x, origin.y);
+        const now = HyprlandData.windowByAddress[address]?.at ?? [origin.x, origin.y];
+        root.animateMove(address, now[0], now[1], origin.x, origin.y);
     }
 
     Variants {
@@ -325,6 +383,8 @@ Scope {
                             property bool dragging: false
 
                             onPressed: mouse => {
+                                // A drag takes over from any move still easing.
+                                root.cancelTween(bar.win.address);
                                 const p = mapToItem(stage, mouse.x, mouse.y);
                                 mover.startX = p.x;
                                 mover.startY = p.y;

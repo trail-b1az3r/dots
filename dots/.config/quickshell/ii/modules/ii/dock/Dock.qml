@@ -53,8 +53,9 @@ Scope { // Scope
                 height: parent.height
                 anchors {
                     top: parent.top
-                    // Hidden, the strip that brings it back is the area the dock sits in.
-                    topMargin: dockRoot.reveal ? 0 : Config.options?.dock.hoverToReveal ? (dockRoot.implicitHeight - Config.options.dock.height) : (dockRoot.implicitHeight + 1)
+                    // Hidden, only a thin strip at the bottom edge brings it back. A taller one would take
+                    // clicks from the windows above it, so they couldn't be dragged.
+                    topMargin: dockRoot.reveal ? 0 : Config.options?.dock.hoverToReveal ? (dockRoot.implicitHeight - Config.options.dock.hoverRegionHeight) : (dockRoot.implicitHeight + 1)
                     horizontalCenter: parent.horizontalCenter
                 }
                 implicitWidth: dockHoverRegion.implicitWidth + Appearance.sizes.elevationMargin * 2

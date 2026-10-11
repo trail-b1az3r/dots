@@ -48,7 +48,7 @@ Rectangle {
             id: logo
             anchors.centerIn: parent
             visible: keyFace.isLogo
-            width: root.pixelSize * 1.2
+            width: root.pixelSize
             height: width
 
             Rectangle {

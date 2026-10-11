@@ -383,7 +383,7 @@ Singleton {
                 property bool enable: false
                 property bool monochromeIcons: true
                 property real height: 60
-                property real hoverRegionHeight: 2
+                property real hoverRegionHeight: 6
                 property bool pinnedOnStartup: false
                 property bool autoHide: true // Hides while a window is focused. Off: always shown
                 property bool hoverToReveal: true // When false, only reveals on empty workspace
