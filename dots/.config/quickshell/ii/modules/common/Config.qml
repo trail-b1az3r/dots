@@ -85,6 +85,9 @@ Singleton {
             property JsonObject halcyon: JsonObject {
                 property string theme: "" // Active theme id, "" for none
                 property bool glassTheme: false // Written by halcyon-theme: the active theme has glass windows or a glass shader
+                property list<string> themeOrder: [] // Built-in theme ids in the order Settings lists them; the rest follow in the default order
+                property list<string> hiddenThemes: [] // Built-in theme ids hidden from Settings; "Show hidden themes" brings them back
+                property bool customThemeHelpDismissed: false // "Do not show again" on the question asked after making a custom theme
                 property string effects: "default" // "default" (theme's own), "full", "light", "off"
                 // Star Rail characters: the random pick and the list refresh only work when on.
                 property JsonObject starRail: JsonObject {
