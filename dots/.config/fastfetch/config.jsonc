@@ -3,7 +3,7 @@
   "logo": {
     "type": "file",
     "source": "~/.config/fastfetch/halcyon.txt",
-    "color": { "1": "38;5;39" },
+    "color": { "1": "38;5;171" },
     "padding": { "right": 3 }
   },
   "display": { "separator": "  " },
