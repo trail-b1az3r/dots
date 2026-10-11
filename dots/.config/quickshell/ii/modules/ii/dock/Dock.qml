@@ -104,6 +104,25 @@ Scope { // Scope
                             VerticalButtonGroup {
                                 Layout.topMargin: Appearance.sizes.hyprlandGapsOut // why does this work
                                 GroupButton {
+                                    // Minimise every window on this workspace, or bring them back.
+                                    baseWidth: 35
+                                    baseHeight: 35
+                                    clickedWidth: baseWidth
+                                    clickedHeight: baseHeight
+                                    buttonRadius: Appearance.rounding.normal
+                                    onClicked: Quickshell.execDetached(["bash", "-c",
+                                        "$HOME/.config/hypr/hyprland/halcyon/minimize-all"])
+                                    contentItem: MaterialSymbol {
+                                        text: "minimize"
+                                        horizontalAlignment: Text.AlignHCenter
+                                        iconSize: Appearance.font.pixelSize.larger
+                                        color: Appearance.colors.colOnLayer0
+                                    }
+                                    StyledToolTip {
+                                        text: Translation.tr("Minimise all windows, or restore them")
+                                    }
+                                }
+                                GroupButton {
                                     // Pin button
                                     baseWidth: 35
                                     baseHeight: 35
