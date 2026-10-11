@@ -920,6 +920,32 @@ def custom_change(args):
     return 0
 
 
+def hidden_themes():
+    """Built-in themes hidden from Settings > Halcyon. Your own themes are never hidden."""
+    value = get_nested(read_shell_config(), "halcyon.hiddenThemes")
+    if not isinstance(value, list):
+        return []
+    builtin = {p.stem for p in THEMES_DIR.glob("*.json")}
+    return [theme_id for theme_id in value if theme_id in builtin]
+
+
+def cmd_show(args):
+    """List hidden themes, or show one again (or `all`)."""
+    hidden = hidden_themes()
+    if not args:
+        print("\n".join(hidden) if hidden else "No hidden themes.")
+        return 0
+    if args == ["all"]:
+        remaining = []
+    elif len(args) == 1 and args[0] in hidden:
+        remaining = [theme_id for theme_id in hidden if theme_id != args[0]]
+    else:
+        raise ThemeError("usage: halcyon-theme show [ID|all]. Hidden now: " + (", ".join(hidden) or "none"))
+    set_shell_value("halcyon.hiddenThemes", remaining)
+    print("showing " + ("all themes" if args == ["all"] else args[0]))
+    return 0
+
+
 def cmd_custom(args):
     """Make your own themes. `new` copies the active theme (or Fractured Glass) to edit."""
     if not args or args[0] == "list":
@@ -930,8 +956,18 @@ def cmd_custom(args):
         return 0
     if args[0] in ("duplicate", "delete"):
         return custom_change(args)
+    if args[0] == "open":
+        if len(args) != 2:
+            raise ThemeError("usage: halcyon-theme custom open ID")
+        path = user_theme_path(args[1])
+        if not shutil.which("xdg-open"):
+            raise ThemeError(f"xdg-open not found. Open {path} in your editor")
+        # The default app for .json, which is the editor for most people.
+        subprocess.Popen(["xdg-open", str(path)], start_new_session=True,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return 0
     if args[0] != "new":
-        raise ThemeError("usage: halcyon-theme custom [list|new [NAME]|duplicate ID|delete ID|path]")
+        raise ThemeError("usage: halcyon-theme custom [list|new [NAME]|duplicate ID|delete ID|open ID|path]")
     base_id = active() or "fractured-glass"
     base = load(base_id)
     number = next(n for n in itertools.count(1) if not (USER_THEMES_DIR / f"custom-{n}.json").exists())
@@ -1394,6 +1430,7 @@ def cmd_revolver(args):
 COMMANDS = {
     "revolver": cmd_revolver,
     "custom": cmd_custom,
+    "show": cmd_show,
     "starrail": cmd_starrail,
     "fetch": cmd_fetch,
     "list": cmd_list, "current": cmd_current, "apply": cmd_apply, "off": cmd_off,
