@@ -12,6 +12,9 @@
                                         active theme (the Settings page runs
                                         this for you)
     halcyon-theme settings              open the Settings app
+    halcyon-theme starrail next         another Star Rail character on the banner
+    halcyon-theme starrail refresh      download the public character index now
+    halcyon-theme starrail status       what is cached and what is showing
     halcyon-theme fetch [--spin [S]]    a system summary beside the mark; --spin
                                         turns it for S seconds (default 3)
     halcyon-theme fetch --json          the same fields as JSON
@@ -1128,7 +1131,53 @@ def cmd_fetch(args):
     return halcyon_fetch.run(spin_seconds=options.spin, as_json_out=options.json)
 
 
+def cmd_starrail(args):
+    """Star Rail characters: refresh the index, or put another character on the banner."""
+    import argparse
+
+    sys.path.insert(0, str(HERE))
+    import starrail
+
+    parser = argparse.ArgumentParser(prog="halcyon-theme starrail")
+    sub = parser.add_subparsers(dest="action", required=True)
+    refresh = sub.add_parser("refresh", help="download the public character index now")
+    refresh.add_argument("--force", action="store_true")
+    sub.add_parser("next", help="show another character on the Star Rail banner")
+    status = sub.add_parser("status", help="what is cached and what is showing")
+    status.add_argument("--json", action="store_true")
+    options = parser.parse_args(args)
+
+    try:
+        if options.action == "refresh":
+            count = starrail.refresh(force=options.force)
+            print(f"character index is current: {count} characters")
+            return 0
+        if options.action == "next":
+            char = starrail.choose_next()
+            if char is None:
+                starrail.refresh()
+                char = starrail.choose_next()
+            if char is None:
+                raise ThemeError("no characters are cached; run `halcyon-theme starrail refresh`")
+            portrait = starrail.portrait(char)
+            cmd_banner(["hsr", portrait, "--title", char.name,
+                        "--subtitle", f"{char.element} · {char.path}"])
+            print(f"showing {char.name} ({char.element}, {char.path})")
+            return 0
+        payload = starrail.status()
+        if options.json:
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+            return 0
+        current = payload["current"]
+        print(f"characters cached: {payload['characters']}")
+        print("showing: " + (f"{current['name']} ({current['element']})" if current else "nothing yet"))
+        return 0
+    except starrail.StarRailError as error:
+        raise ThemeError(str(error)) from None
+
+
 COMMANDS = {
+    "starrail": cmd_starrail,
     "fetch": cmd_fetch,
     "list": cmd_list, "current": cmd_current, "apply": cmd_apply, "off": cmd_off,
     "menu": cmd_menu, "check": cmd_check, "render": cmd_render, "detach": cmd_detach,
@@ -1152,7 +1201,7 @@ def main(argv):
         return command(argv[1:])
     except ThemeError as error:
         print(f"halcyon-theme: {error}", file=sys.stderr)
-        if argv[0] in ("apply", "menu", "off", "effects", "banner"):
+        if argv[0] in ("apply", "menu", "off", "effects", "banner", "starrail"):
             notify("Theme not applied", str(error))
         return 1
 
