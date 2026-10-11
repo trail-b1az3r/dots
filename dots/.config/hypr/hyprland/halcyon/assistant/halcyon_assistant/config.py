@@ -33,6 +33,10 @@ DEFAULTS = {
     "language": "",          # "" = detect
     "speak": True,           # read replies aloud
     "allowActions": True,    # let it control the desktop (volume, apps, themes...)
+    # Where Claude Code keeps its login, as the terminal saw it at sign-in.
+    # Hyprland starts this daemon without that terminal's environment, so the
+    # daemon needs it written down. "" = the default, ~/.claude.
+    "claudeConfigDir": "",
 }
 DEFAULT_MODELS = {
     "claude": "claude-opus-5",

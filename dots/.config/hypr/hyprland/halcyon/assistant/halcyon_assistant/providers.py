@@ -132,14 +132,23 @@ class Claude:
 # Claude with a Pro or Max plan, through Claude Code
 # ---------------------------------------------------------------------------
 
-def claude_code_signed_in():
+def claude_config_dir(saved=""):
+    """Where Claude Code keeps its login.
+
+    The environment wins when it names a directory, as it does in a terminal.
+    Otherwise it is the one the sign-in recorded (the daemon has no terminal
+    environment), and failing that, ~/.claude.
+    """
+    return Path(os.environ.get("CLAUDE_CONFIG_DIR") or saved or Path.home() / ".claude")
+
+
+def claude_code_signed_in(saved=""):
     """Whether Claude Code has a subscription login it can use."""
     if not shutil.which("claude"):
         return False
     if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
         return True
-    config_dir = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
-    return (config_dir / ".credentials.json").is_file()
+    return (claude_config_dir(saved) / ".credentials.json").is_file()
 
 
 class ClaudeCode:
@@ -158,9 +167,10 @@ class ClaudeCode:
                    "DISPLAY", "XDG_RUNTIME_DIR", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME",
                    "XDG_DATA_DIRS", "XDG_CURRENT_DESKTOP", "DBUS_SESSION_BUS_ADDRESS")
 
-    def __init__(self, model="", run=subprocess.run, workdir=None):
+    def __init__(self, model="", run=subprocess.run, workdir=None, config_dir=""):
         self.model = model or "your plan's default"
         self._model_flag = model
+        self.config_dir = config_dir
         self.run = run
         self.session = None
         self.workdir = workdir or config.ASSISTANT_STATE
@@ -195,6 +205,10 @@ class ClaudeCode:
         # Claude Code prefers an API key over your subscription login when
         # one is in the environment; this provider exists to use the plan.
         env = {k: v for k, v in os.environ.items() if k not in self.ENV_CREDENTIALS}
+        # The daemon starts without the terminal's environment, so point Claude
+        # Code at the directory the sign-in recorded.
+        if self.config_dir and "CLAUDE_CONFIG_DIR" not in env:
+            env["CLAUDE_CONFIG_DIR"] = self.config_dir
         Path(self.workdir).mkdir(parents=True, exist_ok=True)
         try:
             done = self.run(self.command(prompt, system, tools), capture_output=True, text=True,
@@ -210,7 +224,8 @@ class ClaudeCode:
         if not data:
             detail = (done.stderr or done.stdout or "no output").strip().splitlines()[-1:] or ["no output"]
             if "login" in detail[0].lower() or "log in" in detail[0].lower():
-                raise ProviderError("Claude Code isn't signed in: run `halcyon assistant login`")
+                raise ProviderError("Claude Code isn't signed in where the assistant looks "
+                                    f"({claude_config_dir(self.config_dir)}): run `halcyon assistant login`")
             raise ProviderError(f"Claude Code failed: {detail[0][:200]}")
         self.session = data.get("session_id") or self.session
         text = (data.get("result") or "").strip()
@@ -382,7 +397,7 @@ def resolve(settings):
     if provider == "auto":
         if _anthropic_credentials():
             provider = "claude"
-        elif claude_code_signed_in():
+        elif claude_code_signed_in(settings["claudeConfigDir"]):
             provider = "claude-code"
         elif config.api_key("gemini"):
             provider = "gemini"
@@ -392,7 +407,7 @@ def resolve(settings):
     if provider == "claude-code":
         if not shutil.which("claude"):
             raise ProviderError("Claude Code isn't installed: run `halcyon assistant login`")
-        return ClaudeCode(model)
+        return ClaudeCode(model, config_dir=settings["claudeConfigDir"])
     if provider == "claude":
         try:
             return Claude(model, key=config.api_key("anthropic"))

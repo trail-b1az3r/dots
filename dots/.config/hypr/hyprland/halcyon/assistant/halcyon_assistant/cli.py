@@ -132,6 +132,9 @@ def login(_args):
                 or not providers.claude_code_signed_in():
             print("Sign-in didn't finish. Run `halcyon assistant login` to try again.")
             return 1
+    # The daemon doesn't see this terminal's environment, so it is told where
+    # the login is, and the voice path uses the same directory.
+    config.write_setting("claudeConfigDir", str(providers.claude_config_dir()))
     config.write_setting("provider", "claude-code")
     daemon.send("reload")
     print("\nDone: the assistant now uses your Claude plan. Press Super + Shift + Space and speak.")
@@ -153,7 +156,7 @@ def doctor(_args):
         rows.append(("AI", f"{provider.name}, model {provider.model}"))
     except providers.ProviderError as error:
         rows.append(("AI", f"not ready: {error}"))
-    rows.append(("Claude plan", "signed in (Claude Code)" if providers.claude_code_signed_in() else
+    rows.append(("Claude plan", "signed in (Claude Code)" if providers.claude_code_signed_in(settings["claudeConfigDir"]) else
                  ("Claude Code installed, not signed in" if providers.shutil.which("claude") else
                   "-  (halcyon assistant login)")))
     for key_id in ("anthropic", "gemini", "openai", "mistral"):
