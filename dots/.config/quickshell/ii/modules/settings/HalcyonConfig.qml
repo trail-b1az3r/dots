@@ -20,7 +20,10 @@ ContentPage {
     // Controls report their initial values while the page is being built;
     // only changes made after that are the user's.
     property bool ready: false
-    Component.onCompleted: readyTimer.start()
+    Component.onCompleted: {
+        readyTimer.start();
+        customList.running = true;
+    }
 
     Timer {
         id: readyTimer
@@ -57,6 +60,30 @@ ContentPage {
     function reloadAssistant() {
         if (page.ready)
             assistantTimer.restart();
+    }
+
+    // Your own themes (halcyon-theme custom). Read from the tool, so new ones show up.
+    property var customThemes: []
+
+    Process {
+        id: customList
+        command: [page.tool, "custom", "list"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    page.customThemes = JSON.parse(this.text) ?? [];
+                } catch (error) {
+                    page.customThemes = [];
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: customListRefresh
+        // Long enough for the tool to write the new theme file.
+        interval: 800
+        onTriggered: customList.running = true
     }
 
     function refresh() {
@@ -104,6 +131,32 @@ ContentPage {
                     value: "fractured-glass"
                 }
             ]
+        }
+
+        ConfigSelectionArray {
+            visible: page.customThemes.length > 0
+            currentValue: Config.options.halcyon.theme
+            onSelected: newValue => {
+                Config.options.halcyon.theme = newValue;
+                Quickshell.execDetached([page.tool, "apply", newValue]);
+            }
+            options: page.customThemes.map(theme => ({
+                displayName: theme.name,
+                icon: "edit",
+                value: theme.id
+            }))
+        }
+
+        RippleButtonWithIcon {
+            materialIcon: "add"
+            mainText: Translation.tr("New custom theme")
+            onClicked: {
+                Quickshell.execDetached([page.tool, "custom", "new"]);
+                customListRefresh.restart();
+            }
+            StyledToolTip {
+                text: Translation.tr("Makes a copy of the current theme to change. Make as many as you like; they are JSON files in ~/.config/halcyon/themes")
+            }
         }
 
         StyledText {

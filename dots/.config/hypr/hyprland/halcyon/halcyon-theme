@@ -77,6 +77,7 @@ Effects levels:
     off     plain blur; no shader, translucency or native glass variants.
 """
 
+import itertools
 import json
 import os
 import re
@@ -105,6 +106,8 @@ BANNERS = DATA / "halcyon/banners"
 
 GENERATED = STATE / "quickshell/user/generated"
 SHELL_CONFIG = CONFIG / "illogical-impulse/config.json"
+# Your own themes (halcyon-theme custom new). Built-in ones live in THEMES_DIR.
+USER_THEMES_DIR = CONFIG / "halcyon/themes"
 COLORS_SCRIPTS = CONFIG / "quickshell/ii/scripts/colors"
 SWITCHWALL = COLORS_SCRIPTS / "switchwall.sh"
 APPLYCOLOR = COLORS_SCRIPTS / "applycolor.sh"
@@ -181,7 +184,18 @@ class ThemeError(Exception):
 # ----------------------------------------------------------------------------
 
 def theme_ids():
-    return sorted(p.stem for p in THEMES_DIR.glob("*.json"))
+    ids = {p.stem for p in THEMES_DIR.glob("*.json")}
+    if USER_THEMES_DIR.is_dir():
+        ids |= {p.stem for p in USER_THEMES_DIR.glob("*.json")}
+    return sorted(ids)
+
+
+def theme_path(theme_id):
+    for folder in (THEMES_DIR, USER_THEMES_DIR):
+        path = folder / f"{theme_id}.json"
+        if path.is_file():
+            return path
+    return THEMES_DIR / f"{theme_id}.json"
 
 
 def luminance(hex_colour):
@@ -359,7 +373,7 @@ def validate(theme_id, theme):
 
 
 def load(theme_id):
-    path = THEMES_DIR / f"{theme_id}.json"
+    path = theme_path(theme_id)
     if not path.is_file():
         raise ThemeError(f"no theme called '{theme_id}'. Themes: {', '.join(theme_ids())}")
     with path.open(encoding="utf-8") as handle:
@@ -842,6 +856,49 @@ def compose_banner(theme_id, theme, wallpaper):
 # Commands
 # ----------------------------------------------------------------------------
 
+def custom_themes():
+    """Your own themes, for the Settings picker."""
+    found = []
+    for path in sorted(USER_THEMES_DIR.glob("*.json")) if USER_THEMES_DIR.is_dir() else []:
+        try:
+            theme = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        found.append({"id": path.stem, "name": str(theme.get("name", path.stem))})
+    return found
+
+
+def cmd_custom(args):
+    """Make your own themes. `new` copies the active theme (or Fractured Glass) to edit."""
+    if not args or args[0] == "list":
+        print(json.dumps(custom_themes(), ensure_ascii=False))
+        return 0
+    if args[0] == "path":
+        print(USER_THEMES_DIR)
+        return 0
+    if args[0] != "new":
+        raise ThemeError("usage: halcyon-theme custom [list|new [NAME]|path]")
+    base_id = active() or "fractured-glass"
+    base = load(base_id)
+    number = next(n for n in itertools.count(1) if not (USER_THEMES_DIR / f"custom-{n}.json").exists())
+    theme_id = f"custom-{number}"
+    theme = json.loads(json.dumps(base))
+    theme["name"] = " ".join(args[1:]).strip() or f"Custom {number}"
+    theme["description"] = f"Your own copy of {base['name']}. Edit this file to change it."
+    # Absolute paths, so the copy works from your own folder as well as the repository.
+    theme["wallpaper"] = str(resolve_wallpaper(base))
+    effects = theme.get("effects", {})
+    if "screen_shader" in effects:
+        effects["screen_shader"] = str(THEMES_DIR / effects["screen_shader"])
+    problems = validate(theme_id, theme)
+    if problems:
+        raise ThemeError("couldn't make the theme:\n  " + "\n  ".join(problems))
+    USER_THEMES_DIR.mkdir(parents=True, exist_ok=True)
+    write_atomic(USER_THEMES_DIR / f"{theme_id}.json", json.dumps(theme, indent=2, ensure_ascii=False) + "\n")
+    print(theme_id)
+    return 0
+
+
 def cmd_list(_args):
     current = active()
     for theme_id in theme_ids():
@@ -1282,6 +1339,7 @@ def cmd_revolver(args):
 
 COMMANDS = {
     "revolver": cmd_revolver,
+    "custom": cmd_custom,
     "starrail": cmd_starrail,
     "fetch": cmd_fetch,
     "list": cmd_list, "current": cmd_current, "apply": cmd_apply, "off": cmd_off,
