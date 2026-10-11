@@ -248,6 +248,25 @@ def reconnect(name, password, source, interactive):
     return None
 
 
+def internet_check():
+    """Ping google.com twice, to show the connection works, not just that NetworkManager says it's up."""
+    if not shutil.which("ping"):
+        notify("Wi-Fi connected", "Couldn't check the internet: ping isn't installed.")
+        return
+    try:
+        result = subprocess.run(["ping", "-c", "2", "-W", "3", "google.com"],
+                                capture_output=True, text=True, timeout=15, check=False)
+        replies = len(re.findall(r"bytes from", result.stdout))
+    except subprocess.TimeoutExpired:
+        replies = 0
+    if replies == 2:
+        notify("Wi-Fi connected", "The internet works: google.com answered both pings.")
+    elif replies == 1:
+        notify("Wi-Fi connected", "google.com answered 1 of 2 pings. The connection may be unstable.")
+    else:
+        notify("Wi-Fi connected, no internet", "google.com didn't answer either ping.")
+
+
 def main(argv):
     interactive = "--interactive" in argv or sys.stdin.isatty()
 
@@ -285,6 +304,7 @@ def main(argv):
         log(f"connected to {name}")
         if typed and connected:
             record_typed(name, connected)
+        internet_check()
         return 0
 
     notify("Wi-Fi not reconnected", f"Could not reconnect to {name}. Connect to it by hand.")
