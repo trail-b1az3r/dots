@@ -133,6 +133,18 @@ Singleton {
             file: "modules/Clipboard.qml"
         },
         {
+            id: "fetch",
+            name: qsTr("System summary"),
+            description: qsTr("Opens Halcyon's fast fetch in a terminal, with the mark turning."),
+            file: "modules/FetchModule.qml"
+        },
+        {
+            id: "starRail",
+            name: qsTr("Star Rail character"),
+            description: qsTr("The character the Star Rail theme is showing. Click for another. Hidden until one is fetched."),
+            file: "modules/StarRailModule.qml"
+        },
+        {
             id: "hypernix",
             name: qsTr("HyperNix"),
             description: qsTr("Generation and job state."),

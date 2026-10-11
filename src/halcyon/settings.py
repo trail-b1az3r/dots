@@ -190,6 +190,7 @@ def choices_for(path: str) -> tuple[str, ...] | None:
 #: interprets each value, so the list cannot drift from what works.
 CHOICES: dict[str, tuple[str, ...]] = {
     "applications.firefox.aspectRatio": windowshape.choices(),
+    "assistant.provider": ("auto", "nixorb", "local", "claude"),
 }
 
 

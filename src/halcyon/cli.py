@@ -752,6 +752,86 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     return doctor.run(json_output=args.json)
 
 
+def cmd_fetch(args: argparse.Namespace) -> int:
+    from . import fetch
+
+    return fetch.run(spin_seconds=args.spin, as_json_out=args.json)
+
+
+def cmd_starrail(args: argparse.Namespace) -> int:
+    from . import starrail
+
+    action = args.starrail_command
+    if action == "refresh":
+        if args.if_enabled and not _starrail_fetch_enabled():
+            return EXIT_OK
+        try:
+            count = starrail.refresh(force=args.force)
+        except starrail.StarRailError as exc:
+            return _result(False, str(exc))
+        return _result(True, f"Character index is current: {count} characters.")
+    if action == "next":
+        char = starrail.choose_next()
+        if char is None:
+            return _result(False, "No characters are cached yet. Run `halcyon starrail refresh`.")
+        try:
+            starrail.portrait(char)
+        except starrail.StarRailError as exc:
+            _print(f"{exc}; the portrait will show when it can be fetched.", error=True)
+        if _settings_flag("starRail.accentFromCharacter") and char.accent:
+            from . import settings as settings_module
+
+            settings_module.set_value("appearance.accentSource", "fixed")
+            settings_module.set_value("appearance.accentColor", char.accent)
+        return _result(True, f"{char.name} ({char.element}, {char.path})")
+    if action == "status":
+        payload = starrail.status()
+        if args.json:
+            return _json_out(payload)
+        cur = payload["current"]
+        _print(f"characters cached: {payload['characters']}")
+        _print("showing: " + (f"{cur['name']} ({cur['element']})" if cur else "nothing yet"))
+        return EXIT_OK
+    return _result(False, "unknown starrail command")
+
+
+def _starrail_fetch_enabled() -> bool:
+    return _settings_flag("starRail.fetchCharacters")
+
+
+def _settings_flag(path: str) -> bool:
+    from . import settings as settings_module
+
+    node: Any = settings_module.load()
+    for part in path.split("."):
+        if not isinstance(node, dict):
+            return False
+        node = node.get(part)
+    return node is True
+
+
+def cmd_revolver(args: argparse.Namespace) -> int:
+    from . import revolver
+
+    if args.revolver_command == "scan":
+        chambers = revolver.pool(args.source, args.mode)
+        if args.json:
+            return _json_out([c.as_dict() for c in chambers])
+        _print(f"{len(chambers)} chambers from {args.source} ({args.mode})")
+        for chamber in chambers:
+            _print(f"  {chamber.name}  [{chamber.id}]  weight {chamber.weight:.2f}")
+        return EXIT_OK
+    if args.revolver_command == "fire":
+        try:
+            argv = revolver.fire(args.source, args.game_id)
+        except revolver.LaunchError as exc:
+            return _result(False, str(exc))
+        except OSError as exc:
+            return _result(False, f"could not start {exc.filename or 'the launcher'}: {exc.strerror}")
+        return _result(True, f"started: {' '.join(argv)}")
+    return _result(False, "unknown revolver command")
+
+
 def cmd_version(_args: argparse.Namespace) -> int:
     _print(f"halcyon {__version__}")
     return EXIT_OK
@@ -1046,6 +1126,47 @@ def build_parser() -> argparse.ArgumentParser:
     doctor_parser = sub.add_parser("doctor", help="check the installation")
     doctor_parser.add_argument("--json", action="store_true")
     doctor_parser.set_defaults(func=cmd_doctor)
+
+    revolver_parser = sub.add_parser("revolver", help="the revolver widget's games")
+    revolver_sub = revolver_parser.add_subparsers(dest="revolver_command", required=True)
+    scan_parser = revolver_sub.add_parser("scan", help="list the chambers and their weights")
+    scan_parser.add_argument("--source", choices=["steam", "prismlauncher"], default="steam")
+    scan_parser.add_argument("--mode", choices=["recent", "random", "recommended"], default="recent")
+    scan_parser.add_argument("--json", action="store_true")
+    scan_parser.set_defaults(func=cmd_revolver)
+    fire_parser = revolver_sub.add_parser("fire", help="launch one game")
+    fire_parser.add_argument("source", choices=["steam", "prismlauncher"])
+    fire_parser.add_argument("game_id")
+    fire_parser.set_defaults(func=cmd_revolver)
+
+    starrail_parser = sub.add_parser(
+        "starrail", help="the Star Rail theme's characters (fetched on request)",
+    )
+    starrail_sub = starrail_parser.add_subparsers(dest="starrail_command", required=True)
+    refresh_parser = starrail_sub.add_parser("refresh", help="download the character index if it is old")
+    refresh_parser.add_argument("--force", action="store_true", help="download it even if it is recent")
+    refresh_parser.add_argument(
+        "--if-enabled", action="store_true",
+        help="do nothing unless starRail.fetchCharacters is on (for timers)",
+    )
+    refresh_parser.set_defaults(func=cmd_starrail)
+    next_parser = starrail_sub.add_parser("next", help="show a different character")
+    next_parser.set_defaults(func=cmd_starrail)
+    status_parser = starrail_sub.add_parser("status", help="what is cached and what is showing")
+    status_parser.add_argument("--json", action="store_true")
+    status_parser.set_defaults(func=cmd_starrail)
+
+    fetch_parser = sub.add_parser(
+        "fetch", help="a system summary beside the Halcyon mark",
+    )
+    fetch_parser.add_argument(
+        "--spin", nargs="?", type=float, const=3.0, default=None,
+        metavar="SECONDS",
+        help="turn the mark for SECONDS (default %(const)s) before settling; "
+        "only on a terminal, and never with reduced motion",
+    )
+    fetch_parser.add_argument("--json", action="store_true", help="print the fields as JSON")
+    fetch_parser.set_defaults(func=cmd_fetch)
 
     version_parser = sub.add_parser("version")
     version_parser.set_defaults(func=cmd_version)

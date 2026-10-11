@@ -85,7 +85,7 @@ The status bar's geometry and module layout.
 | `bar.showOnAllMonitors` | bool | `true` | One bar per monitor, or only on the primary. |
 | `bar.left` | list | `["launcher", "workspaces", "activeWindow"]` | Modules on the left, in order, by id. `halcyon shell bar modules` lists every id. |
 | `bar.center` | list | `["clock"]` | Modules in the centre, in order. Genuinely centred on the bar, not placed after the left section. |
-| `bar.right` | list | `["media", "assistant", "hypernix", "cpu", "memory", "temp…` | Modules on the right, in order. |
+| `bar.right` | list | `["media", "assistant", "starRail", "hypernix", "cpu", "me…` | Modules on the right, in order. |
 | `bar.autoHide` | bool | `false` | Slide the bar off screen until the pointer reaches its edge. |
 | `bar.hoverExpand` | bool | `true` | Let modules show more detail while the pointer is over them. |
 | `bar.clock.format` | string | `"HH:mm"` | Qt date format for the clock, e.g. `HH:mm` or `h:mm AP`. |
@@ -227,7 +227,7 @@ Backends, voice, and what it is allowed to see.
 | Key | Type | Default | Meaning |
 |---|---|---|---|
 | `assistant.enabled` | bool | `true` | Whether the assistant daemon runs at all. |
-| `assistant.provider` | string | `"auto"` | `auto`, `nixorb` or `local`. `auto` prefers NixOrb when it answers. |
+| `assistant.provider` | string | `"auto"` | `auto`, `nixorb`, `local` or `claude`. `auto` prefers NixOrb when it answers; `claude` is never chosen automatically. |
 | `assistant.pushToTalkOnly` | bool | `false` | Only listen while the key is held; never on a wake word. |
 | `assistant.streaming` | bool | `true` | Show the answer as it is generated rather than all at once. |
 | `assistant.voice.enabled` | bool | `true` | Speak answers aloud. |
@@ -244,6 +244,7 @@ Backends, voice, and what it is allowed to see.
 | `assistant.privacy.allowClipboardContext` | bool | `false` | Permit the assistant to read the clipboard. Off by default. |
 | `assistant.privacy.storeConversations` | bool | `true` | Keep history on disk. Off means the conversation lives only in memory. |
 | `assistant.privacy.confirmDestructiveActions` | bool | `true` | Ask before suspending, rebooting, shutting down or logging out. |
+| `assistant.privacy.allowCloudModels` | bool | `false` | Off by default. Must be on before any question is sent to a remote model such as the Claude API. Commands are still handled on this machine. |
 | `assistant.local.llmBackend` | string | `"ollama"` | `ollama` or `openai` for any OpenAI-compatible server. |
 | `assistant.local.llmHost` | string | `"http://127.0.0.1:11434"` | Base URL of that server. |
 | `assistant.local.llmModel` | string | `"llama3.2:3b"` | Model name to request. |
@@ -256,6 +257,8 @@ Backends, voice, and what it is allowed to see.
 | `assistant.nixorb.autostart` | bool | `false` | Start NixOrb with the session if it is not already running. |
 | `assistant.nixorb.socketPath` | string | `""` | Override NixOrb's socket path. Empty means autodetect. |
 | `assistant.historyLimit` | int | `50` | How many turns to keep. |
+| `assistant.claude.model` | string | `"claude-sonnet-5-5"` | The Claude model the API backend asks for, by its API name. |
+| `assistant.claude.maxTokens` | int | `1024` | The longest reply the Claude API backend will ask for. |
 
 ## HyperNix
 
@@ -270,6 +273,26 @@ The optional HyperNix integration.
 | `hypernix.notifyOnJobs` | bool | `true` | Notify when a job finishes. |
 | `hypernix.pollSeconds` | int | `60` | How often to ask HyperNix for its state. |
 | `hypernix.command` | string | `"hypernix"` | The executable name, if it is not `hypernix` on `PATH`. |
+
+## Widgets
+
+Optional things drawn on the desktop. All are off until you turn them on.
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `widgets.revolver.enabled` | bool | `false` | Draw the revolver widget on the desktop background. Off by default. |
+| `widgets.revolver.source` | string | `"steam"` | `steam`, or `prismlauncher`. Where the chambers come from. Read locally; nothing is uploaded. |
+| `widgets.revolver.mode` | string | `"recent"` | How chambers are weighted: `recent`, `random` or `recommended`. |
+| `widgets.revolver.size` | int | `300` | The drum's diameter in pixels. |
+
+## Star Rail
+
+The Star Rail theme's characters. Off until you turn fetching on.
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `starRail.fetchCharacters` | bool | `false` | Off by default. When on, the character index is refreshed automatically (weekly) from the StarRailRes data project. Nothing is fetched while this is off; `halcyon starrail refresh` always fetches when you run it. |
+| `starRail.accentFromCharacter` | bool | `false` | When `halcyon starrail next` shows a character, set the accent to that character's element colour. |
 
 ## Search
 

@@ -25,6 +25,7 @@ value can drift.
 - [Supported distributions](#supported-distributions)
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [The Ultra Bar](#the-ultra-bar)
+- [Fast fetch, the revolver and Star Rail](#fast-fetch-the-revolver-and-star-rail)
 - [Architecture](#architecture)
 - [Customisation](#customisation)
 - [The AI assistant](#the-ai-assistant)
@@ -361,7 +362,11 @@ halcyon theme apply
 `tray`, `notifications`, `cpu`, `memory`, `temperature`, `gpu`,
 `network`, `bluetooth`, `audio`, `microphone`, `battery`,
 `powerProfile`, `clipboard`, `hypernix`, `assistant`, `settings`,
-`systemMenu`, `spacer`, `separator`.
+`systemMenu`, `fetch`, `starRail`, `spacer`, `separator`.
+
+`fetch` opens the system summary in a terminal. `starRail` shows the
+Star Rail theme's current character with that character's element
+colour; it stays hidden until a character has been fetched.
 
 Each takes its options from its own settings subtree —
 `bar.clock.format`, `bar.audio.scrollStep`, `bar.temperature.warnAbove`
@@ -387,6 +392,86 @@ systemctl --user enable --now halcyon-bar
 
 That gives you a second bar which survives the shell restarting. Setting
 it back to `none` removes the generated files again.
+
+---
+
+## Fast fetch, the revolver and Star Rail
+
+### `halcyon fetch`
+
+A system summary beside the Halcyon mark, which is drawn as a black
+sword and trident and turned in 3D, one character grid at a time.
+
+```sh
+halcyon fetch                 # the summary, with the mark settled at a three-quarter view
+halcyon fetch --spin          # the mark turns for three seconds, then settles
+halcyon fetch --spin 5        # for five seconds
+halcyon fetch --json          # the same fields as JSON, for scripts
+```
+
+Every field is read from this machine when the command runs. A field that
+cannot be read is left out, so the summary never claims something the
+machine does not support. The mark only moves on a terminal, and never when
+reduced motion is set. `NO_COLOR` turns colour off.
+
+The same summary is one click away from the bar (`fetch` module) and from
+Spotlight, as "Show the system summary".
+
+### The revolver
+
+An optional drum of installed games on the desktop background. It is
+**off by default**. Turn it on in **Settings → Widgets & Star Rail**.
+
+- Games come from the local Steam library or PrismLauncher's instances.
+  Only files that already exist on this machine are read. Nothing is uploaded.
+- Drag around the drum to spin it. Releasing it leaves one chamber under the
+  pin. Nothing starts until you click the centre, so a stray drag cannot
+  launch a game.
+- The drum shows the first twelve chambers of the pool, weighted by
+  `widgets.revolver.mode`: `recent`, `random` or `recommended`.
+- Steam games are started with `xdg-open steam://rungameid/<id>`. PrismLauncher
+  instances with `prismlauncher --launch <name>`. Both run as a fixed argument
+  list. Ids are checked before anything runs, and no shell is involved.
+
+```sh
+halcyon revolver scan --source steam --mode recommended
+halcyon settings set widgets.revolver.enabled true
+```
+
+The scanner follows [hyprland-revolver](https://github.com/minerofthesoal/hyprland-revolver)
+(MIT, © 2026 minerofthesoal), which worked out how to read Steam's library
+without a Web API key. Halcyon's version leaves out that project's
+achievement parsing, which depends on an undocumented binary format.
+
+### The Star Rail theme
+
+The Star Rail glass preset (`halcyon theme preset star-rail`) is deeper and
+more luminous than the default. Its characters come from outside the machine,
+so they are handled differently from everything else in Halcyon:
+
+- **Nothing is fetched until you ask.** Turning on
+  `starRail.fetchCharacters` allows an automatic weekly refresh of the
+  character list. It is off by default. The buttons in Settings, and the
+  commands below, always work on request.
+- The data is the public character index and portraits from the
+  [StarRailRes](https://github.com/Mar-7th/StarRailRes) project (AGPL-3.0).
+  They are downloaded into `~/.cache/halcyon/starrail` and are not copied
+  into this repository.
+- Honkai: Star Rail, its characters and artwork belong to HoYoverse. Halcyon
+  does not ship any of them, and the portraits are for personal use on your
+  own machine.
+- Every download is size-limited and checked. A portrait must be a PNG. A
+  bad entry in the index is skipped rather than failing the whole list.
+
+```sh
+halcyon starrail refresh          # download the character list now
+halcyon starrail next             # show another character (also fetches its portrait)
+halcyon starrail status --json
+```
+
+With `starRail.accentFromCharacter` on, each element sets the accent to its
+own colour. Those colours are Halcyon's, chosen for legibility on glass, not
+taken from the game.
 
 ---
 
@@ -577,6 +662,34 @@ request.
 5. If the model wants to act, it names an allowlisted action with typed
    parameters. Those are validated before anything happens.
 6. Destructive actions stop and ask.
+
+### The Claude API
+
+Claude is available as a backend, with an API key from the
+[Anthropic Console](https://console.anthropic.com). It is the one backend
+that sends your questions to a company's servers, so it is held to stricter
+rules:
+
+- It is **never chosen automatically**. Select **Claude API** in
+  Settings → AI Assistant → Provider, or `halcyon assistant provider claude`.
+- It refuses to run until **Allow cloud models** is on. That switch is off by
+  default. Commands such as "set the volume to 30%" still run on this machine.
+- Store the key from a terminal. It is typed without being shown and kept in
+  a file only you can read:
+
+```sh
+halcyon assistant claude key set
+halcyon assistant claude key status       # says whether a key is available, never shows it
+halcyon assistant claude key forget
+```
+
+`ANTHROPIC_API_KEY` in the environment takes precedence over the file. A key
+file that other users can read is refused until its permissions are fixed.
+
+The model is `assistant.claude.model` (default `claude-sonnet-5-5`).
+
+**Claude Pro and Max subscriptions do not include API access**, and Halcyon
+cannot sign in with one. The API is billed separately from a subscription.
 
 ### Privacy
 
@@ -901,6 +1014,14 @@ Hyprland is not running.
 MIT. See [LICENSE](LICENSE).
 
 Halcyon is an original work. It is inspired by Apple's design language;
-it contains none of Apple's assets, icons, fonts or code. The default
+it contains none of Apple's assets, icons, fonts or code. The mark is a
+new drawing of a sword and a trident.
+
+The revolver widget's game scanner follows
+[hyprland-revolver](https://github.com/minerofthesoal/hyprland-revolver),
+MIT License, Copyright (c) 2026 minerofthesoal. The Star Rail character data
+is fetched on request from StarRailRes (AGPL-3.0) and is not included here.
+Honkai: Star Rail is a trademark and copyright of HoYoverse; this project is
+not affiliated with it. The default
 typeface is Inter, an open font chosen for its similar feel. Icon
 glyphs come from Nerd Fonts' Material Design set.

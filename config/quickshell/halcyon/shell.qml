@@ -18,6 +18,7 @@ import qs.Modules.Switcher
 import qs.Modules.PowerMenu
 import qs.Modules.Calendar
 import qs.Modules.Dashboard
+import qs.Modules.Widgets
 import qs.Modules.Settings
 import qs.Modules.Cheatsheet
 import qs.Modules.Capture
@@ -120,6 +121,9 @@ ShellRoot {
     // The desktop widgets stay loaded once shown, because they are part
     // of the desktop rather than a panel you dismiss.
     Dashboard {}
+
+    // The revolver is a desktop widget too: off until enabled in Settings.
+    RevolverWidget {}
 
     // ── IPC ────────────────────────────────────────────────────────────
     //

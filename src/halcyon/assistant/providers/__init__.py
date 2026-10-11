@@ -64,12 +64,14 @@ class Provider:
 
 
 def registry() -> dict[str, type[Provider]]:
+    from .claude import ClaudeProvider
     from .local import LocalProvider
     from .nixorb import NixOrbProvider
 
     return {
         NixOrbProvider.id: NixOrbProvider,
         LocalProvider.id: LocalProvider,
+        ClaudeProvider.id: ClaudeProvider,
     }
 
 
@@ -84,7 +86,8 @@ def select(settings: dict[str, Any]) -> tuple[Provider | None, str]:
     `automatic` prefers NixOrb when it is actually running — it owns the
     microphone and its own UI while it is up, and having two assistants
     listening at once is worse than either alone. Otherwise the local
-    stack takes the turn.
+    stack takes the turn. The Claude API is never picked automatically:
+    it sends what is said to a remote service, so it has to be chosen.
     """
     configured = str(settings.get("assistant", {}).get("provider", "auto")).lower()
     available = registry()

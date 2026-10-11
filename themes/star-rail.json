@@ -1,0 +1,18 @@
+{
+  "name": "Star Rail",
+  "description": "A deeper, more luminous glass with a soft bloom, for the Star Rail theme. Characters are fetched on request; see Settings → Widgets & Star Rail.",
+  "glass": {
+    "preset": "star-rail",
+    "opacity": 0.5,
+    "blurStrength": 1.2,
+    "saturation": 1.35,
+    "tintStrength": 0.3,
+    "borderOpacity": 0.42,
+    "cornerRadius": 20,
+    "shadowStrength": 0.7,
+    "specularStrength": 0.7,
+    "refraction": 0.55,
+    "noise": 0.01,
+    "elevationSpread": 1.15
+  }
+}

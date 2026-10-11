@@ -1,32 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Halcyon's mark.
+  Halcyon's mark: a black sword and a black trident, side by side.
 
-  Three stacked chevrons in one flat tile: the brightest on top and two
-  fading layers beneath it, like panes of glass stacked on a surface. The
-  name is the halcyon, the calm bird that brings still water; the mark
-  reads as a lifted, settled shape rather than a picture of a bird.
+  The sword is upright on the left, the trident upright on the right, both
+  drawn as flat silhouettes so the mark reads at 16 px and in one colour.
+  The tile is a pale, cool white so the black silhouettes stand out in
+  both light and dark desktops.
 
-  Colours are explicit, not currentColor. An SVG loaded as an image has no
-  surrounding text colour to inherit, so currentColor resolves to black and
-  the mark disappears on a dark background. The tile is the Halcyon
-  default accent, which reads on both light and dark wallpapers.
+  Colours are explicit, not currentColor: an SVG loaded as an image has no
+  surrounding text colour to inherit, so currentColor would resolve to
+  black and vanish on a dark tile.
 
-  Built to stay legible at 16 px: a single flat shape, no gradients, no
-  blend modes, no filters. Qt's SVG renderer is not required — the shell
-  loads halcyon.png; this file is the master.
+  No gradients, filters, masks or blend modes. Those do not survive being
+  shrunk or drawn by a renderer that is not a browser.
 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
   <title>Halcyon</title>
 
   <!-- The tile. -->
-  <rect x="0" y="0" width="64" height="64" rx="15" fill="#0a84ff"/>
+  <rect x="0" y="0" width="256" height="256" rx="58" fill="#EEF2F7"/>
 
-  <!-- Three layers, brightest on top. Round caps and joins keep the
-       chevrons soft at every size. -->
-  <g fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M16 31 L32 16 L48 31" stroke-opacity="1"/>
-    <path d="M16 41 L32 26 L48 41" stroke-opacity="0.7"/>
-    <path d="M16 51 L32 36 L48 51" stroke-opacity="0.4"/>
+  <!-- Sword: blade, fuller, crossguard, grip, pommel. -->
+  <g fill="#0B0B0C">
+    <path d="M100 18 L112 62 L112 186 L100 200 L88 186 L88 62 Z"/>
+    <rect x="62" y="186" width="76" height="13" rx="5"/>
+    <rect x="91" y="199" width="18" height="34" rx="3"/>
+    <circle cx="100" cy="242" r="10"/>
+  </g>
+  <path d="M100 58 L100 176" stroke="#3A3A3C" stroke-width="3" stroke-linecap="round"/>
+  <path d="M91 214 L109 214 M91 222 L109 222" stroke="#3A3A3C" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Trident: a shaft, a collar, three prongs. -->
+  <g fill="#0B0B0C">
+    <rect x="151" y="78" width="10" height="164" rx="4"/>
+    <rect x="132" y="104" width="48" height="11" rx="4"/>
+    <!-- One fork silhouette: centre tine, two outer tines curving inward,
+         and the notches between them. -->
+    <path d="M156 10 L163 36 L176 22 L172 50 L168 50 L168 96 L144 96 L144 50 L140 50 L136 22 L149 36 Z"/>
   </g>
 </svg>

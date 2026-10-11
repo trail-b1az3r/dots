@@ -43,7 +43,15 @@ def add_parser(subparsers: Any) -> None:
     confirm.add_argument("answer", choices=["yes", "no"])
 
     provider = sub.add_parser("provider", help="choose the backend")
-    provider.add_argument("name", choices=["nixorb", "local", "auto"])
+    provider.add_argument("name", choices=["nixorb", "local", "claude", "auto"])
+
+    claude = sub.add_parser("claude", help="the Claude API backend")
+    claude_sub = claude.add_subparsers(dest="claude_command", required=True)
+    key = claude_sub.add_parser("key", help="manage the API key")
+    key_sub = key.add_subparsers(dest="key_command", required=True)
+    key_sub.add_parser("set", help="store an API key (read from the terminal, not echoed)")
+    key_sub.add_parser("status", help="say whether a key is available, without showing it")
+    key_sub.add_parser("forget", help="delete the stored key")
 
     daemon_parser = sub.add_parser("daemon", help="run the daemon in the foreground")
     daemon_parser.add_argument("--quiet", action="store_true")
@@ -95,6 +103,9 @@ def dispatch(args: argparse.Namespace) -> int:
     if command == "provider":
         settings_module.set_value("assistant.provider", args.name)
         return _report(True, f"Assistant backend set to {args.name}.")
+
+    if command == "claude":
+        return _claude_key(args)
 
     if command == "cancel":
         return _report(*client.cancel())
@@ -175,6 +186,34 @@ def _echo(event: Event) -> None:
     elif event.event in ("final", "error") and _STREAMED:
         print()
         _STREAMED = False
+
+
+def _claude_key(args: argparse.Namespace) -> int:
+    from .providers import claude
+
+    action = args.key_command
+    if action == "set":
+        if not sys.stdin.isatty():
+            return _report(False, "Run this in a terminal, so the key is typed rather than piped into a log.")
+        import getpass
+
+        try:
+            key = getpass.getpass("Anthropic API key (input is hidden): ")
+            claude.store_key(key)
+        except (EOFError, KeyboardInterrupt):
+            return _report(False, "No key stored.")
+        except ValueError as exc:
+            return _report(False, f"No key stored: {exc}.")
+        return _report(True, f"Key stored in {claude.KEY_FILE} (readable by you only).")
+    if action == "status":
+        key, source = claude.read_key()
+        if key is None:
+            return _report(False, f"No key: {source}.")
+        return _report(True, f"A key is available, from the {source}.")
+    if action == "forget":
+        removed = claude.forget_key()
+        return _report(True, "Stored key deleted." if removed else "No stored key to delete.")
+    return _report(False, "unknown key command")
 
 
 def _report(ok: bool, message: str) -> int:

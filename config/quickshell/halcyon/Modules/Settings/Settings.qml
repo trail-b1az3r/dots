@@ -44,6 +44,7 @@ OverlayWindow {
         { id: "appearance", title: "Appearance", glyph: "󰸌" },
         { id: "glass", title: "Liquid Glass", glyph: "󰠱" },
         { id: "wallpaper", title: "Wallpaper", glyph: "󰸉" },
+        { id: "widgets", title: "Widgets & Star Rail", glyph: "󰕮" },
         { id: "animations", title: "Animations", glyph: "󰑮" },
         { id: "keybinds", title: "Keyboard", glyph: "󰌌" },
         { id: "workspaces", title: "Workspaces", glyph: "󰕰" },
@@ -163,6 +164,7 @@ OverlayWindow {
         case "appearance": return "AppearanceSection";
         case "glass": return "GlassSection";
         case "wallpaper": return "WallpaperSection";
+        case "widgets": return "WidgetsSection";
         case "animations": return "AnimationsSection";
         case "keybinds": return "KeybindsSection";
         case "workspaces": return "WorkspacesSection";

@@ -55,6 +55,7 @@
     "right": [
       "media",
       "assistant",
+      "starRail",
       "hypernix",
       "cpu",
       "memory",
@@ -68,7 +69,8 @@
       "powerProfile",
       "tray",
       "notifications",
-      "systemMenu"
+      "systemMenu",
+      "fetch"
     ],
     "autoHide": false,
     "hoverExpand": true,
@@ -220,7 +222,8 @@
       "allowScreenContext": false,
       "allowClipboardContext": false,
       "storeConversations": true,
-      "confirmDestructiveActions": true
+      "confirmDestructiveActions": true,
+      "allowCloudModels": false
     },
     "local": {
       "llmBackend": "ollama",
@@ -237,7 +240,11 @@
       "autostart": false,
       "socketPath": ""
     },
-    "historyLimit": 50
+    "historyLimit": 50,
+    "claude": {
+      "model": "claude-sonnet-5-5",
+      "maxTokens": 1024
+    }
   },
   "hypernix": {
     "enabled": true,
@@ -305,5 +312,17 @@
     "recentFiles": true,
     "telemetry": false
   },
-  "keybinds": {}
+  "keybinds": {},
+  "starRail": {
+    "fetchCharacters": false,
+    "accentFromCharacter": false
+  },
+  "widgets": {
+    "revolver": {
+      "enabled": false,
+      "source": "steam",
+      "mode": "recent",
+      "size": 300
+    }
+  }
 }

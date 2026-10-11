@@ -354,6 +354,46 @@ def _web_search(params: dict[str, Any], settings: dict[str, Any]):
     return desktop.open_path(url)
 
 
+def _show_fetch(_params: dict[str, Any], settings: dict[str, Any]):
+    """Open a terminal with the system summary, and keep it open until Enter."""
+    import shlex
+    import shutil
+
+    binary = shutil.which("halcyon") or "halcyon"
+    script = f"{shlex.quote(binary)} fetch --spin 3; printf '\\nPress Enter to close '; read -r _"
+    ok, message = desktop.open_terminal(settings, command=["sh", "-c", script])
+    return ok, message if message else "Opened the system summary."
+
+
+def _starrail_next(_params: dict[str, Any], settings: dict[str, Any]):
+    from . import starrail
+
+    try:
+        char = starrail.choose_next()
+        if char is None:
+            return False, "No Star Rail characters are cached yet. Refresh the index first."
+        try:
+            starrail.portrait(char)
+        except starrail.StarRailError as exc:
+            return True, f"{char.name} ({char.element}); {exc}"
+        if settings_module.get("starRail.accentFromCharacter") and char.accent:
+            settings_module.set_value("appearance.accentSource", "fixed")
+            settings_module.set_value("appearance.accentColor", char.accent)
+        return True, f"Showing {char.name} ({char.element})."
+    except starrail.StarRailError as exc:
+        return False, str(exc)
+
+
+def _starrail_refresh(_params: dict[str, Any], _settings: dict[str, Any]):
+    from . import starrail
+
+    try:
+        count = starrail.refresh(force=True)
+    except starrail.StarRailError as exc:
+        return False, str(exc)
+    return True, f"Character index refreshed: {count} characters."
+
+
 def _dnd(params: dict[str, Any], _settings: dict[str, Any]):
     state = str(params.get("state", "toggle"))
     current = bool(settings_module.get("notifications.doNotDisturb"))
@@ -365,6 +405,22 @@ def _dnd(params: dict[str, Any], _settings: dict[str, Any]):
     return True, f"Do Not Disturb {'on' if value else 'off'}."
 
 
+register(Action(
+    id="system.fetch", title="Show the system summary", category="system",
+    description="Open a terminal with Halcyon's fast fetch, with the mark turning.",
+    handler=_show_fetch,
+))
+register(Action(
+    id="starrail.next", title="Show another Star Rail character", category="theme",
+    description="Choose a different cached character, download its portrait, and "
+    "optionally take its accent colour.",
+    handler=_starrail_next,
+))
+register(Action(
+    id="starrail.refresh", title="Refresh the Star Rail character index", category="theme",
+    description="Download the public character index now. This is a network request.",
+    handler=_starrail_refresh,
+))
 register(Action(
     id="app.open", title="Open an application", category="apps",
     description="Launch an installed application by name.",

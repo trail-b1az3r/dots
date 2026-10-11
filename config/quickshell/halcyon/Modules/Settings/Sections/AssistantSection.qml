@@ -59,12 +59,14 @@ ColumnLayout {
                 title: "Provider"
                 description: "Automatic prefers NixOrb while it is running, because "
                     + "it owns the microphone and its own interface; otherwise the "
-                    + "local stack answers."
+                    + "local stack answers. Claude API is never chosen automatically: "
+                    + "it sends your questions to Anthropic, so you choose it."
 
                 GlassSegmented {
                     options: [
                         { value: "nixorb", title: "NixOrb" },
                         { value: "local", title: "Local AI" },
+                        { value: "claude", title: "Claude API" },
                         { value: "auto", title: "Automatic" }
                     ]
                     value: Config.get("assistant.provider", "auto")
@@ -127,6 +129,31 @@ ColumnLayout {
                 text: "Re-check"
                 glyph: "󰑐"
                 onClicked: probe.running = true
+            }
+        }
+    }
+
+    SettingsGroup {
+        title: "Claude API"
+
+        ColumnLayout {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            spacing: Theme.spacingSm
+
+            Text {
+                Layout.fillWidth: true
+                text: "Uses an API key from the Anthropic Console, billed to that account. "
+                    + "Store it in a terminal with `halcyon assistant claude key set`; the key "
+                    + "is kept in a file only you can read and is never shown here. "
+                    + "A Claude Pro or Max subscription does not include API access, and "
+                    + "Halcyon cannot sign in with one."
+                color: Theme.textSecondary
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.sizeCaption
+                wrapMode: Text.WordWrap
+                renderType: Text.QtRendering
             }
         }
     }
@@ -278,6 +305,18 @@ ColumnLayout {
                 variant: "caption"
                 tone: "tertiary"
                 wrapMode: Text.WordWrap
+            }
+
+            SettingRow {
+                title: "Allow cloud models"
+                description: "Required before any question is sent to a remote model, "
+                    + "such as the Claude API. Commands still run on this machine. "
+                    + "Off by default."
+
+                GlassToggle {
+                    checked: Config.get("assistant.privacy.allowCloudModels", false)
+                    onToggled: value => Config.set("assistant.privacy.allowCloudModels", value)
+                }
             }
 
             SettingRow {
