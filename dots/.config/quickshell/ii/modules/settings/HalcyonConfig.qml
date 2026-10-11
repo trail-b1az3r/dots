@@ -377,7 +377,7 @@ ContentPage {
                 page.applyCursor();
             }
             StyledToolTip {
-                text: Translation.tr("Off uses illogical-impulse's Bibata cursor")
+                text: Translation.tr("Off uses the standard Bibata cursor")
             }
         }
 
