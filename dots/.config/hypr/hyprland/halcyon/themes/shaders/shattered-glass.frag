@@ -31,7 +31,7 @@ in vec2 v_texcoord;
 uniform sampler2D tex;
 
 uniform vec2 screen_size;
-uniform float time;                 // seconds, for the waves on the rim
+uniform float time;                 // seconds, for the quiver
 uniform vec2 pointer_position;               // 0..1, top-left origin
 uniform vec2 pointer_pressed_positions[32];  // most recent first
 uniform float pointer_pressed_times[32];     // seconds since each press
@@ -76,26 +76,23 @@ vec2 toPixels(vec2 normalised, vec2 size) {
 
 // Liquid bounce. Screen shaders get no pointer velocity, only the time since
 // it last moved (t), so the motion keys off that and the clock:
-//   * squash and stretch: each pointer move sets off a soft spring that starts
-//     from rest, swells and wobbles, then settles, trading width for height;
-//   * slosh: waves travel round the rim in both directions, rising from rest
-//     after each move and dying away.
+//   * squash and stretch: while moving the lens is pressed flatter; when it
+//     stops, a soft spring sends it past its rest shape, trading width for
+//     height, for about a second;
+//   * slosh: waves travel round the rim in both directions, so the outline
+//     wobbles like a drop of liquid. Full strength while moving, dying away
+//     after the pointer stops.
 vec2 bounceScale(float t, float amount) {
-    // Starts from rest, then springs: the lens swells and wobbles, and the
-    // wobble dies away. Nothing jumps when the pointer moves.
-    float rise = 1.0 - exp(-14.0 * t);
-    float spring = 5.0 * rise * exp(-2.4 * t) * cos(12.0 * t);
-    // A quiver on top while the pointer is moving, faded in and out so it never steps.
-    float moving = 1.0 - smoothstep(0.0, 0.3, t);
-    float quiver = sin(time * 19.0) * moving * 1.0;
+    float spring = exp(-3.8 * t) * cos(13.0 * t);
+    float moving = 1.0 - smoothstep(0.0, 0.12, t);
+    float quiver = sin(time * 19.0) * moving;
     float size = -0.12 * spring;
     float squash = 0.14 * spring + 0.05 * quiver;
     return vec2(1.0 + (size + squash) * amount, 1.0 + (size - squash) * amount);
 }
 
 float liquidWave(float angle, float t, float amount) {
-    // Rises from rest, peaks about a third of a second after the event, then dies away.
-    float energy = 14.0 * t * exp(-3.0 * t) * amount;
+    float energy = exp(-3.0 * t) * amount;
     return energy * (0.075 * sin(3.0 * angle - time * 8.0 + 1.3)
                    + 0.055 * sin(4.0 * angle + time * 6.5)
                    + 0.035 * sin(5.0 * angle - time * 11.0 + 0.7));
