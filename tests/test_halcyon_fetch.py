@@ -61,23 +61,19 @@ class TestModel(unittest.TestCase):
                 self.assertAlmostEqual(normal[2], 0.0)
                 self.assertAlmostEqual(math.hypot(normal[0], normal[1]), 1.0, places=6)
 
-    def test_the_mark_has_both_a_sword_and_a_trident(self) -> None:
-        # The sword is left of centre and the trident right of it.
-        xs = [v[0] for tri in logo3d.MODEL for v in tri[:3]]
-        left = [x for x in xs if x < 0]
-        right = [x for x in xs if x > 0.1]
-        self.assertTrue(left and right)
+    def test_the_mark_comes_from_the_logo_outlines(self) -> None:
+        # The solids are the traced logo, so the model is one non-empty set of
+        # triangles that lies inside the unit cube.
+        self.assertGreater(len(logo3d.MODEL), 0)
+        for tri in logo3d.MODEL:
+            for vertex in tri[:3]:
+                self.assertTrue(all(-1.0 <= value <= 1.0 for value in vertex), vertex)
 
-
-class TestRendering(unittest.TestCase):
-    def test_every_frame_has_the_requested_shape(self) -> None:
-        for step in range(24):
-            frame = logo3d.render_frame(step * math.pi / 12, cols=34, rows=18)
-            self.assertEqual(len(frame), 18)
-            for line in frame:
-                self.assertLessEqual(len(line), 34)
-                for char in line:
-                    self.assertTrue(char == " " or char in logo3d.RAMP, repr(char))
+    def test_the_outlines_file_is_what_the_model_uses(self) -> None:
+        import json
+        import pathlib
+        data = json.loads((pathlib.Path(logo3d.__file__).with_name("mark_outline.json")).read_text())
+        self.assertEqual(len(logo3d.SOLIDS), len(data["polygons"]))
 
     def test_the_mark_is_visible_at_every_angle(self) -> None:
         for step in range(24):

@@ -15,7 +15,9 @@ does the mark look like at this angle".
 
 from __future__ import annotations
 
+import json
 import math
+import pathlib
 from typing import Sequence
 
 Point = tuple[float, float]
@@ -43,8 +45,13 @@ def _circle(cx: float, cy: float, r: float, n: int = 12) -> list[Point]:
     ]
 
 
-#: Every solid in the mark: (outline in 256 space, half thickness).
-SOLIDS: tuple[tuple[Sequence[Point], float], ...] = (
+#: The solids the mark is made of, as (outline in 256 space, half thickness).
+#: They come from mark_outline.json, which holds the owner's logo traced to
+#: outlines. If that file is missing or unreadable, the original sword and
+#: trident outlines are used instead, so the spin always works.
+_OUTLINE_FILE = pathlib.Path(__file__).with_name("mark_outline.json")
+
+_FALLBACK_SOLIDS: tuple[tuple[Sequence[Point], float], ...] = (
     (_BLADE, 0.030),
     (_RECT_BLADE_GUARD, 0.045),
     (_GRIP, 0.040),
@@ -53,6 +60,21 @@ SOLIDS: tuple[tuple[Sequence[Point], float], ...] = (
     (_COLLAR, 0.045),
     (_FORK, 0.030),
 )
+
+
+def _load_solids() -> tuple[tuple[Sequence[Point], float], ...]:
+    try:
+        data = json.loads(_OUTLINE_FILE.read_text(encoding="utf-8"))
+        half = float(data["half_thickness"])
+        polygons = [[(float(x), float(y)) for x, y in poly] for poly in data["polygons"]]
+    except (OSError, ValueError, KeyError, TypeError):
+        return _FALLBACK_SOLIDS
+    if not polygons:
+        return _FALLBACK_SOLIDS
+    return tuple((poly, half) for poly in polygons)
+
+
+SOLIDS: tuple[tuple[Sequence[Point], float], ...] = _load_solids()
 
 
 # ── Triangulation ──────────────────────────────────────────────────────
@@ -158,7 +180,9 @@ def build_model() -> list[Triangle]:
         for i in range(len(pts)):
             j = (i + 1) % len(pts)
             dx, dy = pts[j][0] - pts[i][0], pts[j][1] - pts[i][1]
-            length = math.hypot(dx, dy) or 1.0
+            length = math.hypot(dx, dy)
+            if length == 0.0:
+                continue  # a repeated corner has no wall
             # For a counter-clockwise outline the outside is to the right
             # of each edge.
             normal = (dy / length, -dx / length, 0.0)
