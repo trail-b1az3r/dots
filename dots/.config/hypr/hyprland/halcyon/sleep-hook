@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Halcyon: a systemd sleep hook, run as root after the computer resumes.
+#
+# It is the fallback for halcyon-resume.service, the user's own wake-up
+# watcher. While that service is running it handles the wake-up itself, so
+# this does nothing. Only when the watcher is stopped, failed, or missing does
+# this restart NetworkManager and the Razer daemon.
+#
+# ./setup install fills in the user name and copies this to
+# /usr/lib/systemd/system-sleep/halcyon-resume.
+set -u
+
+[ "${1:-}" = post ] || exit 0
+
+USER_NAME="__USER__"
+
+if systemctl --machine="${USER_NAME}@" --user is-active --quiet halcyon-resume.service 2>/dev/null; then
+    exit 0
+fi
+
+systemctl restart NetworkManager.service
+systemctl --machine="${USER_NAME}@" --user restart openrazer-daemon.service 2>/dev/null || true
