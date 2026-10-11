@@ -656,6 +656,11 @@ Singleton {
                 property string skipClasses: ""
             }
 
+            // Other windows kept as live previews down the left edge; click one to bring it forward.
+            property JsonObject stageManager: JsonObject {
+                property bool enable: false
+            }
+
             property JsonObject hacks: JsonObject {
                 property int arbitraryRaceConditionDelay: 20 // milliseconds
             }

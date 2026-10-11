@@ -16,13 +16,23 @@ import Quickshell.Wayland
  * takes input only where the bars are, so the pointer's position stays put
  * while the window moves underneath it.
  *
- * Hyprland doesn't say which apps draw their own title bar, so those apps are
- * listed in Settings > Interface > Floating windows instead of being detected.
+ * While a bar is dragged it follows the pointer itself, rather than waiting for
+ * Hyprland's next window list, so it stays with the window. The shell's own
+ * windows (Settings) never get one.
+ *
+ * Other apps that draw their own title bar are listed in Settings > Interface >
+ * Floating windows, since Hyprland doesn't say which apps do.
  */
 Scope {
     id: root
 
     readonly property int barHeight: 26
+    // Windows the shell opens for itself; they keep their own frame.
+    readonly property string settingsTitle: "illogical-impulse Settings"
+
+    function isShellWindow(win) {
+        return win.title === root.settingsTitle || String(win.class ?? "").toLowerCase().includes("quickshell");
+    }
 
     Variants {
         model: Quickshell.screens
@@ -39,6 +49,7 @@ Scope {
                 .split(",").map(name => name.trim().toLowerCase()).filter(name => name.length > 0)
             readonly property var floatingWindows: monitorInfo ? HyprlandData.windowList.filter(win =>
                 win.floating && win.monitor === hyprMonitor.id
+                && !root.isShellWindow(win)
                 && !overlay.skipped.includes(String(win.class ?? "").toLowerCase())) : []
 
             visible: Config.options.floatingTitleBars.enable && floatingWindows.length > 0
@@ -78,11 +89,28 @@ Scope {
 
                         required property var modelData
                         readonly property var win: modelData
+
+                        // While the bar is being dragged it shows the position it asked
+                        // Hyprland for. Otherwise it shows Hyprland's own position.
+                        property bool moving: false
+                        property real movedX: 0
+                        property real movedY: 0
+                        readonly property real shownX: moving ? movedX : win.at[0]
+                        readonly property real shownY: moving ? movedY : win.at[1]
+
                         // Window and monitor positions are both global, so the difference is the offset on this screen.
-                        x: win.at[0] - overlay.monitorInfo.x
-                        y: win.at[1] - overlay.monitorInfo.y - root.barHeight
+                        x: shownX - overlay.monitorInfo.x
+                        y: shownY - overlay.monitorInfo.y - root.barHeight
                         width: win.size[0]
                         height: root.barHeight
+
+                        // Once the drag ends, hand the position back to Hyprland's window list.
+                        // The delay covers the time Hyprland takes to apply the last move.
+                        Timer {
+                            id: settle
+                            interval: 400
+                            onTriggered: bar.moving = false
+                        }
 
                         Rectangle {
                             anchors.fill: parent
@@ -135,7 +163,7 @@ Scope {
                         // Drag the bar to move the window. The pointer is measured in the
                         // overlay's own coordinates, which don't move with the window.
                         MouseArea {
-                            id: drag
+                            id: mover
                             anchors.fill: parent
                             z: 1
                             cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
@@ -147,21 +175,29 @@ Scope {
 
                             onPressed: mouse => {
                                 const p = mapToItem(stage, mouse.x, mouse.y);
-                                drag.startX = p.x;
-                                drag.startY = p.y;
-                                drag.windowX = bar.win.at[0];
-                                drag.windowY = bar.win.at[1];
+                                mover.startX = p.x;
+                                mover.startY = p.y;
+                                mover.windowX = bar.win.at[0];
+                                mover.windowY = bar.win.at[1];
+                                settle.stop();
+                                bar.movedX = mover.windowX;
+                                bar.movedY = mover.windowY;
+                                bar.moving = true;
                                 Hyprland.dispatch(`hl.dsp.focus({ window = "address:${bar.win.address}" })`);
                             }
 
                             onPositionChanged: mouse => {
-                                if (!drag.pressed)
+                                if (!mover.pressed)
                                     return;
                                 const p = mapToItem(stage, mouse.x, mouse.y);
-                                const x = Math.round(drag.windowX + p.x - drag.startX);
-                                const y = Math.round(drag.windowY + p.y - drag.startY);
+                                const x = Math.round(mover.windowX + p.x - mover.startX);
+                                const y = Math.round(mover.windowY + p.y - mover.startY);
+                                bar.movedX = x;
+                                bar.movedY = y;
                                 Hyprland.dispatch(`hl.dsp.window.move({ x = ${x}, y = ${y}, relative = false, window = "address:${bar.win.address}" })`);
                             }
+
+                            onReleased: settle.restart()
                         }
                     }
                 }

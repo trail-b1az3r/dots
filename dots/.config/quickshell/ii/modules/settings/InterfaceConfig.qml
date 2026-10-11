@@ -40,6 +40,23 @@ ContentPage {
     }
 
     ContentSection {
+        icon: "view_carousel"
+        title: Translation.tr("Stage manager")
+
+        ConfigSwitch {
+            buttonIcon: "view_carousel"
+            text: Translation.tr("Stage manager strip")
+            checked: Config.options.stageManager.enable
+            onCheckedChanged: {
+                Config.options.stageManager.enable = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("Keeps the other windows on this workspace as live previews down the left edge. Click one to bring it forward")
+            }
+        }
+    }
+
+    ContentSection {
         icon: "keyboard"
         title: Translation.tr("Cheat sheet")
 
