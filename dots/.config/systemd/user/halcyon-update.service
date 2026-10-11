@@ -1,0 +1,6 @@
+[Unit]
+Description=Halcyon: check the repository for updates
+
+[Service]
+Type=oneshot
+ExecStart=%h/.config/hypr/hyprland/halcyon/update check

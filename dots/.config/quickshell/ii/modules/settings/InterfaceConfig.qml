@@ -40,36 +40,18 @@ ContentPage {
     }
 
     ContentSection {
-        icon: "auto_awesome"
-        title: Translation.tr("Halcyon logo")
-
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 16
-
-            Image {
-                source: Qt.resolvedUrl("../../assets/icons/halcyon-mono.svg")
-                sourceSize.width: 64
-                sourceSize.height: 64
-                Layout.preferredWidth: 64
-                Layout.preferredHeight: 64
-                fillMode: Image.PreserveAspectFit
-            }
-
-            StyledText {
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                color: Appearance.colors.colSubtext
-                text: Translation.tr("The Halcyon mark in black and white. It can replace the bar's top-left icon.")
-            }
-        }
+        icon: "view_carousel"
+        title: Translation.tr("Stage manager")
 
         ConfigSwitch {
-            buttonIcon: "flare"
-            text: Translation.tr("Show the Halcyon mark in the bar")
-            checked: Config.options.bar.topLeftIcon == "halcyon"
+            buttonIcon: "view_carousel"
+            text: Translation.tr("Stage manager strip")
+            checked: Config.options.stageManager.enable
             onCheckedChanged: {
-                Config.options.bar.topLeftIcon = checked ? "halcyon" : "spark";
+                Config.options.stageManager.enable = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("Keeps the other windows on this workspace as live previews down the left edge. Click one to bring it forward")
             }
         }
     }
@@ -94,7 +76,11 @@ ContentPage {
                   displayName: icon,
                   value: icon
                   }
-                })
+                }).concat([{
+                  displayName: "",
+                  iconSource: Qt.resolvedUrl("../../assets/icons/halcyon-mono.svg"),
+                  value: "halcyon"
+                }])
             }
         }
 

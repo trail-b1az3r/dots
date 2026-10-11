@@ -26,6 +26,7 @@ if status is-interactive
     alias q 'qs -c ii'
     # Halcyon: themes, effects and banners (`halcyon help`)
     alias halcyon ~/.config/hypr/hyprland/halcyon/halcyon-theme
+    alias halcyon-update ~/.config/hypr/hyprland/halcyon/update
     if test "$TERM" != "linux"
         alias ls 'eza --icons=auto'
     end

@@ -20,6 +20,7 @@ import qs.modules.ii.screenTranslator
 import qs.modules.ii.sessionScreen
 import qs.modules.ii.sidebarLeft
 import qs.modules.ii.sidebarRight
+import qs.modules.ii.stageManager
 import qs.modules.ii.overlay
 import qs.modules.ii.verticalBar
 import qs.modules.ii.wallpaperSelector
@@ -30,6 +31,7 @@ Scope {
     PanelLoader { component: Cheatsheet {} }
     PanelLoader { extraCondition: Config.options.dock.enable; component: Dock {} }
     PanelLoader { extraCondition: Config.options.floatingTitleBars.enable; component: FloatingTitleBars {} }
+    PanelLoader { extraCondition: Config.options.stageManager.enable; component: StageManager {} }
     PanelLoader { component: Lock {} }
     PanelLoader { component: MediaControls {} }
     PanelLoader { component: NotificationPopup {} }

@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+# Halcyon updater. Most changes are config files, so they don't need a full
+# ./setup install: `apply` pulls the repository and copies only the files that
+# changed. Anything under sdata/ or setup needs ./setup install instead, and
+# this says so.
+#
+#   update check    look for new commits; notify once for each new one (the default)
+#   update apply    pull, copy the changed dots/ files into $HOME, then reload
+#   update status   show what is installed and what is waiting
+#
+# Files being replaced are backed up first, under ~/.local/state/halcyon/backups.
+set -u
+
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon"
+REPO_FILE="$STATE/repo"          # written by ./setup install
+SEEN_FILE="$STATE/update-seen"   # the last upstream commit already announced
+AVAILABLE_FILE="$STATE/update-available"
+BACKUPS="$STATE/backups"
+
+die() { echo "halcyon update: $*" >&2; exit 1; }
+
+repo() {
+    [[ -r "$REPO_FILE" ]] || die "no repository recorded; run ./setup install once from the repository"
+    REPO="$(cat "$REPO_FILE")"
+    [[ -d "$REPO/.git" ]] || die "$REPO isn't a git repository any more"
+}
+
+notify() {
+    command -v notify-send >/dev/null 2>&1 && notify-send -a Halcyon -i software-update-available "$1" "$2"
+    echo "$1: $2"
+}
+
+check() {
+    repo
+    git -C "$REPO" fetch --quiet 2>/dev/null || die "couldn't reach the repository to check for updates"
+    local upstream local_head behind
+    upstream="$(git -C "$REPO" rev-parse --verify --quiet '@{u}')" || die "the repository has no upstream branch"
+    local_head="$(git -C "$REPO" rev-parse HEAD)"
+    if [[ "$upstream" == "$local_head" ]]; then
+        rm -f "$AVAILABLE_FILE"
+        return 0
+    fi
+    if ! git -C "$REPO" merge-base --is-ancestor HEAD "$upstream"; then
+        echo "The repository has commits that aren't upstream, so updates aren't applied automatically."
+        return 0
+    fi
+    behind="$(git -C "$REPO" rev-list --count "HEAD..$upstream")"
+    echo "$behind" > "$AVAILABLE_FILE"
+    if [[ "$(cat "$SEEN_FILE" 2>/dev/null)" != "$upstream" ]]; then
+        local body="$behind new change(s). Run: ~/.config/hypr/hyprland/halcyon/update apply"
+        if [[ -n "$(git -C "$REPO" diff --name-only HEAD "$upstream" -- sdata setup)" ]]; then
+            body+=" (then ./setup install, since install steps or packages changed)"
+        fi
+        notify "Halcyon update available" "$body"
+        echo "$upstream" > "$SEEN_FILE"
+    fi
+}
+
+apply() {
+    repo
+    git -C "$REPO" diff --quiet || die "the repository has uncommitted changes; commit or stash them first"
+    local before after changed ts backup copied=0 needs_install=0 hypr_changed=0
+    before="$(git -C "$REPO" rev-parse HEAD)"
+    git -C "$REPO" pull --ff-only --quiet || die "couldn't fast-forward the repository; see: git -C $REPO status"
+    after="$(git -C "$REPO" rev-parse HEAD)"
+    [[ "$before" == "$after" ]] && { echo "Already up to date."; rm -f "$AVAILABLE_FILE"; return 0; }
+
+    changed="$(git -C "$REPO" diff --name-only "$before" "$after")"
+    ts="$(date +%Y%m%d-%H%M%S)"
+    backup="$BACKUPS/$ts"
+    while IFS= read -r path; do
+        case "$path" in
+            sdata/*|setup) needs_install=1; continue ;;
+            dots/*) ;;
+            *) continue ;;
+        esac
+        local rel="${path#dots/}" src="$REPO/$path" dest="$HOME/${path#dots/}"
+        if [[ ! -e "$src" ]]; then
+            echo "removed upstream, left in place: $dest"
+            continue
+        fi
+        if [[ -e "$dest" ]] && ! cmp -s "$src" "$dest"; then
+            mkdir -p "$backup/$(dirname "$rel")"
+            cp -p "$dest" "$backup/$rel"
+        fi
+        mkdir -p "$(dirname "$dest")"
+        cp -p "$src" "$dest"
+        copied=$((copied + 1))
+        [[ "$rel" == .config/hypr/* ]] && hypr_changed=1
+    done <<< "$changed"
+
+    # Hyprland reads its config once; Quickshell reloads its own files as they change.
+    if (( hypr_changed )) && pgrep -x Hyprland >/dev/null; then
+        hyprctl reload >/dev/null 2>&1 || true
+    fi
+    echo "$after" > "$SEEN_FILE"
+    rm -f "$AVAILABLE_FILE"
+    [[ -d "$backup" ]] && echo "Replaced files were backed up to $backup"
+    notify "Halcyon updated" "$copied file(s) copied from $(git -C "$REPO" log -1 --format=%h "$after")"
+    if (( needs_install )); then
+        echo "Install steps or packages changed: run ./setup install in $REPO to finish."
+    fi
+}
+
+status() {
+    repo
+    echo "installed from: $(git -C "$REPO" rev-parse --short HEAD) in $REPO"
+    if [[ -f "$AVAILABLE_FILE" ]]; then
+        echo "updates waiting: $(cat "$AVAILABLE_FILE")"
+    else
+        echo "no updates waiting"
+    fi
+}
+
+case "${1:-check}" in
+    check) check ;;
+    apply) apply ;;
+    status) status ;;
+    *) die "usage: update [check|apply|status]" ;;
+esac

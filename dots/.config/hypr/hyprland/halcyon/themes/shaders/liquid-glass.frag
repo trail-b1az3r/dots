@@ -127,7 +127,9 @@ void main() {
         float unit = LENS_RADIUS / 90.0 * 1.26;  // cursor units to pixels
         float outline;
         arrowField((px - pointer * size) / unit, outline, normal);
-        float r = 1.0 + outline * unit / (0.25 * LENS_RADIUS);
+        // The bezel is wider than the squircle's (0.4 of the lens size, not 0.25), so the
+        // cursor's bend and rim are big enough to see on a 24px arrow.
+        float r = 1.0 + outline * unit / (0.4 * LENS_RADIUS);
 #else
         vec2 lensSize = LENS_RADIUS * bounceScale(pointer_last_active, clamp(BOUNCE, 0.0, 1.0));
         vec2 q = (px - pointer * size) / lensSize;  // lens space, rim at r = 1
