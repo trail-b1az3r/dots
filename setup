@@ -90,6 +90,7 @@ case ${SUBCMD_NAME} in
     fi
     source ${SUBCMD_DIR}/4.animated-fetch.sh
     source ${SUBCMD_DIR}/5.sleep-hook.sh
+    source ${SUBCMD_DIR}/6.updater.sh
     ;;
   install-deps)
     for function in ${print_os_group_id_functions[@]}; do
