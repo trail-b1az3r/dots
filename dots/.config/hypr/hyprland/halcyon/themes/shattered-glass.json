@@ -108,20 +108,17 @@
       {
         "leaf": "windowsIn",
         "speed": 3.0,
-        "curve": "glassPop",
-        "style": "popin 90%"
+        "curve": "glassOut"
       },
       {
         "leaf": "windowsOut",
         "speed": 2.2,
-        "curve": "glassOut",
-        "style": "popin 94%"
+        "curve": "glassOut"
       },
       {
         "leaf": "windowsMove",
         "speed": 3.2,
-        "curve": "glassSlide",
-        "style": "slide"
+        "curve": "glassSlide"
       },
       {
         "leaf": "layersIn",

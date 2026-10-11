@@ -106,14 +106,12 @@
       {
         "leaf": "windowsIn",
         "speed": 3.2,
-        "curve": "macSpring",
-        "style": "popin 88%"
+        "curve": "macEaseOut"
       },
       {
         "leaf": "windowsOut",
         "speed": 2.2,
-        "curve": "macEaseIn",
-        "style": "popin 92%"
+        "curve": "macEaseIn"
       },
       {
         "leaf": "fadeIn",
@@ -128,8 +126,7 @@
       {
         "leaf": "windowsMove",
         "speed": 3.4,
-        "curve": "macEaseOut",
-        "style": "slide"
+        "curve": "macEaseOut"
       },
       {
         "leaf": "workspaces",

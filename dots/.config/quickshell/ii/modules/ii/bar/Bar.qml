@@ -73,7 +73,8 @@ Scope {
                     Appearance.sizes.baseBarHeight + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)
 
                 onMustShowChanged: {
-                    if (mustShow && forcedHere) {
+                    // Only the focused window is resized, so a tiled window is never the one changed.
+                    if (mustShow && forcedHere && fullscreenWindow.address === Hyprland.activeToplevel?.address) {
                         resizeWindow(fullscreenWindow.address, "maximized");
                         resizedAddress = fullscreenWindow.address;
                     } else if (!mustShow && resizedNow) {
