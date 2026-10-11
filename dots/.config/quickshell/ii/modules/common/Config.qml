@@ -244,6 +244,17 @@ Singleton {
                         property real x: 400
                         property real y: 100
                     }
+                    // The revolver: a drum of installed games. Off until enabled.
+                    // Games are read from local files only, by halcyon-theme.
+                    property JsonObject revolver: JsonObject {
+                        property bool enable: false
+                        property string placementStrategy: "free"
+                        property real x: 1400
+                        property real y: 520
+                        property string source: "steam" // "steam" or "prismlauncher"
+                        property string mode: "recent" // "recent", "random" or "recommended"
+                        property int size: 300
+                    }
                 }
                 property string wallpaperPath: ""
                 property string thumbnailPath: ""
@@ -259,6 +270,10 @@ Singleton {
             }
 
             property JsonObject bar: JsonObject {
+                // How the top bar is filled: "layer" (upstream), "glass" (tinted
+                // and see-through), "outline" (no fill, a hairline frame) or
+                // "clear" (no fill at all). Themes choose one.
+                property string background: "layer"
                 property JsonObject autoHide: JsonObject {
                     property bool enable: false
                     property int hoverRegionWidth: 2
@@ -360,6 +375,15 @@ Singleton {
             property JsonObject dock: JsonObject {
                 property bool enable: false
                 property bool monochromeIcons: true
+                // The dock's shape: "island" (rounded rectangle), "pill" (fully
+                // round ends), "squircle" (large soft corners) or "edge" (square
+                // top, flush with the bottom of the screen).
+                property string style: "island"
+                // The dock's fill: "layer" (upstream), "glass" (tinted, see-through),
+                // or "outline" (a hairline frame with no fill).
+                property string background: "layer"
+                // Show the button that minimises every window on this workspace.
+                property bool showMinimizeAll: true
                 property real height: 60
                 property real hoverRegionHeight: 2
                 property bool pinnedOnStartup: false

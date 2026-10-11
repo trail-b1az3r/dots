@@ -75,5 +75,12 @@
   "banner": {
     "frame": "#F2C879",
     "glow": "#C8B8FF"
+  },
+  "shell_config": {
+    "dock.style": "edge",
+    "dock.background": "layer",
+    "bar.background": "outline",
+    "dock.enable": true,
+    "dock.hoverToReveal": false
   }
 }

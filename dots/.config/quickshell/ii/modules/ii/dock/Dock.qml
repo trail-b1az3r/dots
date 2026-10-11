@@ -2,6 +2,7 @@ import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import qs.modules.common.functions
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
@@ -84,13 +85,24 @@ Scope { // Scope
                         Rectangle { // The real rectangle that is visible
                             id: dockVisualBackground
                             property real margin: Appearance.sizes.elevationMargin
+                            readonly property string shape: Config.options?.dock.style ?? "island"
+                            readonly property string fill: Config.options?.dock.background ?? "layer"
                             anchors.fill: parent
                             anchors.topMargin: Appearance.sizes.elevationMargin
                             anchors.bottomMargin: Appearance.sizes.hyprlandGapsOut
-                            color: Appearance.colors.colLayer0
-                            border.width: 1
-                            border.color: Appearance.colors.colLayer0Border
-                            radius: Appearance.rounding.large
+                            // The shape and fill come from dock.style and dock.background,
+                            // which each theme sets. Upstream's values are the defaults.
+                            color: fill === "glass"
+                                ? ColorUtils.transparentize(Appearance.colors.colLayer0, 0.4)
+                                : fill === "outline" ? "transparent" : Appearance.colors.colLayer0
+                            border.width: fill === "outline" ? 2 : 1
+                            border.color: fill === "outline"
+                                ? Appearance.colors.colPrimary
+                                : Appearance.colors.colLayer0Border
+                            radius: shape === "pill" ? height / 2
+                                : shape === "squircle" ? Appearance.rounding.large * 1.6
+                                : shape === "edge" ? 0
+                                : Appearance.rounding.large
                         }
 
                         RowLayout {
@@ -103,6 +115,26 @@ Scope { // Scope
 
                             VerticalButtonGroup {
                                 Layout.topMargin: Appearance.sizes.hyprlandGapsOut // why does this work
+                                GroupButton {
+                                    // Minimise every window on this workspace, or bring them back.
+                                    visible: Config.options?.dock.showMinimizeAll ?? true
+                                    baseWidth: 35
+                                    baseHeight: 35
+                                    clickedWidth: baseWidth
+                                    clickedHeight: baseHeight
+                                    buttonRadius: Appearance.rounding.normal
+                                    onClicked: Quickshell.execDetached(["bash", "-c",
+                                        "$HOME/.config/hypr/hyprland/halcyon/minimize-all"])
+                                    contentItem: MaterialSymbol {
+                                        text: "minimize"
+                                        horizontalAlignment: Text.AlignHCenter
+                                        iconSize: Appearance.font.pixelSize.larger
+                                        color: Appearance.colors.colOnLayer0
+                                    }
+                                    StyledToolTip {
+                                        text: Translation.tr("Minimise all windows, or restore them")
+                                    }
+                                }
                                 GroupButton {
                                     // Pin button
                                     baseWidth: 35

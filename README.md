@@ -458,3 +458,23 @@ The desktop is [end-4](https://github.com/end-4)'s illogical-impulse and
 the work of its contributors. Halcyon is a small layer on top of it.
 Licensed under the GPL-3.0, like upstream. See [LICENSE](LICENSE). Some
 parts carry their own licences, listed in [licenses/](licenses/).
+
+## Fast fetch, the revolver, Star Rail and the dock
+
+- **`halcyon-theme fetch`** prints a system summary beside the Halcyon mark,
+  which turns in 3D with `--spin`. Every field is read from this machine.
+- **The dock** is styled per theme: its shape (`dock.style`: `island`,
+  `pill`, `squircle` or `edge`) and its fill (`dock.background`: `layer`,
+  `glass` or `outline`). The top bar takes `bar.background` the same way.
+  Each Halcyon theme sets its own values. The dock's minimise button and
+  **Super + Backspace** both minimise every window on the workspace, and
+  restore them when pressed again.
+- **The revolver** is an optional desktop widget, off by default. Turn it on
+  in Settings > Halcyon > Widgets & Star Rail. It reads your installed Steam
+  games or PrismLauncher instances from local files and launches a game only
+  when you click its centre.
+- **Star Rail characters:** `halcyon-theme starrail next` puts another
+  character on the Star Rail theme's banner. Portraits and the character list
+  come from the public StarRailRes index, and are downloaded only when you run
+  `starrail` or press its button. Halcyon ships none of that artwork, and
+  Honkai: Star Rail belongs to HoYoverse.
