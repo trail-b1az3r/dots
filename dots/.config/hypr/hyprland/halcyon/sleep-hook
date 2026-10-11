@@ -10,6 +10,8 @@
 # /usr/lib/systemd/system-sleep/halcyon-resume.
 set -u
 
+# Always exit 0. A hook that fails can get in the way of the sleep itself, so
+# nothing here may fail the transition: every command below is allowed to fail.
 [ "${1:-}" = post ] || exit 0
 
 USER_NAME="__USER__"
@@ -18,5 +20,6 @@ if systemctl --machine="${USER_NAME}@" --user is-active --quiet halcyon-resume.s
     exit 0
 fi
 
-systemctl restart NetworkManager.service
+systemctl restart NetworkManager.service || true
 systemctl --machine="${USER_NAME}@" --user restart openrazer-daemon.service 2>/dev/null || true
+exit 0

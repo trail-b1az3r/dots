@@ -399,7 +399,7 @@ ContentPage {
 
             ContentSubsection {
                 title: Translation.tr("Lens shape")
-                tooltip: Translation.tr("The arrow cursor's own shape takes the refraction instead of a round lens, and it doesn't bounce")
+                tooltip: Translation.tr("The arrow cursor's own shape takes the refraction instead of a round lens, and it doesn't bounce. Needs the Pointer lens on, the Full effects level, and a glass theme")
 
                 ConfigSelectionArray {
                     currentValue: Config.options.halcyon.glass.lensShape
