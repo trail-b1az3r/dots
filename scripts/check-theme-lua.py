@@ -131,6 +131,9 @@ def check(path):
             spec = lua_json(rest[0])
             if not isinstance(spec.get("match"), dict):
                 problems.append(f"{path}: window rule without a match table")
+            # Hyprland rejects a window rule rounding above 20 (the config fails to load).
+            if isinstance(spec.get("rounding"), (int, float)) and spec["rounding"] > 20:
+                problems.append(f"{path}: window rule rounding {spec['rounding']} is over Hyprland's maximum of 20")
     return problems
 
 

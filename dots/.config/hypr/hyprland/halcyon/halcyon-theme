@@ -547,7 +547,9 @@ def render_lua(theme_id, theme, effects, native_blur, shader_path=None, glass=No
     # Floating windows get rounder corners and an edge a shade darker than their
     # own colour. Themes that keep their plain windows (HyperNeo, Star Rail) don't.
     if theme_id not in PLAIN_WINDOW_THEMES:
-        float_rules = [f"{{ match = {{ float = true }}, rounding = {int(h.get('float_rounding', h['rounding'] + 6))}"]
+        # Hyprland rejects a window rule rounding above 20, so the rule is capped there.
+        float_rounding = min(20, int(h.get("float_rounding", h["rounding"] + 6)))
+        float_rules = [f"{{ match = {{ float = true }}, rounding = {float_rounding}"]
         edge = darker_rgba(h["active_border"])
         if edge:
             float_rules.append(f', border_color = "{edge}"')
@@ -590,8 +592,8 @@ def render_shader(theme, flip, glass=None):
         # The cursor's shape never wobbles, so its bounce is off.
         "BOUNCE": "0.000" if cursor_shape else f"{float(glass['lensBounce']):.3f}",
         "LENS_CURSOR": "1" if cursor_shape else "0",
-        # The cursor's outline is small, so its rim refraction is scaled to fit it.
-        "SHAPE_BEND": "0.5" if cursor_shape else "1.0",
+        # The arrow's rim gets the full bend (the shader widens its bezel to match).
+        "SHAPE_BEND": "1.0",
     }
     for name, value in knobs.items():
         # Shaders without a knob simply don't get it.
