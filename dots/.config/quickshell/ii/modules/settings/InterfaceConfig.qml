@@ -205,13 +205,13 @@ ContentPage {
 
         ConfigSwitch {
             buttonIcon: "vertical_align_bottom"
-            text: Translation.tr("Auto-hide")
+            text: Translation.tr("Auto-hide the bottom bar")
             checked: Config.options.dock.autoHide
             onCheckedChanged: {
                 Config.options.dock.autoHide = checked;
             }
             StyledToolTip {
-                text: Translation.tr("Hides while a window is focused. Move the mouse to the bottom edge to bring it back")
+                text: Translation.tr("Hides itself while a window is focused. Move the mouse down into the bottom area it sits in to show it again")
             }
         }
 
