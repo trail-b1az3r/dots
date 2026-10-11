@@ -43,16 +43,32 @@ Rectangle {
             text: key
         }
 
-        Image {
+        // The Halcyon mark, drawn in the key's text colour so it matches the other symbols.
+        Item {
             id: logo
             anchors.centerIn: parent
             visible: keyFace.isLogo
             width: root.pixelSize * 1.5
             height: width
-            sourceSize.width: width
-            sourceSize.height: height
-            fillMode: Image.PreserveAspectFit
-            source: Qt.resolvedUrl("../../../assets/icons/halcyon-key.svg")
+
+            Rectangle {
+                anchors.fill: parent
+                color: Appearance.m3colors.m3onBackground
+                layer.enabled: true
+                layer.effect: MaskMultiEffect {
+                    maskSource: logoImage
+                }
+            }
+
+            Image {
+                id: logoImage
+                anchors.fill: parent
+                visible: false
+                sourceSize.width: width
+                sourceSize.height: height
+                fillMode: Image.PreserveAspectFit
+                source: Qt.resolvedUrl("../../../assets/icons/halcyon-key.svg")
+            }
         }
     }
 }

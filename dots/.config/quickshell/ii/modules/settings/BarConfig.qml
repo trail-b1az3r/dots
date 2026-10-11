@@ -81,6 +81,18 @@ ContentPage {
                         }
                     ]
                 }
+
+                ConfigSwitch {
+                    buttonIcon: "fullscreen"
+                    text: Translation.tr("Hide in fullscreen")
+                    checked: Config.options.bar.autoHide.hideInFullscreen
+                    onCheckedChanged: {
+                        Config.options.bar.autoHide.hideInFullscreen = checked;
+                    }
+                    StyledToolTip {
+                        text: Translation.tr("While a window is fullscreen, even one an app didn't ask for, the bar steps aside so the window fills the screen")
+                    }
+                }
             }
         }
 

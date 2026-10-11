@@ -50,8 +50,10 @@ Scope {
 
             readonly property HyprlandMonitor hyprMonitor: Hyprland.monitorFor(modelData)
             readonly property bool focusedHere: hyprMonitor?.id === Hyprland.focusedMonitor?.id
+            // A fullscreen app or video takes the screen, so the strip steps aside.
+            readonly property bool fullscreenHere: HyprlandData.fullscreenOnMonitor(modelData.name)
             // With cross-monitor windows there is one strip, on the focused monitor; otherwise one per monitor.
-            readonly property bool showHere: Config.options.stageManager.enable
+            readonly property bool showHere: Config.options.stageManager.enable && !fullscreenHere
                 && (!Config.options.stageManager.crossMonitor || focusedHere)
             readonly property var stashed: HyprlandData.windowList.filter(win =>
                 (Config.options.stageManager.crossMonitor || win.monitor === hyprMonitor?.id)

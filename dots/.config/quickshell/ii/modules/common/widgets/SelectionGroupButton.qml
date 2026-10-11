@@ -43,15 +43,31 @@ GroupButton {
             }
         }
 
-        Image {
+        // A logo, drawn in the text colour like the other symbols, so it reads on light and dark.
+        Item {
             Layout.alignment: Qt.AlignVCenter
             visible: root.iconSource.toString().length > 0
-            source: root.iconSource
-            width: Appearance.font.pixelSize.larger * 1.4
-            height: width
-            sourceSize.width: width
-            sourceSize.height: height
-            fillMode: Image.PreserveAspectFit
+            implicitWidth: Appearance.font.pixelSize.larger * 1.4
+            implicitHeight: implicitWidth
+
+            Rectangle {
+                anchors.fill: parent
+                color: root.toggled ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSecondaryContainer
+                layer.enabled: true
+                layer.effect: MaskMultiEffect {
+                    maskSource: glyph
+                }
+            }
+
+            Image {
+                id: glyph
+                anchors.fill: parent
+                visible: false
+                source: root.iconSource
+                sourceSize.width: width
+                sourceSize.height: height
+                fillMode: Image.PreserveAspectFit
+            }
         }
 
         Item {

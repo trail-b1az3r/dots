@@ -27,7 +27,8 @@ Scope { // Scope
             screen: modelData
             visible: !GlobalStates.screenLocked
 
-            property bool reveal: root.pinned || (Config.options?.dock.hoverToReveal && dockMouseArea.containsMouse) || dockApps.requestDockShow || (!ToplevelManager.activeToplevel?.activated)
+            // Shown when it isn't set to auto-hide, pinned, hovered, requested, or no window is focused.
+            property bool reveal: root.pinned || !(Config.options?.dock.autoHide ?? true) || (Config.options?.dock.hoverToReveal && dockMouseArea.containsMouse) || dockApps.requestDockShow || (!ToplevelManager.activeToplevel?.activated)
 
             anchors {
                 bottom: true
