@@ -280,6 +280,9 @@
   "applications": {
     "terminal": "kitty",
     "browser": "",
+    "firefox": {
+      "aspectRatio": "off"
+    },
     "fileManager": "nautilus",
     "editor": "",
     "screenshotDir": "~/Pictures/Screenshots",

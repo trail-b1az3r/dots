@@ -50,6 +50,35 @@ ColumnLayout {
     }
 
     SettingsGroup {
+        title: "Firefox"
+
+        ColumnLayout {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            spacing: Theme.spacingMd
+
+            SettingRow {
+                title: "Window shape"
+                description: "Open Firefox as a floating window with the same 3:2 "
+                    + "proportions as the Surface Pro 5's display, and keep that "
+                    + "shape when you resize it. Only a floating window can hold a "
+                    + "shape, so Firefox will no longer tile while this is on. "
+                    + "Applies to Firefox windows opened afterwards."
+
+                GlassSegmented {
+                    options: [
+                        { value: "off", title: "Off" },
+                        { value: "surface-pro-5", title: "Surface Pro 5" }
+                    ]
+                    value: Config.get("applications.firefox.aspectRatio", "off")
+                    onSelected: value => Config.set("applications.firefox.aspectRatio", value)
+                }
+            }
+        }
+    }
+
+    SettingsGroup {
         title: "Capture"
 
         ColumnLayout {

@@ -483,10 +483,34 @@ Invalid values are refused with the reason, not silently coerced.
 | `assistant` | Provider, voice, microphone, wake word, privacy, local model settings, NixOrb settings. |
 | `hypernix` | Enable, widget, Spotlight, tray, job notifications, poll interval. |
 | `search` | Result limit, per-provider toggles, file roots and depth, web search engine. |
-| `applications` | Default terminal, browser, file manager, editor, capture directories. |
+| `applications` | Default terminal, browser, file manager, editor, capture directories, and Firefox's window shape. |
 | `accessibility` | Reduced motion, high contrast, large text, text scale, disable blur/animations, minimum transparency, focus ring. |
 | `privacy` | Clipboard history and limit, recent files, telemetry (off, and there is nothing to send). |
 | `keybinds` | Per-binding overrides, keyed by catalog ID. |
+
+### Firefox window shape
+
+Hold Firefox to the Surface Pro 5's 3:2 proportions (its display is
+2736 × 1824):
+
+```sh
+halcyon settings set applications.firefox.aspectRatio surface-pro-5
+halcyon settings set applications.firefox.aspectRatio off      # back to normal
+```
+
+Or use **Settings → Applications → Firefox**. Firefox then opens as a
+floating, centred window, as large a 3:2 as fits inside 85% of the
+monitor — whatever the monitor's own shape, portrait included — and
+stays 3:2 when you resize it with the mouse.
+
+Two things to know. Only a floating window can hold a shape, so Firefox
+stops tiling while this is on. And the rule applies when a window opens:
+close and reopen Firefox after changing it. The shape is the *window's*;
+the page area is a little shorter, because the tab strip and toolbar sit
+inside the 3:2.
+
+Firefox's Picture-in-Picture window keeps its own small, pinned size
+and position; the rules for it come later and take precedence.
 
 ### Presets
 

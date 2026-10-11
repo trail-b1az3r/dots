@@ -18,7 +18,7 @@ import tempfile
 import warnings
 from typing import Any, Iterable
 
-from . import hyprland, keybinds, paths
+from . import hyprland, keybinds, paths, windowshape
 
 
 class RenderError(RuntimeError):
@@ -776,7 +776,7 @@ def render_hypr_runtime_lua(
     out.append("\n")
 
     out.append(_workspace_rules(workspaces))
-    out.append(_window_rules(tokens, power))
+    out.append(_window_rules(tokens, power, settings))
     out.append(_layer_rules(tokens))
     return "".join(out)
 
@@ -820,7 +820,51 @@ def _workspace_rules(workspaces: dict[str, Any]) -> str:
     return "".join(out)
 
 
-def _window_rules(tokens: dict[str, Any], power: dict[str, Any]) -> str:
+#: Window classes Firefox presents on Wayland: the stock build, the
+#: Flatpak, and Debian's ESR. A class not listed here is simply not
+#: reshaped, which fails safe; add it to widen the rule.
+FIREFOX_CLASS = r"^(firefox|org\.mozilla\.firefox|firefox-esr)$"
+
+
+def _firefox_shape_rule(settings: dict[str, Any]) -> dict[str, Any] | None:
+    """The window rule that holds Firefox to the configured aspect ratio.
+
+    Returns None when the setting is off, or names something this build
+    does not know. An unknown value comes from a hand-edited file (`set`
+    refuses it), and a cosmetic preference has no business stopping the
+    desktop from being generated — so it is reported and ignored.
+    """
+    value = settings.get("applications", {}).get("firefox", {}).get(
+        "aspectRatio", windowshape.OFF
+    )
+    shape = windowshape.resolve(value)
+    if shape is None:
+        if not windowshape.is_known(value):
+            warnings.warn(
+                f"applications.firefox.aspectRatio = {value!r} is not one of "
+                f"{', '.join(windowshape.choices())}; leaving Firefox alone.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+        return None
+
+    return {
+        "name": "halcyon-firefox-aspect-ratio",
+        "match": {"class": FIREFOX_CLASS},
+        # Only a floating window can have a shape: a tiled one is sized
+        # by the layout, which fills whatever space it is given.
+        "float": True,
+        "center": True,
+        "size": windowshape.size_expression(shape),
+        # `size` sets the shape on open; this keeps it through a mouse
+        # resize, which would otherwise be free to change it.
+        "keep_aspect_ratio": True,
+    }
+
+
+def _window_rules(
+    tokens: dict[str, Any], power: dict[str, Any], settings: dict[str, Any]
+) -> str:
     out = ["-- Window rules.\n"]
     rules: list[dict[str, Any]] = [
         {
@@ -881,6 +925,15 @@ def _window_rules(tokens: dict[str, Any], power: dict[str, Any]) -> str:
             "opaque": True,
         },
     ]
+
+    # Hyprland applies matching rules in order and a later `size` or
+    # `move` overwrites an earlier one. Firefox's Picture-in-Picture
+    # window has the same class as the browser, so this rule goes in
+    # before the PiP and dialog rules rather than after them: they stay
+    # in charge of their own windows, and only the main window is shaped.
+    shape_rule = _firefox_shape_rule(settings)
+    if shape_rule is not None:
+        rules.insert(1, shape_rule)
 
     if tokens["quality"]["lowPower"]:
         rules.append(

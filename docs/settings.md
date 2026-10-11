@@ -292,6 +292,7 @@ Default applications and capture directories.
 |---|---|---|---|
 | `applications.terminal` | string | `"kitty"` | Terminal for `Super + Return` and for actions that need a shell. |
 | `applications.browser` | string | `""` | Browser for `Super + B`. Empty uses the XDG default. |
+| `applications.firefox.aspectRatio` | string | `"off"` | `off`, or `surface-pro-5` to open Firefox as a floating 3:2 window (the Surface Pro 5's 2736 × 1824 proportions), kept at 3:2 when resized. Only a floating window can hold a shape, so Firefox stops tiling while this is on. Applies to windows opened afterwards. |
 | `applications.fileManager` | string | `"nautilus"` | File manager for `Super + Shift + Return`. |
 | `applications.editor` | string | `""` | Editor for opening text files. Empty uses the XDG default. |
 | `applications.screenshotDir` | string | `"~/Pictures/Screenshots"` | Where screenshots are saved. |

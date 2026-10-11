@@ -17,7 +17,7 @@ import os
 import tempfile
 from typing import Any
 
-from . import SETTINGS_SCHEMA_VERSION, paths
+from . import SETTINGS_SCHEMA_VERSION, paths, windowshape
 
 
 class SettingsError(RuntimeError):
@@ -175,6 +175,24 @@ def _coerce(path: str, value: Any, reference: Any) -> Any:
     return value
 
 
+def choices_for(path: str) -> tuple[str, ...] | None:
+    """The values a setting is restricted to, or None if it is free-form.
+
+    A string setting cannot say what it accepts, and `glass.preset = "froasted"`
+    would be stored without complaint and then do nothing. Settings that
+    are really a pick from a list are declared here, so `set` can refuse
+    a typo and name what was meant.
+    """
+    return CHOICES.get(path)
+
+
+#: Dotted path -> the values it accepts. Derived from the code that
+#: interprets each value, so the list cannot drift from what works.
+CHOICES: dict[str, tuple[str, ...]] = {
+    "applications.firefox.aspectRatio": windowshape.choices(),
+}
+
+
 def set_value(path: str, value: Any) -> dict[str, Any]:
     """Set `a.b.c` in the user's overrides and return the merged result.
 
@@ -184,6 +202,12 @@ def set_value(path: str, value: Any) -> dict[str, Any]:
     """
     reference = get(path, defaults())
     value = _coerce(path, value, reference)
+
+    allowed = choices_for(path)
+    if allowed is not None and value not in allowed:
+        raise SettingsError(
+            f"{path} must be one of {', '.join(allowed)}; got {value!r}"
+        )
 
     overrides = user_settings()
     node = overrides

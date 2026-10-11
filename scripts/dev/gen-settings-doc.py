@@ -230,6 +230,12 @@ DESCRIPTIONS: dict[str, str] = {
 
     "applications.terminal": "Terminal for `Super + Return` and for actions that need a shell.",
     "applications.browser": "Browser for `Super + B`. Empty uses the XDG default.",
+    "applications.firefox.aspectRatio": (
+        "`off`, or `surface-pro-5` to open Firefox as a floating 3:2 window "
+        "(the Surface Pro 5's 2736 × 1824 proportions), kept at 3:2 when "
+        "resized. Only a floating window can hold a shape, so Firefox stops "
+        "tiling while this is on. Applies to windows opened afterwards."
+    ),
     "applications.fileManager": "File manager for `Super + Shift + Return`.",
     "applications.editor": "Editor for opening text files. Empty uses the XDG default.",
     "applications.screenshotDir": "Where screenshots are saved.",
