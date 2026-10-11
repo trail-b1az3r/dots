@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Halcyon's mark: a dark arch with a black sword upright beside a grey
-  trident, angled slightly.
+  Halcyon's mark: a dark, round-topped arch doorway with a keystone, a black
+  sword upright inside it and a grey trident angled beside it.
 
-  The arch is an original pointed shape, not the Arch Linux or BlackArch
-  logo, which are other projects' trademarks. The cracks are drawn as lines,
-  not gradients, so the mark stays one flat design at every size.
+  The doorway is Halcyon's own shape: a rounded arch, not a pointed peak, and
+  it belongs to no other project. The cracks are drawn as lines, not
+  gradients, so the mark stays one flat design at every size.
 
   Colours are explicit, not currentColor, so the mark keeps its contrast
   when an icon loader places it on a light or a dark background.
@@ -13,19 +13,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
   <title>Halcyon</title>
 
-  <!-- The arch: a pointed silhouette, dark. -->
-  <path d="M128 12 C150 52 212 88 226 152 L236 244 L20 244 L30 152 C44 88 106 52 128 12 Z"
+  <!-- The doorway: a round-topped arch on a flat base, dark. -->
+  <path d="M36 236 L36 118 A92 92 0 0 1 220 118 L220 236 Z"
         fill="#1A1E27" stroke="#343B4A" stroke-width="3" stroke-linejoin="round"/>
 
-  <!-- Cracks running down from the peak, drawn as broken lines. -->
+  <!-- The keystone at the top of the arch. -->
+  <path d="M116 26 L140 26 L146 48 L110 48 Z" fill="#262C39" stroke="#343B4A" stroke-width="2" stroke-linejoin="round"/>
+
+  <!-- Cracks in the stone, drawn as broken lines. -->
   <g fill="none" stroke="#3E4659" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M122 58 L116 80 L127 94 L117 112 L124 126"/>
-    <path d="M134 74 L142 96 L133 116 L146 132"/>
-    <path d="M96 150 L108 166 L100 186 L112 200"/>
+    <path d="M70 120 L64 142 L76 158 L68 176"/>
+    <path d="M196 132 L188 152 L199 168"/>
   </g>
 
   <!-- The black sword, upright on the left, with a thin edge so it reads on the dark arch. -->
-  <g transform="translate(128 128) scale(0.6) translate(-128 -128) translate(-14 0)">
+  <g transform="translate(128 128) scale(0.7) translate(-128 -128) translate(-16 0)">
     <g fill="#060708" stroke="#4A5366" stroke-width="2.5" stroke-linejoin="round">
       <path d="M100 18 L112 62 L112 186 L100 200 L88 186 L88 62 Z"/>
       <rect x="62" y="186" width="76" height="13" rx="5"/>
@@ -35,7 +37,7 @@
   </g>
 
   <!-- The grey trident, angled a little to the right of the sword. -->
-  <g transform="translate(128 128) scale(0.6) translate(-128 -128) translate(14 0) rotate(12 156 170)"
+  <g transform="translate(128 128) scale(0.7) translate(-128 -128) translate(14 0) rotate(12 156 170)"
      fill="#A4ADBD">
     <rect x="151" y="78" width="10" height="164" rx="4"/>
     <rect x="132" y="104" width="48" height="11" rx="4"/>
