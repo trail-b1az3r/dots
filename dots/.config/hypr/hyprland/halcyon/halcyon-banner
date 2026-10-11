@@ -58,9 +58,13 @@ def vertical_ramp(w, h, start, end, reverse=False):
 
 
 def cutout_mask(art):
-    """A cut-out keeps its own alpha, softened where it meets the bottom edge."""
+    """A cut-out keeps its own alpha, softened at the bottom edge and along its
+    left side, so no hard vertical edge is left where the character meets the
+    nebula."""
     w, h = art.size
-    return ImageChops.multiply(art.getchannel("A"), vertical_ramp(w, h, h * 0.9, h, reverse=True))
+    alpha = ImageChops.multiply(art.getchannel("A"), vertical_ramp(w, h, h * 0.9, h, reverse=True))
+    left = ramp(w, 0, w * 0.22).resize((w, h))
+    return ImageChops.multiply(alpha, left)
 
 
 def splash_mask(size):

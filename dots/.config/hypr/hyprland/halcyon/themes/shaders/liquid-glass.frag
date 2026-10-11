@@ -51,16 +51,20 @@ const float IDLE_END = 2.6;
 
 // Liquid bounce. Screen shaders get no pointer velocity, only the time since
 // it last moved (t), so the motion keys off that and the clock:
-//   * squash and stretch: each pointer move sets off one soft spring, which
-//     starts from rest and swells then settles, trading width for height;
+//   * squash and stretch: each pointer move sets off a soft spring that starts
+//     from rest, swells and wobbles, then settles, trading width for height;
 //   * slosh: waves travel round the rim in both directions, rising from rest
 //     after each move and dying away.
 vec2 bounceScale(float t, float amount) {
-    // Starts at rest and springs once, so a pointer event never snaps the
-    // lens to full strength; it swells smoothly and settles.
-    float spring = 1.5 * t * exp(-3.2 * t) * sin(9.0 * t);
+    // Starts from rest, then springs: the lens swells and wobbles, and the
+    // wobble dies away. Nothing jumps when the pointer moves.
+    float rise = 1.0 - exp(-14.0 * t);
+    float spring = 2.5 * rise * exp(-2.4 * t) * cos(12.0 * t);
+    // A quiver on top while the pointer is moving, faded in and out so it never steps.
+    float moving = 1.0 - smoothstep(0.0, 0.3, t);
+    float quiver = sin(time * 19.0) * moving * 0.4;
     float size = -0.12 * spring;
-    float squash = 0.14 * spring;
+    float squash = 0.14 * spring + 0.05 * quiver;
     return vec2(1.0 + (size + squash) * amount, 1.0 + (size - squash) * amount);
 }
 
