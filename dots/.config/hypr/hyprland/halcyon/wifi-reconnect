@@ -1,0 +1,295 @@
+#!/usr/bin/env python3
+"""Halcyon: bring back the last Wi-Fi network, after resume or by hand.
+
+Steps, in order. Each stops as soon as the network is up:
+
+  1. Find the last Wi-Fi connection NetworkManager used (Ethernet is ignored).
+  2. Get its password: first the one NetworkManager has saved. If there is
+     none, the password typed most often for this network at the Halcyon
+     prompt (kept encrypted). If there is neither, notify and ask in a terminal.
+  3. Connect with it.
+  4. nmcli connection down, then connection up.
+  5. nmcli --ask connection up, with the password typed into its prompt.
+  6. Notify that the user has to connect by hand.
+
+A password typed at the Halcyon prompt is saved (AES-256-CBC, key in the
+keyring) only after it connects. Passwords NetworkManager already has are not
+copied anywhere.
+
+Run it with --interactive from a terminal to type the password when asked.
+"""
+import getpass
+import json
+import os
+import pty
+import re
+import secrets
+import select
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+WIRELESS = "802-11-wireless"
+STATE = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local/state") / "halcyon/wifi"
+VAULT = STATE / "history.enc"
+KEY_FILE = STATE / "history.key"  # only when there is no keyring
+KEYRING_ATTRS = ["application", "halcyon", "purpose", "wifi-history"]
+OPEN_KEY_MGMT = ("", "none", "--")
+
+
+def run(cmd, **kwargs):
+    return subprocess.run(cmd, capture_output=True, text=True, check=False, **kwargs)
+
+
+def log(message):
+    print(f"halcyon-wifi: {message}", file=sys.stderr)
+
+
+def notify(title, body):
+    log(f"{title}: {body}")
+    if shutil.which("notify-send"):
+        run(["notify-send", "-a", "Halcyon", title, body])
+
+
+def unescape(text):
+    # nmcli -t escapes ':' and '\' with a backslash.
+    return re.sub(r"\\(.)", r"\1", text)
+
+
+def last_wifi():
+    """Name of the Wi-Fi profile activated most recently, or None."""
+    out = run(["nmcli", "-t", "-f", "NAME,TYPE,TIMESTAMP", "connection", "show"]).stdout
+    best_name, best_time = None, 0
+    for line in out.splitlines():
+        # The name may hold colons; type and timestamp never do.
+        name, _, rest = line.rpartition(":")
+        name, _, kind = name.rpartition(":")
+        if kind != WIRELESS or not rest.isdigit():
+            continue
+        if int(rest) > best_time:
+            best_name, best_time = unescape(name), int(rest)
+    return best_name
+
+
+def profile_value(name, field):
+    out = run(["nmcli", "-s", "-g", field, "connection", "show", "id", name])
+    return out.stdout.strip() if out.returncode == 0 else ""
+
+
+def key_management(name):
+    return profile_value(name, "802-11-wireless-security.key-mgmt")
+
+
+# The Halcyon history: passwords typed at the prompt that connected, counted per network.
+
+def history_key():
+    """The key for the history file. In the keyring if there is one, else a file only you can read."""
+    if shutil.which("secret-tool"):
+        found = run(["secret-tool", "lookup", *KEYRING_ATTRS]).stdout.strip()
+        if found:
+            return found
+        if VAULT.exists():
+            # The keyring is locked or can't be read. A new key would make the
+            # old history unreadable, so keep it.
+            return None
+        key = secrets.token_hex(32)
+        stored = subprocess.run(["secret-tool", "store", "--label=Halcyon Wi-Fi history", *KEYRING_ATTRS],
+                                input=key, text=True, capture_output=True, check=False)
+        if stored.returncode == 0:
+            return key
+    if KEY_FILE.is_file():
+        return KEY_FILE.read_text(encoding="utf-8").strip()
+    if VAULT.exists():
+        return None
+    key = secrets.token_hex(32)
+    STATE.mkdir(parents=True, exist_ok=True)
+    fd = os.open(KEY_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(key)
+    return key
+
+
+def openssl(args, data, key):
+    """Run openssl with the key on a pipe, so it never appears in a command line or a file."""
+    read_fd, write_fd = os.pipe()
+    try:
+        os.write(write_fd, key.encode())
+        os.close(write_fd)
+        result = subprocess.run(["openssl", "enc", "-aes-256-cbc", "-pbkdf2", "-iter", "200000",
+                                 "-md", "sha256", "-pass", f"fd:{read_fd}", *args],
+                                input=data, capture_output=True, pass_fds=(read_fd,), check=False)
+    finally:
+        os.close(read_fd)
+    return result
+
+
+def load_history(key):
+    """The history as {network: {password: count}}. None if it exists but can't be read."""
+    if key is None:
+        return None
+    if not VAULT.exists():
+        return {}
+    result = openssl(["-d"], VAULT.read_bytes(), key)
+    if result.returncode != 0:
+        return None
+    return json.loads(result.stdout.decode())
+
+
+def save_history(history, key):
+    STATE.mkdir(parents=True, exist_ok=True)
+    result = openssl([], json.dumps(history).encode(), key)
+    if result.returncode != 0:
+        raise RuntimeError("could not encrypt the Wi-Fi history")
+    temp = VAULT.with_suffix(".tmp")
+    fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "wb") as handle:
+        handle.write(result.stdout)
+    os.replace(temp, VAULT)
+
+
+def most_typed(history, name):
+    counts = (history or {}).get(name, {})
+    return max(counts, key=counts.get) if counts else ""
+
+
+def record_typed(name, password):
+    key = history_key()
+    history = load_history(key)
+    if history is None:
+        log("the Wi-Fi history can't be read, so this password was not saved")
+        return
+    counts = history.setdefault(name, {})
+    counts[password] = counts.get(password, 0) + 1
+    save_history(history, key)
+
+
+# Connecting
+
+def ask_password(name):
+    """The password typed at the terminal. Empty if there is no terminal to type into."""
+    try:
+        return getpass.getpass(f"Wi-Fi password for {name}: ")
+    except EOFError:
+        return ""
+
+
+def set_password(name, password):
+    return run(["nmcli", "connection", "modify", "id", name,
+                "802-11-wireless-security.psk", password]).returncode == 0
+
+
+def up(name):
+    return run(["nmcli", "-w", "25", "connection", "up", "id", name]).returncode == 0
+
+
+def down(name):
+    run(["nmcli", "connection", "down", "id", name])
+
+
+def up_with_typed_password(name, password):
+    """`nmcli --ask connection up`, with the password typed into its prompt."""
+    master, slave = pty.openpty()
+    try:
+        proc = subprocess.Popen(["nmcli", "--ask", "connection", "up", "id", name],
+                                stdin=slave, stdout=slave, stderr=slave, close_fds=True)
+    finally:
+        os.close(slave)
+    typed = False
+    seen = b""
+    deadline = time.monotonic() + 60
+    while time.monotonic() < deadline:
+        ready, _, _ = select.select([master], [], [], 0.5)
+        if not ready:
+            if proc.poll() is not None:
+                break
+            continue
+        try:
+            chunk = os.read(master, 4096)
+        except OSError:  # nmcli closed its end of the terminal
+            break
+        if not chunk:
+            break
+        seen = (seen + chunk)[-200:]
+        if not typed and b"assword" in seen.lower():
+            os.write(master, password.encode() + b"\n")
+            typed = True
+    try:
+        proc.wait(timeout=30)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+    os.close(master)
+    return typed and proc.returncode == 0
+
+
+def reconnect(name, password, source, interactive):
+    """Steps 3 to 6. Returns (password, typed) for the connection that worked, or None.
+
+    typed is True when the password was typed at the prompt just now, so it is worth keeping.
+    """
+    open_network = key_management(name) in OPEN_KEY_MGMT
+    if password and source != "saved":
+        # NetworkManager has no copy of this one yet, so it has to be saved to the profile to connect.
+        set_password(name, password)
+    typed_now = source == "typed"
+    if up(name):
+        return password, typed_now
+    log("first connection attempt failed; cycling the profile")
+    down(name)
+    if up(name):
+        return password, typed_now
+    if password and not open_network and up_with_typed_password(name, password):
+        return password, typed_now
+    if interactive and not open_network:
+        typed = ask_password(name)
+        if typed and set_password(name, typed) and up(name):
+            return typed, True
+    return None
+
+
+def main(argv):
+    interactive = "--interactive" in argv or sys.stdin.isatty()
+
+    name = last_wifi()
+    if not name:
+        notify("No Wi-Fi to reconnect", "NetworkManager has no Wi-Fi connection that was used before.")
+        return 1
+
+    password, source = "", ""
+    if key_management(name) in OPEN_KEY_MGMT:
+        log(f"{name} is an open network; no password needed")
+    else:
+        saved = profile_value(name, "802-11-wireless-security.psk")
+        if saved:
+            password, source = saved, "saved"
+        else:
+            history = load_history(history_key())
+            password = most_typed(history, name)
+            source = "history" if password else ""
+
+    if not password and key_management(name) not in OPEN_KEY_MGMT:
+        if not interactive:
+            notify("Wi-Fi password needed",
+                   f"No password is saved for {name}. Type it: run ~/.config/hypr/hyprland/halcyon/wifi-reconnect in a terminal.")
+            return 1
+        password = ask_password(name)
+        source = "typed"
+        if not password:
+            notify("Wi-Fi not reconnected", f"No password was entered for {name}.")
+            return 1
+
+    result = reconnect(name, password, source, interactive)
+    if result is not None:
+        connected, typed = result
+        log(f"connected to {name}")
+        if typed and connected:
+            record_typed(name, connected)
+        return 0
+
+    notify("Wi-Fi not reconnected", f"Could not reconnect to {name}. Connect to it by hand.")
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
