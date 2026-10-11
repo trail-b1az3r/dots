@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import QtQuick.Layouts
 import qs.services
 import qs.modules.common
@@ -377,7 +378,7 @@ ContentPage {
                 page.applyCursor();
             }
             StyledToolTip {
-                text: Translation.tr("Off uses illogical-impulse's Bibata cursor")
+                text: Translation.tr("Off uses the standard Bibata cursor")
             }
         }
 

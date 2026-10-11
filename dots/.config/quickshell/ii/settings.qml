@@ -79,7 +79,7 @@ ApplicationWindow {
 
     visible: true
     onClosing: Qt.quit()
-    title: "illogical-impulse Settings"
+    title: "Halcyon Settings"
 
     Component.onCompleted: {
         MaterialThemeLoader.reapplyTheme()

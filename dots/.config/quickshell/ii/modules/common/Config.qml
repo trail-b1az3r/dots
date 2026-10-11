@@ -659,6 +659,9 @@ Singleton {
             // Other windows kept as live previews down the left edge; click one to bring it forward.
             property JsonObject stageManager: JsonObject {
                 property bool enable: false
+                property bool crossWorkspace: false // Also show windows on other workspaces
+                property bool crossMonitor: false // Also show windows on other monitors, in one strip on the focused monitor
+                property int previewFps: 18 // How often the previews refresh, 1-50
             }
 
             property JsonObject hacks: JsonObject {

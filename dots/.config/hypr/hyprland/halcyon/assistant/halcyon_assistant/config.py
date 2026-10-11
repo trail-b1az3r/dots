@@ -129,5 +129,5 @@ def store_api_key(key_id, value):
     if data is None:
         data = {}
     data.setdefault("apiKeys", {})[key_id] = value.strip()
-    subprocess.run(["secret-tool", "store", "--label=illogical-impulse Safe Storage", *KEYRING_ATTRS],
+    subprocess.run(["secret-tool", "store", "--label=Halcyon Safe Storage", *KEYRING_ATTRS],
                    input=json.dumps(data), text=True, check=True, timeout=30)
