@@ -116,7 +116,7 @@ AbstractBackgroundWidget {
             id: chamber
 
             required property int index
-            readonly property var data: root.chambers[index]
+            readonly property var entry: root.chambers[index]
             readonly property real angle: root.spin + index * root.step - Math.PI / 2
 
             width: root.size * 0.24
@@ -134,7 +134,7 @@ AbstractBackgroundWidget {
                 anchors.fill: parent
                 anchors.leftMargin: 4
                 anchors.rightMargin: 4
-                text: chamber.data ? chamber.data.name : ""
+                text: chamber.entry ? chamber.entry.name : ""
                 color: chamber.index === root.selected ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer2
                 font.family: Appearance.font.family.main
                 font.pixelSize: 12
