@@ -24,6 +24,8 @@ precision highp float;
 #define STRENGTH 0.5
 #define LENS_RADIUS 90.0
 #define BOUNCE 0.8
+#define LENS_CURSOR 0    // 1: the lens takes the arrow cursor's shape
+#define SHAPE_BEND 1.0   // scales the refraction at the rim, for the cursor's small shape
 
 in vec2 v_texcoord;
 uniform sampler2D tex;
@@ -73,6 +75,38 @@ float liquidWave(float angle, float t, float amount) {
                    + 0.035 * sin(5.0 * angle - time * 11.0 + 0.7));
 }
 
+// The normal arrow cursor, in cursor units with its tip at the origin. Used
+// when the lens takes the cursor's shape (LENS_CURSOR 1).
+const int ARROW_N = 7;
+const vec2 ARROW[ARROW_N] = vec2[ARROW_N](
+    vec2(0.0, 0.0), vec2(0.0, 15.5), vec2(3.6, 11.9), vec2(6.4, 18.2),
+    vec2(8.7, 17.2), vec2(5.9, 11.2), vec2(11.0, 11.2));
+
+// Signed distance from p to the arrow's outline, in cursor units (negative
+// inside), and the outward normal at the nearest point.
+void arrowField(vec2 p, out float dist, out vec2 normal) {
+    float best = 1e9;
+    vec2 dir = vec2(0.0, 1.0);
+    bool inside = false;
+    for (int i = 0; i < ARROW_N; i++) {
+        vec2 a = ARROW[i];
+        vec2 b = ARROW[(i + 1) % ARROW_N];
+        vec2 e = b - a;
+        float h = clamp(dot(p - a, e) / dot(e, e), 0.0, 1.0);
+        vec2 d = p - a - e * h;
+        float len = length(d);
+        if (len < best) {
+            best = len;
+            dir = d / max(len, 1e-6);
+        }
+        // Even-odd crossing test for the inside.
+        if ((a.y > p.y) != (b.y > p.y) && p.x < a.x + (p.y - a.y) * (b.x - a.x) / (b.y - a.y))
+            inside = !inside;
+    }
+    dist = inside ? -best : best;
+    normal = inside ? -dir : dir;
+}
+
 void main() {
     vec2 size = max(screen_size, vec2(1.0));
     vec2 px = v_texcoord * size;
@@ -86,17 +120,26 @@ void main() {
 #if FLIP_POINTER_Y
         pointer.y = 1.0 - pointer.y;
 #endif
+        vec2 normal = vec2(0.0, 1.0);
+#if LENS_CURSOR
+        // The arrow cursor. Its outline is the rim (r = 1), so the bezel,
+        // refraction and shadow below follow its shape. It never bounces.
+        float unit = LENS_RADIUS / 90.0 * 1.26;  // cursor units to pixels
+        float outline;
+        arrowField((px - pointer * size) / unit, outline, normal);
+        float r = 1.0 + outline * unit / (0.25 * LENS_RADIUS);
+#else
         vec2 lensSize = LENS_RADIUS * bounceScale(pointer_last_active, clamp(BOUNCE, 0.0, 1.0));
         vec2 q = (px - pointer * size) / lensSize;  // lens space, rim at r = 1
         vec2 aq = abs(q);
         float r = pow(pow(aq.x, SQUIRCLE) + pow(aq.y, SQUIRCLE), 1.0 / SQUIRCLE);
         r /= 1.0 + liquidWave(atan(q.y, q.x), pointer_last_active, clamp(BOUNCE, 0.0, 1.0));
+        // Outward normal of the squircle at this point.
+        vec2 grad = sign(q) * pow(aq + 1e-5, vec2(SQUIRCLE - 1.0));
+        normal = normalize(grad + 1e-6);
+#endif
 
         if (r < 1.0 + SHADOW_WIDTH) {
-            // Outward normal of the squircle at this point.
-            vec2 grad = sign(q) * pow(aq + 1e-5, vec2(SQUIRCLE - 1.0));
-            vec2 normal = normalize(grad + 1e-6);
-
             if (r < 1.0) {
                 float k = awake * strength;
                 // 0 across the flat middle, 1 at the rim.
@@ -104,7 +147,7 @@ void main() {
                 // A rounded bezel: refraction grows steeply towards the edge,
                 // so what is just outside the lens wraps into it.
                 float bend = t * t * (3.0 - 2.0 * t) * t;
-                vec2 offset = -normal * bend * BEND * k - (px - pointer * size) * MAGNIFY * (1.0 - t) * k;
+                vec2 offset = -normal * bend * BEND * SHAPE_BEND * k - (px - pointer * size) * MAGNIFY * (1.0 - t) * k;
                 vec2 uv = clamp((px + offset) / size, 0.0, 1.0);
                 // Dispersion lives in the inner part of the bezel only. Further
                 // out the bezel squeezes many pixels onto one, and even a

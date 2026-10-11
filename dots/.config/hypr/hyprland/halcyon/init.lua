@@ -45,5 +45,5 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE " ..
         "XDG_RUNTIME_DIR DISPLAY XDG_CURRENT_DESKTOP; " ..
         "systemctl --user daemon-reload; " ..
-        "systemctl --user restart halcyon-quickshell.service halcyon-gpu-guard.service")
+        "systemctl --user restart halcyon-quickshell.service halcyon-gpu-guard.service halcyon-resume.service")
 end)

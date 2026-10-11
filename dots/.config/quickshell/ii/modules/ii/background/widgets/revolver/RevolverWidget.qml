@@ -293,6 +293,11 @@ AbstractBackgroundWidget {
         height: root.stageHeight
         scale: root.scaleFactor
         transformOrigin: Item.TopLeft
+        // Under a glass theme the drum is a little see-through, like the glass around it.
+        opacity: Config.options.halcyon.glassTheme ? 0.8 : 1.0
+        Behavior on opacity {
+            NumberAnimation { duration: Appearance.animation.elementMoveFast.duration }
+        }
 
         Item {
             id: drumArea

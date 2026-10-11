@@ -84,6 +84,7 @@ Singleton {
             // them. "theme" is written by halcyon-theme to show what is active.
             property JsonObject halcyon: JsonObject {
                 property string theme: "" // Active theme id, "" for none
+                property bool glassTheme: false // Written by halcyon-theme: the active theme has glass windows or a glass shader
                 property string effects: "default" // "default" (theme's own), "full", "light", "off"
                 // Star Rail characters: the random pick and the list refresh only work when on.
                 property JsonObject starRail: JsonObject {
@@ -96,6 +97,7 @@ Singleton {
                     property real strength: 0.5 // 0-1, how strong the screen effects are
                     property int lensSize: 90 // Radius of the pointer lens, in pixels
                     property real lensBounce: 0.8 // 0-1, how much the lens sloshes, squashes and springs back as the pointer moves and stops
+                    property string lensShape: "round" // "round": a squircle around the pointer; "cursor": the arrow cursor's own shape, which never bounces
                     property real windowOpacity: 0.96 // Focused windows, for themes with glass windows
                     property real inactiveWindowOpacity: 0.9 // Other windows
                     property int blurSize: 8 // Frost behind glass windows and panels
@@ -645,6 +647,13 @@ Singleton {
             property JsonObject windows: JsonObject {
                 property bool showTitlebar: true // Client-side decoration for shell apps
                 property bool centerTitle: true
+            }
+
+            // Title bars drawn over floating windows, for apps that don't draw their own.
+            property JsonObject floatingTitleBars: JsonObject {
+                property bool enable: false
+                // Comma-separated window classes that draw their own title bar, e.g. "steam, firefox"
+                property string skipClasses: ""
             }
 
             property JsonObject hacks: JsonObject {

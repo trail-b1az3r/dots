@@ -193,6 +193,12 @@ hl.bind("SUPER + F", hl.dsp.window.fullscreen({ mode = "fullscreen", action = "t
     { description = "Window: Fullscreen" })
 hl.bind("SUPER + ALT + F", hl.dsp.window.fullscreen_state({ internal = 0, client = 3, action = "toggle" }),
     { description = "Window: Fullscreen spoof" })
+-- Forces the focused window to fill the screen while the app still thinks it
+-- is windowed, for games that won't go fullscreen on their own. Toggle again to undo.
+-- Super + J and Super + K are already the bar and the on-screen keyboard, and
+-- Hyprland can't bind two plain keys together, so this one is Super + Shift + K.
+hl.bind("SUPER + SHIFT + K", hl.dsp.window.fullscreen_state({ internal = 2, client = 0, action = "toggle" }),
+    { description = "Window: Force fullscreen, app stays windowed" })
 hl.bind("SUPER + P", hl.dsp.window.pin(), { description = "Window: Pin" })
 
 --#/# bind = SUPER+ALT, Hash,, -- Send to workspace -- (1, 2, 3,...)

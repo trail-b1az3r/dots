@@ -1,0 +1,10 @@
+[Unit]
+Description=Halcyon: restart the network and Razer tools after suspend
+
+[Service]
+ExecStart=%h/.config/hypr/hyprland/halcyon/resume
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
