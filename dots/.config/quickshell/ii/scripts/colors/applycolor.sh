@@ -33,13 +33,21 @@ apply_kitty() {
     echo "Template file not found for Kitty theme. Skipping that."
     return
   fi
-  # Copy template
+  # Without the material colours there is nothing to put in the template, and
+  # writing it out as-is leaves "#$term0 #" placeholders for kitty to reject.
+  if [ "${#colorlist[@]}" -eq 0 ]; then
+    echo "No generated colours yet for Kitty. Skipping that."
+    return
+  fi
+  # Fill a copy, then move it into place, so kitty never reads a half-filled file.
   mkdir -p "$STATE_DIR"/user/generated/terminal
-  cp "$SCRIPT_DIR/terminal/kitty-theme.conf" "$STATE_DIR"/user/generated/terminal/kitty-theme.conf
+  local tmp="$STATE_DIR"/user/generated/terminal/kitty-theme.conf.tmp
+  cp "$SCRIPT_DIR/terminal/kitty-theme.conf" "$tmp"
   # Apply colors
   for i in "${!colorlist[@]}"; do
-    sed -i "s/${colorlist[$i]} #/${colorvalues[$i]#\#}/g" "$STATE_DIR"/user/generated/terminal/kitty-theme.conf
+    sed -i "s/${colorlist[$i]} #/${colorvalues[$i]#\#}/g" "$tmp"
   done
+  mv "$tmp" "$STATE_DIR"/user/generated/terminal/kitty-theme.conf
 
   # Reload
   if ! pgrep -f kitty >/dev/null; then

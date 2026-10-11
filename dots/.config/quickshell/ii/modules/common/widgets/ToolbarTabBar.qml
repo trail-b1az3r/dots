@@ -56,7 +56,7 @@ Item {
         implicitHeight: contentItem.children[root.currentIndex]?.implicitHeight ?? 0
         radius: height / 2
         // Animation
-        property Item targetItem: contentItem.children[root.currentIndex]
+        property Item targetItem: contentItem.children[root.currentIndex] ?? null
         AnimatedTabIndexPair {
             id: leftBound
             idx1Duration: 50

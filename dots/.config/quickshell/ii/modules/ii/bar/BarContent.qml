@@ -135,6 +135,7 @@ Item { // Bar content region
 
             Workspaces {
                 id: workspacesWidget
+                property real widgetPadding: 4
                 Layout.fillHeight: true
                 MouseArea {
                     // Right-click to toggle overview

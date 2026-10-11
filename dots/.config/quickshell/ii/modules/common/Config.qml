@@ -444,6 +444,11 @@ Singleton {
             }
 
             property JsonObject notifications: JsonObject {
+                // Pin the popups to one monitor, by name, instead of the focused one.
+                property JsonObject forceMonitor: JsonObject {
+                    property bool enable: false
+                    property string name: ""
+                }
                 property int timeout: 7000
                 property JsonObject monitor: JsonObject {
                     property bool enable: false
