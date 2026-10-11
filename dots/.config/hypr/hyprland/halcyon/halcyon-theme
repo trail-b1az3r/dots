@@ -12,6 +12,9 @@
                                         active theme (the Settings page runs
                                         this for you)
     halcyon-theme settings              open the Settings app
+    halcyon-theme fetch [--spin [S]]    a system summary beside the mark; --spin
+                                        turns it for S seconds (default 3)
+    halcyon-theme fetch --json          the same fields as JSON
 
     halcyon-theme cursor                show the cursor setting
     halcyon-theme cursor on|off         the Halcyon Glass cursor, or upstream's
@@ -1109,7 +1112,24 @@ def cmd_menu(_args):
     return cmd_off([])
 
 
+def cmd_fetch(args):
+    """A system summary beside the Halcyon mark, turning in 3D (see halcyon_fetch)."""
+    import argparse
+
+    sys.path.insert(0, str(HERE))
+    import halcyon_fetch
+
+    parser = argparse.ArgumentParser(prog="halcyon-theme fetch")
+    parser.add_argument("--spin", nargs="?", type=float, const=halcyon_fetch.SPIN_SECONDS,
+                        default=None, metavar="SECONDS",
+                        help="turn the mark for SECONDS before it settles (terminal only)")
+    parser.add_argument("--json", action="store_true", help="print the fields as JSON")
+    options = parser.parse_args(args)
+    return halcyon_fetch.run(spin_seconds=options.spin, as_json_out=options.json)
+
+
 COMMANDS = {
+    "fetch": cmd_fetch,
     "list": cmd_list, "current": cmd_current, "apply": cmd_apply, "off": cmd_off,
     "menu": cmd_menu, "check": cmd_check, "render": cmd_render, "detach": cmd_detach,
     "effects": cmd_effects, "banner": cmd_banner, "refresh": cmd_refresh,
