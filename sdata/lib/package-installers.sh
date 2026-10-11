@@ -69,10 +69,20 @@ install-uv(){
 install-python-packages(){
   UV_NO_MODIFY_PATH=1
   ILLOGICAL_IMPULSE_VIRTUAL_ENV=$XDG_STATE_HOME/quickshell/.venv
-  x mkdir -p $(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)
-  # we need python 3.12 https://github.com/python-pillow/Pillow/issues/8089
-  try uv venv --prompt .venv $(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV) -p 3.12
-  x source $(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate
+  local venv=$(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)
+  if [[ -x "$venv/bin/python" ]]; then
+    # An environment that already works is reused. uv would ask before replacing it.
+    echo "Reusing the Python environment at $venv"
+  else
+    if [[ -e "$venv" ]]; then
+      # A folder without a working interpreter is moved aside, never deleted.
+      x mv "$venv" "$venv.bak-$(date +%s)"
+    fi
+    x mkdir -p "$(dirname "$venv")"
+    # we need python 3.12 https://github.com/python-pillow/Pillow/issues/8089
+    try uv venv --prompt .venv "$venv" -p 3.12
+  fi
+  x source "$venv/bin/activate"
   if [[ "$INSTALL_VIA_NIX" = true ]]; then
     x nix-shell ${REPO_ROOT}/sdata/uv/shell.nix --run "uv pip install -r ${REPO_ROOT}/sdata/uv/requirements.txt"
   else
