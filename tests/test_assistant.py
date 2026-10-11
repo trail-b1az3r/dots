@@ -246,6 +246,8 @@ class ClaudeCodeTest(unittest.TestCase):
     def test_errors_explain_what_to_do(self):
         cases = [(("", "Not logged in · Please run /login"), "halcyon assistant login"),
                  ((json.dumps({"result": "Login expired", "is_error": True}), ""), "expired"),
+                 ((json.dumps({"result": "Failed to authenticate: OAuth session expired and could not "
+                                         "be refreshed", "is_error": True}), ""), "halcyon assistant login"),
                  ((json.dumps({"result": "overloaded", "is_error": True}), ""), "overloaded")]
         for output, expected in cases:
             provider = providers.ClaudeCode(run=self.Run(output), workdir=tempfile.mkdtemp())
