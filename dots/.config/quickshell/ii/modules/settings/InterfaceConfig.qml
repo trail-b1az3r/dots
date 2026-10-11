@@ -8,6 +8,41 @@ ContentPage {
     forceWidth: true
 
     ContentSection {
+        icon: "auto_awesome"
+        title: Translation.tr("Halcyon logo")
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 16
+
+            Image {
+                source: Qt.resolvedUrl("../../assets/icons/halcyon-mono.svg")
+                sourceSize.width: 64
+                sourceSize.height: 64
+                Layout.preferredWidth: 64
+                Layout.preferredHeight: 64
+                fillMode: Image.PreserveAspectFit
+            }
+
+            StyledText {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                color: Appearance.colors.colSubtext
+                text: Translation.tr("The Halcyon mark in black and white. It can replace the bar's top-left icon.")
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "flare"
+            text: Translation.tr("Show the Halcyon mark in the bar")
+            checked: Config.options.bar.topLeftIcon == "halcyon"
+            onCheckedChanged: {
+                Config.options.bar.topLeftIcon = checked ? "halcyon" : "spark";
+            }
+        }
+    }
+
+    ContentSection {
         icon: "keyboard"
         title: Translation.tr("Cheat sheet")
 
