@@ -77,6 +77,28 @@ hl.window_rule({match = {title = ".*\\.exe" }, immediate = true})
 hl.window_rule({match = {title = ".*minecraft.*" }, immediate = true})
 hl.window_rule({match = {class = "^(steam_app).*" }, immediate = true})
 
+-- ######## Games and launchers ########
+-- Games open full screen on their own. Launchers and client apps float, centred,
+-- so they can be moved and resized like any other window.
+-- Steam games (steam_app_<id>) and Minecraft (its window class starts with
+-- "Minecraft"; the launcher's does not, so it is not caught here).
+hl.window_rule({match = {class = "^steam_app_.*" }, fullscreen = true})
+hl.window_rule({match = {class = "^Minecraft.*" }, fullscreen = true})
+
+-- Launchers and the Steam client: floating and centred.
+hl.window_rule({match = {class = "^org\\.prismlauncher\\.PrismLauncher$" }, float = true})
+hl.window_rule({match = {class = "^org\\.prismlauncher\\.PrismLauncher$" }, center = true})
+hl.window_rule({match = {class = "^minecraft-launcher$" }, float = true})
+hl.window_rule({match = {class = "^minecraft-launcher$" }, center = true})
+hl.window_rule({match = {class = "^steam$", title = "^Steam$" }, float = true})
+hl.window_rule({match = {class = "^steam$", title = "^Steam$" }, center = true})
+hl.window_rule({match = {class = "^lutris$" }, float = true})
+hl.window_rule({match = {class = "^lutris$" }, center = true})
+hl.window_rule({match = {class = "^(Heroic|heroic)$" }, float = true})
+hl.window_rule({match = {class = "^(Heroic|heroic)$" }, center = true})
+hl.window_rule({match = {class = "^com\\.usebottles\\.bottles$" }, float = true})
+hl.window_rule({match = {class = "^com\\.usebottles\\.bottles$" }, center = true})
+
 -- No shadow for tiled windows
 hl.window_rule({match = {float = 0 }, no_shadow = true})
 
