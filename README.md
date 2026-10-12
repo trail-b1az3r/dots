@@ -100,6 +100,27 @@ The ML4W installer also installs packages, and gdots does not install the packag
 repository says it was archived in March 2026 and is now maintained at
 [LinuxBeginnings/Hyprland-Dots](https://github.com/LinuxBeginnings/Hyprland-Dots).
 
+### Saving and loading dots
+
+`hyprctl store` saves the dot files as a `.dhyprsave` file, and `hyprctl load` loads one back:
+
+| Command | Does |
+|---|---|
+| `hyprctl store -n <name>` | Saves the dot files as `~/.local/share/halcyon/saves/<name>.dhyprsave` |
+| `hyprctl load -l` | Lists the saves. The one in use is marked `(active)` |
+| `hyprctl load -n <name>` | Loads a save |
+| `hyprctl load -a` | Loads the save before the latest switch, so running it again goes back |
+| `sudo hyprctl load ...` | The same, but for the user who ran `sudo`, not root |
+
+A `.dhyprsave` is a gzipped tar. It holds the entries of `~/.config` that the dot sets install, as they are now.
+It also holds the `.local` files the config refers to: scripts in `~/.local/bin`, fonts, icons and themes, and the
+Halcyon state files `theme.lua` and `placement.lua`. Nothing else in `~/.local` is saved. Its `manifest.txt` lists
+what it holds.
+
+Loading first backs up the files it replaces to `~/.local/state/halcyon/backups/before-load-<time>`. Each dot set
+install, and each `hyprctl dots plus --install`, stores the dots it switched to, so `load -a` has something to go
+back to. The first switch also stores the Halcyon desktop it replaces. Those automatic saves take disk space.
+
 ## Themes
 
 By default, colours come from your wallpaper, as in upstream. A theme
