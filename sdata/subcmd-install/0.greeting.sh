@@ -8,6 +8,7 @@
 printf "${STY_CYAN}[$0]: Hi there! Before we start:${STY_RST}\n"
 printf "\n"
 printf "${STY_PURPLE}${STY_BOLD}This installs Halcyon: end-4's illogical-impulse with a small layer on top.${STY_RST}\n"
+printf "${STY_PURPLE}Most of this desktop is end-4's work (https://github.com/end-4/dots-hyprland). Thank you, end-4 and the contributors.${STY_RST}\n"
 printf "${STY_PURPLE}"
 printf '# The layer lives in ~/.config/hypr/hyprland/halcyon and adds keybinds, looks and wallpapers.\n'
 printf '# Your own changes still belong in ~/.config/hypr/custom, which is never overwritten.\n'

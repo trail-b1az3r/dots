@@ -24,6 +24,12 @@ function setup_hyprland_plus(){
     return 0
   fi
 
+  # Installed from the AUR (package hyprland-plus): nothing to build here.
+  if pacman -Q hyprland-plus >/dev/null 2>&1; then
+    printf "${STY_BLUE}hyprland-plus $(pacman -Q hyprland-plus | cut -d' ' -f2) is already installed (from the AUR), so it is not built again.${STY_RST}\n"
+    return 0
+  fi
+
   local job="$REPO_ROOT/sdata/lib/hyprland-plus-build.sh"
   local console="${HALCYON_HYPRLAND_CONSOLE:-3}"
   local repo="${HALCYON_HYPRLAND_REPO:-$HOME/hyprland-plus}"

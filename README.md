@@ -29,6 +29,7 @@ On top of that, Halcyon adds:
 | **Themes** | Four hand-made themes: HyperNeo, Star Rail, Shattered Glass and Fractured Glass. [More below.](#themes) |
 | **Voice assistant** | Press `Super + Shift + Space` and speak. It answers aloud and can run the desktop. [More below.](#voice-assistant) |
 | **Keybinds** | Extra shortcuts, listed below. They only use key combinations upstream leaves free. |
+| **hyprland-plus** | The compositor is [hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus): Hyprland 0.56.2 with mini windows, superposition windows, plustile windows and a drag fix. [More below.](#hyprland-plus) |
 
 ## Install
 
@@ -57,6 +58,28 @@ When logging in from a display manager, choose **Hyprland**, not
 *Hyprland (uwsm)*.
 
 `./setup uninstall` removes what the installer put in place.
+
+## hyprland-plus
+
+[hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus) is Hyprland 0.56.2 with the
+Halcyon additions. Its own README describes each one. The desktop uses:
+
+- **Mini windows**, `SUPER + CTRL + N`: a window shrinks to a small floating tile.
+- **Superposition windows**: Spotify stays on a thin strip at the right edge, above a fullscreen window.
+- **Plustile windows**: terminals can be resized from each edge with `SUPER + ALT + arrows` (`SHIFT` shrinks),
+  and `SUPER + ALT + F` fits one to its neighbours.
+- **Drag fix**: a tiled window keeps the grab point when it floats during a drag, so it does not jump.
+  The drag guide tints the tile a dropped window would swap with.
+
+The settings are in `~/.config/hypr/hyprland/halcyon/plus.lua`. They only take effect with the fork.
+
+On Arch, `./setup install` checks for the hyprland-plus package first. If it is installed (from the AUR,
+see `packaging/aur` in the fork), nothing is built. Otherwise the installer builds the fork on a text console
+of its own and installs it in place of the packaged Hyprland. Set `HALCYON_SKIP_HYPRLAND_PLUS=1` to skip that.
+
+Once hyprland-plus is running, `hyprctl dots plus` shows the dots checkout the installer recorded.
+`hyprctl dots plus --install` runs `./setup install --force` in that checkout, without asking questions and without
+building hyprland-plus again.
 
 ## Themes
 
@@ -454,7 +477,14 @@ fire at once.
 
 ## Credits and licence
 
-The desktop is [end-4](https://github.com/end-4)'s illogical-impulse and
-the work of its contributors. Halcyon is a small layer on top of it.
-Licensed under the GPL-3.0, like upstream. See [LICENSE](LICENSE). Some
-parts carry their own licences, listed in [licenses/](licenses/).
+Most of this desktop is the work of **[end-4](https://github.com/end-4)**, who
+made illogical-impulse ([dots-hyprland](https://github.com/end-4/dots-hyprland)):
+the Quickshell bar, sidebars, overview, search, the installer, the Material You
+colour system and the docs at [ii.clsty.link](https://ii.clsty.link). Thank you,
+end-4, and to everyone who contributes to that project. Halcyon is a small layer
+on top of it.
+
+The full list, with the other projects and licences, is in [CREDITS.md](CREDITS.md).
+
+Licensed under the GPL-3.0, like upstream. See [LICENSE](LICENSE). Some parts
+carry their own licences, listed in [licenses/](licenses/).
