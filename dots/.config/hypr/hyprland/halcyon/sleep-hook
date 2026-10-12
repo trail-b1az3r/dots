@@ -2,8 +2,9 @@
 # Halcyon: a systemd sleep hook, run as root after the computer resumes.
 #
 # The user's halcyon-resume watcher is tried first. This is the fallback: a few
-# seconds after resume, if NetworkManager still isn't "connected", it restarts
-# NetworkManager itself, then checks again. A working network is left alone.
+# seconds after resume, if Bluetooth's adapter is off, it restarts bluetoothd and
+# powers the adapter on. Then, if NetworkManager still isn't "connected", it
+# restarts NetworkManager itself, and checks again. A working network is left alone.
 #
 # The check runs as a detached unit, so the resume isn't held up waiting for it.
 # Every step is allowed to fail: a sleep hook must never block suspend or wake.
@@ -26,7 +27,27 @@ wait_for_network() {
     network_up
 }
 
+bluetooth_on() { timeout 5 bluetoothctl show 2>/dev/null | grep -q "Powered: yes"; }
+restart_bluetooth_if_off() {
+    command -v bluetoothctl >/dev/null || return 0
+    bluetooth_on && return 0
+    logger -t halcyon-resume "bluetooth is off after resume; restarting bluetoothd"
+    rfkill unblock bluetooth 2>/dev/null || true
+    systemctl restart bluetooth.service || logger -t halcyon-resume "could not restart bluetooth.service"
+    for _ in 1 2 3 4 5; do
+        sleep 2
+        timeout 5 bluetoothctl power on >/dev/null 2>&1 || true
+        bluetooth_on && break
+    done
+    if bluetooth_on; then
+        logger -t halcyon-resume "bluetooth is on again"
+    else
+        logger -t halcyon-resume "bluetooth is still off after resume"
+    fi
+}
+
 sleep 6
+restart_bluetooth_if_off
 if wait_for_network 12; then
     logger -t halcyon-resume "network is up after resume"
     exit 0

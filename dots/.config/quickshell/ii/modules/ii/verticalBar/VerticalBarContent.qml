@@ -167,11 +167,7 @@ Item { // Bar content region
         onScrollDown: Audio.decrementVolume();
         onScrollUp: Audio.incrementVolume();
         onMovedAway: GlobalStates.osdVolumeOpen = false;
-        onPressed: event => {
-            if (event.button === Qt.LeftButton) {
-                GlobalStates.sidebarRightOpen = !GlobalStates.sidebarRightOpen;
-            }
-        }
+        // Only the sidebar button opens the sidebar; the rest of this strip is for scrolling.
 
         ColumnLayout {
             id: bottomSectionColumnLayout
@@ -214,7 +210,8 @@ Item { // Bar content region
                     animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
                 }
 
-                onPressed: {
+                // RippleButton reports a press through clicked, not pressed.
+                onClicked: {
                     GlobalStates.sidebarRightOpen = !GlobalStates.sidebarRightOpen;
                 }
 
