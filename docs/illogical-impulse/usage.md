@@ -1,0 +1,158 @@
+# Usage
+
+> Halcyon is built on illogical-impulse, so these pages are end-4's, ported from the [illogical-impulse docs](https://ii.clsty.link) (source: [dots-hyprland-wiki](https://github.com/end-4/dots-hyprland-wiki), commit `c70231a`, GPL-3.0). Where Halcyon differs, its own docs say so: see the [Halcyon docs](../halcyon/README.md).
+
+This page documents some non-obvious details. Not everything is here, so explore...
+
+## General
+
+Hit `Super`+`/` for a list of keybinds
+
+<details> 
+  <summary>In case it doesn't work, here's an image</summary>
+
+  <img width="1412" height="828" alt="image" src="https://github.com/user-attachments/assets/8f7bd216-9e03-47e3-8709-0008772a4133" />
+
+</details>
+
+## Overview
+
+- Open with `Super` or `Super`+`Tab`
+- Drag a window to another workspace to send it there
+- Middle-click to close window
+
+## Launcher
+
+- Bundled with the overview. Just start typing.
+- Results can include:
+  - App search
+  - Math result
+  - [Prefix: `/`] Launcher actions
+  - [Prefix: `;`] Clipboard history
+  - [Prefix: `:`] Emojis
+  - Additional actions for typed content: run command, perform search
+
+- Non-self-explanatory launcher actions:
+  - /superpaste NUM_OF_ENTRIES[i]: Paste NUM_OF_ENTRIES last clipboard entries. Specify `i` for images.
+  - /todo TASK: Add item to to-do list
+
+## Bar controls
+- Media widget:
+  - Middle-click to Play/Pause
+  - Right-click for Next track
+  - Mouse4/Mouse5 for Prev/Next track
+- Brightness: Scroll top-left corner
+- Volume: Scroll top-right corner
+- Workspaces:
+  - Mouse4 to toggle special workspace
+  - Right-click to open overview
+
+## Left sidebar
+
+## General controls
+- Tab completion in Intelligence and Anime tabs
+  - When suggestions show up above the typing area, use up/down arrow keys to select the desired option, then hit Tab to confirm your choice.
+- Wanna take the assistant with you? To detach the sidebar into a window, hit `Super`+`Alt`+`A`.
+
+## AI Chat
+
+- Type `/model` to select a model. Locally installed Ollama models are detected automatically.
+- Type `/key` for instructions on how to get an API key for online models.
+- Currently, Gemini models with tools can edit your shell config. You can, for example, tell it "hide app icons on my workspaces".
+
+## Translator
+
+Handled with the `trans` commandline tool. Not much to say here...
+
+## Anime boorus
+
+- Type `/mode` and see the available providers.
+- Type 1 or many tags to see results. Suggestions show up as you type.
+- Type a number to select the page of the results to view
+
+## Wallpaper & colors
+- To pick a wallpaper, press `Ctrl`+`Super`+`T` and select an image. This will also
+  - Change color of the shell, Qt apps, and GTK apps
+  - Change the position of the background clock to the least busy region of the image (currently only works well with single monitor)
+
+## Screenshot tool
+
+- `Super`+`Shift`+`S`: Screen snip | left-drag to copy to clipboard, right-drag to annotate
+- `Super`+`Shift`+`A`: Google Lens search
+- `Super`+`Shift`+`X`: Text recognition
+
+## Screen translation
+
+Translates screen contents using Google's Cloud Vision and Translation API. This section will guide you through the (somewhat involved) setup process.
+
+## Prerequisites
+
+- You have a Google Account
+- While you will not be charged unless you activate a full account, Google requires a credit/debit card to prevent fraud. A virtual one containing one cent should work, as long as it's legit.
+
+## Setting it up
+
+- Go to [Google Cloud Console](https://console.cloud.google.com/) and create or select a project. This can be the same project you use for the Gemini API if you've set that up for the sidebar chat.
+- Enable the following APIs:
+  - [Cloud Vision API](https://console.cloud.google.com/marketplace/product/google/vision.googleapis.com)
+  - [Cloud Translation API](https://console.cloud.google.com/marketplace/product/google/translate.googleapis.com)
+- From the left navigation menu, go to the **Billing** section. Press **Link a billing account** and enter your details as required.
+- From the left navigation menu, go to **IAM & Admin** > **Service Accounts**. Press **Create service account**, then:
+  - Step 1: Enter names. It does not matter what you enter.
+  - Step 2: Permission: add the **Service Usage Consumer** and **Cloud Translation API User** roles and press **Continue**
+  - Step 3: Just press Done
+- You should now see a service account in the shown list. Click the 3-dots menu on the right side of it and then **Manage keys**
+  - Click **Add key** > **Create new key**
+  - Select JSON key type (should be the default) and press **Create**. A JSON file will be downloaded.
+- Open the downloaded JSON file and copy its contents
+- Open the screen translator with `Super`+`Shift`+`T`, then:
+  - Click the Key input button at the bottom of the screen
+  - Paste the JSON contents in there and press Enter. Translation will start.
+- And you might want to delete that JSON key file afterwards, now that it's stored safely in the keyring.
+  - Note: Currently, to view it again, you'll have to inspect the illogical-impulse Safe Storage keyring entry.
+
+## Workspace Groups
+
+## Navigation & Workspace Management
+
+If 10 workspaces aren't enough for you, you can use the next set of workspaces, up to Hyprland's limit. To start, simply over-scroll the workspace widget on the bar to the right (or use keybinds) to switch to a new group.
+
+Keybinds and shell widgets work seamlessly in the focused workspace group. You don't have to configure anything extra if you don't change the number of workspaces shown on the workspace indicator or the overview.
+
+- **Navigating / moving workspaces within a group**: Standard Hyprland keybinds apply.
+  - `Super` + `2` → workspace **12** if you're in workspace **11-20 (group 2)**.
+  - `Super` + `Alt` + `3` silently moves focused window → workspace **23** if you're in workspace **21-30 (group 3)**.
+
+- **Navigating between groups**:
+  - Consider adding following Hyprland keybinds for jumping to adjacent workspace groups
+    ```ini title="~/.config/hypr/custom/keybinds.lua"
+    hl.bind("SUPER + ALT + Z", hl.dsp.focus({ workspace = "r-10" }))
+    hl.bind("SUPER + ALT + X", hl.dsp.focus({ workspace = "r+10" }))
+    ```
+- The **Overview** and **Workspace indicator** adapt seamlessly. The shown content is based on the current workspace group.
+  
+> [!TIP]
+> If you wish to modify the keybinds or include [more features](https://wiki.hypr.land/Configuring/Dispatchers/) for workspace navigation, use `~/.config/hypr/hyprland/scripts/workspace_action.sh` script, instead of `hyprctl dispatch`. This will determine the current workspace group using the active workspace ID and dispatch to the proper workspace.
+
+## Multi-Monitor Considerations
+
+Consider these strategies for effective multi-monitor management:
+- Allocate group 1 (workspaces 1-10) to primary monitor while group 2 (workspaces 11-20) to secondary monitor:
+  - On startup, manually move the starting workspace on the secondary monitor into the second group (e.g., workspace 11) using `Super` + `0`, then `Ctrl` + `Super` + `Right`.
+  - In effect, this will also create separate overview widget per monitor.
+- Use [workspace binding](https://wiki.hypr.land/Configuring/Workspace-Rules/#rules) to always place specific workspaces on specific monitors. Get all your monitor names using `hyprctl monitors | grep Monitor`.
+  ```ini title="~/.config/hypr/custom/general.lua"
+  -- Bind workspaces 1-10 (group 1) to primary monitor
+  for i = 1, 10 do
+    hl.workspace_rule({ workspace = tostring(i), monitor = "eDP-1", default = true })
+  end
+
+  -- Bind workspaces 11-20 (group 2) to secondary monitor
+  for i = 11, 20 do
+    hl.workspace_rule({ workspace = tostring(i), monitor = "HDMI-A-1", default = true })
+  end
+  ```
+- Focus on two workspaces at a time on each monitor and move/swap windows across monitor/groups (using `Super` + `Left/Right/Up/Down` or `Super` + `Shift` + `Left/Right/Up/Down`) as needed.
+
+> [!NOTE]
+> Workspace groups are not natively supported by Hyprland or any status bar/widget system. This config achieves this simply by tinkering wth Hyprland dispatchers and the shell config.

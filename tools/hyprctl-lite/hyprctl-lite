@@ -9,7 +9,8 @@
 #   1. Clones hyprland-plus into ~/hyprland-plus of the account that ran sudo, or updates the clone.
 #   2. Installs the build dependencies listed in that repository's packaging/aur/PKGBUILD.
 #   3. Builds hyprland-plus as that account, not as root.
-#   4. Moves the packaged Hyprland aside (kept as /usr/bin/hyprland.official) and installs hyprland-plus to /usr/local.
+#   4. Installs hyprland-plus to /usr/local. The packaged Hyprland stays installed (copied to /usr/bin/hyprland.official):
+#      other packages depend on it, and /usr/local/bin comes first in PATH.
 #   5. Removes this file. If any step fails, the file is kept so the command can be run again.
 #
 # Install it with one command (also in the dots README):
@@ -77,14 +78,18 @@ step "Building hyprland-plus as $user (this takes a while)"
 as_user make -C "$repo" all
 
 if pacman -Q hyprland >/dev/null 2>&1; then
-    step "Moving the packaged Hyprland aside"
+    step "Keeping a copy of the packaged Hyprland"
+    # Not removed: illogical-impulse-hyprland and others depend on it. hyprland-plus in /usr/local/bin shadows it.
     [[ -e /usr/bin/hyprland.official ]] || cp /usr/bin/hyprland /usr/bin/hyprland.official
-    pacman -R --noconfirm hyprland || die "could not remove the packaged hyprland (other packages depend on it). Nothing was installed."
 fi
 
 step "Installing hyprland-plus to /usr/local"
 make -C "$repo" install
 ln -sf /usr/local/bin/Hyprland /usr/local/bin/hyprland
+
+if [[ "$(command -v Hyprland)" != /usr/local/bin/Hyprland ]]; then
+    echo "warning: PATH finds $(command -v Hyprland) first, not /usr/local/bin/Hyprland. Put /usr/local/bin before /usr/bin in PATH." >&2
+fi
 
 commit="$(as_user git -C "$repo" rev-parse --short HEAD)"
 as_user mkdir -p "$state"

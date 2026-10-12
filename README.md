@@ -10,6 +10,8 @@ known to work, and keeps Halcyon's own changes in one place on top of it.
 
 ---
 
+Documentation is in [docs/](docs/README.md): the Halcyon pages, and the illogical-impulse pages ported from end-4's docs.
+
 ## What you get
 
 Everything illogical-impulse provides: the Quickshell bar and sidebars,
