@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Halcyon window debug snapshot: records the window, workspace, focus and split state to a log.
+# Run it before and after each step of a bug, and send the log back.
+#
+#   ./debug-snapshot [label]
+set -u
+
+log="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon/debug-snapshot.log"
+mkdir -p "$(dirname "$log")"
+{
+    echo "===== $(date +%H:%M:%S.%3N) ${1:-snapshot}"
+    echo "-- active window"; hyprctl activewindow 2>&1
+    echo "-- workspaces"; hyprctl workspaces 2>&1
+    echo "-- clients (address, workspace, floating, fullscreen, at, size, class)"
+    hyprctl clients -j 2>/dev/null | python3 -c '
+import json, sys
+for c in json.load(sys.stdin):
+    print(c["address"], "ws=" + str(c["workspace"]["id"]), "floating=" + str(int(bool(c["floating"]))),
+          "fs=" + str(c.get("fullscreen")), "at=" + str(c["at"][0]) + "," + str(c["at"][1]),
+          "size=" + str(c["size"][0]) + "x" + str(c["size"][1]), c.get("class", ""))
+' 2>&1
+    echo "-- layers that take keyboard input"
+    hyprctl layers -j 2>/dev/null | python3 -c '
+import json, sys
+for monitor in json.load(sys.stdin).values():
+    for level in monitor.get("levels", {}).values():
+        for layer in level:
+            if layer.get("interactivity", "none") != "none":
+                print(layer.get("namespace"), "interactivity=" + str(layer.get("interactivity")))
+' 2>&1
+    echo "-- dwindle"
+    for option in dwindle:default_split_ratio dwindle:force_split dwindle:preserve_split; do
+        hyprctl getoption "$option" -j 2>/dev/null | python3 -c 'import json,sys; d=json.load(sys.stdin); print(sys.argv[1], d.get("float", d.get("int", d.get("custom", "?"))))' "$option" 2>&1
+    done
+    echo "-- terminal processes (is an old kitty or foot still running after its window closed?)"
+    pgrep -a -x 'kitty|foot|alacritty|wezterm|konsole' 2>&1 || echo "none"
+    echo "-- placement file: $(cat "${XDG_STATE_HOME:-$HOME/.local/state}/halcyon/placement.lua" 2>/dev/null | head -1 || echo none)"
+} >> "$log"
+echo "wrote snapshot to $log"
