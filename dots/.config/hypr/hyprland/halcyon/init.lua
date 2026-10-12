@@ -10,6 +10,7 @@
 require("hyprland.halcyon.general")
 require("hyprland.halcyon.keybinds")
 require("hyprland.halcyon.mini")
+require("hyprland.halcyon.tiles")
 
 -- The active theme's window style, written by halcyon-theme. It exists only
 -- while a theme is active; see `halcyon-theme list`.
