@@ -28,10 +28,6 @@ hl.window_rule({match = {title = "^(.*)(wants to open)$" },                  cen
 hl.window_rule({match = {title = "^(.*)(wants to open)$" },                  float = true})
 hl.window_rule({match = {class = "^(blueberry\\.py)$" },                     float = true})
 hl.window_rule({match = {class = "^(guifetch)$" },                           float = true}) -- FlafyDev/guifetch
--- Firefox and Dolphin draw their own top bar and ask Hyprland to move the window from it. Hyprland then
--- floats the window and centres it on the cursor. no_xdg_drags stops that; SUPER + drag still moves
--- the window (it swaps tiles). Add an app's class here if its top bar causes the same jump.
-hl.window_rule({match = {class = "^(firefox|org\\.kde\\.dolphin)$" }, no_xdg_drags = true })
 hl.window_rule({match = {class = "^(pavucontrol)$" },                        float = true})
 hl.window_rule({match = {class = "^(pavucontrol)$" },                        size = {"(monitor_w*0.45)", "(monitor_h*0.45)"} })
 hl.window_rule({match = {class = "^(pavucontrol)$" },                        center = true})

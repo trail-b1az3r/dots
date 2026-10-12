@@ -47,6 +47,19 @@ if [[ ! -z $(systemctl --version) ]]; then
       v sudo systemctl --machine=$(whoami)@.host --user enable ydotool --now
     fi
   fi
+  # OpenRazer: its daemon is a user service that nothing starts by itself, so it never came up at login.
+  # Enable it so it starts at every login. The daemon reaches the devices through the plugdev group.
+  if [[ -f /usr/lib/systemd/user/openrazer-daemon.service || -f /usr/share/systemd/user/openrazer-daemon.service ]]; then
+    if getent group plugdev >/dev/null && ! id -nG "$(whoami)" | tr ' ' '\n' | grep -qx plugdev; then
+      v sudo gpasswd -a "$(whoami)" plugdev
+      printf "${STY_YELLOW}Added you to plugdev for OpenRazer. Log out and back in once for it to apply.${STY_RST}\n"
+    fi
+    if [[ ! -z "${DBUS_SESSION_BUS_ADDRESS}" ]]; then
+      v systemctl --user enable --now openrazer-daemon.service
+    else
+      v sudo systemctl --machine=$(whoami)@.host --user enable --now openrazer-daemon.service
+    fi
+  fi
   v sudo systemctl enable bluetooth --now
 elif [[ ! -z $(openrc --version) ]]; then
   v bash -c "echo 'modules=i2c-dev' | sudo tee -a /etc/conf.d/modules"

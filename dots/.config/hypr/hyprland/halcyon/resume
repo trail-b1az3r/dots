@@ -29,6 +29,24 @@ restart_razer() {
     fi
 }
 
+bluetooth_on() {
+    timeout 5 bluetoothctl show 2>/dev/null | grep -q "Powered: yes"
+}
+
+# After a suspend the adapter is often off, and nothing turns it back on. Unblock it and power it on, a few
+# times, since bluetoothd needs a moment. Runs detached, so the watcher keeps listening. The system sleep
+# hook is the fallback that restarts bluetoothd itself.
+restart_bluetooth() {
+    command -v bluetoothctl >/dev/null || return 0
+    bluetooth_on && return 0
+    rfkill unblock bluetooth 2>/dev/null || true
+    for _ in 1 2 3; do
+        timeout 5 bluetoothctl power on >/dev/null 2>&1 || true
+        sleep 2
+        bluetooth_on && return 0
+    done
+}
+
 dbus-monitor --system "type='signal',interface='org.freedesktop.login1.Manager',member='PrepareForSleep'" |
 while read -r line; do
     case "$line" in
@@ -37,6 +55,7 @@ while read -r line; do
             restart_network
             ( reconnect_wifi_if_down ) &
             restart_razer
+            ( restart_bluetooth ) &
             ;;
     esac
 done

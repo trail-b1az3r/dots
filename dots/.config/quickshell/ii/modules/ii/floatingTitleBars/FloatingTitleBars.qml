@@ -15,12 +15,13 @@ import Quickshell.Wayland
  * bar above it, with its buttons:
  *   - the headphones mute the window's sound (the cable is pulled out when muted);
  *   - the down arrow makes the window a mini window: a small one in the bottom
- *     right corner. Hovering a mini window brings it back to full size;
+ *     right corner. Clicking a mini window brings it back to full size. With the
+ *     Halcyon Hyprland fork, a mini window can be moved anywhere and stays small;
  *   - the close button closes it.
  *
  * Bars are drawn on one full-screen overlay per monitor. The overlay takes input
- * only where the bars and the mini windows' hover zones are, so the pointer's
- * position stays put while a window moves underneath it.
+ * only where the bars are (and, on stock Hyprland, the mini windows' click zones),
+ * so the pointer's position stays put while a window moves underneath it.
  *
  * While a bar is dragged it follows the pointer itself, rather than waiting for
  * Hyprland's next window list. The shell's own windows (Settings) never get one.
@@ -223,8 +224,23 @@ Scope {
         Hyprland.dispatch(`hl.dsp.window.resize({ x = ${Math.round(width)}, y = ${Math.round(height)}, relative = false, window = "address:${address}" })`);
     }
 
+    // The Halcyon Hyprland fork reports a `mini` flag on every window and has hl.dsp.window.mini, which keeps the
+    // window small wherever it is moved and restores it on a click. Stock Hyprland has neither, so the bar falls
+    // back to its own mini windows in the bottom right corner.
+    function hasMiniApi(address) {
+        return (HyprlandData.windowByAddress[address]?.mini) !== undefined;
+    }
+
+    function setMini(address, on) {
+        Hyprland.dispatch(`hl.dsp.window.mini({ action = "${on ? "enable" : "disable"}", window = "address:${address}" })`);
+    }
+
     // Makes a window a mini window in the bottom right corner of its monitor, next to any others.
     function minimize(win, monitor) {
+        if (win.mini !== undefined) {
+            root.setMini(win.address, true);
+            return;
+        }
         const origin = { x: win.at[0], y: win.at[1], width: win.size[0], height: win.size[1], monitor: monitor.id };
         const others = Object.keys(root.minis).filter(address => root.minis[address].monitor === monitor.id).length;
         const right = monitor.x + monitor.width / monitor.scale;
@@ -240,6 +256,10 @@ Scope {
 
     // Brings a mini window back to the size and place it had before.
     function expand(address) {
+        if (root.hasMiniApi(address)) {
+            root.setMini(address, false);
+            return;
+        }
         const origin = root.minis[address];
         if (!origin)
             return;
@@ -292,8 +312,9 @@ Scope {
             mask: Region {
                 regions: Array.from({ length: bars.count }, (_, i) =>
                     regionComponent.createObject(overlay, { item: bars.itemAt(i) }))
-                    .concat(Array.from({ length: bars.count }, (_, i) =>
-                        regionComponent.createObject(overlay, { item: bars.itemAt(i)?.hoverZone })))
+                    .concat(Array.from({ length: bars.count }, (_, i) => bars.itemAt(i)?.hoverZone)
+                        .filter(zone => zone)
+                        .map(zone => regionComponent.createObject(overlay, { item: zone })))
             }
 
             Item {
@@ -309,7 +330,7 @@ Scope {
 
                         required property var modelData
                         readonly property var win: modelData
-                        readonly property bool isMini: root.minis[win.address] !== undefined
+                        readonly property bool isMini: root.hasMiniApi(win.address) ? win.mini === true : root.minis[win.address] !== undefined
                         readonly property bool muted: root.isMuted(win)
                         readonly property bool hasSound: root.audioStreams(win).length > 0
                         // Set in the drag: the position asked of Hyprland, shown until its window list catches up.
@@ -318,7 +339,9 @@ Scope {
                         property real movedY: 0
                         readonly property real shownX: moving ? movedX : win.at[0]
                         readonly property real shownY: moving ? movedY : win.at[1]
-                        readonly property Item hoverZone: zone
+                        // Stock Hyprland only: the bar's own zone over the mini body takes the click. The fork's
+                        // window receives the click itself, so nothing is laid over it.
+                        readonly property Item hoverZone: (isMini && !root.hasMiniApi(win.address)) ? zone : null
 
                         // Window and monitor positions are both global, so the difference is the offset on this screen.
                         x: shownX - overlay.monitorInfo.x
@@ -334,7 +357,7 @@ Scope {
                             onTriggered: bar.moving = false
                         }
 
-                        // Under a mini window the body is covered, so hovering it brings the window back.
+                        // Stock Hyprland's mini window: a click on its body brings it back. Clicking, not hovering, is what does it.
                         Item {
                             id: zone
                             x: 0
@@ -345,8 +368,7 @@ Scope {
 
                             MouseArea {
                                 anchors.fill: parent
-                                hoverEnabled: true
-                                onEntered: root.expand(bar.win.address)
+                                onClicked: root.expand(bar.win.address)
                             }
                         }
 
@@ -498,10 +520,15 @@ Scope {
                                 root.moveWindow(bar.win.address, target.x, target.y);
                             }
 
-                            // A click without a drag focuses the window; the end of a drag hands the position back to Hyprland.
+                            // A click without a drag focuses the window, or brings a mini window back to full size; the end
+                            // of a drag hands the position back to Hyprland.
                             onReleased: {
-                                if (!mover.dragging)
-                                    Hyprland.dispatch(`hl.dsp.focus({ window = "address:${bar.win.address}" })`);
+                                if (!mover.dragging) {
+                                    if (bar.isMini)
+                                        root.expand(bar.win.address);
+                                    else
+                                        Hyprland.dispatch(`hl.dsp.focus({ window = "address:${bar.win.address}" })`);
+                                }
                                 mover.dragging = false;
                                 if (bar.moving)
                                     settle.restart();

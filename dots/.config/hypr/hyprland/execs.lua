@@ -23,6 +23,8 @@ hl.on("hyprland.start", function ()
     -- Cursor
     hl.exec_cmd("hyprctl setcursor Bibata-Modern-Classic 24")
 
-    -- Razer devices: the Polychromatic tray applet, if OpenRazer and Polychromatic are installed.
-    hl.exec_cmd("command -v polychromatic-tray-applet >/dev/null && polychromatic-tray-applet")
+    -- Razer devices. OpenRazer's daemon is a user service that nothing else starts, so it is started at login,
+    -- before the Polychromatic tray applet, which needs it. Both are skipped when they are not installed.
+    hl.exec_cmd("systemctl --user start openrazer-daemon.service >/dev/null 2>&1; " ..
+        "command -v polychromatic-tray-applet >/dev/null && polychromatic-tray-applet")
 end)

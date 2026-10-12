@@ -25,7 +25,8 @@ RippleButton {
     colRippleToggled: Appearance.colors.colSecondaryContainerActive
     toggled: GlobalStates.sidebarLeftOpen
 
-    onPressed: {
+    // RippleButton reports a press through clicked, not pressed.
+    onClicked: {
         GlobalStates.sidebarLeftOpen = !GlobalStates.sidebarLeftOpen;
     }
 

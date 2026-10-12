@@ -9,6 +9,15 @@ local hyprScripts = "$HOME/.config/hypr/hyprland/scripts"
 local qsIpcCall = "qs -c $qsConfig ipc call"
 local qsIsAlive = qsIpcCall .. " TEST_ALIVE"
 
+-- Super on its own toggles the overview (and search) when it is released. Any other key pressed while Super
+-- is held cancels that, so Super + / or Super + a letter opens only what that combination opens. Hyprland
+-- only allows a catch-all bind inside a submap, and this one is universal, so it fires in every submap. It is
+-- defined first, so it sees each key before that key's own bind. non_consuming lets the key reach its bind.
+hl.define_submap("release-cancel", function()
+    hl.bind("catchall", hl.dsp.global("quickshell:searchToggleReleaseInterrupt"),
+        { ignore_mods = true, non_consuming = true, submap_universal = true })
+end)
+
 hl.bind("SUPER + SUPER_L", hl.dsp.global("quickshell:searchToggleRelease"), { description = "Shell: Toggle search" })
 hl.bind("SUPER + SUPER_R", hl.dsp.global("quickshell:searchToggleRelease"))
 hl.bind("SUPER + SUPER_L", hl.dsp.exec_cmd(qsIsAlive .. " || pkill fuzzel || fuzzel"))
@@ -353,7 +362,8 @@ hl.bind("SUPER + T", hl.dsp.exec_cmd(terminal))
 hl.bind("CTRL + ALT + T", hl.dsp.exec_cmd(terminal))
 hl.bind("SUPER + E", hl.dsp.exec_cmd(fileManager), { description = "App: File manager" })
 hl.bind("SUPER + W", hl.dsp.exec_cmd(browser), { description = "App: Browser" })
-hl.bind("SUPER + C", hl.dsp.exec_cmd(codeEditor), { description = "App: Code editor" })
+-- Claude Code in its own terminal window (kitty -1 reuses a running kitty, as the other terminal launchers do).
+hl.bind("SUPER + C", hl.dsp.exec_cmd("kitty -1 claude"), { description = "App: Claude Code" })
 hl.bind("CTRL + SUPER + SHIFT + ALT + W", hl.dsp.exec_cmd(officeSoftware), { description = "App: Office software" })
 hl.bind("SUPER + X", hl.dsp.exec_cmd(textEditor), { description = "App: Text editor" })
 hl.bind("CTRL + SUPER + V", hl.dsp.exec_cmd(volumeMixer), { description = "App: Volume mixer" })

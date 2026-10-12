@@ -1,0 +1,78 @@
+name: Stable release
+
+# A normal release. Push a tag that matches VERSION, or run this by hand with the tag.
+#
+#   echo 1.0.1 > VERSION && git commit -am "Release 1.0.1" && git tag v1.0.1 && git push origin main v1.0.1
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "The tag to release, for example v1.0.1. It must match the VERSION file."
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish the stable release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Work out the tag and version
+        env:
+          TAG_INPUT: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          tag="$TAG_INPUT"
+          version="$(tr -d '[:space:]' < VERSION)"
+          if [[ "$tag" != "v$version" ]]; then
+            echo "The tag is $tag, but VERSION says $version. Make them match, then release again." >&2
+            exit 1
+          fi
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Stop if the release already exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "A release for $TAG already exists. Delete it first, or use a new version." >&2
+            exit 1
+          fi
+
+      - name: Install Lua, glslang and Pillow
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y lua5.4 glslang-tools python3-pil
+
+      - name: Shapes submodule checked out
+        run: test -n "$(ls -A dots/.config/quickshell/ii/modules/common/widgets/shapes)"
+
+      - name: Static checks
+        run: ./scripts/validate.sh
+
+      - name: Build the archive
+        run: ./scripts/release.sh "$VERSION" dist
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create "$TAG" \
+            "dist/halcyon-$VERSION.tar.gz" \
+            "dist/halcyon-$VERSION.tar.gz.sha256" \
+            --verify-tag \
+            --title "Halcyon $VERSION" \
+            --generate-notes
