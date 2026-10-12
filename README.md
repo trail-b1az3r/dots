@@ -430,10 +430,14 @@ While the mode is on, the normal binds are off, so every chord in the mode
 only has to be unique inside it. In the default set the arrow keys move the
 focused window, where they normally change focus.
 
-The mode is defined in `~/.config/hypr/hyprland/halcyon/modes.lua`. Change
-`MODE.toggle` and `MODE.exit` to choose the keys (`MODE.exit` can be any
-key). Add mode binds with `modeBind(chord, dispatcher, options)`, which takes
-the same arguments as `hl.bind`.
+Change the keys and binds in `~/.config/hypr/hyprland/halcyon/hypr_mode.lua`.
+It is a plain list: `toggle`, `exit`, and `binds` as
+`{ chord, dispatcher, description }`, the same chord syntax and dispatchers as
+`hl.bind`. Save the file and Hyprland reloads it.
+
+Halcyon updates overwrite that file. To keep your own version, copy it to
+`~/.config/hypr/custom/hypr_mode.lua` and edit the copy. Hyprland uses the
+copy when it exists, and updates never touch it.
 
 ## How it's put together
 
