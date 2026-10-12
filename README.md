@@ -133,6 +133,28 @@ Loading first backs up the files it replaces to `~/.local/state/halcyon/backups/
 install, and each `hyprctl dots plus --install`, stores the dots it switched to, so `load -a` has something to go
 back to. The first switch also stores the Halcyon desktop it replaces. Those automatic saves take disk space.
 
+## Install or update hyprland-plus with hyprctl-lite
+
+hyprctl-lite is a single script whose only command is `install full`. It installs or updates hyprland-plus, then removes
+itself. On Arch, get it with this one command:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/trail-b1az3r/dots/claude/youthful-gates-rt1csq-v2/tools/hyprctl-lite/hyprctl-lite | sudo tee /usr/local/bin/hyprctl-lite >/dev/null && sudo chmod 755 /usr/local/bin/hyprctl-lite
+```
+
+Then run:
+
+```sh
+sudo hyprctl-lite install full
+```
+
+It clones hyprland-plus into `~/hyprland-plus` (or updates that clone), installs the build dependencies from its
+`packaging/aur/PKGBUILD`, builds it as your user, and installs it to `/usr/local`. It keeps the packaged Hyprland as
+`/usr/bin/hyprland.official`. If a step fails, it stays in `/usr/local/bin` so you can run it again.
+
+The `curl` command runs a script from GitHub as root, so read it first if you prefer:
+`curl -fsSL <the same URL> | less`. The script is short.
+
 ## Releases
 
 Two kinds of release are on the repository's Releases page. GitHub Actions builds both.
