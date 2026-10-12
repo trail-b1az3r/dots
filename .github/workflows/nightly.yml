@@ -1,0 +1,88 @@
+name: Nightly release
+
+# Every night, build the latest main into one prerelease called "nightly". It replaces the previous nightly.
+# If main has not changed since the last nightly, there is nothing new and the run stops early.
+# Run it by hand to build now, even when main has not changed.
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nightly-release
+  cancel-in-progress: false
+
+jobs:
+  nightly:
+    name: Build and publish the nightly release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          ref: main
+
+      - name: Work out what to build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+          short="${sha:0:12}"
+          date_utc="$(date -u +%Y%m%d)"
+          echo "SHA=$sha" >> "$GITHUB_ENV"
+          echo "SHORT=$short" >> "$GITHUB_ENV"
+          echo "LABEL=nightly-$date_utc-$short" >> "$GITHUB_ENV"
+          echo "DATE_UTC=$(date -u '+%Y-%m-%d %H:%M UTC')" >> "$GITHUB_ENV"
+
+          skip=false
+          if [[ "$EVENT" != "workflow_dispatch" ]]; then
+            if gh release view nightly --json body --jq .body 2>/dev/null | grep -q "commit $short"; then
+              skip=true
+            fi
+          fi
+          echo "SKIP=$skip" >> "$GITHUB_ENV"
+          if [[ "$skip" == true ]]; then
+            echo "main is still at $short, which the nightly was built from. Nothing to do."
+          fi
+
+      - name: Install Lua, glslang and Pillow
+        if: env.SKIP != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y lua5.4 glslang-tools python3-pil
+
+      - name: Shapes submodule checked out
+        if: env.SKIP != 'true'
+        run: test -n "$(ls -A dots/.config/quickshell/ii/modules/common/widgets/shapes)"
+
+      - name: Static checks
+        if: env.SKIP != 'true'
+        run: ./scripts/validate.sh
+
+      - name: Build the archive
+        if: env.SKIP != 'true'
+        run: ./scripts/release.sh "$LABEL" dist
+
+      - name: Replace the nightly release
+        if: env.SKIP != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # Deleting the release also deletes its tag, so the new tag points at this commit.
+          gh release delete nightly --yes --cleanup-tag 2>/dev/null || true
+          gh release create nightly \
+            "dist/halcyon-$LABEL.tar.gz" \
+            "dist/halcyon-$LABEL.tar.gz.sha256" \
+            --target "$SHA" \
+            --prerelease \
+            --title "Halcyon nightly ($DATE_UTC)" \
+            --notes "Built from main at $DATE_UTC. This is commit $SHORT. Expect bugs; use a stable release for daily use."

@@ -133,6 +133,29 @@ Loading first backs up the files it replaces to `~/.local/state/halcyon/backups/
 install, and each `hyprctl dots plus --install`, stores the dots it switched to, so `load -a` has something to go
 back to. The first switch also stores the Halcyon desktop it replaces. Those automatic saves take disk space.
 
+## Releases
+
+Two kinds of release are on the repository's Releases page. GitHub Actions builds both.
+
+- **Stable** (`.github/workflows/stable.yml`): a normal release, numbered by the `VERSION` file. It is published
+  when a `v` tag matching `VERSION` is pushed. You can also run it by hand from the Actions tab, with the tag.
+- **Nightly** (`.github/workflows/nightly.yml`): a prerelease built from `main` each night. It replaces the previous
+  nightly. If `main` has not changed since the last one, the run stops without building.
+
+Each archive is `halcyon-<version>.tar.gz` with a `.sha256` file next to it. Check a download with
+`sha256sum -c halcyon-<version>.tar.gz.sha256`.
+
+To make a stable release:
+
+```sh
+echo 1.0.1 > VERSION
+git commit -am "Release 1.0.1"
+git tag v1.0.1
+git push origin main v1.0.1
+```
+
+`scripts/release.sh <label> <outdir>` builds the same archive on your machine, if you want to look at it first.
+
 ## Themes
 
 By default, colours come from your wallpaper, as in upstream. A theme
