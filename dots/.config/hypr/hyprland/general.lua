@@ -57,7 +57,7 @@ hl.config({
             active_border = "rgba(0DB7D455)",
             inactive_border = "rgba(31313600)"
         },
-        resize_on_border = true,
+        resize_on_border = false, -- a grab on a window's edge or top starts a resize otherwise; title bars sit there
 
         no_focus_fallback = true,
         allow_tearing = true, -- This just allows the `immediate` window rule to work
