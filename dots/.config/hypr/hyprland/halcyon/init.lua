@@ -18,6 +18,12 @@ if is_file_exists(themeFile) then
     dofile(themeFile)
 end
 
+-- How new windows are split, from Settings > Interface > Windows (halcyon-theme placement).
+local placementFile = stateHome .. "/halcyon/placement.lua"
+if is_file_exists(placementFile) then
+    dofile(placementFile)
+end
+
 -- The Halcyon Glass cursor (Settings > Halcyon > Cursor). Upstream sets its
 -- own cursor at startup too, so wait a moment and apply ours after it.
 hl.on("hyprland.start", function()
