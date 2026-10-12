@@ -81,10 +81,11 @@ Once hyprland-plus is running, `hyprctl dots plus` shows the dots checkout the i
 `hyprctl dots plus --install` runs `./setup install --force` in that checkout, without asking questions and without
 building hyprland-plus again.
 
-The same command installs other people's Hyprland dotfiles. Run it in a terminal, because their installers ask questions:
+The same command installs other people's Hyprland dotfiles, and the base that Halcyon is built on. Run it in a terminal, because their installers ask questions:
 
 | Command | Set | Installer |
 |---|---|---|
+| `hyprctl dots ii --install` | [illogical-impulse](https://github.com/end-4/dots-hyprland), end-4's desktop that Halcyon is built on | its `./setup install` |
 | `hyprctl dots jakoolit --install` | [JaKooLit Hyprland-Dots](https://github.com/JaKooLit/Hyprland-Dots) | its `copy.sh` |
 | `hyprctl dots mlfw --install` | [ML4W OS](https://github.com/mylinuxforwork/dotfiles) | ML4W's installer from ml4w.com |
 | `hyprctl dots gdots --install` | [gdots](https://github.com/semi710/gdots) | copies its `.config` and `bin` |
@@ -417,6 +418,22 @@ full list, including all of upstream's.
 Upstream's bindings are all still there. For example, `Super + Q` closes
 a window, `Super + Enter` opens a terminal, and `Super` on its own opens
 search.
+
+### Hypr mode: a second set of keybinds
+
+Hypr mode gives you a second layer, so the same chords can do something
+else. Press `Super + F10 + H` (a function key, Super and a letter, held
+together) to turn it on, and press `Escape` to turn it off. The same key
+turns it off too. A notification says when the mode starts and ends.
+
+While the mode is on, the normal binds are off, so every chord in the mode
+only has to be unique inside it. In the default set the arrow keys move the
+focused window, where they normally change focus.
+
+The mode is defined in `~/.config/hypr/hyprland/halcyon/modes.lua`. Change
+`MODE.toggle` and `MODE.exit` to choose the keys (`MODE.exit` can be any
+key). Add mode binds with `modeBind(chord, dispatcher, options)`, which takes
+the same arguments as `hl.bind`.
 
 ## How it's put together
 
