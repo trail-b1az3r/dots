@@ -1,14 +1,17 @@
-# Builds the Halcyon Hyprland fork (hyprland-plus) from source and installs it in place
-# of the packaged Hyprland. Sourced by ./setup install after the auto-theme step.
+# Builds the Halcyon Hyprland fork (hyprland-plus) and installs it in place of the packaged
+# Hyprland. Sourced by ./setup install after the auto-theme step.
 #
+# The build runs on a text console of its own (sdata/lib/hyprland-plus-build.sh), so the
+# compositor can be replaced without the graphical session running it. The installer waits
+# on that console, switches back when it is done, and then finishes.
+#
+#   HALCYON_HYPRLAND_CONSOLE       console number for the build (default 3)
 #   HALCYON_HYPRLAND_REPO          where the source lives (default ~/hyprland-plus)
 #   HALCYON_HYPRLAND_REF           branch to build (default halcyon-0.56.2)
 #   HALCYON_SKIP_HYPRLAND_PLUS=1   leave the packaged Hyprland alone
 #
-# The packaged binary is copied to /usr/bin/hyprland.official before it is removed, so
-# it can be put back with: sudo make -C ~/hyprland-plus uninstall && sudo pacman -S hyprland
-
-HYPRLAND_PLUS_URL="https://github.com/trail-b1az3r/hyprland-plus"
+# The packaged binary is copied to /usr/bin/hyprland.official before it is removed, so it can
+# be put back with: sudo make -C ~/hyprland-plus uninstall && sudo pacman -S hyprland
 
 function setup_hyprland_plus(){
   if [[ "${HALCYON_SKIP_HYPRLAND_PLUS:-0}" == 1 ]]; then
@@ -16,53 +19,39 @@ function setup_hyprland_plus(){
     return 0
   fi
 
-  local repo="${HALCYON_HYPRLAND_REPO:-$HOME/hyprland-plus}"
-  local ref="${HALCYON_HYPRLAND_REF:-halcyon-0.56.2}"
-  local state="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon"
-
   if ! command -v pacman >/dev/null 2>&1; then
     printf "${STY_YELLOW}hyprland-plus is only installed automatically on Arch. Build it by hand: https://github.com/trail-b1az3r/hyprland-plus${STY_RST}\n"
     return 0
   fi
 
-  # Build tools and git. Hyprland's own libraries come from the dependency step.
-  v sudo pacman -S --needed --noconfirm git cmake base-devel || return 1
+  local job="$REPO_ROOT/sdata/lib/hyprland-plus-build.sh"
+  local console="${HALCYON_HYPRLAND_CONSOLE:-3}"
+  local repo="${HALCYON_HYPRLAND_REPO:-$HOME/hyprland-plus}"
+  local ref="${HALCYON_HYPRLAND_REF:-halcyon-0.56.2}"
+  local state="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon"
 
-  if [[ -d "$repo/.git" ]]; then
-    v git -C "$repo" fetch origin "$ref" || return 1
-    v git -C "$repo" checkout "$ref" || return 1
-    v git -C "$repo" pull --ff-only origin "$ref" || {
-      printf "${STY_RED}$repo has local changes that stop the update. Commit or stash them, then run ./setup install again.${STY_RST}\n"
-      return 1
-    }
+  if ! command -v openvt >/dev/null 2>&1; then
+    printf "${STY_YELLOW}openvt is not installed (Arch: the kbd package), so hyprland-plus will build in this terminal.${STY_RST}\n"
+    local rc=0
+    HALCYON_HYPRLAND_REPO="$repo" HALCYON_HYPRLAND_REF="$ref" bash "$job" || rc=$?
   else
-    v git clone --branch "$ref" "$HYPRLAND_PLUS_URL" "$repo" || return 1
-  fi
-  v git -C "$repo" submodule update --init --recursive || return 1
-
-  v make -C "$repo" all || {
-    printf "${STY_RED}hyprland-plus did not build. The packaged Hyprland is still installed.${STY_RST}\n"
-    return 1
-  }
-
-  # Keep the packaged binary before removing the package.
-  if pacman -Q hyprland >/dev/null 2>&1; then
-    if [[ ! -e /usr/bin/hyprland.official ]]; then
-      v sudo cp /usr/bin/hyprland /usr/bin/hyprland.official || return 1
+    local back
+    back="$(fgconsole 2>/dev/null || true)"
+    printf "${STY_BLUE}Opening console ${console} to build and install hyprland-plus. Enter your password there if asked.${STY_RST}\n"
+    printf "${STY_BLUE}This installer waits for that console to finish, then continues here.${STY_RST}\n"
+    local rc=0
+    sudo openvt -c "$console" -s -w -- sudo -u "$(id -un)" env HALCYON_HYPRLAND_REPO="$repo" HALCYON_HYPRLAND_REF="$ref" bash "$job" || rc=$?
+    if [[ -n "$back" ]]; then
+      sudo chvt "$back" 2>/dev/null || true
     fi
-    v sudo pacman -R --noconfirm hyprland || {
-      printf "${STY_RED}Could not remove the packaged hyprland (other packages depend on it). Nothing was installed.${STY_RST}\n"
-      return 1
-    }
   fi
 
-  v sudo make -C "$repo" install || return 1
-  v sudo ln -sf /usr/local/bin/Hyprland /usr/local/bin/hyprland
+  if [[ $rc -ne 0 ]]; then
+    printf "${STY_RED}hyprland-plus was not installed (the build exited with status ${rc}). Fix the error and run ./setup install again.${STY_RST}\n"
+    return 1
+  fi
 
-  mkdir -p "$state"
-  git -C "$repo" rev-parse --short HEAD > "$state/hyprland-plus-commit"
-  printf "${STY_BLUE}Installed hyprland-plus $(cat "$state/hyprland-plus-commit") from ${ref}.${STY_RST}\n"
-  printf "${STY_BLUE}Log out and back in, or restart Hyprland, to run it.${STY_RST}\n"
+  printf "${STY_BLUE}Log out and back in, or restart Hyprland, to run hyprland-plus.${STY_RST}\n"
 }
 
 setup_hyprland_plus
