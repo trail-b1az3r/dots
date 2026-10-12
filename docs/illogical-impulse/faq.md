@@ -1,0 +1,29 @@
+# Meta-ish Q&A
+
+> Halcyon is built on illogical-impulse, so these pages are end-4's, ported from the [illogical-impulse docs](https://ii.clsty.link) (source: [dots-hyprland-wiki](https://github.com/end-4/dots-hyprland-wiki), commit `c70231a`, GPL-3.0). Where Halcyon differs, its own docs say so: see the [Halcyon docs](../halcyon/README.md).
+
+_For usage problems, see the Troubleshooting/FAQ page. This page is for meta stuff._
+
+---
+- **Q: Brooo this is so cool how do i learn to make these thingies???? Step by step??? Help?? Pls no unfriend bro**
+- A: To get started with Quickshell, go through its [Usage Guide](https://quickshell.org/docs/v0.3.0/guide/). There is no shortcut and it is not possible to recall everything I've done in order to guide you.
+---
+- **Q: Is making something like this difficult? How much time did it take?**
+- A (short): Yes. Took about 2 months for the "base" part.
+- A (full): I managed, so I say it's easy. Since you asked this you have no clue, it's hard for you. There is some learning involved and you can't rely on intuition to get by for free.
+---
+- **Q: Why the switch from AGS to Quickshell?**
+- A: See [dots-hyprland#1276 (comment)](https://github.com/end-4/dots-hyprland/pull/1276#issuecomment-2860016485)
+---
+- **Q: Why is the dock disabled by default?**
+- A: It interferes with dragging to resize at the bottom edge, and the overview is superior anyway
+---
+- **Q: Why does the wiki use `ii.clsty.link` as domain?**
+- A: See [dots-hyprland-wiki#28](https://github.com/end-4/dots-hyprland-wiki/issues/28).
+---
+- **Q: Why not upload PKGBUILDs to AUR?**
+- A: Short answer: because they are **designed** to be **local** PKGBUILDs shipped within the Git repo.
+---
+- **Q: Why are the PKGBULDs designed to be local?**
+- A: See [dots-hyprland#2240 (comment)](https://github.com/end-4/dots-hyprland/issues/2240#issuecomment-3419239068).
+---
