@@ -245,7 +245,8 @@ Item { // Bar content region
                     animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
                 }
 
-                onPressed: {
+                // RippleButton reports a press through clicked, not pressed.
+                onClicked: {
                     GlobalStates.sidebarRightOpen = !GlobalStates.sidebarRightOpen;
                 }
 
