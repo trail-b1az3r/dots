@@ -1,18 +1,29 @@
--- Tile resizing: the focused tile gives or takes space from the tiles around it.
+-- Plustile windows: a tiled window that can be resized from each of its four edges.
 --
---   SUPER + ALT + Right / Down   grow the tile to the right / down (its neighbours give up space)
---   SUPER + ALT + Left / Up      shrink the tile from the right / bottom edge
+-- Only windows that have the plustile rule can be resized this way. Enable it per app, for example:
+--   hl.window_rule({ match = { class = "^(kitty)$" }, plustile = true })
 --
--- Hyprland's resize moves a tile's right and bottom edges only. Growing it to the left or up
--- needs the fork to move the left and top edges too, which is not in stock Hyprland.
+--   SUPER + ALT + Left / Right / Up / Down           move that edge outwards: the tile grows, its neighbours give up space
+--   SUPER + ALT + SHIFT + Left / Right / Up / Down   move that edge inwards: the tile shrinks
+--
+-- Each press moves the edge by STEP pixels. Only the edge you press moves, so a tile never
+-- changes size on its other sides. Windows without the plustile rule are left alone.
 
-local STEP = 40
+-- Needs the Halcyon Hyprland fork (hl.dsp.window.resize_edge). On stock Hyprland this file does nothing.
+if hl.dsp and hl.dsp.window and hl.dsp.window.resize_edge then
+    local STEP = 40
 
-hl.bind("SUPER + ALT + Right", hl.dsp.window.resize({ x = STEP, y = 0, relative = true }),
-    { description = "Tile: Grow to the right" })
-hl.bind("SUPER + ALT + Down", hl.dsp.window.resize({ x = 0, y = STEP, relative = true }),
-    { description = "Tile: Grow down" })
-hl.bind("SUPER + ALT + Left", hl.dsp.window.resize({ x = -STEP, y = 0, relative = true }),
-    { description = "Tile: Shrink from the right" })
-hl.bind("SUPER + ALT + Up", hl.dsp.window.resize({ x = 0, y = -STEP, relative = true }),
-    { description = "Tile: Shrink from the bottom" })
+    local edges = {
+        { key = "Left",  edge = "left" },
+        { key = "Right", edge = "right" },
+        { key = "Up",    edge = "top" },
+        { key = "Down",  edge = "bottom" },
+    }
+
+    for _, e in ipairs(edges) do
+        hl.bind("SUPER + ALT + " .. e.key, hl.dsp.window.resize_edge({ edge = e.edge, amount = STEP }),
+            { description = "Plustile: Grow the " .. e.edge .. " edge" })
+        hl.bind("SUPER + ALT + SHIFT + " .. e.key, hl.dsp.window.resize_edge({ edge = e.edge, amount = -STEP }),
+            { description = "Plustile: Shrink the " .. e.edge .. " edge" })
+    end
+end
