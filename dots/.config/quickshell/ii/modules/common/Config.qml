@@ -659,6 +659,9 @@ Singleton {
             // Title bars drawn over floating windows, for apps that don't draw their own.
             property JsonObject floatingTitleBars: JsonObject {
                 property bool enable: false
+                // A tiled window that a press in its top band turns floating keeps the cursor's grab point
+                // (Hyprland would centre it on the cursor). Off: Hyprland's own behaviour.
+                property bool keepTileGrab: true
                 // Comma-separated window classes that draw their own title bar, e.g. "steam, firefox"
                 property string skipClasses: ""
             }

@@ -5,6 +5,7 @@ import qs.modules.common.widgets
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Io
 import Quickshell.Wayland
 
 /**
@@ -39,6 +40,85 @@ Scope {
 
     // Mini windows: address -> the size and place they had before, and their monitor.
     property var minis: ({})
+
+    // A tiled window that a press in its top band turns floating (an app's own title bar starts a move,
+    // or a drag does): Hyprland centres it on the cursor, which is the jump. While such a window floats,
+    // it is kept where it was grabbed: the tile's place, moved by the same amount as the cursor.
+    readonly property int grabBand: 140
+    readonly property int grabTimeout: 4000
+    // address -> { x, y, w, h } for each window while it is tiled
+    property var tileGeometry: ({})
+    // The window being kept: { address, tile, startX, startY, started }, startX null until the cursor is read
+    property var grab: null
+
+    Connections {
+        target: HyprlandData
+
+        function onWindowListChanged() {
+            const previous = root.tileGeometry;
+            const tiles = Object.assign({}, previous);
+            HyprlandData.windowList.forEach(win => {
+                if (!win.floating)
+                    tiles[win.address] = { x: win.at[0], y: win.at[1], w: win.size[0], h: win.size[1] };
+            });
+            root.tileGeometry = tiles;
+
+            if (!Config.options.floatingTitleBars.keepTileGrab || root.grab !== null)
+                return;
+            // A window that was tiled and is now floating has just been turned floating.
+            const turned = HyprlandData.windowList.find(win => win.floating && previous[win.address] !== undefined);
+            if (turned) {
+                root.grab = { address: turned.address, tile: previous[turned.address], startX: null, startY: null, started: Date.now() };
+                cursorPoll.running = true;
+            }
+        }
+    }
+
+    // Reads the cursor's position from Hyprland, with the grab's own timing.
+    Process {
+        id: cursorPoll
+        command: ["hyprctl", "cursorpos"]
+        stdout: StdioCollector {
+            onStreamFinished: root.onCursor(this.text)
+        }
+    }
+
+    Timer {
+        interval: 30
+        repeat: true
+        running: root.grab !== null
+        onTriggered: cursorPoll.running = true
+    }
+
+    function onCursor(text) {
+        const grab = root.grab;
+        if (grab === null)
+            return;
+        const m = text.trim().match(/^(-?\d+),\s*(-?\d+)/);
+        if (!m)
+            return;
+        const cx = Number(m[1]);
+        const cy = Number(m[2]);
+        const win = HyprlandData.windowByAddress[grab.address];
+        // The grab is over once the window has tiled again (Hyprland puts it back on release), or after a while.
+        if (!win || !win.floating || Date.now() - grab.started > root.grabTimeout) {
+            root.grab = null;
+            return;
+        }
+        if (grab.startX === null) {
+            const tile = grab.tile;
+            const inBand = cx >= tile.x && cx < tile.x + tile.w && cy >= tile.y && cy < tile.y + root.grabBand;
+            if (!inBand) {
+                // Not a press in the top band: leave Hyprland to it.
+                root.grab = null;
+                return;
+            }
+            root.grab = Object.assign({}, grab, { startX: cx, startY: cy });
+            root.resizeWindow(grab.address, tile.w, tile.h);
+            return;
+        }
+        root.moveWindow(grab.address, grab.tile.x + (cx - grab.startX), grab.tile.y + (cy - grab.startY));
+    }
 
     function isShellWindow(win) {
         return win.title === root.settingsTitle || String(win.class ?? "").toLowerCase().includes("quickshell");

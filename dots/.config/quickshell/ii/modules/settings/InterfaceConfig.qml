@@ -25,6 +25,18 @@ ContentPage {
             }
         }
 
+        ConfigSwitch {
+            buttonIcon: "pan_tool_alt"
+            text: Translation.tr("Keep the grab point when a tiled window is dragged")
+            checked: Config.options.floatingTitleBars.keepTileGrab
+            onCheckedChanged: {
+                Config.options.floatingTitleBars.keepTileGrab = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("A tiled window that a press in its top edge makes floating stays under the cursor where it was grabbed, rather than being centred on the cursor")
+            }
+        }
+
         ContentSubsection {
             title: Translation.tr("Apps with their own title bar")
             tooltip: Translation.tr("Comma-separated window classes that draw their own title bar. Those get none from here")
