@@ -81,6 +81,24 @@ Once hyprland-plus is running, `hyprctl dots plus` shows the dots checkout the i
 `hyprctl dots plus --install` runs `./setup install --force` in that checkout, without asking questions and without
 building hyprland-plus again.
 
+The same command installs other people's Hyprland dotfiles. Run it in a terminal, because their installers ask questions:
+
+| Command | Set | Installer |
+|---|---|---|
+| `hyprctl dots jakoolit --install` | [JaKooLit Hyprland-Dots](https://github.com/JaKooLit/Hyprland-Dots) | its `copy.sh` |
+| `hyprctl dots mlfw --install` | [ML4W OS](https://github.com/mylinuxforwork/dotfiles) | ML4W's installer from ml4w.com |
+| `hyprctl dots gdots --install` | [gdots](https://github.com/semi710/gdots) | copies its `.config` and `bin` |
+
+`hyprctl dots <set>` without `--install` only describes what it would do. With `--install`, the set is cloned to
+`~/.local/share/halcyon/dotsets/<set>` and left as it is upstream. Then the config it replaces is backed up to
+`~/.local/state/halcyon/backups/<set>-<time>`, and its installer runs. Each set replaces the desktop's config in
+`~/.config`, so `hyprctl dots plus --install` brings Halcyon back. Restore anything else from the backup by copying
+it back by hand.
+
+The ML4W installer also installs packages, and gdots does not install the packages its README lists. JaKooLit's
+repository says it was archived in March 2026 and is now maintained at
+[LinuxBeginnings/Hyprland-Dots](https://github.com/LinuxBeginnings/Hyprland-Dots).
+
 ## Themes
 
 By default, colours come from your wallpaper, as in upstream. A theme
