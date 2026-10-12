@@ -34,10 +34,18 @@ AbstractQuickPanel {
     readonly property list<var> toggles: Config.ready ? Config.options.sidebar.quickToggles.android.toggles : []
 
     // Halcyon's update button is added to a saved layout once; after that it is kept or removed as you choose.
-    Component.onCompleted: {
-        if (Config.ready && !Config.options.sidebar.quickToggles.android.updateToggleAdded) {
-            Config.options.sidebar.quickToggles.android.toggles = Config.options.sidebar.quickToggles.android.toggles.concat([{ "size": 1, "type": "halcyonUpdate" }]);
-            Config.options.sidebar.quickToggles.android.updateToggleAdded = true;
+    function addUpdateToggle() {
+        if (!Config.ready || Config.options.sidebar.quickToggles.android.updateToggleAdded)
+            return;
+        Config.options.sidebar.quickToggles.android.toggles = Config.options.sidebar.quickToggles.android.toggles.concat([{ "size": 1, "type": "halcyonUpdate" }]);
+        Config.options.sidebar.quickToggles.android.updateToggleAdded = true;
+    }
+    // The config may still be loading when this panel is made, so it's tried again once it is ready.
+    Component.onCompleted: root.addUpdateToggle()
+    Connections {
+        target: Config
+        function onReadyChanged() {
+            root.addUpdateToggle();
         }
     }
     readonly property list<var> toggleRows: toggleRowsForList(toggles)
