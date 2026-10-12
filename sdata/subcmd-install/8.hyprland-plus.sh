@@ -41,14 +41,28 @@ function setup_hyprland_plus(){
     local rc=0
     HALCYON_HYPRLAND_REPO="$repo" HALCYON_HYPRLAND_REF="$ref" bash "$job" || rc=$?
   else
-    local back
-    back="$(fgconsole 2>/dev/null || true)"
-    printf "${STY_BLUE}Opening console ${console} to build and install hyprland-plus. Enter your password there if asked.${STY_RST}\n"
-    printf "${STY_BLUE}This installer waits for that console to finish, then continues here.${STY_RST}\n"
+    # The console this desktop runs on. logind sets XDG_VTNR for the session; fgconsole needs root, so it is the fallback.
+    local back="${XDG_VTNR:-}"
+    if [[ -z "$back" ]]; then
+      back="$(sudo fgconsole 2>/dev/null || true)"
+    fi
+    if [[ "$console" == "$back" ]]; then
+      console=$((back + 1))
+    fi
+    if [[ "${HALCYON_WALKTHROUGH:-0}" == 1 ]]; then
+      printf "${STY_BLUE}Switching to console ${console} now. The build runs there, then this installer switches back by itself.${STY_RST}\n"
+    else
+      printf "${STY_BLUE}Opening console ${console} to build and install hyprland-plus. Enter your password there if asked.${STY_RST}\n"
+      printf "${STY_BLUE}This installer waits for that console to finish, then continues here.${STY_RST}\n"
+    fi
     local rc=0
     sudo openvt -c "$console" -s -w -- sudo -u "$(id -un)" env HALCYON_HYPRLAND_REPO="$repo" HALCYON_HYPRLAND_REF="$ref" bash "$job" || rc=$?
+    # Back to the desktop. openvt -s does not switch back by itself, so this is the way back.
     if [[ -n "$back" ]]; then
       sudo chvt "$back" 2>/dev/null || true
+      printf "${STY_BLUE}Back on the desktop (console ${back}).${STY_RST}\n"
+    else
+      printf "${STY_YELLOW}Could not find the desktop's console. Switch back with Ctrl+Alt+F1 to F6, whichever is your session.${STY_RST}\n"
     fi
   fi
 
