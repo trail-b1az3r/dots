@@ -20,6 +20,9 @@ if hl.dsp and hl.dsp.window and hl.dsp.window.resize_edge then
         { key = "Down",  edge = "bottom" },
     }
 
+    -- Fit: the focused plustile window takes the free space around it, from its neighbours.
+    hl.bind("SUPER + ALT + F", hl.dsp.window.fit_plustile(), { description = "Plustile: Fit to neighbours" })
+
     for _, e in ipairs(edges) do
         hl.bind("SUPER + ALT + " .. e.key, hl.dsp.window.resize_edge({ edge = e.edge, amount = STEP }),
             { description = "Plustile: Grow the " .. e.edge .. " edge" })
