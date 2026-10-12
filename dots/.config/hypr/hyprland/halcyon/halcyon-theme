@@ -1513,11 +1513,42 @@ def cmd_revolver(args):
     return 0
 
 
+# How a new window is split from the others. Hyprland's dwindle layout does these two natively.
+PLACEMENTS = {
+    "golden": (1.618, 0),   # the split follows the golden ratio, the side chosen by where the cursor is
+    "cursor": (1.0, 0),     # halves, the side chosen by where the cursor is
+}
+PLACEMENT_LUA = HALCYON_STATE / "placement.lua"
+
+
+def cmd_placement(args):
+    """`placement` shows how new windows are placed; `placement golden|cursor` changes it."""
+    current = "golden"
+    try:
+        head = PLACEMENT_LUA.read_text(encoding="utf-8").splitlines()[0]
+        current = head.split("mode:", 1)[1].strip()
+    except (OSError, IndexError):
+        pass
+    if not args:
+        print(current)
+        return 0
+    if args[0] not in PLACEMENTS or len(args) != 1:
+        raise ThemeError("usage: halcyon-theme placement golden|cursor")
+    ratio, force = PLACEMENTS[args[0]]
+    write_atomic(PLACEMENT_LUA, f"-- mode: {args[0]}\n"
+                 f"hl.config({{ dwindle = {{ default_split_ratio = {ratio}, force_split = {force} }} }})\n")
+    if hyprland_running():
+        subprocess.run(["hyprctl", "reload"], capture_output=True, check=False)
+    print(args[0])
+    return 0
+
+
 COMMANDS = {
     "revolver": cmd_revolver,
     "custom": cmd_custom,
     "show": cmd_show,
     "auto": cmd_auto,
+    "placement": cmd_placement,
     "starrail": cmd_starrail,
     "fetch": cmd_fetch,
     "list": cmd_list, "current": cmd_current, "apply": cmd_apply, "off": cmd_off,

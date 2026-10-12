@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Halcyon drag probe: records what a drag does to a window, so the jump can be seen in numbers.
+#
+# Run it, and within the time it gives, hold SUPER and drag a TILED window by its middle, then drag a
+# tiled window by its top edge with no modifier. Every 50 ms it logs the window under the cursor: where
+# the cursor is, where the window is, its size, whether it floats, and where the grab point is inside it.
+# Send the log back.
+#
+#   ./drag-probe [seconds]      default 10
+set -u
+
+seconds="${1:-10}"
+log="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon/drag-probe.log"
+mkdir -p "$(dirname "$log")"
+: > "$log"
+
+# The window under the cursor, read from hyprctl's client list. Prints nothing if there's none.
+window_under_cursor() {
+    python3 - "$1" <<'PY'
+import json, re, subprocess, sys
+m = re.match(r"(\d+),\s*(\d+)", sys.argv[1])
+if not m:
+    sys.exit(0)
+cx, cy = int(m.group(1)), int(m.group(2))
+clients = json.loads(subprocess.run(["hyprctl", "clients", "-j"], capture_output=True, text=True).stdout or "[]")
+for c in clients:
+    x, y = c["at"]
+    w, h = c["size"]
+    if x <= cx < x + w and y <= cy < y + h:
+        print(f'{c["address"]} floating={int(bool(c["floating"]))} at={x},{y} size={w}x{h} '
+              f'cursor={cx},{cy} grab={cx - x},{cy - y}')
+        break
+PY
+}
+
+echo "Probe runs for $seconds s. Drag a tiled window: SUPER + drag by the middle, then drag by the top edge. Log: $log" >&2
+end=$(( $(date +%s%N) / 1000000 + seconds * 1000 ))
+while (( $(date +%s%N) / 1000000 < end )); do
+    stamp="$(date +%s%N | cut -c1-13)"
+    line="$(window_under_cursor "$(hyprctl cursorpos 2>/dev/null)")"
+    echo "$stamp ${line:-no window under cursor}" >> "$log"
+    sleep 0.05
+done
+echo "done: $(wc -l < "$log") samples in $log" >&2

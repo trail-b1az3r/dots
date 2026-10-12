@@ -591,6 +591,7 @@ Singleton {
                     property string style: "android" // Options: classic, android
                     property JsonObject android: JsonObject {
                         property int columns: 5
+                        property bool updateToggleAdded: false // Set once Halcyon's update button has been added to the saved layout
                         property list<var> toggles: [
                             { "size": 2, "type": "network" },
                             { "size": 2, "type": "bluetooth"  },
@@ -661,6 +662,9 @@ Singleton {
                 // Comma-separated window classes that draw their own title bar, e.g. "steam, firefox"
                 property string skipClasses: ""
             }
+
+            // How a new window is split from the others: "golden" or "cursor". Applied by halcyon-theme placement.
+            property string windowPlacement: "golden"
 
             // Other windows kept as live previews down the left edge; click one to bring it forward.
             property JsonObject stageManager: JsonObject {

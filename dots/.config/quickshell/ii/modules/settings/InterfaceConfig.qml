@@ -1,7 +1,9 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import qs.services
 import qs.modules.common
+import qs.modules.common.functions
 import qs.modules.common.widgets
 
 ContentPage {
@@ -91,6 +93,40 @@ ContentPage {
             StyledToolTip {
                 text: Translation.tr("Frames a second for the strip's previews. Higher looks smoother and costs more")
             }
+        }
+    }
+
+    ContentSection {
+        icon: "dashboard"
+        title: Translation.tr("Windows")
+
+        ConfigSelectionArray {
+            currentValue: Config.options.windowPlacement
+            onSelected: newValue => {
+                Config.options.windowPlacement = newValue;
+                Quickshell.execDetached([`${FileUtils.trimFileProtocol(Directories.config)}/hypr/hyprland/halcyon/halcyon-theme`, "placement", newValue]);
+            }
+            options: [
+                {
+                    displayName: Translation.tr("Golden ratio"),
+                    icon: "square",
+                    value: "golden"
+                },
+                {
+                    displayName: Translation.tr("Cursor position"),
+                    icon: "near_me",
+                    value: "cursor"
+                }
+            ]
+        }
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colSubtext
+            font.pixelSize: Appearance.font.pixelSize.smallie
+            text: Translation.tr("Where a new window opens. Golden ratio splits the space on the golden ratio; cursor position splits on the side the pointer is on. Limits of two per row or column, and the Mondrian grid, aren't built yet.")
         }
     }
 

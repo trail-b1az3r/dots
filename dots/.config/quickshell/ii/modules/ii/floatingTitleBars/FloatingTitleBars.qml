@@ -94,9 +94,11 @@ Scope {
         return (root.sineEase(t) + root.bezierEase(t)) / 2;
     }
 
-    function animateMove(address, fromX, fromY, toX, toY) {
+    // Moves a window from one place and size to another over the same curve, so its size and place
+    // change together rather than the size snapping first.
+    function animateWindow(address, from, to) {
         root.cancelTween(address);
-        root.tweens = root.tweens.concat([{ address: address, fromX: fromX, fromY: fromY, toX: toX, toY: toY, start: Date.now() }]);
+        root.tweens = root.tweens.concat([{ address: address, from: from, to: to, start: Date.now() }]);
         tweenTimer.restart();
     }
 
@@ -112,8 +114,9 @@ Scope {
             const now = Date.now();
             root.tweens.forEach(tween => {
                 const e = root.moveEase(Math.min(1, (now - tween.start) / root.moveDuration));
-                root.moveWindow(tween.address, tween.fromX + (tween.toX - tween.fromX) * e,
-                    tween.fromY + (tween.toY - tween.fromY) * e);
+                const at = i => Math.round(tween.from[i] + (tween.to[i] - tween.from[i]) * e);
+                root.resizeWindow(tween.address, at(2), at(3));
+                root.moveWindow(tween.address, at(0), at(1));
             });
             root.tweens = root.tweens.filter(tween => now - tween.start < root.moveDuration);
             if (root.tweens.length === 0)
@@ -151,8 +154,8 @@ Scope {
         const copy = Object.assign({}, root.minis);
         copy[win.address] = origin;
         root.minis = copy;
-        root.resizeWindow(win.address, root.miniWidth, root.miniHeight);
-        root.animateMove(win.address, win.at[0], win.at[1], x, y);
+        root.animateWindow(win.address, [win.at[0], win.at[1], win.size[0], win.size[1]],
+            [x, y, root.miniWidth, root.miniHeight]);
     }
 
     // Brings a mini window back to the size and place it had before.
@@ -163,9 +166,10 @@ Scope {
         const copy = Object.assign({}, root.minis);
         delete copy[address];
         root.minis = copy;
-        root.resizeWindow(address, origin.width, origin.height);
-        const now = HyprlandData.windowByAddress[address]?.at ?? [origin.x, origin.y];
-        root.animateMove(address, now[0], now[1], origin.x, origin.y);
+        // Read fresh: the window list can lag the mini move that just happened.
+        const now = HyprlandData.windowByAddress[address] ?? null;
+        const from = now ? [now.at[0], now.at[1], now.size[0], now.size[1]] : [origin.x, origin.y, root.miniWidth, root.miniHeight];
+        root.animateWindow(address, from, [origin.x, origin.y, origin.width, origin.height]);
     }
 
     Variants {
@@ -386,10 +390,12 @@ Scope {
                                 // A drag takes over from any move still easing.
                                 root.cancelTween(bar.win.address);
                                 const p = mapToItem(stage, mouse.x, mouse.y);
+                                // The window's place now, not the one the list had before the last move.
+                                const fresh = HyprlandData.windowByAddress[bar.win.address] ?? bar.win;
                                 mover.startX = p.x;
                                 mover.startY = p.y;
-                                mover.windowX = bar.win.at[0];
-                                mover.windowY = bar.win.at[1];
+                                mover.windowX = fresh.at[0];
+                                mover.windowY = fresh.at[1];
                                 mover.dragging = false;
                             }
 

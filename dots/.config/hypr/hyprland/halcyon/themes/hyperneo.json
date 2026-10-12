@@ -106,7 +106,8 @@
       {
         "leaf": "windowsIn",
         "speed": 3.2,
-        "curve": "macEaseOut"
+        "curve": "macEaseOut",
+        "style": "popin 88%"
       },
       {
         "leaf": "windowsOut",

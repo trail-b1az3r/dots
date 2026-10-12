@@ -110,7 +110,8 @@
       {
         "leaf": "windowsIn",
         "speed": 3.2,
-        "curve": "glassOut"
+        "curve": "glassOut",
+        "style": "popin 90%"
       },
       {
         "leaf": "windowsOut",

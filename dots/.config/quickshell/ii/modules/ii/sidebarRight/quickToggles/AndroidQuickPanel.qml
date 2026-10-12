@@ -29,9 +29,17 @@ AbstractQuickPanel {
     readonly property real baseCellHeight: 56
 
     // Toggles
-    readonly property list<string> availableToggleTypes: ["network", "bluetooth", "idleInhibitor", "easyEffects", "nightLight", "darkMode", "cloudflareWarp", "gameMode", "screenSnip", "colorPicker", "onScreenKeyboard", "mic", "audio", "notifications", "powerProfile","musicRecognition", "antiFlashbang"]
+    readonly property list<string> availableToggleTypes: ["network", "bluetooth", "idleInhibitor", "easyEffects", "nightLight", "darkMode", "cloudflareWarp", "gameMode", "screenSnip", "colorPicker", "onScreenKeyboard", "mic", "audio", "notifications", "powerProfile","musicRecognition", "antiFlashbang", "halcyonUpdate"]
     readonly property int columns: Config.options.sidebar.quickToggles.android.columns
     readonly property list<var> toggles: Config.ready ? Config.options.sidebar.quickToggles.android.toggles : []
+
+    // Halcyon's update button is added to a saved layout once; after that it is kept or removed as you choose.
+    Component.onCompleted: {
+        if (Config.ready && !Config.options.sidebar.quickToggles.android.updateToggleAdded) {
+            Config.options.sidebar.quickToggles.android.toggles = Config.options.sidebar.quickToggles.android.toggles.concat([{ "size": 1, "type": "halcyonUpdate" }]);
+            Config.options.sidebar.quickToggles.android.updateToggleAdded = true;
+        }
+    }
     readonly property list<var> toggleRows: toggleRowsForList(toggles)
     readonly property list<var> unusedToggles: {
         const types = availableToggleTypes.filter(type => !toggles.some(toggle => (toggle && toggle.type === type)))
