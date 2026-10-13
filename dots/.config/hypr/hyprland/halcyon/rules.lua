@@ -1,0 +1,101 @@
+-- Turns the smart window rules in app_rules.lua (or ~/.config/hypr/custom/app_rules.lua) into window rules.
+--
+-- Native fields become native Hyprland rule effects. Plus fields become the hyprland-plus effects, and are skipped
+-- on stock Hyprland. Unknown fields and wrong values are reported once, in a notification, and the rest of the
+-- entry still applies, so one typo does not lose a whole rule.
+
+local M = {}
+
+-- field -> function(value, effects, problems) that adds rule effects
+local NATIVE = {
+    workspace = function(v, fx, bad)
+        if type(v) == "number" or type(v) == "string" then fx.workspace = tostring(v) else bad("workspace must be a number or a name") end
+    end,
+    float = function(v, fx, bad) if type(v) == "boolean" then fx.float = v else bad("float must be true or false") end end,
+    tile = function(v, fx, bad) if type(v) == "boolean" then fx.tile = v else bad("tile must be true or false") end end,
+    center = function(v, fx, bad) if type(v) == "boolean" then fx.center = v else bad("center must be true or false") end end,
+    monitor = function(v, fx, bad) if type(v) == "string" then fx.monitor = v else bad("monitor must be a name, like \"DP-1\"") end end,
+    title_bar = function(v, fx, bad) if type(v) == "boolean" then fx.decorate = v else bad("title_bar must be true or false") end end,
+    min_size = function(v, fx, bad)
+        if type(v) == "table" and type(v[1]) == "number" and type(v[2]) == "number" then fx.min_size = v[1] .. " " .. v[2]
+        else bad("min_size must be { width, height }") end
+    end,
+    max_size = function(v, fx, bad)
+        if type(v) == "table" and type(v[1]) == "number" and type(v[2]) == "number" then fx.max_size = v[1] .. " " .. v[2]
+        else bad("max_size must be { width, height }") end
+    end,
+}
+
+local PLUS = {
+    plus = function(v, fx, bad) if type(v) == "boolean" then fx.plustile = v else bad("plus must be true or false") end end,
+    keep_size = function(v, fx, bad) if type(v) == "boolean" then fx.plus_locked = v else bad("keep_size must be true or false") end end,
+    superposition = function(v, fx, bad) if type(v) == "boolean" then fx.superposition = v else bad("superposition must be true or false") end end,
+}
+
+local ROLES = {
+    tile = function(fx) fx.tile = true end,
+    float = function(fx) fx.float = true; fx.center = true end,
+    plus = function(fx, plusAvailable) if plusAvailable then fx.plustile = true end; fx.tile = true end,
+    pinned = function(fx) fx.float = true; fx.center = true; fx.pin = true end,
+}
+
+-- Builds the effects for one entry. Returns match, effects, problems (a list of strings).
+function M.translate(entry, plusAvailable)
+    local problems = {}
+    local function bad(text) problems[#problems + 1] = text end
+
+    if type(entry) ~= "table" then
+        return nil, nil, { "an entry is not a table" }
+    end
+    if type(entry.class) ~= "string" and type(entry.title) ~= "string" then
+        return nil, nil, { "an entry has neither class nor title to match" }
+    end
+
+    local match = { class = entry.class, title = entry.title }
+    local fx = {}
+
+    for key, value in pairs(entry) do
+        if key == "class" or key == "title" then
+            -- the match
+        elseif key == "role" then
+            local role = ROLES[value]
+            if role then role(fx, plusAvailable) else bad("role must be tile, float, plus or pinned, not " .. tostring(value)) end
+        elseif NATIVE[key] then
+            NATIVE[key](value, fx, bad)
+        elseif PLUS[key] then
+            if plusAvailable then PLUS[key](value, fx, bad) else bad(key .. " needs hyprland-plus, skipped") end
+        else
+            bad("unknown field " .. tostring(key))
+        end
+    end
+
+    if fx.float and fx.tile then
+        bad("float and tile both set; float wins")
+        fx.tile = nil
+    end
+
+    return match, fx, problems
+end
+
+function M.apply(rules, plusAvailable)
+    local report = {}
+    for i, entry in ipairs(rules) do
+        local match, fx, problems = M.translate(entry, plusAvailable)
+        local label = (type(entry) == "table" and (entry.class or entry.title)) or ("entry " .. i)
+        for _, p in ipairs(problems) do
+            report[#report + 1] = label .. ": " .. p
+        end
+        if match and next(fx) then
+            fx.match = match
+            hl.window_rule(fx)
+        end
+    end
+
+    if #report > 0 then
+        local text = table.concat(report, "\n"):gsub("'", "")
+        hl.exec_cmd("notify-send -a Hyprland 'Halcyon app rules' '" .. text .. "'")
+    end
+    return report
+end
+
+return M

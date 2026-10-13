@@ -13,19 +13,77 @@ Rectangle {
     property real borderRadius: 5
     property real pixelSize: Appearance.font.pixelSize.smaller
     property color keyColor: Appearance.m3colors.m3surfaceContainerLow
+
+    // Pressed: the face travels down into the thick bottom border, and the key squashes a little. Animated both
+    // ways, so a press and its release are both visible.
+    property bool down: false
+    property int pressDuration: 70
+    // When true, clicking the key presses it.
+    property bool interactive: false
+
+    // Presses the key after delayMs and releases it holdMs later. Used to play a chord.
+    function tap(delayMs, holdMs) {
+        releaseTimer.stop();
+        pressTimer.interval = Math.max(1, delayMs);
+        releaseTimer.interval = Math.max(1, holdMs);
+        pressTimer.restart();
+    }
+
+    Timer {
+        id: pressTimer
+        onTriggered: {
+            root.down = true;
+            releaseTimer.restart();
+        }
+    }
+    Timer {
+        id: releaseTimer
+        onTriggered: root.down = false
+    }
+
     implicitWidth: keyFace.implicitWidth + borderWidth * 2
     implicitHeight: keyFace.implicitHeight + borderWidth * 2 + extraBottomBorderWidth
     radius: borderRadius
     color: borderColor
+    transformOrigin: Item.Bottom
+    scale: down ? 0.96 : 1
+
+    Behavior on scale {
+        NumberAnimation {
+            duration: root.pressDuration
+            easing.type: Easing.OutQuad
+        }
+    }
+
+    MouseArea {
+        anchors.fill: parent
+        enabled: root.interactive
+        cursorShape: root.interactive ? Qt.PointingHandCursor : Qt.ArrowCursor
+        onPressed: root.down = true
+        onReleased: root.down = false
+        onCanceled: root.down = false
+    }
 
     Rectangle {
         id: keyFace
         anchors {
             fill: parent
-            topMargin: borderWidth
+            topMargin: borderWidth + (root.down ? extraBottomBorderWidth : 0)
             leftMargin: borderWidth
             rightMargin: borderWidth
-            bottomMargin: extraBottomBorderWidth + borderWidth
+            bottomMargin: (root.down ? 0 : extraBottomBorderWidth) + borderWidth
+        }
+        Behavior on anchors.topMargin {
+            NumberAnimation {
+                duration: root.pressDuration
+                easing.type: Easing.OutQuad
+            }
+        }
+        Behavior on anchors.bottomMargin {
+            NumberAnimation {
+                duration: root.pressDuration
+                easing.type: Easing.OutQuad
+            }
         }
         // "halcyon" stands for the Halcyon mark, which the Super key can be set to.
         readonly property bool isLogo: root.key === "halcyon"

@@ -20,6 +20,8 @@ set -euo pipefail
 
 REPO_URL="https://github.com/trail-b1az3r/hyprland-plus"
 REF="halcyon-0.56.2"
+# Bumped with each change, so an old downloaded copy is easy to spot in its output.
+LITE_VERSION="2026-10-13"
 
 usage() {
     printf 'usage: sudo hyprctl-lite install full\n'
@@ -60,6 +62,8 @@ step() {
 
 trap 'printf "\nhyprctl-lite: the install did not finish. hyprctl-lite is kept, so you can run it again.\n" >&2' ERR
 
+printf 'hyprctl-lite %s\n' "$LITE_VERSION"
+
 step "Fetching hyprland-plus ($REF) into $repo"
 if [[ -d "$repo/.git" ]]; then
     as_user git -C "$repo" fetch origin "$REF"
@@ -72,7 +76,16 @@ as_user git -C "$repo" submodule update --init --recursive
 
 step "Installing the build dependencies (from packaging/aur/PKGBUILD)"
 mapfile -t deps < <(bash -c 'source "$1" >/dev/null 2>&1; printf "%s\n" "${depends[@]}" "${makedepends[@]}"' _ "$repo/packaging/aur/PKGBUILD")
-pacman -S --needed --noconfirm -- base-devel "${deps[@]}"
+# Only the ones not already satisfied. pacman -T counts what other packages provide, so an installed
+# -git variant (aquamarine-git, hyprland-protocols-git, ...) is left alone instead of conflicting.
+mapfile -t missing < <(pacman -T -- "${deps[@]}" || true)
+pacman -S --needed --noconfirm -- base-devel
+if (( ${#missing[@]} > 0 )); then
+    printf 'Installing: %s\n' "${missing[*]}"
+    pacman -S --needed --noconfirm -- "${missing[@]}" || die "could not install the build dependencies: ${missing[*]}"
+else
+    printf 'All build dependencies are already installed.\n'
+fi
 
 step "Building hyprland-plus as $user (this takes a while)"
 as_user make -C "$repo" all

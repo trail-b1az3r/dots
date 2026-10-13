@@ -7,7 +7,7 @@ import qs.modules.common
 import qs.modules.common.functions
 import qs.modules.common.widgets
 
-// Settings > Halcyon: themes, effects and glass.
+// Settings > Halcyon: themes, effects, glass, Plus Tiles and the config check.
 //
 // Everything here is stored under `halcyon` in the shell config, which
 // halcyon-theme reads. Changing an effects or glass option re-applies it to
@@ -112,7 +112,8 @@ ContentPage {
         { id: "hyperneo", name: "HyperNeo", icon: "desktop_mac" },
         { id: "hsr", name: "Star Rail", icon: "train" },
         { id: "shattered-glass", name: "Shattered Glass", icon: "broken_image" },
-        { id: "fractured-glass", name: "Fractured Glass", icon: "lens_blur" }
+        { id: "fractured-glass", name: "Fractured Glass", icon: "lens_blur" },
+        { id: "wallpaper-heaven-kenami", name: "Wallpaper Heaven", icon: "wb_twilight" }
     ]
     property bool showHidden: false
     property string openThemeMenu: "" // Id of the row whose menu is dropped down
@@ -163,6 +164,10 @@ ContentPage {
     property int autoMinute: 0
     property var autoDays: [] // ISO weekdays, 1 = Monday. Empty means every day.
     property bool autoUseTime: true
+    property string autoTimeKind: "clock" // "clock", "sunset" or "sunrise"
+    property int autoOffset: 0 // Minutes after (+) or before (-) sunset or sunrise
+    // Today's sunrise and sunset from `halcyon-theme auto sun`: { location, source, sunrise, sunset }
+    property var sunInfo: ({})
     property string autoWeather: "" // "" for any weather, else a group from halcyon-theme
     readonly property bool autoCanSave: page.autoUseTime || page.autoWeather !== ""
     readonly property var autoWeatherChoices: [
@@ -185,8 +190,14 @@ ContentPage {
 
     function openAuto(id) {
         const entry = page.autoEntry(id);
-        page.autoHour = entry ? parseInt(entry.time.slice(0, 2)) : 8;
-        page.autoMinute = entry ? parseInt(entry.time.slice(3, 5)) : 0;
+        const time = entry?.time ?? "";
+        const sun = /^(sunrise|sunset)(?:([+-])([0-9]{1,3}))?$/.exec(time);
+        const clock = /^([0-9]{2}):([0-9]{2})$/.exec(time);
+        page.autoTimeKind = sun ? sun[1] : "clock";
+        page.autoOffset = sun && sun[3] ? parseInt(sun[3]) * (sun[2] === "-" ? -1 : 1) : 0;
+        page.autoHour = clock ? parseInt(clock[1]) : 8;
+        page.autoMinute = clock ? parseInt(clock[2]) : 0;
+        sunProc.running = true;
         page.autoDays = entry?.days ? entry.days.slice() : [];
         page.autoUseTime = entry ? "time" in entry : true;
         page.autoWeather = entry?.weather ?? "";
@@ -205,7 +216,9 @@ ContentPage {
         // Only the conditions that are on are saved. Days narrow the time or the weather.
         const entry = { theme: page.autoEditing };
         if (page.autoUseTime)
-            entry.time = `${String(page.autoHour).padStart(2, "0")}:${String(page.autoMinute).padStart(2, "0")}`;
+            entry.time = page.autoTimeKind === "clock"
+                ? `${String(page.autoHour).padStart(2, "0")}:${String(page.autoMinute).padStart(2, "0")}`
+                : page.autoTimeKind + (page.autoOffset === 0 ? "" : (page.autoOffset > 0 ? "+" : "-") + Math.abs(page.autoOffset));
         if (page.autoDays.length > 0)
             entry.days = page.autoDays.slice().sort((a, b) => a - b);
         if (page.autoWeather !== "")
@@ -213,6 +226,45 @@ ContentPage {
         const others = Config.options.halcyon.autoApply.filter(saved => saved.theme !== page.autoEditing);
         Config.options.halcyon.autoApply = others.concat([entry]);
         page.autoEditing = "";
+    }
+
+    // "19:42" moved by the offset, for the "today at" line under a sun time.
+    function shiftedTime(hhmm, minutes) {
+        if (!hhmm)
+            return "";
+        const total = (parseInt(hhmm.slice(0, 2)) * 60 + parseInt(hhmm.slice(3, 5)) + minutes + 1440) % 1440;
+        return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+    }
+
+    function sunLine() {
+        if (!page.sunInfo.location)
+            return Translation.tr("No location yet. Type one below, or turn on the bar's weather, which knows where you are.");
+        const today = page.sunInfo[page.autoTimeKind];
+        if (!today)
+            return Translation.tr("The sun doesn't %1 here today, so this won't apply today.").arg(page.autoTimeKind === "sunset" ? Translation.tr("set") : Translation.tr("rise"));
+        const where = page.sunInfo.source === "settings" ? Translation.tr("your location") : Translation.tr("the weather location");
+        return Translation.tr("Today at %1, from %2.").arg(page.shiftedTime(today, page.autoOffset)).arg(where);
+    }
+
+    Process {
+        id: sunProc
+        command: [page.tool, "auto", "sun"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    page.sunInfo = JSON.parse(this.text) ?? {};
+                } catch (error) {
+                    page.sunInfo = {};
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: sunRefresh
+        // After Config has written the new location.
+        interval: 900
+        onTriggered: sunProc.running = true
     }
 
     function removeAuto() {
@@ -354,8 +406,61 @@ ContentPage {
                 onCheckedChanged: page.autoUseTime = checked
             }
 
-            RowLayout {
+            ConfigSelectionArray {
                 visible: page.autoUseTime
+                currentValue: page.autoTimeKind
+                onSelected: newValue => page.autoTimeKind = newValue
+                options: [
+                    { displayName: Translation.tr("Clock time"), icon: "schedule", value: "clock" },
+                    { displayName: Translation.tr("Sunset"), icon: "wb_twilight", value: "sunset" },
+                    { displayName: Translation.tr("Sunrise"), icon: "wb_sunny", value: "sunrise" }
+                ]
+            }
+
+            ColumnLayout {
+                visible: page.autoUseTime && page.autoTimeKind !== "clock"
+                Layout.fillWidth: true
+                spacing: 6
+
+                RowLayout {
+                    spacing: 8
+                    StyledText {
+                        text: Translation.tr("Minutes after (+) or before (−)")
+                        color: Appearance.colors.colOnLayer1
+                        font.pixelSize: Appearance.font.pixelSize.small
+                    }
+                    StyledSpinBox {
+                        from: -180
+                        to: 180
+                        stepSize: 5
+                        value: page.autoOffset
+                        onValueModified: page.autoOffset = value
+                    }
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    color: Appearance.colors.colSubtext
+                    font.pixelSize: Appearance.font.pixelSize.smallie
+                    text: page.sunLine()
+                }
+
+                MaterialTextArea {
+                    Layout.fillWidth: true
+                    placeholderText: Translation.tr("Location as latitude, longitude (e.g. 51.51, -0.13). Empty: the weather location")
+                    text: Config.options.halcyon.location
+                    onTextChanged: {
+                        if (text.trim() === Config.options.halcyon.location)
+                            return;
+                        Config.options.halcyon.location = text.trim();
+                        sunRefresh.restart();
+                    }
+                }
+            }
+
+            RowLayout {
+                visible: page.autoUseTime && page.autoTimeKind === "clock"
                 spacing: 6
                 StyledSpinBox {
                     from: 0
@@ -914,6 +1019,340 @@ ContentPage {
                 onValueChanged: {
                     Config.options.halcyon.glass.blurSize = value;
                     page.refresh();
+                }
+            }
+        }
+    }
+
+    // Plus Tiles (hyprland-plus): written to Hyprland by `halcyon plus apply`,
+    // debounced like refresh() so a spin box reloads Hyprland once.
+    property var plusStatus: ({})
+
+    Process {
+        id: plusStatusProc
+        command: [page.tool, "plus", "status"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    page.plusStatus = JSON.parse(this.text) ?? {};
+                } catch (error) {
+                    page.plusStatus = {};
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: plusTimer
+        interval: 700
+        onTriggered: {
+            Quickshell.execDetached([page.tool, "plus", "apply"]);
+            plusStatusRefresh.restart();
+        }
+    }
+
+    Timer {
+        id: plusStatusRefresh
+        interval: 1200
+        onTriggered: plusStatusProc.running = true
+    }
+
+    function applyPlus() {
+        if (page.ready)
+            plusTimer.restart();
+    }
+
+    ContentSection {
+        icon: "dashboard"
+        title: Translation.tr("Plus Tiles")
+
+        NoticeBox {
+            Layout.fillWidth: true
+            visible: page.plusStatus.running === true && page.plusStatus.plus !== true
+            materialIcon: "info"
+            text: Translation.tr("These need hyprland-plus, the Halcyon Hyprland fork. On stock Hyprland they are saved but do nothing; the app rules that stock Hyprland has still work.")
+        }
+
+        ConfigRow {
+            uniform: true
+            ConfigSwitch {
+                buttonIcon: "select_all"
+                text: Translation.tr("Every tiled window")
+                checked: Config.options.halcyon.plus.allTiled
+                onCheckedChanged: {
+                    Config.options.halcyon.plus.allTiled = checked;
+                    page.applyPlus();
+                }
+                StyledToolTip {
+                    text: Translation.tr("Off: only the apps marked plus in the app rules are Plus Tiles")
+                }
+            }
+            ConfigSwitch {
+                buttonIcon: "preview"
+                text: Translation.tr("Preview edge moves")
+                checked: Config.options.halcyon.plus.editPreview
+                onCheckedChanged: {
+                    Config.options.halcyon.plus.editPreview = checked;
+                    page.applyPlus();
+                }
+                StyledToolTip {
+                    text: Translation.tr("On: Move Edge shows the new sizes and applies them on Enter. Off: every step applies at once")
+                }
+            }
+        }
+
+        ConfigRow {
+            uniform: true
+            ConfigSwitch {
+                buttonIcon: "restore"
+                text: Translation.tr("Keep custom sizes")
+                checked: Config.options.halcyon.plus.autoRestore
+                onCheckedChanged: {
+                    Config.options.halcyon.plus.autoRestore = checked;
+                    page.applyPlus();
+                }
+                StyledToolTip {
+                    text: Translation.tr("Tiles whose edges you moved get their size back when windows open, close or move, or the monitor changes")
+                }
+            }
+            ConfigSwitch {
+                buttonIcon: "highlight"
+                text: Translation.tr("Flash focus target")
+                checked: Config.options.halcyon.plus.focusPreview
+                onCheckedChanged: {
+                    Config.options.halcyon.plus.focusPreview = checked;
+                    page.applyPlus();
+                }
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("Move Edge steps")
+            tooltip: Translation.tr("How far one key press moves an edge, in pixels. Fine is used with Ctrl, coarse with Shift")
+
+            ConfigSpinBox {
+                icon: "straighten"
+                text: Translation.tr("Normal")
+                value: Config.options.halcyon.plus.step
+                from: 2
+                to: 400
+                stepSize: 5
+                onValueChanged: {
+                    Config.options.halcyon.plus.step = value;
+                    page.applyPlus();
+                }
+            }
+            ConfigSpinBox {
+                icon: "remove"
+                text: Translation.tr("Fine")
+                value: Config.options.halcyon.plus.stepFine
+                from: 1
+                to: Config.options.halcyon.plus.step
+                stepSize: 1
+                onValueChanged: {
+                    Config.options.halcyon.plus.stepFine = value;
+                    page.applyPlus();
+                }
+            }
+            ConfigSpinBox {
+                icon: "add"
+                text: Translation.tr("Coarse")
+                value: Config.options.halcyon.plus.stepCoarse
+                from: Config.options.halcyon.plus.step
+                to: 1000
+                stepSize: 10
+                onValueChanged: {
+                    Config.options.halcyon.plus.stepCoarse = value;
+                    page.applyPlus();
+                }
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("Smallest tile")
+            tooltip: Translation.tr("An edge move never makes a tile, or a neighbour, smaller than this")
+
+            ConfigSpinBox {
+                icon: "width"
+                text: Translation.tr("Width")
+                value: Config.options.halcyon.plus.minWidth
+                from: 20
+                to: 2000
+                stepSize: 10
+                onValueChanged: {
+                    Config.options.halcyon.plus.minWidth = value;
+                    page.applyPlus();
+                }
+            }
+            ConfigSpinBox {
+                icon: "height"
+                text: Translation.tr("Height")
+                value: Config.options.halcyon.plus.minHeight
+                from: 20
+                to: 2000
+                stepSize: 10
+                onValueChanged: {
+                    Config.options.halcyon.plus.minHeight = value;
+                    page.applyPlus();
+                }
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("Visual feedback")
+            tooltip: Translation.tr("Outlines and flashes for Move Edge, the drag guide, focus and the geometry inspector. Colours are plus:feedback options in ~/.config/hypr/custom")
+
+            ConfigSwitch {
+                buttonIcon: "border_style"
+                text: Translation.tr("Show feedback")
+                checked: Config.options.halcyon.plus.feedback
+                onCheckedChanged: {
+                    Config.options.halcyon.plus.feedback = checked;
+                    page.applyPlus();
+                }
+            }
+            ConfigSpinBox {
+                icon: "timer"
+                enabled: Config.options.halcyon.plus.feedback
+                text: Translation.tr("Flash length (ms)")
+                value: Config.options.halcyon.plus.feedbackDuration
+                from: 0
+                to: 3000
+                stepSize: 50
+                onValueChanged: {
+                    Config.options.halcyon.plus.feedbackDuration = value;
+                    page.applyPlus();
+                }
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("App rules and keys")
+            tooltip: Translation.tr("Opens your copy in ~/.config/hypr/custom, made from Halcyon's the first time. Hyprland reloads when you save it")
+
+            RowLayout {
+                spacing: 8
+                RippleButtonWithIcon {
+                    materialIcon: "rule"
+                    mainText: page.plusStatus.customRules ? Translation.tr("Edit app rules") : Translation.tr("Customise app rules")
+                    onClicked: {
+                        Quickshell.execDetached([page.tool, "plus", "edit", "rules"]);
+                        plusStatusRefresh.restart();
+                    }
+                }
+                RippleButtonWithIcon {
+                    materialIcon: "keyboard"
+                    mainText: page.plusStatus.customKeys ? Translation.tr("Edit Plus keys") : Translation.tr("Customise Plus keys")
+                    onClicked: {
+                        Quickshell.execDetached([page.tool, "plus", "edit", "keys"]);
+                        plusStatusRefresh.restart();
+                    }
+                }
+            }
+        }
+    }
+
+    // `halcyon config-check --json`, shown as a list. Only Fix changes anything,
+    // and it only fixes file permissions, after a backup.
+    property var checkFindings: []
+    property string checkSummary: ""
+
+    Process {
+        id: configCheck
+        property bool fix: false
+        command: [page.tool, "config-check", "--json"].concat(fix ? ["--fix"] : [])
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const result = JSON.parse(this.text);
+                    page.checkFindings = result.findings ?? [];
+                    const errors = page.checkFindings.filter(f => f.severity === "error").length;
+                    const warnings = page.checkFindings.filter(f => f.severity === "warning").length;
+                    page.checkSummary = page.checkFindings.length === 0
+                        ? Translation.tr("No problems found.")
+                        : Translation.tr("%1 error(s), %2 warning(s).").arg(errors).arg(warnings);
+                    if ((result.fixed ?? []).length > 0)
+                        page.checkSummary += " " + Translation.tr("Fixed %1, after a backup to %2.").arg(result.fixed.length).arg(result.backup);
+                } catch (error) {
+                    page.checkFindings = [];
+                    page.checkSummary = Translation.tr("The check didn't run. Try `halcyon config-check` in a terminal.");
+                }
+            }
+        }
+    }
+
+    function runCheck(fix) {
+        configCheck.fix = fix;
+        page.checkSummary = Translation.tr("Checking…");
+        configCheck.running = true;
+    }
+
+    ContentSection {
+        icon: "fact_check"
+        title: Translation.tr("Configuration check")
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colSubtext
+            font.pixelSize: Appearance.font.pixelSize.smallie
+            text: Translation.tr("Looks for config errors, options your Hyprland doesn't have, keybinds that clash, repeated lines, missing plugins and wrong file permissions. Your config is never rewritten.")
+        }
+
+        RowLayout {
+            spacing: 8
+            RippleButtonWithIcon {
+                materialIcon: "search_check"
+                mainText: Translation.tr("Check")
+                enabled: !configCheck.running
+                onClicked: page.runCheck(false)
+            }
+            RippleButtonWithIcon {
+                materialIcon: "build"
+                mainText: Translation.tr("Fix permissions")
+                visible: page.checkFindings.some(f => f.autofix)
+                enabled: !configCheck.running
+                onClicked: page.runCheck(true)
+                StyledToolTip {
+                    text: Translation.tr("Backs up ~/.config/hypr, then fixes file permissions only")
+                }
+            }
+        }
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            visible: page.checkSummary !== ""
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colOnLayer1
+            text: page.checkSummary
+        }
+
+        Repeater {
+            model: page.checkFindings
+            delegate: RowLayout {
+                id: finding
+                required property var modelData
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                spacing: 8
+
+                MaterialSymbol {
+                    Layout.alignment: Qt.AlignTop
+                    text: finding.modelData.severity === "error" ? "error" : finding.modelData.severity === "warning" ? "warning" : "info"
+                    iconSize: Appearance.font.pixelSize.large
+                    color: finding.modelData.severity === "error" ? Appearance.colors.colError : Appearance.colors.colSubtext
+                }
+                StyledText {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    color: Appearance.colors.colOnLayer1
+                    font.pixelSize: Appearance.font.pixelSize.small
+                    text: finding.modelData.message
+                        + (finding.modelData.path ? `  (${finding.modelData.path})` : "")
+                        + (finding.modelData.fix ? "\n" + Translation.tr("Fix: %1").arg(finding.modelData.fix) : "")
                 }
             }
         }

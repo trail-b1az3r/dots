@@ -87,7 +87,8 @@ Singleton {
                 property bool glassTheme: false // Written by halcyon-theme: the active theme has glass windows or a glass shader
                 property list<string> themeOrder: [] // Built-in theme ids in the order Settings lists them; the rest follow in the default order
                 property list<string> hiddenThemes: [] // Built-in theme ids hidden from Settings; "Show hidden themes" brings them back
-                property list<var> autoApply: [] // Schedules from Settings: { theme, time "HH:MM", days (ISO weekdays, empty for every day), weather }
+                property list<var> autoApply: [] // Schedules from Settings: { theme, time "HH:MM" or "sunset"/"sunrise" with an optional offset in minutes ("sunset-30"), days (ISO weekdays, empty for every day), weather }
+                property string location: "" // "lat,lon" for sunset and sunrise schedules; "" uses the bar's weather location
                 property bool customThemeHelpDismissed: false // "Do not show again" on the question asked after making a custom theme
                 property string effects: "default" // "default" (theme's own), "full", "light", "off"
                 // Star Rail characters: the random pick and the list refresh only work when on.
@@ -122,6 +123,20 @@ Singleton {
                 property JsonObject cursor: JsonObject {
                     property bool enable: true // Halcyon Glass cursor; off restores upstream's Bibata
                     property int size: 24
+                }
+                // Plus Tiles (hyprland-plus). Written to Hyprland by `halcyon plus apply`; defaults match plus.lua.
+                property JsonObject plus: JsonObject {
+                    property bool allTiled: false // Every tiled window is a Plus Tile, not only the apps in app_rules.lua
+                    property bool editPreview: true // Move Edge previews, and applies on Enter
+                    property bool autoRestore: true // Edge-modified tiles keep their size when windows open, close or move
+                    property bool focusPreview: false // Flash the tile that Plus focus moves to
+                    property int step: 40 // Move Edge step, in pixels
+                    property int stepFine: 10 // With Ctrl
+                    property int stepCoarse: 160 // With Shift
+                    property int minWidth: 120 // Smallest a tile is made by an edge move
+                    property int minHeight: 90
+                    property bool feedback: true // Outlines and flashes for edits, the drag guide and the inspector
+                    property int feedbackDuration: 450 // How long a flash lasts, in ms
                 }
             }
 
@@ -362,7 +377,8 @@ Singleton {
                 property bool useMacSymbol: false
                 property bool splitButtons: false
                 property bool useMouseSymbol: false
-                property bool useFnSymbol: false
+                // Halcyon: function keys are shown as icons in the cheat sheet.
+                property bool useFnSymbol: true
                 property JsonObject fontSize: JsonObject {
                     property int key: Appearance.font.pixelSize.smaller
                     property int comment: Appearance.font.pixelSize.smaller

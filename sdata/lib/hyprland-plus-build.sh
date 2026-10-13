@@ -19,7 +19,7 @@ step(){ printf '\n\033[36m==> %s\033[0m\n' "$*"; }
 
 fail(){
     printf '\n\033[31m%s\033[0m\n' "$*"
-    printf 'The packaged Hyprland is still installed, unless the removal step ran. Press Enter to close this console.\n'
+    printf 'The packaged Hyprland is still installed. Press Enter to close this console.\n'
     read -r _
     exit 1
 }
@@ -41,18 +41,19 @@ git -C "$REPO" submodule update --init --recursive || fail "Could not fetch the 
 step "Building hyprland-plus (this takes a while)"
 make -C "$REPO" all || fail "hyprland-plus did not build. Read the first error above."
 
-if pacman -Q hyprland >/dev/null 2>&1; then
-    step "Keeping the packaged Hyprland binary"
-    if [[ ! -e /usr/bin/hyprland.official ]]; then
-        sudo cp /usr/bin/hyprland /usr/bin/hyprland.official || fail "Could not copy /usr/bin/hyprland."
-    fi
-    step "Removing the packaged Hyprland"
-    sudo pacman -R --noconfirm hyprland || fail "Could not remove the packaged hyprland (other packages depend on it). Nothing was installed."
+# The packaged Hyprland is not removed: illogical-impulse-hyprland and others depend on it.
+# hyprland-plus goes to /usr/local/bin, which comes before /usr/bin in PATH, so it is the one that runs.
+if pacman -Q hyprland >/dev/null 2>&1 && [[ -e /usr/bin/hyprland && ! -e /usr/bin/hyprland.official ]]; then
+    step "Keeping a copy of the packaged Hyprland binary"
+    sudo cp /usr/bin/hyprland /usr/bin/hyprland.official || fail "Could not copy /usr/bin/hyprland."
 fi
 
 step "Installing hyprland-plus"
 sudo make -C "$REPO" install || fail "make install failed."
 sudo ln -sf /usr/local/bin/Hyprland /usr/local/bin/hyprland
+if [[ "$(command -v Hyprland)" != /usr/local/bin/Hyprland ]]; then
+    printf '\033[33mPATH finds %s first, not /usr/local/bin/Hyprland. Put /usr/local/bin before /usr/bin in PATH.\033[0m\n' "$(command -v Hyprland)"
+fi
 
 mkdir -p "$STATE"
 git -C "$REPO" rev-parse --short HEAD > "$STATE/hyprland-plus-commit"

@@ -28,6 +28,13 @@
     halcyon-theme cursor apply          apply the setting (run at startup)
 
     halcyon-theme assistant ...         the voice assistant (`halcyon assistant help`)
+    halcyon-theme config-check [--fix]  check the Hyprland and Halcyon config, and say how to fix it
+    halcyon-theme auto list             scheduled themes (Settings > Halcyon, Auto-apply)
+    halcyon-theme auto sun              today's sunrise and sunset, for "sunset" schedules
+    halcyon-theme auto location [LAT,LON|clear]   where the sun times are for (default:
+                                        the bar's weather location)
+    halcyon-theme plus [apply|status]   Plus Tiles settings from Settings > Halcyon
+    halcyon-theme plus edit rules|keys  open your copy of app_rules.lua or plus_keys.lua
     halcyon-theme effects flip          mirror pointer effects vertically,
                                         if the glass lens trails the pointer
                                         upside down
@@ -89,6 +96,9 @@ from datetime import datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+import halcyon_sun  # noqa: E402  (next to this script)
+
 THEMES_DIR = HERE / "themes"
 BANNER_TOOL = HERE / "halcyon-banner"
 
@@ -967,12 +977,33 @@ def weather_category():
     return next((group for group, codes in WEATHER_GROUPS.items() if code in codes), None)
 
 
-def entry_due(entry, now, category):
-    """Whether an entry's time, days and weather all match right now. An entry with none of them never fires."""
+def sun_location():
+    """(lat, lon, source) for sun times: Settings first, then the bar's weather location. None if neither."""
+    stored = halcyon_sun.parse_location(get_nested(read_shell_config(), "halcyon.location"))
+    if stored:
+        return (*stored, "settings")
+    try:
+        data = json.loads((STATE_DIR / "weather.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    found = halcyon_sun.parse_location(data) if isinstance(data, dict) else None
+    return (*found, "weather") if found else None
+
+
+def entry_due(entry, now, category, location=None):
+    """Whether an entry's time, days and weather all match right now. An entry with none of them never fires.
+
+    `now` is timezone-aware. A time is "HH:MM", or "sunset"/"sunrise" with an optional offset in minutes, which
+    needs `location` (lat, lon) and never fires without it.
+    """
     if not any(key in entry for key in ("time", "days", "weather")):
         return False
-    if "time" in entry and entry["time"] != now.strftime("%H:%M"):
-        return False
+    if "time" in entry:
+        spec = entry["time"]
+        if not halcyon_sun.is_time_spec(spec):
+            return False
+        if halcyon_sun.resolve(spec, now, location) != now.strftime("%H:%M"):
+            return False
     days = entry.get("days") or []
     if days and now.isoweekday() not in days:
         return False
@@ -982,21 +1013,46 @@ def entry_due(entry, now, category):
 
 def cmd_auto(args):
     """Run once a minute by halcyon-auto-theme.timer. Applies a schedule when it becomes due, not every minute it stays due. `auto list` shows them."""
+    now = datetime.now().astimezone()
+    place = sun_location()
+    location = place[:2] if place else None
+    if args == ["sun"]:
+        sunrise, sunset = (halcyon_sun.resolve(event, now, location) for event in ("sunrise", "sunset"))
+        print(json.dumps({"location": list(location) if location else None, "source": place[2] if place else None,
+                          "sunrise": sunrise, "sunset": sunset}))
+        return 0
+    if args and args[0] == "location":
+        if len(args) == 1:
+            print(f"{place[0]:.4f},{place[1]:.4f} (from {place[2]})" if place else
+                  "none: set one with `halcyon-theme auto location LAT,LON`, or turn on the bar's weather")
+            return 0
+        if args[1:] == ["clear"]:
+            set_shell_value("halcyon.location", "")
+            return 0
+        value = " ".join(args[1:]).replace(" ", ",") if len(args) == 3 else args[1]
+        if halcyon_sun.parse_location(value) is None:
+            raise ThemeError("usage: halcyon-theme auto location LAT,LON (e.g. 51.51,-0.13) or clear")
+        set_shell_value("halcyon.location", value)
+        return 0
     if args == ["list"]:
         for entry in scheduled_themes():
             days = entry.get("days") or []
             when = ",".join(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][day - 1] for day in days) or "every day"
-            parts = [entry.get("time") or "any time", when]
+            spec = entry.get("time")
+            if spec and not halcyon_sun.CLOCK_TIME.match(str(spec)):
+                today = halcyon_sun.resolve(str(spec), now, location) if halcyon_sun.is_time_spec(spec) else None
+                note = f"{today} today" if today else ("no location yet" if location is None else "not today")
+                spec = f"{halcyon_sun.describe(str(spec))} ({note})"
+            parts = [spec or "any time", when]
             if entry.get("weather"):
                 parts.append(f"when {entry['weather']}")
             print(f"{entry['theme']:<16} " + ", ".join(parts))
         return 0
     if args:
-        raise ThemeError("usage: halcyon-theme auto [list]")
-    now = datetime.now()
+        raise ThemeError("usage: halcyon-theme auto [list|sun|location [LAT,LON|clear]]")
     category = weather_category()
     entries = scheduled_themes()
-    due = [entry for entry in entries if entry_due(entry, now, category)]
+    due = [entry for entry in entries if entry_due(entry, now, category, location)]
     due_keys = [json.dumps(entry, sort_keys=True) for entry in due]
     previous = set()
     try:
@@ -1562,6 +1618,12 @@ def main(argv):
     if argv and argv[0] == "assistant":
         launcher = HERE / "assistant/halcyon-assistant"
         os.execv(str(launcher), [str(launcher), *argv[1:]])
+    if argv and argv[0] == "config-check":
+        checker = HERE / "halcyon_config_check.py"
+        os.execv(sys.executable, [sys.executable, str(checker), *argv[1:]])
+    if argv and argv[0] == "plus":
+        settings = HERE / "halcyon_plus_settings.py"
+        os.execv(sys.executable, [sys.executable, str(settings), *argv[1:]])
     if not argv or argv[0] in ("-h", "--help", "help"):
         print(__doc__.strip())
         return 0

@@ -28,7 +28,7 @@ On top of that, Halcyon adds:
 | **Glass panels** | Shell transparency is on by default. It can still be turned off in Settings. |
 | **Softer layout** | Wider gaps, rounder corners, deeper blur (popups too), a softer shadow. |
 | **Wallpapers** | The hyperNeo fire wallpaper is the default. It and the three Halcyon wallpapers are copied into `~/Pictures/Wallpapers`, where the wallpaper picker looks. |
-| **Themes** | Four hand-made themes: HyperNeo, Star Rail, Shattered Glass and Fractured Glass. [More below.](#themes) |
+| **Themes** | Five hand-made themes: HyperNeo, Star Rail, Shattered Glass, Fractured Glass and Wallpaper Heaven. [More below.](#themes) |
 | **Voice assistant** | Press `Super + Shift + Space` and speak. It answers aloud and can run the desktop. [More below.](#voice-assistant) |
 | **Keybinds** | Extra shortcuts, listed below. They only use key combinations upstream leaves free. |
 | **hyprland-plus** | The compositor is [hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus): Hyprland 0.56.2 with mini windows, superposition windows, plustile windows and a drag fix. [More below.](#hyprland-plus) |
@@ -80,8 +80,9 @@ Halcyon additions. Its own README describes each one. The desktop uses:
 
 - **Mini windows**, `SUPER + CTRL + N`: a window shrinks to a small floating tile.
 - **Superposition windows**: Spotify stays on a thin strip at the right edge, above a fullscreen window.
-- **Plustile windows**: terminals can be resized from each edge with `SUPER + ALT + arrows` (`SHIFT` shrinks),
-  and `SUPER + CTRL + F` fits one to its neighbours.
+- **Plus Tiles**: terminals are ordinary tiles until you use Move Edge (`SUPER + ALT + E`) on one. Then you pick an
+  edge, move it, see the preview and press Enter: the tiles sharing that edge adapt, and the tile keeps its custom
+  size from then on. See [Plus Tiles](#plus-tiles) below.
 - **Drag fix**: a tiled window keeps the grab point when it floats during a drag, so it does not jump.
   The drag guide tints the tile a dropped window would swap with.
 
@@ -89,7 +90,7 @@ The settings are in `~/.config/hypr/hyprland/halcyon/plus.lua`. They only take e
 
 On Arch, `./setup install` checks for the hyprland-plus package first. If it is installed (from the AUR,
 see `packaging/aur` in the fork), nothing is built. Otherwise the installer builds the fork on a text console
-of its own and installs it in place of the packaged Hyprland. Set `HALCYON_SKIP_HYPRLAND_PLUS=1` to skip that.
+of its own and installs it to `/usr/local`, ahead of the packaged Hyprland in PATH. The packaged `hyprland` stays installed, because other packages depend on it. Set `HALCYON_SKIP_HYPRLAND_PLUS=1` to skip that.
 
 Once hyprland-plus is running, `hyprctl dots plus` shows the dots checkout the installer recorded.
 `hyprctl dots plus --install` runs `./setup install --force` in that checkout, without asking questions and without
@@ -192,6 +193,7 @@ style, animations, wallpaper and, for some, shell layout and effects:
 | **Star Rail** | `hsr` | Astral gold and lavender on deep-space navy, over a golden rail curving through a nebula. Can show the current banner character. |
 | **Shattered Glass** | `shattered-glass` | Liquid glass: a glass lens follows the pointer, clicks crack the screen, windows turn to frosted glass. Ice blue and prism violet, sharp corners. |
 | **Fractured Glass** | `fractured-glass` | Refraction only, like Apple's Liquid Glass: a squircle glass lens follows the pointer and bends what's behind its rim. No ripples or cracks. Soft blue, lavender and pink over calm fragments of thick glass. |
+| **Wallpaper Heaven** | `wallpaper-heaven-kenami` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. Wallpaper by Kenami, from Wallpaper Heaven. |
 
 Pick one in **Settings > Halcyon**, with **`Ctrl + Super + Shift + T`**,
 or from a terminal:
@@ -231,6 +233,23 @@ wallpaper. The themes are dark themes, so switching to light mode, or
 picking an accent colour, also leaves the theme. The colours are then
 generated from the theme's accent, not hand-made. `halcyon off`
 makes colours follow the wallpaper again.
+
+### Applying a theme on a schedule
+
+In Settings > Halcyon, open a theme's menu and choose **Auto-apply**. A theme can
+come on at a clock time, at **sunset** or **sunrise** (with an offset, such as
+30 minutes before sunset), on some days only, or with some weather. Wallpaper
+Heaven suits sunset.
+
+The sun times are worked out on this computer each day, for your location: the
+one you type in the Auto-apply card, or else the bar's weather location. Where
+the sun doesn't set that day, a sunset schedule doesn't fire.
+
+```sh
+halcyon auto list                   # what is scheduled, and today's sun times
+halcyon auto sun                    # today's sunrise and sunset
+halcyon auto location 51.51,-0.13   # set the location (clear: back to the weather's)
+```
 
 ### Effects
 
@@ -494,17 +513,84 @@ full list, including all of upstream's.
 | `Ctrl + Super + Shift + T` | Pick a Halcyon theme |
 | `Super + Shift + Space` | Voice assistant (again to cancel) |
 | `Super + Shift + H` | HyperNix (if installed) |
+| `Super + Alt + E` | Plus Tiles: Move Edge (see below) |
+| `Super + Ctrl + F` | Plus Tiles: Fit to neighbours |
+| `Super + Ctrl + Shift + F` | Plus Tiles: back to an ordinary tile |
+| `Super + Ctrl + I` | Plus Tiles: geometry inspector |
+| `Super + Alt + arrow` | Plus Tiles: move that edge out at once (`Shift`: in) |
+| `Super + F10 + H` or `Super + Ctrl + H` | Hypr mode on and off |
 
 Upstream's bindings are all still there. For example, `Super + Q` closes
 a window, `Super + Enter` opens a terminal, and `Super` on its own opens
 search.
 
+`Super` on its own opens the overview when you let go of it, and only then: a
+key pressed while `Super` is held (`Super + /`, for example) cancels that.
+Every bind that holds `Super` gets a hidden companion that sends the cancel
+(`halcyon/super_tap.lua`). An earlier version used one catch-all bind instead,
+which also caught the `Super` key itself and stopped the overview opening.
+
+The cheat sheet (`Super + /`) shows function keys as icons. Hover a line to
+see its chord pressed, key by key, and released; click a key to press it.
+
+### Plus Tiles
+
+A Plus Tile is a tiled window that can be given a custom size. Until you use
+Move Edge on it, it is an ordinary tile: the layout places and sizes it like
+any other. Terminals are Plus Tiles (see `app_rules.lua`).
+
+| In Move Edge (`Super + Alt + E`) | |
+|---|---|
+| arrows, or `H` `J` `K` `L` | select the left, bottom, top or right edge |
+| `=` and `-` | move the edge out or in (`Shift`: a big step, `Ctrl`: a small one) |
+| `Enter` | apply what the preview shows |
+| `Escape` | cancel |
+| `F` / `R` | fit to neighbours / back to an ordinary tile |
+
+Moving an edge goes through the layout, so the tiles that share that edge give
+up or take the space, and the board stays aligned. After that the tile is
+*edge-modified*: Fit to Neighbors keeps its size and makes the neighbours fit
+around it, and its size comes back after windows open, close or move. On an
+ordinary tile, Fit to Neighbors just fits the layout's space.
+
+The everyday settings (every tiled window or only some, preview, steps,
+smallest tile, feedback) are in **Settings > Halcyon > Plus Tiles**, or
+`halcyon plus` in a terminal. The rest, such as the feedback colours, are in
+`halcyon/plus.lua`; set them in `~/.config/hypr/custom`, which wins over both.
+The keys are in `halcyon/plus_keys.lua`. Copy it to
+`~/.config/hypr/custom/plus_keys.lua` to change the keys (Settings has a button
+for this): your copy is used instead, and updates never overwrite it.
+`hyprctl plus inspect` prints the focused tile's geometry, neighbours and limits.
+
+### App rules
+
+`halcyon/app_rules.lua` lists what each app should do: its workspace, floating
+or tiled, minimum size, decorations, and the Plus settings (Plus Tile, keep its
+size, superposition strip). Native Hyprland rules and the Plus-only ones are
+marked in the file. Copy it to `~/.config/hypr/custom/app_rules.lua` to make it
+yours, or use **Customise app rules** in Settings > Halcyon > Plus Tiles. Mistakes are reported in one notification, and the rest still applies.
+
+### Checking the configuration
+
+```sh
+halcyon config-check          # what is wrong, and how to fix it
+halcyon config-check --fix    # also fix file permissions, after a backup
+```
+
+The same check is in **Settings > Halcyon > Configuration check**.
+
+It reports Hyprland's own config errors, Plus options without hyprland-plus,
+Lua that does not parse, malformed chords, two binds on one chord, repeated
+lines in your custom files, missing plugins, Plus settings that contradict each
+other, and wrong file permissions. It never rewrites your configuration.
+
 ### Hypr mode: a second set of keybinds
 
 Hypr mode gives you a second layer, so the same chords can do something
-else. Press `Super + F10 + H` (a function key, Super and a letter, held
-together) to turn it on, and press `Escape` to turn it off. The same key
-turns it off too. A notification says when the mode starts and ends.
+else. Press `Super + Ctrl + H`, or `Super + F10 + H` (F10 before H; on many
+laptops F10 also needs Fn), to turn it on, and `Escape` to turn it off. The
+same keys turn it off too. A band of light swipes across the screen, then
+the mode's binds appear and stay until the mode ends.
 
 While the mode is on, the normal binds are off, so every chord in the mode
 only has to be unique inside it. In the default set the arrow keys move the
