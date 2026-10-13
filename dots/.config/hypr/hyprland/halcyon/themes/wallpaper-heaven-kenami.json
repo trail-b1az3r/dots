@@ -1,0 +1,160 @@
+{
+  "name": "Wallpaper Heaven",
+  "description": "A road at sunset under a red ring: warm rose and ember accents over deep dusk violet. Wallpaper by Kenami, from Wallpaper Heaven.",
+  "wallpaper": "wallpapers/wallpaper-heaven-kenami.jpg",
+  "seed": "#FF4940",
+  "scheme": "scheme-fidelity",
+  "shell": {
+    "background": "#0E0B14",
+    "on_background": "#F3E6E4",
+    "surface": "#0E0B14",
+    "surface_dim": "#0E0B14",
+    "surface_bright": "#3A2E3E",
+    "surface_container_lowest": "#09070E",
+    "surface_container_low": "#16111C",
+    "surface_container": "#1C1622",
+    "surface_container_high": "#261D2C",
+    "surface_container_highest": "#312635",
+    "surface_variant": "#3A2C3C",
+    "on_surface": "#F3E6E4",
+    "on_surface_variant": "#D8C2C2",
+    "outline": "#A48A8C",
+    "outline_variant": "#4E3C44",
+    "primary": "#FF8A7A",
+    "on_primary": "#5C0E0C",
+    "primary_container": "#8D2A2A",
+    "on_primary_container": "#FFDAD3",
+    "secondary": "#E8B4C6",
+    "on_secondary": "#4A1F30",
+    "secondary_container": "#64324A",
+    "on_secondary_container": "#FFD9E5",
+    "tertiary": "#FFC18A",
+    "on_tertiary": "#4E2600",
+    "tertiary_container": "#6E3A10",
+    "on_tertiary_container": "#FFDCC0",
+    "surface_tint": "#FF8A7A",
+    "inverse_surface": "#F3E6E4",
+    "inverse_on_surface": "#352A30",
+    "inverse_primary": "#A33B33",
+    "error": "#FFB4AB",
+    "on_error": "#690005",
+    "error_container": "#93000A",
+    "on_error_container": "#FFDAD6",
+    "shadow": "#000000",
+    "scrim": "#000000"
+  },
+  "terminal": {
+    "term0": "#140F18",
+    "term1": "#FF6B6B",
+    "term2": "#A8D58E",
+    "term3": "#FFC36E",
+    "term4": "#8FA8E8",
+    "term5": "#E3A0C8",
+    "term6": "#8ED1CF",
+    "term7": "#DCCACA",
+    "term8": "#5E4C58",
+    "term9": "#FF8F87",
+    "term10": "#C2E8AA",
+    "term11": "#FFD9A0",
+    "term12": "#B3C5F5",
+    "term13": "#F2C2DE",
+    "term14": "#B2E6E3",
+    "term15": "#F3E6E4"
+  },
+  "hyprland": {
+    "rounding": 16,
+    "rounding_power": 2.5,
+    "gaps_in": 5,
+    "gaps_out": 12,
+    "border_size": 2,
+    "active_border": "rgba(FF7A6ECC) rgba(FFC18ACC) 45deg",
+    "inactive_border": "rgba(4E3C4480)",
+    "blur_size": 7,
+    "blur_passes": 3,
+    "blur_vibrancy": 0.3,
+    "blur_popups": true,
+    "dim_inactive": false,
+    "window_opacity": [
+      0.97,
+      0.92
+    ],
+    "shadow_color": "rgba(1A050890)",
+    "shadow_color_inactive": "rgba(0000005A)",
+    "shadow_range": 34,
+    "shadow_render_power": 3,
+    "shadow_offset": [
+      0,
+      8
+    ],
+    "curves": {
+      "duskRise": [
+        0.16,
+        1.0,
+        0.3,
+        1.0
+      ],
+      "duskSet": [
+        0.55,
+        0.0,
+        0.8,
+        0.15
+      ],
+      "duskDrift": [
+        0.25,
+        0.9,
+        0.25,
+        1.0
+      ]
+    },
+    "animations": [
+      {
+        "leaf": "windowsIn",
+        "speed": 3.4,
+        "curve": "duskRise",
+        "style": "popin 88%"
+      },
+      {
+        "leaf": "windowsOut",
+        "speed": 2.4,
+        "curve": "duskSet",
+        "style": "popin 90%"
+      },
+      {
+        "leaf": "windowsMove",
+        "speed": 3.4,
+        "curve": "duskDrift"
+      },
+      {
+        "leaf": "layersIn",
+        "speed": 2.8,
+        "curve": "duskRise",
+        "style": "popin 95%"
+      },
+      {
+        "leaf": "workspaces",
+        "speed": 5.0,
+        "curve": "duskDrift",
+        "style": "slidefade 12%"
+      }
+    ]
+  },
+  "effects": {
+    "default": "light",
+    "native_blur": {
+      "variant": 8,
+      "options": {
+        "acrylic:refraction": 14,
+        "acrylic:bulb": 36,
+        "acrylic:clarity": 0.84,
+        "acrylic:aberration": 0.012,
+        "acrylic:tint": "rgba(FF6A5A14)"
+      }
+    }
+  },
+  "shell_config": {
+    "appearance.transparency.enable": true,
+    "appearance.transparency.automatic": false,
+    "appearance.transparency.backgroundTransparency": 0.22,
+    "appearance.transparency.contentTransparency": 0.5
+  }
+}

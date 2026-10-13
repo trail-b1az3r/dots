@@ -16,7 +16,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 THEME_TOOL = HERE.parent.parent / "halcyon-theme"
-THEMES = ["hyperneo", "hsr", "shattered-glass", "fractured-glass"]
+THEMES = ["hyperneo", "hsr", "shattered-glass", "fractured-glass", "wallpaper-heaven-kenami"]
 
 
 def _schema(properties, required=()):
@@ -56,7 +56,7 @@ ACTIONS = {
     },
     "apply_theme": {
         "description": "Switch the Halcyon theme: hyperneo (macOS-style ember and neon), hsr (Star Rail), "
-                       "shattered-glass, fractured-glass (Liquid Glass), or off (colours from the wallpaper).",
+                       "shattered-glass, fractured-glass (Liquid Glass), wallpaper-heaven-kenami (sunset), or off (colours from the wallpaper).",
         "parameters": _schema({"theme": {"type": "string", "enum": THEMES + ["off"]}}, ["theme"]),
     },
     "set_effects": {

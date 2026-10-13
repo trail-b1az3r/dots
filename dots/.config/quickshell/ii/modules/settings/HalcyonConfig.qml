@@ -112,7 +112,8 @@ ContentPage {
         { id: "hyperneo", name: "HyperNeo", icon: "desktop_mac" },
         { id: "hsr", name: "Star Rail", icon: "train" },
         { id: "shattered-glass", name: "Shattered Glass", icon: "broken_image" },
-        { id: "fractured-glass", name: "Fractured Glass", icon: "lens_blur" }
+        { id: "fractured-glass", name: "Fractured Glass", icon: "lens_blur" },
+        { id: "wallpaper-heaven-kenami", name: "Wallpaper Heaven", icon: "wb_twilight" }
     ]
     property bool showHidden: false
     property string openThemeMenu: "" // Id of the row whose menu is dropped down
