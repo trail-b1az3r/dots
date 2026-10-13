@@ -29,6 +29,8 @@
 
     halcyon-theme assistant ...         the voice assistant (`halcyon assistant help`)
     halcyon-theme config-check [--fix]  check the Hyprland and Halcyon config, and say how to fix it
+    halcyon-theme plus [apply|status]   Plus Tiles settings from Settings > Halcyon
+    halcyon-theme plus edit rules|keys  open your copy of app_rules.lua or plus_keys.lua
     halcyon-theme effects flip          mirror pointer effects vertically,
                                         if the glass lens trails the pointer
                                         upside down
@@ -1566,6 +1568,9 @@ def main(argv):
     if argv and argv[0] == "config-check":
         checker = HERE / "halcyon_config_check.py"
         os.execv(sys.executable, [sys.executable, str(checker), *argv[1:]])
+    if argv and argv[0] == "plus":
+        settings = HERE / "halcyon_plus_settings.py"
+        os.execv(sys.executable, [sys.executable, str(settings), *argv[1:]])
     if not argv or argv[0] in ("-h", "--help", "help"):
         print(__doc__.strip())
         return 0

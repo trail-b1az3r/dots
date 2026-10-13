@@ -7,7 +7,7 @@ import qs.modules.common
 import qs.modules.common.functions
 import qs.modules.common.widgets
 
-// Settings > Halcyon: themes, effects and glass.
+// Settings > Halcyon: themes, effects, glass, Plus Tiles and the config check.
 //
 // Everything here is stored under `halcyon` in the shell config, which
 // halcyon-theme reads. Changing an effects or glass option re-applies it to
@@ -915,6 +915,340 @@ ContentPage {
                 onValueChanged: {
                     Config.options.halcyon.glass.blurSize = value;
                     page.refresh();
+                }
+            }
+        }
+    }
+
+    // Plus Tiles (hyprland-plus): written to Hyprland by `halcyon plus apply`,
+    // debounced like refresh() so a spin box reloads Hyprland once.
+    property var plusStatus: ({})
+
+    Process {
+        id: plusStatusProc
+        command: [page.tool, "plus", "status"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    page.plusStatus = JSON.parse(this.text) ?? {};
+                } catch (error) {
+                    page.plusStatus = {};
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: plusTimer
+        interval: 700
+        onTriggered: {
+            Quickshell.execDetached([page.tool, "plus", "apply"]);
+            plusStatusRefresh.restart();
+        }
+    }
+
+    Timer {
+        id: plusStatusRefresh
+        interval: 1200
+        onTriggered: plusStatusProc.running = true
+    }
+
+    function applyPlus() {
+        if (page.ready)
+            plusTimer.restart();
+    }
+
+    ContentSection {
+        icon: "dashboard"
+        title: Translation.tr("Plus Tiles")
+
+        NoticeBox {
+            Layout.fillWidth: true
+            visible: page.plusStatus.running === true && page.plusStatus.plus !== true
+            materialIcon: "info"
+            text: Translation.tr("These need hyprland-plus, the Halcyon Hyprland fork. On stock Hyprland they are saved but do nothing; the app rules that stock Hyprland has still work.")
+        }
+
+        ConfigRow {
+            uniform: true
+            ConfigSwitch {
+                buttonIcon: "select_all"
+                text: Translation.tr("Every tiled window")
+                checked: Config.options.halcyon.plus.allTiled
+                onCheckedChanged: {
+                    Config.options.halcyon.plus.allTiled = checked;
+                    page.applyPlus();
+                }
+                StyledToolTip {
+                    text: Translation.tr("Off: only the apps marked plus in the app rules are Plus Tiles")
+                }
+            }
+            ConfigSwitch {
+                buttonIcon: "preview"
+                text: Translation.tr("Preview edge moves")
+                checked: Config.options.halcyon.plus.editPreview
+                onCheckedChanged: {
+                    Config.options.halcyon.plus.editPreview = checked;
+                    page.applyPlus();
+                }
+                StyledToolTip {
+                    text: Translation.tr("On: Move Edge shows the new sizes and applies them on Enter. Off: every step applies at once")
+                }
+            }
+        }
+
+        ConfigRow {
+            uniform: true
+            ConfigSwitch {
+                buttonIcon: "restore"
+                text: Translation.tr("Keep custom sizes")
+                checked: Config.options.halcyon.plus.autoRestore
+                onCheckedChanged: {
+                    Config.options.halcyon.plus.autoRestore = checked;
+                    page.applyPlus();
+                }
+                StyledToolTip {
+                    text: Translation.tr("Tiles whose edges you moved get their size back when windows open, close or move, or the monitor changes")
+                }
+            }
+            ConfigSwitch {
+                buttonIcon: "highlight"
+                text: Translation.tr("Flash focus target")
+                checked: Config.options.halcyon.plus.focusPreview
+                onCheckedChanged: {
+                    Config.options.halcyon.plus.focusPreview = checked;
+                    page.applyPlus();
+                }
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("Move Edge steps")
+            tooltip: Translation.tr("How far one key press moves an edge, in pixels. Fine is used with Ctrl, coarse with Shift")
+
+            ConfigSpinBox {
+                icon: "straighten"
+                text: Translation.tr("Normal")
+                value: Config.options.halcyon.plus.step
+                from: 2
+                to: 400
+                stepSize: 5
+                onValueChanged: {
+                    Config.options.halcyon.plus.step = value;
+                    page.applyPlus();
+                }
+            }
+            ConfigSpinBox {
+                icon: "remove"
+                text: Translation.tr("Fine")
+                value: Config.options.halcyon.plus.stepFine
+                from: 1
+                to: Config.options.halcyon.plus.step
+                stepSize: 1
+                onValueChanged: {
+                    Config.options.halcyon.plus.stepFine = value;
+                    page.applyPlus();
+                }
+            }
+            ConfigSpinBox {
+                icon: "add"
+                text: Translation.tr("Coarse")
+                value: Config.options.halcyon.plus.stepCoarse
+                from: Config.options.halcyon.plus.step
+                to: 1000
+                stepSize: 10
+                onValueChanged: {
+                    Config.options.halcyon.plus.stepCoarse = value;
+                    page.applyPlus();
+                }
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("Smallest tile")
+            tooltip: Translation.tr("An edge move never makes a tile, or a neighbour, smaller than this")
+
+            ConfigSpinBox {
+                icon: "width"
+                text: Translation.tr("Width")
+                value: Config.options.halcyon.plus.minWidth
+                from: 20
+                to: 2000
+                stepSize: 10
+                onValueChanged: {
+                    Config.options.halcyon.plus.minWidth = value;
+                    page.applyPlus();
+                }
+            }
+            ConfigSpinBox {
+                icon: "height"
+                text: Translation.tr("Height")
+                value: Config.options.halcyon.plus.minHeight
+                from: 20
+                to: 2000
+                stepSize: 10
+                onValueChanged: {
+                    Config.options.halcyon.plus.minHeight = value;
+                    page.applyPlus();
+                }
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("Visual feedback")
+            tooltip: Translation.tr("Outlines and flashes for Move Edge, the drag guide, focus and the geometry inspector. Colours are plus:feedback options in ~/.config/hypr/custom")
+
+            ConfigSwitch {
+                buttonIcon: "border_style"
+                text: Translation.tr("Show feedback")
+                checked: Config.options.halcyon.plus.feedback
+                onCheckedChanged: {
+                    Config.options.halcyon.plus.feedback = checked;
+                    page.applyPlus();
+                }
+            }
+            ConfigSpinBox {
+                icon: "timer"
+                enabled: Config.options.halcyon.plus.feedback
+                text: Translation.tr("Flash length (ms)")
+                value: Config.options.halcyon.plus.feedbackDuration
+                from: 0
+                to: 3000
+                stepSize: 50
+                onValueChanged: {
+                    Config.options.halcyon.plus.feedbackDuration = value;
+                    page.applyPlus();
+                }
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("App rules and keys")
+            tooltip: Translation.tr("Opens your copy in ~/.config/hypr/custom, made from Halcyon's the first time. Hyprland reloads when you save it")
+
+            RowLayout {
+                spacing: 8
+                RippleButtonWithIcon {
+                    materialIcon: "rule"
+                    mainText: page.plusStatus.customRules ? Translation.tr("Edit app rules") : Translation.tr("Customise app rules")
+                    onClicked: {
+                        Quickshell.execDetached([page.tool, "plus", "edit", "rules"]);
+                        plusStatusRefresh.restart();
+                    }
+                }
+                RippleButtonWithIcon {
+                    materialIcon: "keyboard"
+                    mainText: page.plusStatus.customKeys ? Translation.tr("Edit Plus keys") : Translation.tr("Customise Plus keys")
+                    onClicked: {
+                        Quickshell.execDetached([page.tool, "plus", "edit", "keys"]);
+                        plusStatusRefresh.restart();
+                    }
+                }
+            }
+        }
+    }
+
+    // `halcyon config-check --json`, shown as a list. Only Fix changes anything,
+    // and it only fixes file permissions, after a backup.
+    property var checkFindings: []
+    property string checkSummary: ""
+
+    Process {
+        id: configCheck
+        property bool fix: false
+        command: [page.tool, "config-check", "--json"].concat(fix ? ["--fix"] : [])
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const result = JSON.parse(this.text);
+                    page.checkFindings = result.findings ?? [];
+                    const errors = page.checkFindings.filter(f => f.severity === "error").length;
+                    const warnings = page.checkFindings.filter(f => f.severity === "warning").length;
+                    page.checkSummary = page.checkFindings.length === 0
+                        ? Translation.tr("No problems found.")
+                        : Translation.tr("%1 error(s), %2 warning(s).").arg(errors).arg(warnings);
+                    if ((result.fixed ?? []).length > 0)
+                        page.checkSummary += " " + Translation.tr("Fixed %1, after a backup to %2.").arg(result.fixed.length).arg(result.backup);
+                } catch (error) {
+                    page.checkFindings = [];
+                    page.checkSummary = Translation.tr("The check didn't run. Try `halcyon config-check` in a terminal.");
+                }
+            }
+        }
+    }
+
+    function runCheck(fix) {
+        configCheck.fix = fix;
+        page.checkSummary = Translation.tr("Checking…");
+        configCheck.running = true;
+    }
+
+    ContentSection {
+        icon: "fact_check"
+        title: Translation.tr("Configuration check")
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colSubtext
+            font.pixelSize: Appearance.font.pixelSize.smallie
+            text: Translation.tr("Looks for config errors, options your Hyprland doesn't have, keybinds that clash, repeated lines, missing plugins and wrong file permissions. Your config is never rewritten.")
+        }
+
+        RowLayout {
+            spacing: 8
+            RippleButtonWithIcon {
+                materialIcon: "search_check"
+                mainText: Translation.tr("Check")
+                enabled: !configCheck.running
+                onClicked: page.runCheck(false)
+            }
+            RippleButtonWithIcon {
+                materialIcon: "build"
+                mainText: Translation.tr("Fix permissions")
+                visible: page.checkFindings.some(f => f.autofix)
+                enabled: !configCheck.running
+                onClicked: page.runCheck(true)
+                StyledToolTip {
+                    text: Translation.tr("Backs up ~/.config/hypr, then fixes file permissions only")
+                }
+            }
+        }
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            visible: page.checkSummary !== ""
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colOnLayer1
+            text: page.checkSummary
+        }
+
+        Repeater {
+            model: page.checkFindings
+            delegate: RowLayout {
+                id: finding
+                required property var modelData
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                spacing: 8
+
+                MaterialSymbol {
+                    Layout.alignment: Qt.AlignTop
+                    text: finding.modelData.severity === "error" ? "error" : finding.modelData.severity === "warning" ? "warning" : "info"
+                    iconSize: Appearance.font.pixelSize.large
+                    color: finding.modelData.severity === "error" ? Appearance.colors.colError : Appearance.colors.colSubtext
+                }
+                StyledText {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    color: Appearance.colors.colOnLayer1
+                    font.pixelSize: Appearance.font.pixelSize.small
+                    text: finding.modelData.message
+                        + (finding.modelData.path ? `  (${finding.modelData.path})` : "")
+                        + (finding.modelData.fix ? "\n" + Translation.tr("Fix: %1").arg(finding.modelData.fix) : "")
                 }
             }
         }

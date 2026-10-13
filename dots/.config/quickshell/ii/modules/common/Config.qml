@@ -123,6 +123,20 @@ Singleton {
                     property bool enable: true // Halcyon Glass cursor; off restores upstream's Bibata
                     property int size: 24
                 }
+                // Plus Tiles (hyprland-plus). Written to Hyprland by `halcyon plus apply`; defaults match plus.lua.
+                property JsonObject plus: JsonObject {
+                    property bool allTiled: false // Every tiled window is a Plus Tile, not only the apps in app_rules.lua
+                    property bool editPreview: true // Move Edge previews, and applies on Enter
+                    property bool autoRestore: true // Edge-modified tiles keep their size when windows open, close or move
+                    property bool focusPreview: false // Flash the tile that Plus focus moves to
+                    property int step: 40 // Move Edge step, in pixels
+                    property int stepFine: 10 // With Ctrl
+                    property int stepCoarse: 160 // With Shift
+                    property int minWidth: 120 // Smallest a tile is made by an edge move
+                    property int minHeight: 90
+                    property bool feedback: true // Outlines and flashes for edits, the drag guide and the inspector
+                    property int feedbackDuration: 450 // How long a flash lasts, in ms
+                }
             }
 
             property JsonObject policies: JsonObject {

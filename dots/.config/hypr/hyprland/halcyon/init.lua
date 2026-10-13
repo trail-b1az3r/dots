@@ -22,6 +22,13 @@ if is_file_exists(themeFile) then
     dofile(themeFile)
 end
 
+-- Plus Tiles settings from Settings > Halcyon > Plus Tiles (halcyon-theme plus apply). They override the
+-- defaults in plus.lua; custom/ is loaded later and still wins.
+local plusFile = stateHome .. "/halcyon/plus.lua"
+if is_file_exists(plusFile) then
+    dofile(plusFile)
+end
+
 -- How new windows are split, from Settings > Interface > Windows (halcyon-theme placement).
 local placementFile = stateHome .. "/halcyon/placement.lua"
 if is_file_exists(placementFile) then

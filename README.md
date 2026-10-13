@@ -536,11 +536,14 @@ up or take the space, and the board stays aligned. After that the tile is
 around it, and its size comes back after windows open, close or move. On an
 ordinary tile, Fit to Neighbors just fits the layout's space.
 
-The keys are in `halcyon/plus_keys.lua`, and the settings (steps, minimum sizes,
-preview colours) in `halcyon/plus.lua`. Copy `plus_keys.lua` to
-`~/.config/hypr/custom/plus_keys.lua` to change the keys: your copy is used
-instead, and updates never overwrite it. `hyprctl plus inspect` prints the
-focused tile's geometry, neighbours and limits.
+The everyday settings (every tiled window or only some, preview, steps,
+smallest tile, feedback) are in **Settings > Halcyon > Plus Tiles**, or
+`halcyon plus` in a terminal. The rest, such as the feedback colours, are in
+`halcyon/plus.lua`; set them in `~/.config/hypr/custom`, which wins over both.
+The keys are in `halcyon/plus_keys.lua`. Copy it to
+`~/.config/hypr/custom/plus_keys.lua` to change the keys (Settings has a button
+for this): your copy is used instead, and updates never overwrite it.
+`hyprctl plus inspect` prints the focused tile's geometry, neighbours and limits.
 
 ### App rules
 
@@ -548,7 +551,7 @@ focused tile's geometry, neighbours and limits.
 or tiled, minimum size, decorations, and the Plus settings (Plus Tile, keep its
 size, superposition strip). Native Hyprland rules and the Plus-only ones are
 marked in the file. Copy it to `~/.config/hypr/custom/app_rules.lua` to make it
-yours. Mistakes are reported in one notification, and the rest still applies.
+yours, or use **Customise app rules** in Settings > Halcyon > Plus Tiles. Mistakes are reported in one notification, and the rest still applies.
 
 ### Checking the configuration
 
@@ -556,6 +559,8 @@ yours. Mistakes are reported in one notification, and the rest still applies.
 halcyon config-check          # what is wrong, and how to fix it
 halcyon config-check --fix    # also fix file permissions, after a backup
 ```
+
+The same check is in **Settings > Halcyon > Configuration check**.
 
 It reports Hyprland's own config errors, Plus options without hyprland-plus,
 Lua that does not parse, malformed chords, two binds on one chord, repeated
