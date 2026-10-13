@@ -11,7 +11,7 @@
 #   HALCYON_SKIP_HYPRLAND_PLUS=1   leave the packaged Hyprland alone
 #
 # The packaged binary is copied to /usr/bin/hyprland.official before it is removed, so it can
-# be put back with: sudo make -C ~/hyprland-plus uninstall && sudo pacman -S hyprland
+# be put back with: sudo make -C ~/hyprland-plus uninstall (the packaged hyprland is never removed)
 
 function setup_hyprland_plus(){
   if [[ "${HALCYON_SKIP_HYPRLAND_PLUS:-0}" == 1 ]]; then

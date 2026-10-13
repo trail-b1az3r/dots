@@ -14,7 +14,7 @@ The settings are in `~/.config/hypr/hyprland/halcyon/plus.lua`. They only take e
 
 On Arch, `./setup install` checks for the hyprland-plus package first. If it is installed (from the AUR,
 see `packaging/aur` in the fork), nothing is built. Otherwise the installer builds the fork on a text console
-of its own and installs it in place of the packaged Hyprland. Set `HALCYON_SKIP_HYPRLAND_PLUS=1` to skip that.
+of its own and installs it to `/usr/local`, ahead of the packaged Hyprland in PATH. The packaged `hyprland` stays installed, because other packages depend on it. Set `HALCYON_SKIP_HYPRLAND_PLUS=1` to skip that.
 
 Once hyprland-plus is running, `hyprctl dots plus` shows the dots checkout the installer recorded.
 `hyprctl dots plus --install` runs `./setup install --force` in that checkout, without asking questions and without
