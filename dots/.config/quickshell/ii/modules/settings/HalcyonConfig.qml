@@ -164,6 +164,10 @@ ContentPage {
     property int autoMinute: 0
     property var autoDays: [] // ISO weekdays, 1 = Monday. Empty means every day.
     property bool autoUseTime: true
+    property string autoTimeKind: "clock" // "clock", "sunset" or "sunrise"
+    property int autoOffset: 0 // Minutes after (+) or before (-) sunset or sunrise
+    // Today's sunrise and sunset from `halcyon-theme auto sun`: { location, source, sunrise, sunset }
+    property var sunInfo: ({})
     property string autoWeather: "" // "" for any weather, else a group from halcyon-theme
     readonly property bool autoCanSave: page.autoUseTime || page.autoWeather !== ""
     readonly property var autoWeatherChoices: [
@@ -186,8 +190,14 @@ ContentPage {
 
     function openAuto(id) {
         const entry = page.autoEntry(id);
-        page.autoHour = entry ? parseInt(entry.time.slice(0, 2)) : 8;
-        page.autoMinute = entry ? parseInt(entry.time.slice(3, 5)) : 0;
+        const time = entry?.time ?? "";
+        const sun = /^(sunrise|sunset)(?:([+-])([0-9]{1,3}))?$/.exec(time);
+        const clock = /^([0-9]{2}):([0-9]{2})$/.exec(time);
+        page.autoTimeKind = sun ? sun[1] : "clock";
+        page.autoOffset = sun && sun[3] ? parseInt(sun[3]) * (sun[2] === "-" ? -1 : 1) : 0;
+        page.autoHour = clock ? parseInt(clock[1]) : 8;
+        page.autoMinute = clock ? parseInt(clock[2]) : 0;
+        sunProc.running = true;
         page.autoDays = entry?.days ? entry.days.slice() : [];
         page.autoUseTime = entry ? "time" in entry : true;
         page.autoWeather = entry?.weather ?? "";
@@ -206,7 +216,9 @@ ContentPage {
         // Only the conditions that are on are saved. Days narrow the time or the weather.
         const entry = { theme: page.autoEditing };
         if (page.autoUseTime)
-            entry.time = `${String(page.autoHour).padStart(2, "0")}:${String(page.autoMinute).padStart(2, "0")}`;
+            entry.time = page.autoTimeKind === "clock"
+                ? `${String(page.autoHour).padStart(2, "0")}:${String(page.autoMinute).padStart(2, "0")}`
+                : page.autoTimeKind + (page.autoOffset === 0 ? "" : (page.autoOffset > 0 ? "+" : "-") + Math.abs(page.autoOffset));
         if (page.autoDays.length > 0)
             entry.days = page.autoDays.slice().sort((a, b) => a - b);
         if (page.autoWeather !== "")
@@ -214,6 +226,45 @@ ContentPage {
         const others = Config.options.halcyon.autoApply.filter(saved => saved.theme !== page.autoEditing);
         Config.options.halcyon.autoApply = others.concat([entry]);
         page.autoEditing = "";
+    }
+
+    // "19:42" moved by the offset, for the "today at" line under a sun time.
+    function shiftedTime(hhmm, minutes) {
+        if (!hhmm)
+            return "";
+        const total = (parseInt(hhmm.slice(0, 2)) * 60 + parseInt(hhmm.slice(3, 5)) + minutes + 1440) % 1440;
+        return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+    }
+
+    function sunLine() {
+        if (!page.sunInfo.location)
+            return Translation.tr("No location yet. Type one below, or turn on the bar's weather, which knows where you are.");
+        const today = page.sunInfo[page.autoTimeKind];
+        if (!today)
+            return Translation.tr("The sun doesn't %1 here today, so this won't apply today.").arg(page.autoTimeKind === "sunset" ? Translation.tr("set") : Translation.tr("rise"));
+        const where = page.sunInfo.source === "settings" ? Translation.tr("your location") : Translation.tr("the weather location");
+        return Translation.tr("Today at %1, from %2.").arg(page.shiftedTime(today, page.autoOffset)).arg(where);
+    }
+
+    Process {
+        id: sunProc
+        command: [page.tool, "auto", "sun"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    page.sunInfo = JSON.parse(this.text) ?? {};
+                } catch (error) {
+                    page.sunInfo = {};
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: sunRefresh
+        // After Config has written the new location.
+        interval: 900
+        onTriggered: sunProc.running = true
     }
 
     function removeAuto() {
@@ -355,8 +406,61 @@ ContentPage {
                 onCheckedChanged: page.autoUseTime = checked
             }
 
-            RowLayout {
+            ConfigSelectionArray {
                 visible: page.autoUseTime
+                currentValue: page.autoTimeKind
+                onSelected: newValue => page.autoTimeKind = newValue
+                options: [
+                    { displayName: Translation.tr("Clock time"), icon: "schedule", value: "clock" },
+                    { displayName: Translation.tr("Sunset"), icon: "wb_twilight", value: "sunset" },
+                    { displayName: Translation.tr("Sunrise"), icon: "wb_sunny", value: "sunrise" }
+                ]
+            }
+
+            ColumnLayout {
+                visible: page.autoUseTime && page.autoTimeKind !== "clock"
+                Layout.fillWidth: true
+                spacing: 6
+
+                RowLayout {
+                    spacing: 8
+                    StyledText {
+                        text: Translation.tr("Minutes after (+) or before (−)")
+                        color: Appearance.colors.colOnLayer1
+                        font.pixelSize: Appearance.font.pixelSize.small
+                    }
+                    StyledSpinBox {
+                        from: -180
+                        to: 180
+                        stepSize: 5
+                        value: page.autoOffset
+                        onValueModified: page.autoOffset = value
+                    }
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    color: Appearance.colors.colSubtext
+                    font.pixelSize: Appearance.font.pixelSize.smallie
+                    text: page.sunLine()
+                }
+
+                MaterialTextArea {
+                    Layout.fillWidth: true
+                    placeholderText: Translation.tr("Location as latitude, longitude (e.g. 51.51, -0.13). Empty: the weather location")
+                    text: Config.options.halcyon.location
+                    onTextChanged: {
+                        if (text.trim() === Config.options.halcyon.location)
+                            return;
+                        Config.options.halcyon.location = text.trim();
+                        sunRefresh.restart();
+                    }
+                }
+            }
+
+            RowLayout {
+                visible: page.autoUseTime && page.autoTimeKind === "clock"
                 spacing: 6
                 StyledSpinBox {
                     from: 0

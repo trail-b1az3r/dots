@@ -51,6 +51,23 @@ picking an accent colour, also leaves the theme. The colours are then
 generated from the theme's accent, not hand-made. `halcyon off`
 makes colours follow the wallpaper again.
 
+### Applying a theme on a schedule
+
+In Settings > Halcyon, open a theme's menu and choose **Auto-apply**. A theme can
+come on at a clock time, at **sunset** or **sunrise** (with an offset, such as
+30 minutes before sunset), on some days only, or with some weather. Wallpaper
+Heaven suits sunset.
+
+The sun times are worked out on this computer each day, for your location: the
+one you type in the Auto-apply card, or else the bar's weather location. Where
+the sun doesn't set that day, a sunset schedule doesn't fire.
+
+```sh
+halcyon auto list                   # what is scheduled, and today's sun times
+halcyon auto sun                    # today's sunrise and sunset
+halcyon auto location 51.51,-0.13   # set the location (clear: back to the weather's)
+```
+
 ### Effects
 
 | Level | What you get |
