@@ -56,7 +56,7 @@ function setup_hyprland_plus(){
       printf "${STY_BLUE}This installer waits for that console to finish, then continues here.${STY_RST}\n"
     fi
     local rc=0
-    sudo openvt -c "$console" -s -w -- sudo -u "$(id -un)" env HALCYON_HYPRLAND_REPO="$repo" HALCYON_HYPRLAND_REF="$ref" bash "$job" || rc=$?
+    sudo openvt -f -c "$console" -s -w -- sudo -u "$(id -un)" env HALCYON_HYPRLAND_REPO="$repo" HALCYON_HYPRLAND_REF="$ref" bash "$job" || rc=$?
     # Back to the desktop. openvt -s does not switch back by itself, so this is the way back.
     if [[ -n "$back" ]]; then
       sudo chvt "$back" 2>/dev/null || true
