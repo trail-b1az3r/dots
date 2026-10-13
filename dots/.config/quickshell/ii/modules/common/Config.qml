@@ -362,7 +362,8 @@ Singleton {
                 property bool useMacSymbol: false
                 property bool splitButtons: false
                 property bool useMouseSymbol: false
-                property bool useFnSymbol: false
+                // Halcyon: function keys are shown as icons in the cheat sheet.
+                property bool useFnSymbol: true
                 property JsonObject fontSize: JsonObject {
                     property int key: Appearance.font.pixelSize.smaller
                     property int comment: Appearance.font.pixelSize.smaller

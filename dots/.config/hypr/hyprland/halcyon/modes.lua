@@ -14,16 +14,23 @@ local function loadSettings()
 end
 
 local SETTINGS = loadSettings()
-local MODE     = { name = "hypr", toggle = SETTINGS.toggle, exit = SETTINGS.exit }
+local MODE     = { name = "hypr", exit = SETTINGS.exit }
+
+-- toggle is one chord or a list of them.
+MODE.toggles   = type(SETTINGS.toggle) == "table" and SETTINGS.toggle or { SETTINGS.toggle }
+
+-- The shell shows the mode (a swipe, then the mode's binds) when the submap changes. Without the shell running,
+-- a notification says it instead.
+local QS_ALIVE = "qs -c $qsConfig ipc call TEST_ALIVE >/dev/null 2>&1"
 
 local function enterMode()
-    hl.dispatch(hl.dsp.exec_cmd("notify-send 'Entered hypr mode' 'Keybinds are different until you press " .. MODE.exit .. "' -a 'Hyprland'"))
     hl.dispatch(hl.dsp.submap(MODE.name))
+    hl.dispatch(hl.dsp.exec_cmd(QS_ALIVE .. " || notify-send 'Entered hypr mode' 'Keybinds are different until you press " .. MODE.exit .. "' -a 'Hyprland'"))
 end
 
 local function exitMode()
-    hl.dispatch(hl.dsp.exec_cmd("notify-send 'Left hypr mode' 'Keybinds are back to normal' -a 'Hyprland'"))
     hl.dispatch(hl.dsp.submap("reset"))
+    hl.dispatch(hl.dsp.exec_cmd(QS_ALIVE .. " || notify-send 'Left hypr mode' 'Keybinds are back to normal' -a 'Hyprland'"))
 end
 
 -- The toggle is universal, so it works both outside the mode and inside it.
@@ -37,7 +44,10 @@ local function toggleMode()
 end
 
 hl.define_submap(MODE.name, function()
-    hl.bind(MODE.toggle, toggleMode, { submap_universal = true, description = "Shell: Toggle hypr mode" })
+    for i, chord in ipairs(MODE.toggles) do
+        -- Only the first one is described, so the cheat sheet lists the mode once.
+        hl.bind(chord, toggleMode, { submap_universal = true, description = i == 1 and "Shell: Toggle hypr mode" or nil })
+    end
     hl.bind(MODE.exit, exitMode)
 
     for _, b in ipairs(SETTINGS.binds) do

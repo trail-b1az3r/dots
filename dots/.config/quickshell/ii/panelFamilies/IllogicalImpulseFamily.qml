@@ -7,6 +7,7 @@ import qs.modules.ii.bar
 import qs.modules.ii.cheatsheet
 import qs.modules.ii.dock
 import qs.modules.ii.floatingTitleBars
+import qs.modules.ii.hyprMode
 import qs.modules.ii.lock
 import qs.modules.ii.mediaControls
 import qs.modules.ii.notificationPopup
@@ -32,6 +33,7 @@ Scope {
     PanelLoader { extraCondition: Config.options.dock.enable; component: Dock {} }
     PanelLoader { extraCondition: Config.options.floatingTitleBars.enable; component: FloatingTitleBars {} }
     PanelLoader { extraCondition: Config.options.stageManager.enable; component: StageManager {} }
+    PanelLoader { component: HyprModeOverlay {} }
     PanelLoader { component: Lock {} }
     PanelLoader { component: MediaControls {} }
     PanelLoader { component: NotificationPopup {} }

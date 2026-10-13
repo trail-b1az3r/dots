@@ -10,13 +10,10 @@ local qsIpcCall = "qs -c $qsConfig ipc call"
 local qsIsAlive = qsIpcCall .. " TEST_ALIVE"
 
 -- Super on its own toggles the overview (and search) when it is released. Any other key pressed while Super
--- is held cancels that, so Super + / or Super + a letter opens only what that combination opens. Hyprland
--- only allows a catch-all bind inside a submap, and this one is universal, so it fires in every submap. It is
--- defined first, so it sees each key before that key's own bind. non_consuming lets the key reach its bind.
-hl.define_submap("release-cancel", function()
-    hl.bind("catchall", hl.dsp.global("quickshell:searchToggleReleaseInterrupt"),
-        { ignore_mods = true, non_consuming = true, submap_universal = true })
-end)
+-- is held cancels that, so Super + / or Super + a letter opens only what that combination opens. Halcyon does
+-- this by giving every Super bind a companion that sends the cancel; see halcyon/super_tap.lua. It wraps
+-- hl.bind, so it is loaded before the first bind.
+require("hyprland.halcyon.super_tap")
 
 hl.bind("SUPER + SUPER_L", hl.dsp.global("quickshell:searchToggleRelease"), { description = "Shell: Toggle search" })
 hl.bind("SUPER + SUPER_R", hl.dsp.global("quickshell:searchToggleRelease"))

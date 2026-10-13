@@ -115,9 +115,14 @@ Column {
         return bind.description.indexOf(":") === -1;
     }
 
+    // F1 to F12 are keys of their own, not a numbered series: they are never folded into "<Number>".
+    function isFunctionKey(key) {
+        return /^F\d{1,2}$/.test(key);
+    }
+
     function containsNonFirstRepetitive(bind) {
         const key = bind.key;
-        if (key.includes("mouse") || key.includes("page")) return false;
+        if (key.includes("mouse") || key.includes("page") || isFunctionKey(key)) return false;
         // Contains non-1 number
         if (/\d/.test(key) && !key.includes("1")) return true;
         // Contains non-left direction
@@ -127,10 +132,13 @@ Column {
 
     function containsFirstRepetitive(bind) {
         const key = bind.key;
+        if (isFunctionKey(key)) return false;
         return key.includes("1") || /left/i.test(key);
     }
 
     function transformKey(key) {
+        // Function keys are shown as their own icon (functionSymbolMap), whole.
+        if (isFunctionKey(key)) return root.functionSymbolMap[key] || key;
         const replaced = root.keySubstitutions[key] || key;
         const denumbered = replaced.replace("1", "<Number>");
         const dedirectioned = denumbered.replace("Left", "<Direction>");
@@ -170,6 +178,23 @@ Column {
         required property var keyData
         property string categoryName: ""
 
+        // Plays the chord: the keys go down one after another, then come back up in reverse order.
+        function play() {
+            const keys = [];
+            for (let i = 0; i < modRepeater.count; i++) {
+                const k = modRepeater.itemAt(i);
+                if (k) keys.push(k);
+            }
+            if (keybindKey.visible) keys.push(keybindKey);
+            const STAGGER = 70, HOLD = 220;
+            for (let i = 0; i < keys.length; i++)
+                keys[i].tap(i * STAGGER, HOLD + (keys.length - 1 - i) * 2 * STAGGER);
+        }
+
+        HoverHandler {
+            onHoveredChanged: if (hovered) bindLine.play()
+        }
+
         Row {
             spacing: 16
             Row {
@@ -178,6 +203,7 @@ Column {
                 width: root.maxBindWidth
                 spacing: 4
                 Repeater {
+                    id: modRepeater
                     model: {
                         const modList = root.modMaskToStringList(bindLine.keyData.modmask).map(mod => root.keySubstitutions[mod] || mod)
                         if (modList.length == 0) return []
@@ -188,6 +214,7 @@ Column {
                         required property var modelData
                         key: root.transformKey(modelData)
                         pixelSize: Config.options.cheatsheet.fontSize.key
+                        interactive: true
                     }
                 }
                 StyledText {
@@ -203,6 +230,7 @@ Column {
                     key: root.transformKey(bindLine.keyData.key)
                     pixelSize: Config.options.cheatsheet.fontSize.key
                     color: Appearance.colors.colOnLayer0
+                    interactive: true
                 }
             }
             Item {

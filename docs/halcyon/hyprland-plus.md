@@ -5,8 +5,9 @@ Halcyon additions. Its own README describes each one. The desktop uses:
 
 - **Mini windows**, `SUPER + CTRL + N`: a window shrinks to a small floating tile.
 - **Superposition windows**: Spotify stays on a thin strip at the right edge, above a fullscreen window.
-- **Plustile windows**: terminals can be resized from each edge with `SUPER + ALT + arrows` (`SHIFT` shrinks),
-  and `SUPER + CTRL + F` fits one to its neighbours.
+- **Plus Tiles**: terminals are ordinary tiles until you use Move Edge (`SUPER + ALT + E`) on one. Then you pick an
+  edge, move it, see the preview and press Enter: the tiles sharing that edge adapt, and the tile keeps its custom
+  size from then on. See [Plus Tiles](keybinds.md#plus-tiles) below.
 - **Drag fix**: a tiled window keeps the grab point when it floats during a drag, so it does not jump.
   The drag guide tints the tile a dropped window would swap with.
 
