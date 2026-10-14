@@ -1271,9 +1271,20 @@ def cmd_apply(args):
         body += "\nSpin the revolver to break the screen (Settings > Background > Widgets turns it on)."
     elif effects == "full" and theme.get("effects", {}).get("screen_shader"):
         body += "\nScreen effects use more GPU. Settings > Halcyon to tone them down."
+    update_browsers()
     notify(f"{theme['name']} theme", body)
     print(f"applied {theme_id} (effects: {effects}{', native glass' if native else ''})")
     return 0
+
+
+def update_browsers():
+    """Firefox and Chromium follow the new colours (halcyon_browsers.py). Never fatal: a theme is not a browser."""
+    try:
+        subprocess.run([sys.executable, str(HERE / "halcyon_browsers.py"), "update", "--quiet"],
+                       stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                       timeout=60, check=False)
+    except (OSError, subprocess.SubprocessError):
+        pass
 
 
 def cmd_effects(args):
@@ -1423,6 +1434,7 @@ def cmd_detach(_args):
     leave_theme()
     if had_theme:
         reload_hyprland()
+        update_browsers()  # the theme's own touches go with it
     return 0
 
 
@@ -1433,6 +1445,7 @@ def cmd_off(_args):
         # current wallpaper again.
         run([str(SWITCHWALL), "--noswitch", "--color", "clear"])
     reload_hyprland()
+    update_browsers()
     notify("Theme off", "Colours follow the wallpaper again.")
     print("theme off")
     return 0
@@ -1681,6 +1694,29 @@ def cmd_collapse(args):
     raise ThemeError("usage: halcyon-theme collapse arm AGE X Y R | disarm")
 
 
+def cmd_migrate(args):
+    """Bring a theme applied by an older Halcyon up to date (login and `update apply` run this).
+
+    A renamed theme (wallpaper-heaven-kenami is now red-sun) is applied again under its new name, and so is a theme
+    whose files changed (`--changed FILE...`, the paths an update copied), so settings a theme gained since it was
+    applied, like Red Sun turning on the revolver, take effect without picking the theme again. Otherwise only the
+    browser themes are written, which is cheap and covers profiles made since.
+    """
+    raw = read_state(ACTIVE_FILE)
+    current = RENAMED.get(raw, raw) if raw else None
+    changed = args[args.index("--changed") + 1:] if "--changed" in args else []
+    stale = current is not None and (raw != current or any(
+        f"halcyon/themes/{current}.json" in path or f"halcyon/themes/shaders/{current}" in path for path in changed))
+    shell_says = (read_shell_config().get("halcyon") or {}).get("theme")
+    if current is not None and shell_says in RENAMED:
+        stale = True  # the shell still has the old name, so its theme-specific parts (the ring) are off
+    if stale and theme_path(current).is_file():
+        print(f"applying {current} again" + (f" (it was called {raw})" if raw != current else ""))
+        return cmd_apply([current])
+    update_browsers()
+    return 0
+
+
 def cmd_hyprland(args):
     """Which Hyprland is running (or installed), and whether it is hyprland-plus and new enough for Plus Tiles."""
     import halcyon_compositor
@@ -1696,6 +1732,7 @@ def cmd_hyprland(args):
 
 COMMANDS = {
     "collapse": cmd_collapse,
+    "migrate": cmd_migrate,
     "hyprland": cmd_hyprland,
     "revolver": cmd_revolver,
     "custom": cmd_custom,
@@ -1729,6 +1766,9 @@ def main(argv):
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and argv[0] == "crashes":
         tool = HERE / "halcyon_crashes.py"
+        os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
+    if argv and argv[0] == "browsers":
+        tool = HERE / "halcyon_browsers.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and argv[0] == "usb":
         tool = HERE / "halcyon_usb.py"

@@ -41,6 +41,13 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("sleep 1 && $HOME/.config/hypr/hyprland/halcyon/halcyon-theme cursor apply")
 end)
 
+-- A theme applied by an older Halcyon is brought up to date, and Firefox and Chromium get the current colours
+-- (a profile made since the last theme change is themed too). After the shell is up, since the theme may change
+-- its settings.
+hl.on("hyprland.start", function()
+    hl.exec_cmd("sleep 4 && $HOME/.config/hypr/hyprland/halcyon/halcyon-theme migrate >/dev/null 2>&1")
+end)
+
 -- The voice assistant daemon, if Settings > Halcyon > Assistant has it on.
 hl.on("hyprland.start", function()
     hl.exec_cmd("log=\"${XDG_STATE_HOME:-$HOME/.local/state}/halcyon\"; mkdir -p \"$log\" && " ..

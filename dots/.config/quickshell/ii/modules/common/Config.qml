@@ -121,6 +121,11 @@ Singleton {
                     property bool speak: true // Read replies aloud
                     property bool allowActions: true // Let it control the desktop
                 }
+                // Firefox and Chromium themes from the shell's colours (halcyon browsers)
+                property JsonObject browsers: JsonObject {
+                    property bool firefox: true // userChrome/userContent in every Firefox, LibreWolf and Zen profile
+                    property bool chromium: true // a theme extension Chromium and Brave load (Chrome: load it once)
+                }
                 property JsonObject cursor: JsonObject {
                     property bool enable: true // Halcyon Glass cursor; off restores upstream's Bibata
                     property int size: 24

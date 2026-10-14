@@ -99,3 +99,9 @@ else
 fi
 
 # apply_qt & # Qt theming is already handled by kde-material-colors
+
+# Halcyon: Firefox and Chromium follow these colours too. halcyon-theme does it itself once a theme is fully
+# applied (it sets HALCYON_THEME_APPLYING for the scripts it runs), so only wallpaper changes are handled here.
+if [ -z "$HALCYON_THEME_APPLYING" ] && [ -x "$XDG_CONFIG_HOME/hypr/hyprland/halcyon/halcyon_browsers.py" ]; then
+  "$XDG_CONFIG_HOME/hypr/hyprland/halcyon/halcyon_browsers.py" update --quiet >/dev/null 2>&1 &
+fi

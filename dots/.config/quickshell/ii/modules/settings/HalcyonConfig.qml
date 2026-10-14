@@ -58,6 +58,17 @@ ContentPage {
         onTriggered: Quickshell.execDetached([page.assistantTool, "reload"])
     }
 
+    // Turning a browser off takes its theme away; turning one on (or anything else) writes the themes now.
+    function browsersChanged(turnedOff) {
+        if (!page.ready)
+            return;
+        const tool = `${FileUtils.trimFileProtocol(Directories.config)}/hypr/hyprland/halcyon/halcyon_browsers.py`;
+        if (turnedOff.length > 0)
+            Quickshell.execDetached([tool, "off", turnedOff]);
+        else
+            Quickshell.execDetached([tool, "update", "--quiet"]);
+    }
+
     function reloadAssistant() {
         if (page.ready)
             assistantTimer.restart();
@@ -694,6 +705,52 @@ ContentPage {
             color: Appearance.colors.colSubtext
             font.pixelSize: Appearance.font.pixelSize.smallie
             text: Translation.tr("Full adds screen effects that follow the pointer. Hyprland then redraws every frame, which uses noticeably more GPU; Light keeps the glass look without that cost.")
+        }
+    }
+
+    ContentSection {
+        icon: "web"
+        title: Translation.tr("Browsers")
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colSubtext
+            font.pixelSize: Appearance.font.pixelSize.smallie
+            text: Translation.tr("Firefox and Chromium take the desktop's colours, from a Halcyon theme or the wallpaper. They pick up new colours when they next start. Google Chrome: load ~/.local/share/halcyon/chromium-theme once in chrome://extensions (Developer mode, Load unpacked).")
+        }
+
+        ConfigRow {
+            uniform: true
+            ConfigSwitch {
+                buttonIcon: "public"
+                text: "Firefox"
+                checked: Config.options.halcyon.browsers.firefox
+                onCheckedChanged: {
+                    if (Config.options.halcyon.browsers.firefox === checked)
+                        return;
+                    Config.options.halcyon.browsers.firefox = checked;
+                    page.browsersChanged(checked ? "" : "firefox");
+                }
+                StyledToolTip {
+                    text: Translation.tr("Firefox, LibreWolf, Zen, Floorp and Waterfox: every profile")
+                }
+            }
+            ConfigSwitch {
+                buttonIcon: "language"
+                text: "Chromium"
+                checked: Config.options.halcyon.browsers.chromium
+                onCheckedChanged: {
+                    if (Config.options.halcyon.browsers.chromium === checked)
+                        return;
+                    Config.options.halcyon.browsers.chromium = checked;
+                    page.browsersChanged(checked ? "" : "chromium");
+                }
+                StyledToolTip {
+                    text: Translation.tr("Chromium and Brave load the theme by themselves; Chrome needs it loaded once")
+                }
+            }
         }
     }
 

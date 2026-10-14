@@ -42,6 +42,7 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("plus edit rules|keys", "open your copy of app_rules.lua or plus_keys.lua"),
         ("config-check [--fix] [--json]", "check the Hyprland and Halcyon config, and say how to fix it"),
         ("crashes [--since 2d] [--json]", "why apps closed: core dumps, memory kills, and shell restarts that took apps with them"),
+        ("migrate", "bring a theme applied by an older Halcyon up to date (login and `update apply` do this)"),
         ("hyprland [--json]", "which Hyprland is running: stock, hyprland-plus, or a hyprland-plus too old for Plus Tiles"),
     ]),
     ("Text from the screen", [
@@ -49,7 +50,10 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("text --window|--screen|--clipboard", "the focused window, the whole monitor, or the image in the clipboard"),
         ("text FILE [--print] [--join] [--lang eng+deu]", "read an image or a PDF (scanned or not); print it, rejoin lines, pick languages"),
     ]),
-    ("Devices", [
+    ("Browsers and devices", [
+        ("browsers [--json]", "the Firefox and Chromium themes that follow Halcyon's colours, and where they are"),
+        ("browsers update", "write them now (applying a theme or a wallpaper does this)"),
+        ("browsers off [firefox|chromium]", "take them out of the browsers again"),
         ("usb [--json]", "why a browser can't find or open a USB, HID or serial device (WebUSB, WebHID, Web Serial)"),
         ("usb allow VID:PID ... | --all", "let you open those devices from the browser (a udev rule; asks for sudo)"),
         ("usb remove", "take that rule away again"),

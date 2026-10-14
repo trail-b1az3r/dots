@@ -46,7 +46,7 @@ AbstractBackgroundWidget {
 
     /** The ring painted in the Red Sun wallpaper, in this widget's parent's coordinates: {x, y, r}, or null. */
     property var sunRing: null
-    readonly property bool ringAnchored: redSun && sunRing !== null && root.configEntry.followRing !== false
+    readonly property bool ringAnchored: redSun && !!sunRing && sunRing.r > 0 && root.configEntry.followRing !== false
 
     readonly property real scaleFactor: ringAnchored ? sunRing.r / Styles.SUN_RING_STAGE_RADIUS
                                                   : Math.max(200, configEntry.size) / stageWidth
