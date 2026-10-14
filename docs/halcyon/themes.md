@@ -12,6 +12,11 @@ style, animations, wallpaper and, for some, shell layout and effects:
 | **Fractured Glass** | `fractured-glass` | Refraction only, like Apple's Liquid Glass: a squircle glass lens follows the pointer and bends what's behind its rim. No ripples or cracks. Soft blue, lavender and pink over calm fragments of thick glass. |
 | **Red Sun** | `red-sun` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. The ring is the revolver: spin it and the screen breaks, an eye opens in the sun and finds the car, and the tape rewinds. Wallpaper by Kenami, from Wallpaper Heaven. |
 
+![HyperNeo, Star Rail, Shattered Glass and Fractured Glass, each with its wallpaper, its revolver, and Firefox in its colours](../assets/preview-themes.jpg)
+
+<sub>Top: HyperNeo, Star Rail. Bottom: Shattered Glass, Fractured Glass. Rendered from the repository: each theme's
+wallpaper, its revolver drawn by the shell's own QML, and a real Firefox wearing the theme.</sub>
+
 Pick one in **Settings > Halcyon**, with **`Ctrl + Super + Shift + T`**,
 or from a terminal:
 

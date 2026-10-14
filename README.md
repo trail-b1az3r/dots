@@ -8,6 +8,12 @@ generator, its own Quickshell shell and its own installer. It broke, so
 this repository now starts from end-4's desktop, which is maintained and
 known to work, and keeps Halcyon's own changes in one place on top of it.
 
+![Halcyon in the Red Sun theme: the wallpaper's red ring is the revolver, and Firefox wears the theme](docs/assets/preview-red-sun.jpg)
+
+<sub>The Red Sun theme. Previews in this README are rendered from the repository: each theme's wallpaper, its
+revolver drawn by the shell's own QML, and a real Firefox wearing the theme, composited together. The bar and the
+other parts of the live desktop are not in them.</sub>
+
 ---
 
 Documentation is in [docs/](docs/README.md): the Halcyon pages, and the illogical-impulse pages ported from end-4's docs.
@@ -30,6 +36,8 @@ On top of that, Halcyon adds:
 | **Wallpapers** | The hyperNeo fire wallpaper is the default. It and the three Halcyon wallpapers are copied into `~/Pictures/Wallpapers`, where the wallpaper picker looks. |
 | **Themes** | Five hand-made themes: HyperNeo, Star Rail, Shattered Glass, Fractured Glass and Red Sun. [More below.](#themes) |
 | **Voice assistant** | Press `Super + Shift + Space` and speak. It answers aloud and can run the desktop. [More below.](#voice-assistant) |
+| **Browser themes** | Firefox and Chromium take the desktop's colours, from a theme or the wallpaper. [More below.](#browsers) |
+| **Server mode** | One button in **Settings > Halcyon**: no suspend, no automatic lock or screen blanking, until you stop it. [More below.](#server-mode) |
 | **Keybinds** | Extra shortcuts, listed below. They only use key combinations upstream leaves free. |
 | **hyprland-plus** | The compositor is [hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus): Hyprland 0.56.2 with mini windows, superposition windows, plustile windows and a drag fix. [More below.](#hyprland-plus) |
 
@@ -210,7 +218,11 @@ style, animations, wallpaper and, for some, shell layout and effects:
 | **Star Rail** | `hsr` | Astral gold and lavender on deep-space navy, over a golden rail curving through a nebula. Can show the current banner character. |
 | **Shattered Glass** | `shattered-glass` | Liquid glass: a glass lens follows the pointer, clicks crack the screen, windows turn to frosted glass. Ice blue and prism violet, sharp corners. |
 | **Fractured Glass** | `fractured-glass` | Refraction only, like Apple's Liquid Glass: a squircle glass lens follows the pointer and bends what's behind its rim. No ripples or cracks. Soft blue, lavender and pink over calm fragments of thick glass. |
-| **Red Sun** | `red-sun` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. The ring is the revolver: spin it and the screen cracks and caves in. Wallpaper by Kenami, from Wallpaper Heaven. |
+| **Red Sun** | `red-sun` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. The ring is the revolver: spin it and the screen breaks, an eye opens in the sun and finds the car, and the tape rewinds. Wallpaper by Kenami, from Wallpaper Heaven. |
+
+![HyperNeo, Star Rail, Shattered Glass and Fractured Glass, each with its wallpaper, its revolver, and Firefox in its colours](docs/assets/preview-themes.jpg)
+
+<sub>Top: HyperNeo, Star Rail. Bottom: Shattered Glass, Fractured Glass.</sub>
 
 Pick one in **Settings > Halcyon**, with **`Ctrl + Super + Shift + T`**,
 or from a terminal:
@@ -308,14 +320,22 @@ They're stored under `halcyon` in `~/.config/illogical-impulse/config.json`,
 which `halcyon refresh` re-reads.
 
 **Red Sun at `full`**: the red ring in the wallpaper is the revolver. It sits on the painted ring, lights up while it
-turns, and a real spin breaks the screen (`themes/shaders/red-sun.frag`): cracks run out from the ring, the screen
-splits into bevelled shards at different depths that sink towards it, the gaps glow red, and then it all heals. A
-slow nudge does nothing. The shader is only switched in for those few seconds (`halcyon collapse arm`, run by the
-revolver), so Red Sun costs no GPU the rest of the time, unlike the glass themes. At `light` or `off` the ring still
-turns, without the collapse. Applying Red Sun turns the revolver on (Settings > Revolver), and leaving it puts the setting
-back. Turn off "In Red Sun, sit on the wallpaper's red ring" there to keep the revolver where you placed it.
+turns, and a real spin plays about ten seconds (`themes/shaders/red-sun.frag`):
 
-![The Red Sun collapse: cracks run out from the ring, the shards sink towards it, then it heals](docs/assets/red-sun-collapse.jpg)
+1. **The sun spins.** The ring turns, gaps and all, with embers flying off it. Cracks run out from it and the screen
+   splits into bevelled shards that sink towards it, the gaps glowing red, light raying out.
+2. **An eye opens** in the hole inside the ring. It looks round, blinks, then fixes on the car on the road: its
+   pupil narrows to a slit and a red ring closes on the car.
+3. **It turns to videotape**: scanlines, colour bleeding sideways, tracking noise, and a VCR's `PLAY ▶` with a counter.
+4. **It rewinds**: `◀◀ REW`, and everything runs backwards at speed until the desktop is as it was.
+
+A slow nudge does nothing. The shader is only switched in for those seconds (`halcyon collapse arm`, run by the
+revolver), so Red Sun costs no GPU the rest of the time. At `light` or `off` the ring still turns, without the
+sequence. Applying Red Sun turns the revolver on (Settings > Revolver), and leaving it puts the setting back.
+
+![The Red Sun sequence: the sun spins and the screen breaks, an eye opens and finds the car, then the tape rewinds](docs/assets/red-sun-sequence.webp)
+
+<sub>Rendered frame by frame from the shader itself.</sub>
 
 ![The Red Sun ring at rest and while it spins](docs/assets/red-sun-ring.jpg)
 
@@ -540,6 +560,25 @@ halcyon assistant ask "what's on workspace 3?"  # typed, prints the reply
 
 It keeps a few minutes of conversation, so follow-ups work, and logs to
 `~/.local/state/halcyon/assistant.log`.
+
+## Browsers
+
+Firefox (and LibreWolf, Zen, Floorp, Waterfox) and Chromium (and Brave) take the desktop's colours: a theme's, or
+the wallpaper's when no theme is on. They change when you apply a theme or a wallpaper, and pick it up the next
+time the browser starts. Google Chrome needs the theme folder loaded once: see [Browsers](docs/halcyon/browsers.md).
+
+![Firefox in Red Sun, Star Rail and Fractured Glass](docs/assets/firefox-themes.jpg)
+
+```sh
+halcyon browsers                  # what is themed, and where
+halcyon usb                       # why a browser can't find a USB device, and the fix
+```
+
+## Server mode
+
+For a computer that serves something: **Settings > Halcyon > Server mode > Start server mode** (or `halcyon server
+on`). Until you stop it, nothing suspends (idle, lid, suspend key, or asked for by hand) and the screen never locks
+or blanks by itself. It stays on after a restart. It is a `systemd-inhibit` lock, so `systemd-inhibit --list` shows it.
 
 ## Keybinds
 
