@@ -1612,7 +1612,10 @@ def cmd_placement(args):
 
 
 COLLAPSE_STATE = HALCYON_STATE / "collapse.json"
-COLLAPSE_SECONDS = 7.0   # the shader's DURATION, plus a margin for the arm to arrive
+COLLAPSE_SECONDS = 11.4  # the shader's DURATION (spin, eye, tape, rewind), plus a margin for the arm to arrive
+# Where the car on the road is, from the ring's centre, as fractions of the screen, in the Red Sun wallpaper
+# (the car is at 0.6485, 0.7084 of it, the ring at 0.4907, 0.4312). Used when the revolver does not say.
+CAR_FROM_RING = (0.1578, 0.2772)
 
 
 def hyprland_eval(lua):
@@ -1624,9 +1627,10 @@ def hyprland_eval(lua):
     return result.returncode == 0 and "error" not in text
 
 
-def collapse_arm(age, ring_x, ring_y, ring_r):
+def collapse_arm(age, ring_x, ring_y, ring_r, car_x=None, car_y=None):
     """Switch the active theme's triggered shader in, armed for a spin that started `age` seconds ago at the
-    ring (x, y as 0..1 of the screen, r as a fraction of its height). Returns a reason when it does nothing."""
+    ring (x, y as 0..1 of the screen, r as a fraction of its height), with the car the eye looks at (0..1 of the
+    screen; by default where it is in the wallpaper relative to the ring). Returns a reason when it does nothing."""
     current = active()
     if current is None:
         return "no theme is active"
@@ -1638,6 +1642,10 @@ def collapse_arm(age, ring_x, ring_y, ring_r):
     text = render_shader(theme, bool(read_state(FLIP_FILE)), glass_settings())
     knobs = {"COLLAPSE_ARMED": "1", "ARM_AGE": f"{max(0.0, min(float(age), 5.0)):.3f}",
              "RING_X": f"{float(ring_x):.4f}", "RING_Y": f"{float(ring_y):.4f}", "RING_R": f"{float(ring_r):.4f}"}
+    if car_x is None or car_y is None:
+        car_x, car_y = float(ring_x) + CAR_FROM_RING[0], float(ring_y) + CAR_FROM_RING[1]
+    knobs["CAR_X"] = f"{min(max(float(car_x), 0.0), 1.0):.4f}"
+    knobs["CAR_Y"] = f"{min(max(float(car_y), 0.0), 1.0):.4f}"
     for name, value in knobs.items():
         text = re.sub(rf"^#define {name} .*$", f"#define {name} {value}", text, count=1, flags=re.M)
     # A new path each time, so Hyprland compiles the new copy instead of keeping the old one.
@@ -1675,12 +1683,12 @@ def collapse_disarm(token=None):
 
 
 def cmd_collapse(args):
-    """`collapse arm AGE X Y R` (the revolver runs this when a spin lands), `collapse disarm`."""
-    if len(args) == 5 and args[0] == "arm":
+    """`collapse arm AGE X Y R [CAR_X CAR_Y]` (the revolver runs this when a spin lands), `collapse disarm`."""
+    if len(args) in (5, 7) and args[0] == "arm":
         try:
             values = [float(a) for a in args[1:]]
         except ValueError:
-            raise ThemeError("usage: halcyon-theme collapse arm AGE X Y R (numbers)")
+            raise ThemeError("usage: halcyon-theme collapse arm AGE X Y R [CAR_X CAR_Y] (numbers)")
         reason = collapse_arm(*values)
         if reason:
             print(f"not armed: {reason}")
@@ -1691,7 +1699,7 @@ def cmd_collapse(args):
         if reason:
             print(f"not disarmed: {reason}")
         return 0
-    raise ThemeError("usage: halcyon-theme collapse arm AGE X Y R | disarm")
+    raise ThemeError("usage: halcyon-theme collapse arm AGE X Y R [CAR_X CAR_Y] | disarm")
 
 
 def cmd_migrate(args):

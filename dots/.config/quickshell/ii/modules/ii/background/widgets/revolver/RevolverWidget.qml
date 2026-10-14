@@ -46,6 +46,8 @@ AbstractBackgroundWidget {
 
     /** The ring painted in the Red Sun wallpaper, in this widget's parent's coordinates: {x, y, r}, or null. */
     property var sunRing: null
+    /** The car on the road in the Red Sun wallpaper, in the same coordinates: {x, y}, or null. */
+    property var sunCar: null
     readonly property bool ringAnchored: redSun && !!sunRing && sunRing.r > 0 && root.configEntry.followRing !== false
 
     readonly property real scaleFactor: ringAnchored ? sunRing.r / Styles.SUN_RING_STAGE_RADIUS
@@ -204,8 +206,14 @@ AbstractBackgroundWidget {
             return;
         const ringRadius = Styles.SUN_RING_STAGE_RADIUS * root.scaleFactor;
         const age = Math.max(0, (Date.now() - root.pressTime) / 1000);
-        Quickshell.execDetached([root.tool, "collapse", "arm", age.toFixed(3),
-            (centre.x / width).toFixed(4), (centre.y / height).toFixed(4), (ringRadius / height).toFixed(4)]);
+        const args = [root.tool, "collapse", "arm", age.toFixed(3),
+            (centre.x / width).toFixed(4), (centre.y / height).toFixed(4), (ringRadius / height).toFixed(4)];
+        // The eye ends up looking at the car. Off the painted ring the tool puts it where it is in the wallpaper.
+        if (root.ringAnchored && root.sunCar && root.parent) {
+            const car = root.parent.mapToItem(null, root.sunCar.x, root.sunCar.y);
+            args.push((car.x / width).toFixed(4), (car.y / height).toFixed(4));
+        }
+        Quickshell.execDetached(args);
     }
 
     function onSpinStopped(): void {

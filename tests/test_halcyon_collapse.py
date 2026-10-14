@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import os
 import shutil
 import subprocess
@@ -72,6 +73,30 @@ class CollapseTests(unittest.TestCase):
         self.assertFalse(armed[0].exists())
         self.assertIn('screen_shader = ""', self.log())
         self.assertIn("damage_tracking = 2", self.log())
+
+    def test_the_car_the_eye_looks_at(self):
+        self.tool("collapse", "arm", "0.2", "0.49", "0.43", "0.073", "0.71", "0.88")
+        text = next(self.state.glob("screen-shader-armed-*.frag")).read_text()
+        self.assertIn("#define CAR_X 0.7100", text)
+        self.assertIn("#define CAR_Y 0.8800", text)
+
+    def test_without_a_car_it_is_where_the_wallpaper_has_it(self):
+        self.tool("collapse", "arm", "0.2", "0.4907", "0.4312", "0.0656")
+        text = next(self.state.glob("screen-shader-armed-*.frag")).read_text()
+        self.assertIn("#define CAR_X 0.6485", text)
+        self.assertIn("#define CAR_Y 0.7084", text)
+
+    def test_disarm_waits_for_the_whole_sequence(self):
+        duration = float(re.search(r"const float DURATION = ([0-9.]+);", SHADER.read_text()).group(1))
+        theme = (HALCYON / "halcyon-theme").read_text()
+        seconds = float(re.search(r"^COLLAPSE_SECONDS = ([0-9.]+)", theme, re.M).group(1))
+        self.assertGreater(seconds, duration, "the shader is taken out only after the rewind has finished")
+        self.assertLess(seconds, duration + 2.0)
+
+    def test_the_sequence_is_all_there(self):
+        text = SHADER.read_text()
+        for part in ("float sceneTime(", "vec3 drawEye(", "vec3 embers(", "float glyphPixel(", "REW_SPEED", "T_LOCK"):
+            self.assertIn(part, text)
 
     def test_each_arm_uses_a_new_path(self):
         self.tool("collapse", "arm", "0.1", "0.5", "0.5", "0.07")

@@ -10,7 +10,7 @@ style, animations, wallpaper and, for some, shell layout and effects:
 | **Star Rail** | `hsr` | Astral gold and lavender on deep-space navy, over a golden rail curving through a nebula. Can show the current banner character. |
 | **Shattered Glass** | `shattered-glass` | Liquid glass: a glass lens follows the pointer, clicks crack the screen, windows turn to frosted glass. Ice blue and prism violet, sharp corners. |
 | **Fractured Glass** | `fractured-glass` | Refraction only, like Apple's Liquid Glass: a squircle glass lens follows the pointer and bends what's behind its rim. No ripples or cracks. Soft blue, lavender and pink over calm fragments of thick glass. |
-| **Red Sun** | `red-sun` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. The ring is the revolver: spin it and the screen cracks and caves in. Wallpaper by Kenami, from Wallpaper Heaven. |
+| **Red Sun** | `red-sun` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. The ring is the revolver: spin it and the screen breaks, an eye opens in the sun and finds the car, and the tape rewinds. Wallpaper by Kenami, from Wallpaper Heaven. |
 
 Pick one in **Settings > Halcyon**, with **`Ctrl + Super + Shift + T`**,
 or from a terminal:
@@ -108,12 +108,23 @@ They're stored under `halcyon` in `~/.config/illogical-impulse/config.json`,
 which `halcyon refresh` re-reads.
 
 **Red Sun at `full`**: the red ring in the wallpaper is the revolver. It sits on the painted ring, lights up while it
-turns, and a real spin breaks the screen (`themes/shaders/red-sun.frag`): cracks run out from the ring, the screen
-splits into bevelled shards at different depths that sink towards it, the gaps glow red, and then it all heals. A
-slow nudge does nothing. The shader is only switched in for those few seconds (`halcyon collapse arm`, run by the
-revolver), so Red Sun costs no GPU the rest of the time, unlike the glass themes. At `light` or `off` the ring still
-turns, without the collapse. Applying Red Sun turns the revolver on (Settings > Revolver), and leaving it puts the setting
-back. Turn off "In Red Sun, sit on the wallpaper's red ring" there to keep the revolver where you placed it.
+turns, and a real spin plays about ten seconds (`themes/shaders/red-sun.frag`):
+
+1. **The sun spins.** The ring turns, gaps and all, smeared by its speed, with embers flying off it. Cracks run out
+   from it and the screen splits into bevelled shards that sink towards it, the gaps glowing red, light raying out.
+2. **An eye opens** in the hole inside the ring. It looks round, blinks, then fixes on the car on the road: its
+   pupil narrows to a slit and a red ring closes on the car.
+3. **It turns to videotape**: scanlines, colour bleeding sideways, tracking noise, and a VCR's `PLAY ▶` with a counter.
+4. **It rewinds**: `◀◀ REW`, and everything runs backwards at speed through the tape's noise. The eye closes, the
+   shards fly back together and the ring turns back, then `PLAY ▶` and the desktop is as it was.
+
+A slow nudge does nothing. The shader is only switched in for those seconds (`halcyon collapse arm`, run by the
+revolver, which also tells it where the car is on your screen), so Red Sun costs no GPU the rest of the time, unlike
+the glass themes. At `light` or `off` the ring still turns, without the sequence. Applying Red Sun turns the revolver
+on (Settings > Revolver), and leaving it puts the setting back. Turn off "In Red Sun, sit on the wallpaper's red ring"
+there to keep the revolver where you placed it; it then draws the whole lit ring itself.
+
+![The Red Sun sequence: the sun spins and the screen breaks, an eye opens and finds the car, then the tape rewinds](../assets/red-sun-sequence.webp)
 
 ![The Red Sun collapse: cracks run out from the ring, the shards sink towards it, then it heals](../assets/red-sun-collapse.jpg)
 

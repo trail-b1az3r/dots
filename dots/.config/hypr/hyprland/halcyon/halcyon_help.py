@@ -61,7 +61,7 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
     ]),
     ("Widgets, characters and extras", [
         ("revolver scan [--json]", "the revolver's games and their weights"),
-        ("collapse arm AGE X Y R | disarm", "the Red Sun screen collapse (the revolver runs this when a spin lands)"),
+        ("collapse arm AGE X Y R [CX CY] | disarm", "the Red Sun sequence: spin, eye, tape and rewind (the revolver runs this)"),
         ("revolver fire SOURCE ID", "start one of them"),
         ("starrail next|refresh|status", "Star Rail banner character: another one, download the index, what is showing"),
         ("banner NAME IMAGE [--title T] [--subtitle S]", "put character art on a theme's banner"),
