@@ -62,6 +62,54 @@ class MigrateTest(unittest.TestCase):
         self.assertIs(red_sun["shell_config"]["background.widgets.revolver.enable"], True)
 
 
+class RevolverOnTest(unittest.TestCase):
+    """The revolver is on for every theme now; the old default (off) the shell saved is turned on once."""
+
+    def run_once(self, stored, restore=None):
+        with tempfile.TemporaryDirectory() as tmp:
+            shell = Path(tmp, "config.json")
+            shell.write_text(json.dumps(stored))
+            restore_file = Path(tmp, "shell-restore.json")
+            if restore is not None:
+                restore_file.write_text(json.dumps(restore))
+            with unittest.mock.patch.object(theme, "SHELL_CONFIG", shell), \
+                    unittest.mock.patch.object(theme, "SHELL_RESTORE", restore_file), \
+                    unittest.mock.patch.object(theme, "REVOLVER_ON_MARKER", Path(tmp, "marker")):
+                first = theme.migrate_revolver_on()
+                data = json.loads(shell.read_text())
+                # Turned off again by hand afterwards: it stays off.
+                data["background"]["widgets"]["revolver"]["enable"] = False
+                shell.write_text(json.dumps(data))
+                second = theme.migrate_revolver_on()
+                after = json.loads(shell.read_text())
+                left = json.loads(restore_file.read_text()) if restore_file.exists() else None
+        return first, second, data, after, left
+
+    def test_saved_off_is_turned_on_once(self):
+        first, second, data, after, _ = self.run_once({"background": {"widgets": {"revolver": {"enable": False, "x": 5}}}})
+        self.assertTrue(first)
+        self.assertFalse(second)
+        self.assertIs(after["background"]["widgets"]["revolver"]["enable"], False, "a later choice is kept")
+        self.assertEqual(after["background"]["widgets"]["revolver"]["x"], 5)
+
+    def test_leaving_red_sun_no_longer_turns_it_off(self):
+        restore = {"background.widgets.revolver.enable": {"had": True, "previous": False, "set": True},
+                   "appearance.transparency.enable": {"had": True, "previous": False, "set": True}}
+        _, _, _, _, left = self.run_once({"background": {"widgets": {"revolver": {"enable": True}}}}, restore)
+        self.assertNotIn("background.widgets.revolver.enable", left)
+        self.assertIn("appearance.transparency.enable", left, "the theme's other settings still go back")
+
+    def test_on_by_default_in_the_shell(self):
+        config = (ROOT / "dots/.config/quickshell/ii/modules/common/Config.qml").read_text()
+        block = config[config.index("property JsonObject revolver: JsonObject {"):]
+        self.assertIn("property bool enable: true", block[:200])
+
+    def test_both_panel_families_load_it(self):
+        qs = ROOT / "dots/.config/quickshell/ii/modules"
+        self.assertIn("RevolverLoader {", (qs / "ii/background/Background.qml").read_text())
+        self.assertIn("RevolverLoader {", (qs / "waffle/background/WaffleBackground.qml").read_text())
+
+
 class StartupTest(unittest.TestCase):
     def test_login_and_update_run_it(self):
         self.assertIn("halcyon-theme migrate", (HALCYON / "init.lua").read_text())

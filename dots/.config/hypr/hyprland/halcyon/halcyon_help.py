@@ -60,6 +60,8 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("usb remove", "take that rule away again"),
     ]),
     ("Widgets, characters and extras", [
+        ("revolver status", "whether the revolver is on and where, its games, and any error the shell logged for it"),
+        ("revolver on|off", "show or hide it, on every theme"),
         ("revolver scan [--json]", "the revolver's games and their weights"),
         ("collapse arm AGE X Y R [CX CY] | disarm", "the Red Sun sequence: spin, eye, tape and rewind (the revolver runs this)"),
         ("revolver fire SOURCE ID", "start one of them"),

@@ -1563,7 +1563,17 @@ def cmd_revolver(args):
     fire = sub.add_parser("fire", help="start one game")
     fire.add_argument("source", choices=revolver.SOURCES)
     fire.add_argument("game_id")
+    sub.add_parser("status", help="whether it is on, where it shows, and any error the shell logged for it")
+    sub.add_parser("on", help="turn it on")
+    sub.add_parser("off", help="turn it off")
     options = parser.parse_args(args)
+
+    if options.action in ("on", "off"):
+        set_shell_value("background.widgets.revolver.enable", options.action == "on")
+        print(f"revolver {options.action}")
+        return 0
+    if options.action == "status":
+        return revolver_status(revolver)
 
     if options.action == "scan":
         chambers = revolver.pool(options.source, options.mode)
@@ -1578,6 +1588,44 @@ def cmd_revolver(args):
     except revolver.LaunchError as error:
         raise ThemeError(str(error)) from None
     print("started: " + " ".join(argv))
+    return 0
+
+
+def revolver_status(revolver):
+    """What decides whether the revolver is on screen, in one place, so a report needs one command's output."""
+    config = read_shell_config()
+    entry = get_nested(config, "background.widgets.revolver")
+    entry = entry if isinstance(entry, dict) else {}
+    enabled = entry.get("enable", True) is not False
+    family = get_nested(config, "panelFamily")
+    family = family if isinstance(family, str) else "ii"
+    theme = active()
+    print(f"enabled      {'yes' if enabled else 'no  (halcyon revolver on, or Settings > Background > Widgets)'}")
+    print(f"theme        {theme or 'none'}" + ("  (sits on the painted ring)" if theme == "red-sun" and entry.get("followRing", True) else ""))
+    print(f"panel family {family}")
+    if not (theme == "red-sun" and entry.get("followRing", True)):
+        print(f"place        x {entry.get('x', 1400)}, y {entry.get('y', 520)}, size {entry.get('size', 300)}")
+    source, mode = entry.get("source", "steam"), entry.get("mode", "recent")
+    try:
+        games = len(revolver.pool(source, mode))
+    except Exception as error:  # a broken library file must not hide the rest of the report
+        games = f"could not read ({error})"
+    print(f"games        {games} from {source} ({mode})")
+    # What the shell said about it: the service's journal, else Quickshell's own log.
+    lines = []
+    if shutil.which("journalctl"):
+        out = subprocess.run(["journalctl", "--user", "-u", "halcyon-quickshell.service", "-b", "--no-pager", "-o", "cat"],
+                             capture_output=True, text=True, check=False).stdout
+        lines = [l for l in out.splitlines() if re.search(r"[Rr]evolver", l)]
+    if not lines and shutil.which("qs"):
+        out = subprocess.run(["qs", "log", "-c", "ii"], capture_output=True, text=True, check=False, timeout=20)
+        lines = [l for l in (out.stdout + out.stderr).splitlines() if re.search(r"[Rr]evolver", l)]
+    if lines:
+        print("shell log:")
+        for line in lines[-15:]:
+            print("  " + re.sub(r"\x1b\[[0-9;]*m", "", line))
+    else:
+        print("shell log    nothing about the revolver (it loaded, or the shell has not started it)")
     return 0
 
 
@@ -1702,6 +1750,32 @@ def cmd_collapse(args):
     raise ThemeError("usage: halcyon-theme collapse arm AGE X Y R [CAR_X CAR_Y] | disarm")
 
 
+REVOLVER_ON_MARKER = HALCYON_STATE / "migrated-revolver-on"
+
+
+def migrate_revolver_on():
+    """Once: the revolver is on for every theme now, but the shell saved the old default (off) in config.json, and a
+    Red Sun applied before this would switch it off again when left. Turn it on, and forget that restore. After this,
+    turning it off in Settings stays off."""
+    if REVOLVER_ON_MARKER.exists():
+        return False
+    key = "background.widgets.revolver.enable"
+    data = read_shell_config()
+    changed = get_nested(data, key) is not True
+    if changed:
+        set_nested(data, key, True)
+        write_atomic(SHELL_CONFIG, json.dumps(data, indent=2) + "\n")
+    try:
+        restore = json.loads(SHELL_RESTORE.read_text(encoding="utf-8"))
+        if key in restore:
+            del restore[key]
+            write_atomic(SHELL_RESTORE, json.dumps(restore, indent=2) + "\n")
+    except (OSError, ValueError):
+        pass
+    write_atomic(REVOLVER_ON_MARKER, "1\n")
+    return changed
+
+
 def cmd_migrate(args):
     """Bring a theme applied by an older Halcyon up to date (login and `update apply` run this).
 
@@ -1710,6 +1784,7 @@ def cmd_migrate(args):
     applied, like Red Sun turning on the revolver, take effect without picking the theme again. Otherwise only the
     browser themes are written, which is cheap and covers profiles made since.
     """
+    migrate_revolver_on()
     raw = read_state(ACTIVE_FILE)
     current = RENAMED.get(raw, raw) if raw else None
     changed = args[args.index("--changed") + 1:] if "--changed" in args else []

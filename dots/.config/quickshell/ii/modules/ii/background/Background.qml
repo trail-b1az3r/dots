@@ -17,6 +17,7 @@ import Quickshell.Hyprland
 import qs.modules.ii.background.widgets
 import qs.modules.ii.background.widgets.clock
 import qs.modules.ii.background.widgets.weather
+import qs.modules.ii.background.widgets.revolver
 
 Variants {
     id: root
@@ -281,41 +282,12 @@ Variants {
                     }
                 }
 
-                // The revolver is loaded by file path rather than by type. A fault
-                // in the widget then stays inside its own Loader, and the rest
-                // of the background still loads.
-                Loader {
-                    id: revolverLoader
-
-                    function reload(): void {
-                        if (!Config.options.background.widgets.revolver.enable) {
-                            source = "";
-                            return;
-                        }
-                        setSource(Qt.resolvedUrl("widgets/revolver/RevolverWidget.qml"), {
-                            screenWidth: bgRoot.screen.width,
-                            screenHeight: bgRoot.screen.height,
-                            scaledScreenWidth: bgRoot.screen.width,
-                            scaledScreenHeight: bgRoot.screen.height,
-                            wallpaperScale: 1
-                        });
-                    }
-
-                    Component.onCompleted: reload()
-                    onLoaded: {
-                        item.sunRing = Qt.binding(() => widgetCanvas.sunRing);
-                        item.sunCar = Qt.binding(() => widgetCanvas.sunCar);
-                    }
-                    // A revolver that fails to load leaves the rest of the background alone; this says why, in
-                    // `qs log -c ii`.
-                    onStatusChanged: if (status === Loader.Error) console.warn("[Halcyon] the revolver did not load; see the errors above")
-
-                    Connections {
-                        target: Config.options.background.widgets.revolver
-                        function onEnableChanged(): void {
-                            revolverLoader.reload();
-                        }
-                    }
+                // The revolver, in its own Loader (RevolverLoader) so a fault in it leaves the rest of the background.
+                RevolverLoader {
+                    screenWidth: bgRoot.screen.width
+                    screenHeight: bgRoot.screen.height
+                    sunRing: widgetCanvas.sunRing
+                    sunCar: widgetCanvas.sunCar
                 }
 
                 FadeLoader {

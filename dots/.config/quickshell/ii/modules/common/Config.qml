@@ -276,10 +276,10 @@ Singleton {
                         property real x: 400
                         property real y: 100
                     }
-                    // The revolver: a drum of installed games. Off until enabled.
+                    // The revolver: a drum of installed games, on every theme (Red Sun's ring is one).
                     // Games are read from local files only, by halcyon-theme.
                     property JsonObject revolver: JsonObject {
-                        property bool enable: false
+                        property bool enable: true
                         property string placementStrategy: "free"
                         property real x: 1400
                         property real y: 520

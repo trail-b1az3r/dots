@@ -125,8 +125,9 @@ turns, and a real spin plays about ten seconds (`themes/shaders/red-sun.frag`):
 
 A slow nudge does nothing. The shader is only switched in for those seconds (`halcyon collapse arm`, run by the
 revolver, which also tells it where the car is on your screen), so Red Sun costs no GPU the rest of the time, unlike
-the glass themes. At `light` or `off` the ring still turns, without the sequence. Applying Red Sun turns the revolver
-on (Settings > Revolver), and leaving it puts the setting back. Turn off "In Red Sun, sit on the wallpaper's red ring"
+the glass themes. At `light` or `off` the ring still turns, without the sequence. The revolver is on in every theme
+(`halcyon revolver on|off`, or Settings > Revolver) and glows on the ring even at rest; `halcyon revolver status` says
+why if it doesn't show. Turn off "In Red Sun, sit on the wallpaper's red ring"
 there to keep the revolver where you placed it; it then draws the whole lit ring itself.
 
 ![The Red Sun sequence: the sun spins and the screen breaks, an eye opens and finds the car, then the tape rewinds](../assets/red-sun-sequence.webp)
