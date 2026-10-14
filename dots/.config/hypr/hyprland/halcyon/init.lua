@@ -29,7 +29,11 @@ if is_file_exists(plusFile) then
     dofile(plusFile)
 end
 
--- How new windows are split, from Settings > Interface > Windows (halcyon-theme placement).
+-- Halcyon's own layouts (two at a time, stacked or side by side, and the Mondrian grid), registered so
+-- placement.lua can pick one; see layouts.lua.
+require("hyprland.halcyon.layouts")
+
+-- How new windows are placed, from Settings > Interface > Windows (halcyon-theme placement).
 local placementFile = stateHome .. "/halcyon/placement.lua"
 if is_file_exists(placementFile) then
     dofile(placementFile)

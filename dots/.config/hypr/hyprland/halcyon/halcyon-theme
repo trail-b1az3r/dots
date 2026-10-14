@@ -1563,7 +1563,17 @@ def cmd_revolver(args):
     fire = sub.add_parser("fire", help="start one game")
     fire.add_argument("source", choices=revolver.SOURCES)
     fire.add_argument("game_id")
+    sub.add_parser("status", help="whether it is on, where it shows, and any error the shell logged for it")
+    sub.add_parser("on", help="turn it on")
+    sub.add_parser("off", help="turn it off")
     options = parser.parse_args(args)
+
+    if options.action in ("on", "off"):
+        set_shell_value("background.widgets.revolver.enable", options.action == "on")
+        print(f"revolver {options.action}")
+        return 0
+    if options.action == "status":
+        return revolver_status(revolver)
 
     if options.action == "scan":
         chambers = revolver.pool(options.source, options.mode)
@@ -1581,16 +1591,72 @@ def cmd_revolver(args):
     return 0
 
 
-# How a new window is split from the others. Hyprland's dwindle layout does these two natively.
+def revolver_status(revolver):
+    """What decides whether the revolver is on screen, in one place, so a report needs one command's output."""
+    config = read_shell_config()
+    entry = get_nested(config, "background.widgets.revolver")
+    entry = entry if isinstance(entry, dict) else {}
+    enabled = entry.get("enable", True) is not False
+    family = get_nested(config, "panelFamily")
+    family = family if isinstance(family, str) else "ii"
+    theme = active()
+    print(f"enabled      {'yes' if enabled else 'no  (halcyon revolver on, or Settings > Background > Widgets)'}")
+    print(f"theme        {theme or 'none'}" + ("  (sits on the painted ring)" if theme == "red-sun" and entry.get("followRing", True) else ""))
+    print(f"panel family {family}")
+    if not (theme == "red-sun" and entry.get("followRing", True)):
+        print(f"place        x {entry.get('x', 1400)}, y {entry.get('y', 520)}, size {entry.get('size', 300)}")
+    source, mode = entry.get("source", "steam"), entry.get("mode", "recent")
+    try:
+        games = len(revolver.pool(source, mode))
+    except Exception as error:  # a broken library file must not hide the rest of the report
+        games = f"could not read ({error})"
+    print(f"games        {games} from {source} ({mode})")
+    # What the shell said about it: the service's journal, else Quickshell's own log.
+    lines = []
+    if shutil.which("journalctl"):
+        out = subprocess.run(["journalctl", "--user", "-u", "halcyon-quickshell.service", "-b", "--no-pager", "-o", "cat"],
+                             capture_output=True, text=True, check=False).stdout
+        lines = [l for l in out.splitlines() if re.search(r"[Rr]evolver", l)]
+    if not lines and shutil.which("qs"):
+        out = subprocess.run(["qs", "log", "-c", "ii"], capture_output=True, text=True, check=False, timeout=20)
+        lines = [l for l in (out.stdout + out.stderr).splitlines() if re.search(r"[Rr]evolver", l)]
+    if lines:
+        print("shell log:")
+        for line in lines[-15:]:
+            print("  " + re.sub(r"\x1b\[[0-9;]*m", "", line))
+    else:
+        print("shell log    nothing about the revolver (it loaded, or the shell has not started it)")
+    return 0
+
+
+# How a new window is placed. golden and cursor are Hyprland's dwindle layout; the rest are Halcyon's own layouts
+# in layouts.lua (registered as lua:halcyon-<mode>).
 PLACEMENTS = {
     "golden": (1.618, 0),   # the split follows the golden ratio, the side chosen by where the cursor is
     "cursor": (1.0, 0),     # halves, the side chosen by where the cursor is
 }
+LUA_PLACEMENTS = {
+    "stacked": "two windows at a time, one above the other; a third opens on the next empty workspace",
+    "side-by-side": "two windows at a time, next to each other; a third opens on the next empty workspace",
+    "mondrian": "each new window splits the biggest tile, on uneven ratios, like a Mondrian painting",
+}
 PLACEMENT_LUA = HALCYON_STATE / "placement.lua"
 
 
+def placement_lua(mode):
+    """The placement.lua for a mode. HALCYON_PLACEMENT tells layouts.lua which cap, if any, applies."""
+    if mode in PLACEMENTS:
+        ratio, force = PLACEMENTS[mode]
+        return (f"-- mode: {mode}\nHALCYON_PLACEMENT = \"{mode}\"\n"
+                f"hl.config({{ general = {{ layout = \"dwindle\" }}, "
+                f"dwindle = {{ default_split_ratio = {ratio}, force_split = {force} }} }})\n")
+    return (f"-- mode: {mode}\nHALCYON_PLACEMENT = \"{mode}\"\n"
+            f"hl.config({{ general = {{ layout = \"lua:halcyon-{mode}\" }} }})\n")
+
+
 def cmd_placement(args):
-    """`placement` shows how new windows are placed; `placement golden|cursor` changes it."""
+    """`placement` shows how new windows are placed; `placement MODE` changes it; `placement --list`."""
+    modes = list(PLACEMENTS) + list(LUA_PLACEMENTS)
     current = "golden"
     try:
         head = PLACEMENT_LUA.read_text(encoding="utf-8").splitlines()[0]
@@ -1600,11 +1666,15 @@ def cmd_placement(args):
     if not args:
         print(current)
         return 0
-    if args[0] not in PLACEMENTS or len(args) != 1:
-        raise ThemeError("usage: halcyon-theme placement golden|cursor")
-    ratio, force = PLACEMENTS[args[0]]
-    write_atomic(PLACEMENT_LUA, f"-- mode: {args[0]}\n"
-                 f"hl.config({{ dwindle = {{ default_split_ratio = {ratio}, force_split = {force} }} }})\n")
+    if args == ["--list"]:
+        descriptions = {"golden": "splits on the golden ratio, on the side the pointer is on (default)",
+                        "cursor": "splits in halves, on the side the pointer is on", **LUA_PLACEMENTS}
+        for mode in modes:
+            print(f"{'*' if mode == current else ' '} {mode:<13} {descriptions[mode]}")
+        return 0
+    if args[0] not in modes or len(args) != 1:
+        raise ThemeError("usage: halcyon-theme placement [" + "|".join(modes) + "|--list]")
+    write_atomic(PLACEMENT_LUA, placement_lua(args[0]))
     if hyprland_running():
         subprocess.run(["hyprctl", "reload"], capture_output=True, check=False)
     print(args[0])
@@ -1702,6 +1772,32 @@ def cmd_collapse(args):
     raise ThemeError("usage: halcyon-theme collapse arm AGE X Y R [CAR_X CAR_Y] | disarm")
 
 
+REVOLVER_ON_MARKER = HALCYON_STATE / "migrated-revolver-on"
+
+
+def migrate_revolver_on():
+    """Once: the revolver is on for every theme now, but the shell saved the old default (off) in config.json, and a
+    Red Sun applied before this would switch it off again when left. Turn it on, and forget that restore. After this,
+    turning it off in Settings stays off."""
+    if REVOLVER_ON_MARKER.exists():
+        return False
+    key = "background.widgets.revolver.enable"
+    data = read_shell_config()
+    changed = get_nested(data, key) is not True
+    if changed:
+        set_nested(data, key, True)
+        write_atomic(SHELL_CONFIG, json.dumps(data, indent=2) + "\n")
+    try:
+        restore = json.loads(SHELL_RESTORE.read_text(encoding="utf-8"))
+        if key in restore:
+            del restore[key]
+            write_atomic(SHELL_RESTORE, json.dumps(restore, indent=2) + "\n")
+    except (OSError, ValueError):
+        pass
+    write_atomic(REVOLVER_ON_MARKER, "1\n")
+    return changed
+
+
 def cmd_migrate(args):
     """Bring a theme applied by an older Halcyon up to date (login and `update apply` run this).
 
@@ -1710,6 +1806,7 @@ def cmd_migrate(args):
     applied, like Red Sun turning on the revolver, take effect without picking the theme again. Otherwise only the
     browser themes are written, which is cheap and covers profiles made since.
     """
+    migrate_revolver_on()
     raw = read_state(ACTIVE_FILE)
     current = RENAMED.get(raw, raw) if raw else None
     changed = args[args.index("--changed") + 1:] if "--changed" in args else []

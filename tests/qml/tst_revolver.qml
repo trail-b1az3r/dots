@@ -167,7 +167,7 @@ Item {
             verify(drum.ringLight >= 0.8, "lit at rest");
             widget.sunRing = { x: 942, y: 466, r: 70.8 };
             verify(!drum.standalone, "on the painted ring the wallpaper is the ring");
-            compare(drum.ringLight, 0, "dark at rest there");
+            verify(drum.ringLight >= 0.6, "it still glows at rest there, or it cannot be seen at all");
             widget.sunRing = { x: 0, y: 0, r: 0 };
             verify(!widget.ringAnchored, "a ring of no size is not a ring");
         }

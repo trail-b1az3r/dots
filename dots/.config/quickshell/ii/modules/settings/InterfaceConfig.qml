@@ -128,6 +128,21 @@ ContentPage {
                     displayName: Translation.tr("Cursor position"),
                     icon: "near_me",
                     value: "cursor"
+                },
+                {
+                    displayName: Translation.tr("Two, stacked"),
+                    icon: "splitscreen",
+                    value: "stacked"
+                },
+                {
+                    displayName: Translation.tr("Two, side by side"),
+                    icon: "splitscreen_right",
+                    value: "side-by-side"
+                },
+                {
+                    displayName: Translation.tr("Mondrian grid"),
+                    icon: "dashboard",
+                    value: "mondrian"
                 }
             ]
         }
@@ -138,7 +153,7 @@ ContentPage {
             wrapMode: Text.Wrap
             color: Appearance.colors.colSubtext
             font.pixelSize: Appearance.font.pixelSize.smallie
-            text: Translation.tr("Where a new window opens. Golden ratio splits the space on the golden ratio; cursor position splits on the side the pointer is on. Limits of two per row or column, and the Mondrian grid, aren't built yet.")
+            text: Translation.tr("Where a new window opens. Golden ratio splits the space on the golden ratio, and cursor position in halves, on the side the pointer is on. Two, stacked or side by side, keeps two windows on a workspace and opens a third on the next empty one. Mondrian grid splits the biggest tile each time, on uneven ratios, into blocks like a Mondrian painting.")
         }
     }
 

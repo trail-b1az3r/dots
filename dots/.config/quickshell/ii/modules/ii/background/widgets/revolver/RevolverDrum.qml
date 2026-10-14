@@ -41,8 +41,9 @@ Item {
     /** Red Sun away from the painted ring (another wallpaper, or followRing off): the drum draws the whole sun
      *  itself, lit at rest, instead of leaving the ring to the wallpaper. */
     property bool standalone: false
-    /** How brightly the ring burns: on the painted ring only while it turns; standalone, always. */
-    readonly property real ringLight: standalone ? Math.max(0.8, heat) : heat
+    /** How brightly the ring burns. It glows at rest too, so the revolver can be seen on the painted ring, and
+     *  burns brighter while it turns. */
+    readonly property real ringLight: Math.max(standalone ? 0.8 : 0.62, heat)
     property bool locked: false
     readonly property alias rotor: rotor
 
