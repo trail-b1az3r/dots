@@ -38,6 +38,11 @@ Item {
     property int spinDirection: 1
     /** 0..1: the Red Sun ring's light. RevolverWidget raises it while the drum turns. */
     property real heat: 0
+    /** Red Sun away from the painted ring (another wallpaper, or followRing off): the drum draws the whole sun
+     *  itself, lit at rest, instead of leaving the ring to the wallpaper. */
+    property bool standalone: false
+    /** How brightly the ring burns: on the painted ring only while it turns; standalone, always. */
+    readonly property real ringLight: standalone ? Math.max(0.8, heat) : heat
     property bool locked: false
     readonly property alias rotor: rotor
 
@@ -178,11 +183,32 @@ Item {
                 }
             }
 
+            // Red Sun on its own: the sun's disc inside the ring, dark in the middle and glowing towards the rim,
+            // like the painted one.
+            Shape {
+                anchors.fill: parent
+                visible: drum.redSun && drum.standalone
+                ShapePath {
+                    strokeWidth: -1
+                    fillGradient: RadialGradient {
+                        centerX: drum.c; centerY: drum.c
+                        centerRadius: 88
+                        focalX: drum.c; focalY: drum.c - 10
+                        GradientStop { position: 0.0; color: drum.withAlpha("#1a0610", 0.92) }
+                        GradientStop { position: 0.55; color: drum.withAlpha("#4a0c16", 0.86) }
+                        GradientStop { position: 0.78; color: drum.withAlpha("#8a1a22", 0.7) }
+                        GradientStop { position: 0.9; color: drum.withAlpha(drum.colGlow, 0.55) }
+                        GradientStop { position: 1.0; color: drum.withAlpha(drum.colGlow, 0.2) }
+                    }
+                    PathSvg { path: Styles.circle(drum.c, drum.c, 88) }
+                }
+            }
+
             // Red Sun: a red haze where the ring burns.
             Shape {
                 anchors.fill: parent
                 visible: drum.redSun
-                opacity: 0.35 + 0.65 * drum.heat
+                opacity: 0.35 + 0.65 * drum.ringLight
                 ShapePath {
                     strokeWidth: -1
                     fillGradient: RadialGradient {
@@ -238,7 +264,7 @@ Item {
                     id: sunRing
                     anchors.fill: parent
                     visible: drum.redSun
-                    opacity: drum.heat
+                    opacity: drum.ringLight
                     Instantiator {
                         // Glow from wide and faint to the white-hot core, for each lit arc.
                         model: [
@@ -332,8 +358,8 @@ Item {
                                 anchors.centerIn: parent
                                 width: slot.size + 24
                                 height: slot.size + 24
-                                visible: slot.live || (drum.redSun && drum.heat > 0.05)
-                                opacity: slot.live ? 1 : drum.heat * 0.6
+                                visible: slot.live || (drum.redSun && drum.ringLight > 0.05)
+                                opacity: slot.live ? 1 : drum.ringLight * 0.6
                                 ShapePath {
                                     strokeWidth: -1
                                     fillGradient: RadialGradient {
@@ -348,48 +374,29 @@ Item {
                             }
 
                             // Red Sun: an ember bead, white-hot in the middle, riding on the ring.
-
                             Shape {
-
                                 anchors.fill: parent
-
                                 visible: drum.redSun
-
-                                opacity: slot.live ? 1 : 0.6 + 0.4 * drum.heat
-
+                                opacity: slot.live ? 1 : 0.6 + 0.4 * drum.ringLight
                                 ShapePath {
-
                                     strokeWidth: -1
-
                                     fillGradient: RadialGradient {
-
                                         centerX: slot.size / 2; centerY: slot.size / 2
-
                                         centerRadius: slot.size / 2
-
                                         focalX: centerX; focalY: centerY
-
                                         GradientStop { position: 0.0; color: drum.colHot }
-
                                         GradientStop { position: 0.32; color: drum.colHot }
-
                                         GradientStop { position: 0.5; color: drum.colGlow }
-
                                         GradientStop { position: 1.0; color: drum.withAlpha(drum.colGlow, 0) }
-
                                     }
-
                                     PathSvg { path: Styles.circle(slot.size / 2, slot.size / 2, slot.size / 2) }
-
                                 }
-
                             }
-
 
                             Shape {
                                 id: chamberShape
                                 anchors.fill: parent
-                            visible: !drum.redSun
+                                visible: !drum.redSun
                                 readonly property real h: slot.size / 2
                                 readonly property color fill: slot.live ? drum.colAccent : drum.colChamber
 

@@ -54,6 +54,7 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("browsers [--json]", "the Firefox and Chromium themes that follow Halcyon's colours, and where they are"),
         ("browsers update", "write them now (applying a theme or a wallpaper does this)"),
         ("browsers off [firefox|chromium]", "take them out of the browsers again"),
+        ("server on|off|status", "server mode: no suspend, no automatic lock or screen blanking (Settings > Halcyon has the button)"),
         ("usb [--json]", "why a browser can't find or open a USB, HID or serial device (WebUSB, WebHID, Web Serial)"),
         ("usb allow VID:PID ... | --all", "let you open those devices from the browser (a udev rule; asks for sudo)"),
         ("usb remove", "take that rule away again"),

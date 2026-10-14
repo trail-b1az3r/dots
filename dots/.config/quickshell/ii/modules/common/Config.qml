@@ -121,6 +121,7 @@ Singleton {
                     property bool speak: true // Read replies aloud
                     property bool allowActions: true // Let it control the desktop
                 }
+                property bool serverMode: false // No suspend, no automatic lock, no screen blanking (halcyon server)
                 // Firefox and Chromium themes from the shell's colours (halcyon browsers)
                 property JsonObject browsers: JsonObject {
                     property bool firefox: true // userChrome/userContent in every Firefox, LibreWolf and Zen profile

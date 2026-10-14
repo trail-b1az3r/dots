@@ -371,6 +371,7 @@ AbstractBackgroundWidget {
 
                 RevolverDrum {
                     id: drum
+                    objectName: "drum"
 
                     style: root.style
                     colBase: root.colBase
@@ -390,6 +391,7 @@ AbstractBackgroundWidget {
                     locked: GlobalStates.screenLocked
                     // The Red Sun ring burns while it turns, and cools slowly after.
                     heat: root.redSun && (root.spinning || dragArea.pressed) ? Math.max(0.55, root.spinSpeed) : 0
+                    standalone: root.redSun && !root.ringAnchored
                     Behavior on heat {
                         NumberAnimation { duration: drum.heat > 0.1 ? 1400 : 380; easing.type: Easing.OutCubic }
                     }

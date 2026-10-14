@@ -58,6 +58,32 @@ ContentPage {
         onTriggered: Quickshell.execDetached([page.assistantTool, "reload"])
     }
 
+    // Server mode: the service's real state, read back after every change.
+    readonly property string serverTool: `${FileUtils.trimFileProtocol(Directories.config)}/hypr/hyprland/halcyon/halcyon_server.py`
+    property bool serverActive: false
+    property int serverLocks: 0
+    Process {
+        id: serverStatus
+        running: true
+        command: [page.serverTool, "status", "--json"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const info = JSON.parse(text);
+                    page.serverActive = info.active === true;
+                    page.serverLocks = (info.inhibitors ?? []).length;
+                } catch (e) {
+                    page.serverActive = false;
+                }
+            }
+        }
+    }
+    Timer {
+        id: serverRecheck
+        interval: 1200
+        onTriggered: serverStatus.running = true
+    }
+
     // Turning a browser off takes its theme away; turning one on (or anything else) writes the themes now.
     function browsersChanged(turnedOff) {
         if (!page.ready)
@@ -705,6 +731,51 @@ ContentPage {
             color: Appearance.colors.colSubtext
             font.pixelSize: Appearance.font.pixelSize.smallie
             text: Translation.tr("Full adds screen effects that follow the pointer. Hyprland then redraws every frame, which uses noticeably more GPU; Light keeps the glass look without that cost.")
+        }
+    }
+
+    ContentSection {
+        icon: "dns"
+        title: Translation.tr("Server mode")
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colSubtext
+            font.pixelSize: Appearance.font.pixelSize.smallie
+            text: Translation.tr("For a computer that serves something: it never suspends (idle, lid, or the suspend key), and the screen never locks or blanks by itself. Stays on after a restart until you stop it.")
+        }
+
+        RowLayout {
+            spacing: 10
+            RippleButtonWithIcon {
+                buttonRadius: Appearance.rounding.full
+                toggled: page.serverActive
+                colBackgroundToggled: Appearance.colors.colPrimaryContainer
+                colBackgroundToggledHover: Appearance.colors.colPrimaryContainerHover
+                materialIcon: page.serverActive ? "stop_circle" : "play_circle"
+                mainText: page.serverActive ? Translation.tr("Stop server mode") : Translation.tr("Start server mode")
+                onClicked: {
+                    const turnOn = !page.serverActive;
+                    // The tool saves the choice (halcyon.serverMode) itself, so there is one writer.
+                    page.serverActive = turnOn; // at once; the check below confirms it
+                    Quickshell.execDetached([page.serverTool, turnOn ? "on" : "off"]);
+                    serverRecheck.restart();
+                }
+                StyledToolTip {
+                    text: "halcyon server on | off"
+                }
+            }
+            StyledText {
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                color: page.serverActive ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
+                font.pixelSize: Appearance.font.pixelSize.smallie
+                text: page.serverActive
+                    ? Translation.tr("On: no suspend, no automatic lock")
+                    : Translation.tr("Off: locking, blanking and suspend as usual")
+            }
         }
     }
 

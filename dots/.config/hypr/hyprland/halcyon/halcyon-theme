@@ -1767,6 +1767,9 @@ def main(argv):
     if argv and argv[0] == "crashes":
         tool = HERE / "halcyon_crashes.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
+    if argv and argv[0] == "server":
+        tool = HERE / "halcyon_server.py"
+        os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and argv[0] == "browsers":
         tool = HERE / "halcyon_browsers.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])

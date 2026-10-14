@@ -69,5 +69,11 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE " ..
         "XDG_RUNTIME_DIR DISPLAY XDG_CURRENT_DESKTOP; " ..
         "systemctl --user daemon-reload; " ..
-        "systemctl --user restart halcyon-quickshell.service halcyon-gpu-guard.service halcyon-resume.service")
+        -- Older Halcyon enabled these for every login, which started the shell in KDE too. They are only
+        -- started from here now, so drop those links.
+        "w=\"${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/default.target.wants\"; " ..
+        "rm -f \"$w/halcyon-quickshell.service\" \"$w/halcyon-gpu-guard.service\" \"$w/halcyon-resume.service\"; " ..
+        "systemctl --user restart halcyon-quickshell.service halcyon-gpu-guard.service halcyon-resume.service; " ..
+        -- Server mode (Settings > Halcyon) stays on across restarts.
+        "$HOME/.config/hypr/hyprland/halcyon/halcyon_server.py apply")
 end)

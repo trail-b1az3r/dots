@@ -140,6 +140,23 @@ Item {
             verify(!widget.ringAnchored, "followRing off keeps the saved place");
             Config.options.background.widgets.revolver.followRing = true;
         }
+
+        // Off the painted ring (another wallpaper, the old theme name, followRing off) the drum draws the whole lit
+        // sun itself; before, only the beads showed, floating round nothing.
+        function test_red_sun_off_the_ring_draws_the_lit_ring() {
+            Config.options.halcyon.theme = "red-sun";
+            const widget = makeRevolver();
+            const drum = findChild(widget, "drum");
+            verify(drum, "the drum is reachable");
+            verify(!widget.ringAnchored);
+            verify(drum.standalone);
+            verify(drum.ringLight >= 0.8, "lit at rest");
+            widget.sunRing = { x: 942, y: 466, r: 70.8 };
+            verify(!drum.standalone, "on the painted ring the wallpaper is the ring");
+            compare(drum.ringLight, 0, "dark at rest there");
+            widget.sunRing = { x: 0, y: 0, r: 0 };
+            verify(!widget.ringAnchored, "a ring of no size is not a ring");
+        }
     }
 
     // Every style, and the plates, load without errors.

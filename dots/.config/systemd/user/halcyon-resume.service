@@ -2,6 +2,9 @@
 Description=Halcyon: restart the network and Razer tools after suspend
 
 [Service]
+# Only inside a running Hyprland. systemd's user manager outlives a session, so without this a restart after
+# Hyprland exits (or an enabled unit at the next login) would start it in KDE or GNOME instead.
+ExecCondition=/bin/sh -c 'hyprctl version >/dev/null 2>&1 || exit 1'
 ExecStart=%h/.config/hypr/hyprland/halcyon/resume
 Restart=on-failure
 RestartSec=5
@@ -9,5 +12,4 @@ RestartSec=5
 KillMode=process
 OOMPolicy=continue
 
-[Install]
-WantedBy=default.target
+# Started by Hyprland (halcyon/init.lua), never enabled on its own: see ExecCondition.
