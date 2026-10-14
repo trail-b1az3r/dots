@@ -279,6 +279,7 @@ Singleton {
                         property string source: "steam" // "steam" or "prismlauncher"
                         property string mode: "recent" // "recent", "random" or "recommended"
                         property int size: 300
+                        property bool followRing: true // In the Red Sun theme, sit on the wallpaper's red ring (it is the drum)
                     }
                 }
                 property string wallpaperPath: ""

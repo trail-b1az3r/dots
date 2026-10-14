@@ -9,24 +9,26 @@ import qs.modules.common
 import qs.modules.common.functions
 import qs.modules.common.widgets
 import qs.modules.ii.background.widgets
+import "RevolverStyles.js" as Styles
 
 /**
  * The revolver: a drum of installed games, drawn on the wallpaper.
  *
- * The look follows hyprland-revolver (MIT License, Copyright (c) 2026
- * minerofthesoal): a wavy cookie dial, eight chambers around a hub, a
- * hammer, a side-loading clip, a muzzle burst, and a diagonal lock bar
- * while the screen is locked. Chambers come from `halcyon-theme revolver
- * scan`, which reads the local Steam library or PrismLauncher.
+ * The look follows hyprland-revolver (MIT License, Copyright (c) 2026 minerofthesoal): a dial of eight chambers
+ * round a hub, a hammer, and a muzzle burst, with a safety bar while the screen is locked. RevolverDrum draws it
+ * in the active theme's own shapes (RevolverStyles.js). Chambers come from `halcyon-theme revolver scan`, which
+ * reads the local Steam library or PrismLauncher.
  *
- * Dragging spins the drum with flick inertia, and the chamber that stops
- * under the pin is the one loaded. A spin that lands on a loaded chamber
- * fires it: the clip slides in, the hammer strikes, the game starts, and
- * the spent shell is ejected and a new one loaded. A slow nudge settles
- * the drum without firing, so only a deliberate spin launches a game.
+ * Dragging spins the drum with flick inertia, and the chamber that stops under the hammer is the one loaded. A
+ * spin that lands on a loaded chamber fires it: the hammer strikes, the game starts, and the spent shell is ejected
+ * and a new one loaded. A slow nudge settles the drum without firing, so only a deliberate spin launches a game.
  *
- * Its place is set by background.widgets.revolver.x and .y, and its size
- * by .size. The drawing is laid out on a 230 × 268 stage and scaled.
+ * In the Red Sun theme the drum is the red ring of the wallpaper. It sits on the painted ring (unless
+ * background.widgets.revolver.followRing is off), lights up while it turns, and a real spin breaks the screen:
+ * `halcyon-theme collapse arm` switches the theme's collapse shader in for a few seconds.
+ *
+ * Its place is set by background.widgets.revolver.x and .y, and its size by .size. The drawing is laid out on a
+ * 230 × 268 stage and scaled.
  */
 AbstractBackgroundWidget {
     id: root
@@ -37,15 +39,32 @@ AbstractBackgroundWidget {
     readonly property int chamberCount: 8
     readonly property real stageWidth: 230
     readonly property real stageHeight: 268
-    readonly property real scaleFactor: Math.max(200, configEntry.size) / stageWidth
+    readonly property string tool: `${FileUtils.trimFileProtocol(Directories.config)}/hypr/hyprland/halcyon/halcyon-theme`
 
-    readonly property color colBackground: Appearance.colors.colPrimaryContainer
-    readonly property color colOnBackground: Appearance.colors.colSecondary
-    readonly property color colAccent: Appearance.colors.colTertiary
-    readonly property color colChamber: Appearance.colors.colShadow
+    readonly property var style: Styles.styleFor(Config.options.halcyon.theme)
+    readonly property bool redSun: style.id === "red-sun"
+
+    /** The ring painted in the Red Sun wallpaper, in this widget's parent's coordinates: {x, y, r}, or null. */
+    property var sunRing: null
+    readonly property bool ringAnchored: redSun && sunRing !== null && root.configEntry.followRing !== false
+
+    readonly property real scaleFactor: ringAnchored ? sunRing.r / Styles.SUN_RING_STAGE_RADIUS
+                                                  : Math.max(200, configEntry.size) / stageWidth
+
+    // On the painted ring the drum's centre is the ring's centre.
+    x: ringAnchored ? sunRing.x - Styles.CENTRE * scaleFactor : targetX
+    y: ringAnchored ? sunRing.y - Styles.CENTRE * scaleFactor : targetY
 
     implicitWidth: stageWidth * scaleFactor
     implicitHeight: stageHeight * scaleFactor
+
+    // The theme's colours, and Red Sun's own light.
+    readonly property color colBase: Appearance.colors.colPrimaryContainer
+    readonly property color colOn: Appearance.colors.colOnLayer1
+    readonly property color colAccent: Appearance.colors.colPrimary
+    readonly property color colChamber: Appearance.colors.colLayer0
+    readonly property color colGlow: redSun ? "#ff4940" : Appearance.colors.colPrimary
+    readonly property color colHot: redSun ? "#ffe2d6" : Appearance.colors.colOnPrimary
 
     property bool loading: false
     property bool spinning: false
@@ -62,6 +81,11 @@ AbstractBackgroundWidget {
     property int landedIndex: -1
     property int ejectingIndex: -1
     property string statusText: Translation.tr("Drag to spin")
+    /** 0..1, how fast the drum is turning right now. */
+    property real spinSpeed: 0
+    property int spinDirection: 1
+    /** When the current drag began (ms), to tell the collapse shader how long ago the press was. */
+    property real pressTime: 0
 
     function refresh(): void {
         if (root.loading)
@@ -82,7 +106,8 @@ AbstractBackgroundWidget {
             pool = [];
         }
         if (pool.length === 0) {
-            root.statusText = Translation.tr("Nothing found for this source");
+            // In Red Sun the ring still turns, and still breaks the screen, with no games to load.
+            root.statusText = root.redSun ? "" : Translation.tr("Nothing found for this source");
             return;
         }
         root.lastPool = pool;
@@ -119,9 +144,9 @@ AbstractBackgroundWidget {
         return out;
     }
 
-    // Valid resting rotations put a chamber's centre exactly under the pin at
-    // the top (270°). Chamber i sits at i·step before rotation, so it lands on
-    // the pin when the rotation is 270 - i·step, modulo one step.
+    // Valid resting rotations put a chamber's centre exactly under the hammer at
+    // the top (270°). Chamber i sits at i·step before rotation, so it lands
+    // there when the rotation is 270 - i·step, modulo one step.
     function snapToChamber(raw: real): real {
         const step = 360 / root.chamberCount;
         const offset = 270 % step;
@@ -144,39 +169,63 @@ AbstractBackgroundWidget {
     function releaseSpin(velocityPerMs: real): void {
         const vAbs = Math.min(2.2, Math.abs(velocityPerMs));
         const dir = velocityPerMs >= 0 ? 1 : -1;
+        const flick = vAbs >= 0.03;
         // A nudge settles where it is; a flick carries the drum on.
-        const extraDegrees = vAbs < 0.03 ? 0 : vAbs * 900;
-        const duration = vAbs < 0.03 ? 350 : Math.max(500, Math.min(3200, 500 + vAbs * 1400));
-        const target = root.snapToChamber(drum.rotation + dir * extraDegrees);
+        const extraDegrees = flick ? vAbs * 900 : 0;
+        const duration = flick ? Math.max(500, Math.min(3200, 500 + vAbs * 1400)) : 350;
+        const target = root.snapToChamber(drum.rotor.rotation + dir * extraDegrees);
 
+        root.spinDirection = dir;
         root.committedSpin = root.chambers.length >= root.chamberCount;
         root.landedIndex = root.chamberAtRotation(target);
-        root.landing = root.committedSpin && vAbs >= 0.03;
+        root.landing = root.committedSpin && flick;
         root.spinning = true;
-        root.statusText = root.committedSpin ? Translation.tr("Spinning...") : Translation.tr("Still chambering...");
+        if (root.committedSpin)
+            root.statusText = Translation.tr("Spinning...");
+        else if (!root.redSun)
+            root.statusText = Translation.tr("Still chambering...");
+
+        if (root.redSun && flick)
+            root.armCollapse();
 
         spinAnim.duration = duration;
         spinAnim.to = target;
         spinAnim.start();
     }
 
+    // Red Sun: tell the collapse shader where the ring is and how long ago it was grabbed. The tool checks the
+    // theme and the effects level, and does nothing when the effect is off.
+    function armCollapse(): void {
+        const win = root.Window.window;
+        const centre = drum.mapToItem(null, Styles.CENTRE, Styles.CENTRE);
+        const width = win ? win.width : root.screenWidth;
+        const height = win ? win.height : root.screenHeight;
+        if (width <= 0 || height <= 0)
+            return;
+        const ringRadius = Styles.SUN_RING_STAGE_RADIUS * root.scaleFactor;
+        const age = Math.max(0, (Date.now() - root.pressTime) / 1000);
+        Quickshell.execDetached([root.tool, "collapse", "arm", age.toFixed(3),
+            (centre.x / width).toFixed(4), (centre.y / height).toFixed(4), (ringRadius / height).toFixed(4)]);
+    }
+
     function onSpinStopped(): void {
         root.spinning = false;
         if (!root.landing) {
-            root.statusText = Translation.tr("Drag to spin");
+            if (root.chambers.length > 0)
+                root.statusText = Translation.tr("Drag to spin");
             return;
         }
         root.landing = false;
         root.fire();
     }
 
-    // Fires the chamber under the pin: the fire sequence, then the game starts.
+    // Fires the chamber under the hammer: the fire sequence, then the game starts.
     function fire(): void {
         const chosen = root.chambers[root.landedIndex];
         if (!chosen || root.firing || root.spinning)
             return;
         root.pendingChosen = chosen;
-        root.statusText = Translation.tr("Firing...");
+        root.statusText = chosen.name;
         fireSequence.start();
     }
 
@@ -185,9 +234,7 @@ AbstractBackgroundWidget {
     function fireShot(): void {
         if (!root.pendingChosen)
             return;
-        Quickshell.execDetached(["bash", "-c",
-            'exec "$HOME/.config/hypr/hyprland/halcyon/halcyon-theme" revolver fire "$1" "$2"',
-            "bash", root.pendingChosen.source, root.pendingChosen.id]);
+        Quickshell.execDetached([root.tool, "revolver", "fire", root.pendingChosen.source, root.pendingChosen.id]);
         root.ejectingIndex = root.landedIndex;
         root.pendingChosen = null;
     }
@@ -225,10 +272,7 @@ AbstractBackgroundWidget {
     Process {
         id: scanner
 
-        command: ["bash", "-c",
-            'exec "$HOME/.config/hypr/hyprland/halcyon/halcyon-theme" revolver scan --json' +
-            ' --source "$1" --mode "$2"',
-            "bash", root.configEntry.source, root.configEntry.mode]
+        command: [root.tool, "revolver", "scan", "--json", "--source", root.configEntry.source, "--mode", root.configEntry.mode]
         stdout: StdioCollector {
             onStreamFinished: root.onScanFinished(this.text)
         }
@@ -237,7 +281,7 @@ AbstractBackgroundWidget {
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0 && root.loading) {
                 root.loading = false;
-                root.statusText = Translation.tr("Scan failed");
+                root.statusText = root.redSun ? "" : Translation.tr("Scan failed");
             }
         }
     }
@@ -252,7 +296,7 @@ AbstractBackgroundWidget {
             if (root.loading) {
                 scanner.running = false;
                 root.loading = false;
-                root.statusText = Translation.tr("Scan timed out");
+                root.statusText = root.redSun ? "" : Translation.tr("Scan timed out");
             }
         }
     }
@@ -260,30 +304,42 @@ AbstractBackgroundWidget {
     NumberAnimation {
         id: spinAnim
 
-        target: drum
+        target: drum.rotor
         property: "rotation"
         easing.type: Easing.OutCubic
         onStopped: root.onSpinStopped()
     }
 
+    // How fast the drum turns, sampled while it moves: drives the trails and the Red Sun ring's light.
+    Timer {
+        id: speedSampler
+        property real lastRotation: 0
+        interval: 33
+        repeat: true
+        running: root.spinning || dragArea.pressed
+        onRunningChanged: lastRotation = drum.rotor.rotation
+        onTriggered: {
+            const degreesPerMs = Math.abs(drum.rotor.rotation - lastRotation) / interval;
+            lastRotation = drum.rotor.rotation;
+            root.spinSpeed = Math.min(1, root.spinSpeed * 0.5 + (degreesPerMs / 1.1) * 0.5);
+        }
+    }
+    onSpinningChanged: if (!spinning && !dragArea.pressed) root.spinSpeed = 0
+
     SequentialAnimation {
         id: fireSequence
 
         ScriptAction { script: root.firing = true }
-        NumberAnimation { target: gunFrame; property: "opacity"; to: 1; duration: 180 }
-        NumberAnimation { target: clipItem; property: "x"; to: 4; duration: 220; easing.type: Easing.OutBack }
-        PauseAnimation { duration: 120 }
-        NumberAnimation { target: clipItem; property: "x"; to: -40; duration: 180; easing.type: Easing.InBack }
-        NumberAnimation { target: hammer; property: "rotation"; to: -35; duration: 180; easing.type: Easing.OutQuad }
+        NumberAnimation { target: drum.hammerItem; property: "rotation"; to: -35; duration: 200; easing.type: Easing.OutQuad }
+        PauseAnimation { duration: 90 }
         ScriptAction { script: root.fireShot() }
         ScriptAction { script: root.firing = false }
         ParallelAnimation {
-            NumberAnimation { target: hammer; property: "rotation"; to: 0; duration: 70; easing.type: Easing.InQuad }
-            NumberAnimation { target: recoilWrapper; property: "y"; to: -8; duration: 60; easing.type: Easing.OutQuad }
+            NumberAnimation { target: drum.hammerItem; property: "rotation"; to: 0; duration: 70; easing.type: Easing.InQuad }
+            NumberAnimation { target: recoil; property: "y"; to: -8; duration: 60; easing.type: Easing.OutQuad }
             ScriptAction { script: muzzleBurst.burst() }
         }
-        NumberAnimation { target: recoilWrapper; property: "y"; to: 0; duration: 260; easing.type: Easing.OutBack }
-        NumberAnimation { target: gunFrame; property: "opacity"; to: 0; duration: 220 }
+        NumberAnimation { target: recoil; property: "y"; to: 0; duration: 260; easing.type: Easing.OutBack }
     }
 
     Item {
@@ -294,7 +350,7 @@ AbstractBackgroundWidget {
         scale: root.scaleFactor
         transformOrigin: Item.TopLeft
         // Under a glass theme the drum is a little see-through, like the glass around it.
-        opacity: Config.options.halcyon.glassTheme ? 0.8 : 1.0
+        opacity: Config.options.halcyon.glassTheme ? 0.86 : 1.0
         Behavior on opacity {
             NumberAnimation { duration: Appearance.animation.elementMoveFast.duration }
         }
@@ -307,251 +363,61 @@ AbstractBackgroundWidget {
             width: 230
             height: 230
 
-            // The gun frame: an abstract outline that fades in behind the
-            // drum during the fire sequence.
-            Rectangle {
-                id: gunFrame
-
-                anchors.centerIn: parent
-                width: parent.width + 36
-                height: parent.height * 0.5
-                y: parent.height * 0.58
-                radius: 20
-                color: "transparent"
-                border.color: root.colOnBackground
-                border.width: 2
-                opacity: 0
-                z: -1
-            }
-
-            // Everything that kicks back on recoil lives in this plain Item, so
-            // animating its y cannot disturb an anchor on drumArea.
+            // Everything that kicks back on recoil, in a plain Item so animating its y cannot disturb an anchor.
             Item {
-                id: recoilWrapper
-
+                id: recoil
                 width: parent.width
                 height: parent.height
 
-                StyledDropShadow {
-                    target: cookieLoader
-                }
-
-                Loader {
-                    id: cookieLoader
-
-                    anchors.fill: parent
-                    visible: false // StyledDropShadow draws it
-                    sourceComponent: MaterialCookie {
-                        implicitSize: drumArea.width
-                        sides: root.chamberCount
-                        color: root.colBackground
-                    }
-                }
-
-                Item {
+                RevolverDrum {
                     id: drum
 
-                    anchors.fill: parent
-                    rotation: 0
+                    style: root.style
+                    colBase: root.colBase
+                    colOn: root.colOn
+                    colAccent: root.colAccent
+                    colChamber: root.colChamber
+                    colGlow: root.colGlow
+                    colHot: root.colHot
+                    fontFamily: Appearance.font.family.main
+                    chambers: root.chambers
+                    chamberCount: root.chamberCount
+                    liveIndex: root.committedSpin ? root.landedIndex : -1
+                    ejectingIndex: root.ejectingIndex
+                    spinning: root.spinning
+                    spinSpeed: root.spinSpeed
+                    spinDirection: root.spinDirection
+                    locked: GlobalStates.screenLocked
+                    // The Red Sun ring burns while it turns, and cools slowly after.
+                    heat: root.redSun && (root.spinning || dragArea.pressed) ? Math.max(0.55, root.spinSpeed) : 0
+                    Behavior on heat {
+                        NumberAnimation { duration: drum.heat > 0.1 ? 1400 : 380; easing.type: Easing.OutCubic }
+                    }
 
-                    Repeater {
-                        model: root.chamberCount
-
-                        delegate: Item {
-                            id: chamberSlot
-
-                            required property int index
-                            readonly property var entry: root.chambers[index]
-                            readonly property real angle: index * (360 / root.chamberCount) * Math.PI / 180
-                            readonly property bool isLive: root.landedIndex === index && !root.spinning && root.committedSpin
-                            readonly property bool isEjecting: root.ejectingIndex === index
-
-                            x: drum.width / 2 + Math.cos(angle) * 82 - 24
-                            y: drum.height / 2 + Math.sin(angle) * 82 - 24
-                            width: 48
-                            height: 48
-                            // Counter-rotate so the labels stay upright as the drum turns.
-                            rotation: -drum.rotation
-
-                            // Rising edge only: the sequence runs to the end once started.
-                            onIsEjectingChanged: if (chamberSlot.isEjecting) ejectReload.start()
-
-                            // Everything that moves during an eject and reload lives here,
-                            // so the chamber's own position stays fixed on the drum.
-                            Item {
-                                id: shell
-
-                                property real fallY: 0
-                                property real wobble: 0
-
-                                anchors.fill: parent
-                                transform: [
-                                    Rotation { angle: shell.wobble; origin.x: shell.width / 2; origin.y: shell.height / 2 },
-                                    Translate { y: shell.fallY }
-                                ]
-
-                                // The brass rim, peeking out behind the casing.
-                                Rectangle {
-                                    anchors.fill: parent
-                                    radius: width / 2
-                                    color: chamberSlot.isLive ? root.colAccent : Qt.lighter(root.colChamber, 1.4)
-                                    opacity: chamberSlot.isLive ? 0.55 : 0.35
-                                }
-
-                                // The casing face, carrying the game's name.
-                                Rectangle {
-                                    anchors.fill: parent
-                                    anchors.margins: 2
-                                    radius: width / 2
-                                    color: chamberSlot.isLive ? root.colAccent : root.colChamber
-                                    opacity: chamberSlot.isLive ? 0.92 : 0.5
-                                    border.width: 1
-                                    border.color: Qt.darker(chamberSlot.isLive ? root.colAccent : root.colChamber, 1.3)
-
-                                    StyledText {
-                                        anchors.fill: parent
-                                        anchors.margins: 4
-                                        text: chamberSlot.entry ? chamberSlot.entry.name : "—"
-                                        color: root.colOnBackground
-                                        font.pixelSize: chamberSlot.isLive ? 9 : 8
-                                        font.bold: chamberSlot.isLive
-                                        wrapMode: Text.WordWrap
-                                        horizontalAlignment: Text.AlignHCenter
-                                        verticalAlignment: Text.AlignVCenter
-                                        elide: Text.ElideRight
-                                        maximumLineCount: 4
-                                    }
-                                }
-
-                                // The primer, a small dot near the rim.
-                                Rectangle {
-                                    anchors.top: parent.top
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    anchors.topMargin: 3
-                                    width: 7
-                                    height: 7
-                                    radius: 3.5
-                                    color: chamberSlot.isLive ? root.colOnBackground : Qt.darker(root.colChamber, 1.2)
-                                    opacity: chamberSlot.isLive ? 0.9 : 0.55
-                                    border.width: 1
-                                    border.color: root.colBackground
-                                }
-                            }
-
-                            // The spent shell drops clear, the next round loads while
-                            // it is out of sight, and it drops back in and settles.
-                            SequentialAnimation {
-                                id: ejectReload
-
-                                ParallelAnimation {
-                                    NumberAnimation { target: shell; property: "fallY"; to: 46; duration: 240; easing.type: Easing.InQuad }
-                                    NumberAnimation { target: shell; property: "wobble"; to: (chamberSlot.index % 2 === 0 ? 1 : -1) * 50; duration: 240; easing.type: Easing.InQuad }
-                                    NumberAnimation { target: shell; property: "opacity"; to: 0; duration: 220 }
-                                }
-                                ScriptAction { script: root.replaceChamber(chamberSlot.index) }
-                                PropertyAction { target: shell; property: "fallY"; value: -46 }
-                                PropertyAction { target: shell; property: "wobble"; value: 0 }
-                                PropertyAction { target: shell; property: "opacity"; value: 0 }
-                                PauseAnimation { duration: 60 }
-                                ParallelAnimation {
-                                    NumberAnimation { target: shell; property: "fallY"; to: 0; duration: 260; easing.type: Easing.OutBack }
-                                    NumberAnimation { target: shell; property: "opacity"; to: 1; duration: 200 }
-                                }
-                                ScriptAction {
-                    script: {
-                        if (root.ejectingIndex === chamberSlot.index) {
+                    onSwapChamber: index => root.replaceChamber(index)
+                    onEjectDone: index => {
+                        if (root.ejectingIndex === index) {
                             root.ejectingIndex = -1;
                             root.statusText = Translation.tr("Drag to spin");
                         }
                     }
-                }
-                            }
-                        }
-                    }
-                }
-
-                // The hub, the axis the cylinder turns on.
-                Item {
-                    anchors.centerIn: parent
-                    width: 46
-                    height: 46
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: width / 2
-                        color: root.colChamber
-                        opacity: 0.65
-                        border.color: root.colOnBackground
-                        border.width: 1
-                    }
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: parent.width * 0.55
-                        height: width
-                        radius: width / 2
-                        color: root.colAccent
-                        opacity: 0.85
-                    }
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: parent.width * 0.3
-                        height: 3
-                        radius: 1.5
-                        color: root.colBackground
-                        opacity: 0.85
-                    }
-                }
-
-                // The hammer hinges at its base, cocks back, then strikes.
-                Item {
-                    id: hammer
-
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    y: -26
-                    width: 14
-                    height: 20
-                    rotation: 0
-                    transformOrigin: Item.Bottom
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: 3
-                        color: root.colAccent
-                        border.color: root.colOnBackground
-                        border.width: 1
-                    }
-                }
-
-                // The side clip. It is only visible during the fire sequence, and
-                // x: -40 is its retracted position, not an off-widget one.
-                Rectangle {
-                    id: clipItem
-
-                    visible: root.firing
-                    width: 14
-                    height: 50
-                    radius: 3
-                    anchors.verticalCenter: parent.verticalCenter
-                    x: -40
-                    color: root.colChamber
-                    border.color: root.colOnBackground
-                    border.width: 1
                 }
 
                 // The muzzle burst. Hand-animated dots, not QtQuick.Particles.
                 Item {
                     id: muzzleBurst
 
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    y: -4
+                    x: Styles.CENTRE
+                    y: root.redSun ? Styles.CENTRE - Styles.SUN_RING_STAGE_RADIUS : -4
                     width: 1
                     height: 1
 
                     function burst(): void {
-                        for (let i = 0; i < 8; i++) {
+                        const count = root.redSun ? 16 : 9;
+                        for (let i = 0; i < count; i++) {
                             const p = particleComponent.createObject(muzzleBurst);
                             const angle = (Math.random() * 140 - 70 - 90) * Math.PI / 180;
-                            const dist = 18 + Math.random() * 14;
+                            const dist = (root.redSun ? 26 : 18) + Math.random() * 16;
                             p.targetX = Math.cos(angle) * dist;
                             p.targetY = Math.sin(angle) * dist;
                             p.start();
@@ -567,12 +433,12 @@ AbstractBackgroundWidget {
                             property real targetX: 0
                             property real targetY: 0
 
-                            width: 4
-                            height: 4
-                            radius: 2
-                            x: -2
-                            y: -2
-                            color: root.colAccent
+                            width: root.redSun ? 3 : 4
+                            height: width
+                            radius: width / 2
+                            x: -width / 2
+                            y: -width / 2
+                            color: root.redSun ? (Math.random() < 0.5 ? root.colHot : root.colGlow) : root.colAccent
 
                             function start(): void {
                                 particleAnim.start();
@@ -581,80 +447,13 @@ AbstractBackgroundWidget {
                             ParallelAnimation {
                                 id: particleAnim
 
-                                NumberAnimation { target: particle; property: "x"; to: particle.targetX; duration: 260; easing.type: Easing.OutQuad }
-                                NumberAnimation { target: particle; property: "y"; to: particle.targetY; duration: 260; easing.type: Easing.OutQuad }
-                                NumberAnimation { target: particle; property: "opacity"; from: 1; to: 0; duration: 260 }
+                                NumberAnimation { target: particle; property: "x"; to: particle.targetX; duration: 300; easing.type: Easing.OutQuad }
+                                NumberAnimation { target: particle; property: "y"; to: particle.targetY; duration: 300; easing.type: Easing.OutQuad }
+                                NumberAnimation { target: particle; property: "opacity"; from: 1; to: 0; duration: 300 }
                                 onStopped: particle.destroy()
                             }
                         }
                     }
-                }
-
-                // The firing pin. Whatever chamber stops here is the one loaded.
-                Rectangle {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    y: -4
-                    width: 8
-                    height: 8
-                    radius: 4
-                    color: root.colAccent
-                }
-            }
-
-            // The diagonal safety bar, shown while the screen is locked.
-            Rectangle {
-                id: lockBar
-
-                visible: GlobalStates.screenLocked
-                z: 20
-                anchors.centerIn: parent
-                width: parent.width * 1.05
-                height: 26
-                rotation: -8
-                radius: 4
-                border.color: root.colBackground
-                border.width: 1
-                gradient: Gradient {
-                    GradientStop { position: 0.0; color: root.colChamber }
-                    GradientStop { position: 0.5; color: root.colOnBackground }
-                    GradientStop { position: 1.0; color: root.colChamber }
-                }
-
-                // Brushed-metal hatching.
-                Repeater {
-                    model: 14
-
-                    delegate: Rectangle {
-                        required property int index
-
-                        x: index * (lockBar.width / 14)
-                        width: 2
-                        height: lockBar.height
-                        rotation: 20
-                        color: root.colBackground
-                        opacity: 0.25
-                    }
-                }
-
-                Rectangle {
-                    anchors.left: parent.left
-                    anchors.leftMargin: 6
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 8
-                    height: 8
-                    radius: 4
-                    color: root.colAccent
-                    border.color: root.colBackground
-                }
-                Rectangle {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 6
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 8
-                    height: 8
-                    radius: 4
-                    color: root.colAccent
-                    border.color: root.colBackground
                 }
             }
 
@@ -671,6 +470,7 @@ AbstractBackgroundWidget {
                 // Spinning waits for a spent shell to be reloaded.
                 enabled: !GlobalStates.screenLocked && !root.firing && root.ejectingIndex < 0
                 preventStealing: true
+                cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
 
                 function angleAt(mx: real, my: real): real {
                     return Math.atan2(my - height / 2, mx - width / 2) * 180 / Math.PI;
@@ -680,10 +480,10 @@ AbstractBackgroundWidget {
                     if (root.spinning)
                         return;
                     spinAnim.stop();
+                    root.pressTime = Date.now();
                     dragArea.lastAngle = dragArea.angleAt(mouse.x, mouse.y);
                     dragArea.lastTimestamp = Date.now();
                     dragArea.velocity = 0;
-                    root.statusText = "...";
                 }
 
                 onPositionChanged: mouse => {
@@ -696,7 +496,7 @@ AbstractBackgroundWidget {
                     const now = Date.now();
                     const dt = Math.max(1, now - dragArea.lastTimestamp);
                     dragArea.velocity = dragArea.velocity * 0.7 + (delta / dt) * 0.3;
-                    drum.rotation += delta;
+                    drum.rotor.rotation += delta;
                     dragArea.lastAngle = a;
                     dragArea.lastTimestamp = now;
                 }
@@ -712,10 +512,17 @@ AbstractBackgroundWidget {
         StyledText {
             anchors.top: drumArea.bottom
             anchors.horizontalCenter: parent.horizontalCenter
-            anchors.topMargin: 10
+            anchors.topMargin: root.redSun ? 4 : 12
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            elide: Text.ElideRight
+            visible: root.style.statusLabel && text !== ""
             text: root.statusText
-            color: root.colOnBackground
+            color: root.redSun ? root.colHot : root.colOn
+            style: Text.Outline
+            styleColor: ColorUtils.applyAlpha("#000000", 0.35)
             font.pixelSize: 11
+            font.weight: Font.Medium
         }
     }
 }

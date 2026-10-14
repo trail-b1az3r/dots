@@ -207,7 +207,7 @@ style, animations, wallpaper and, for some, shell layout and effects:
 | **Star Rail** | `hsr` | Astral gold and lavender on deep-space navy, over a golden rail curving through a nebula. Can show the current banner character. |
 | **Shattered Glass** | `shattered-glass` | Liquid glass: a glass lens follows the pointer, clicks crack the screen, windows turn to frosted glass. Ice blue and prism violet, sharp corners. |
 | **Fractured Glass** | `fractured-glass` | Refraction only, like Apple's Liquid Glass: a squircle glass lens follows the pointer and bends what's behind its rim. No ripples or cracks. Soft blue, lavender and pink over calm fragments of thick glass. |
-| **Red Sun** | `red-sun` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. Wallpaper by Kenami, from Wallpaper Heaven. |
+| **Red Sun** | `red-sun` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. The ring is the revolver: spin it and the screen cracks and caves in. Wallpaper by Kenami, from Wallpaper Heaven. |
 
 Pick one in **Settings > Halcyon**, with **`Ctrl + Super + Shift + T`**,
 or from a terminal:
@@ -297,6 +297,21 @@ active theme straight away:
 
 They're stored under `halcyon` in `~/.config/illogical-impulse/config.json`,
 which `halcyon refresh` re-reads.
+
+**Red Sun at `full`**: the red ring in the wallpaper is the revolver. It sits on the painted ring, lights up while it
+turns, and a real spin breaks the screen (`themes/shaders/red-sun.frag`): cracks run out from the ring, the screen
+splits into bevelled shards at different depths that sink towards it, the gaps glow red, and then it all heals. A
+slow nudge does nothing. The shader is only switched in for those few seconds (`halcyon collapse arm`, run by the
+revolver), so Red Sun costs no GPU the rest of the time, unlike the glass themes. At `light` or `off` the ring still
+turns, without the collapse. Applying Red Sun turns the revolver on (Settings > Revolver), and leaving it puts the setting
+back. Turn off "In Red Sun, sit on the wallpaper's red ring" there to keep the revolver where you placed it.
+
+### The revolver, the clock and the weather card
+
+The wallpaper widgets take the active theme's shapes. The revolver's drum is a Material cookie dial with no theme,
+the red ring in Red Sun, a cut-glass disc with gem chambers in the glass themes, a squircle with icon-like chambers in
+HyperNeo, and a gold rail with star chambers in Star Rail. The analogue clock's face and the weather card follow the
+same shapes. Drag the drum to spin it: a flick fires the game under the hammer, a nudge only settles it.
 
 **Shattered Glass at `full`** runs a screen shader
 (`themes/shaders/shattered-glass.frag`) that treats the screen as a

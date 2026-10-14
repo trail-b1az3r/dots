@@ -237,6 +237,15 @@ Variants {
                 readonly property real wallpaperTotalOffsetX: wallpaper.x - baseWallpaperOffsetX
                 readonly property real wallpaperTotalOffsetY: wallpaper.y - baseWallpaperOffsetY
                 readonly property bool locked: GlobalStates.screenLocked
+                // The red ring painted in the Red Sun wallpaper, in this canvas's coordinates, so the revolver can
+                // sit on it and turn it. Follows the wallpaper as it slides with the workspaces.
+                readonly property bool wallpaperHasSunRing: Config.options.halcyon.theme === "red-sun"
+                    && bgRoot.wallpaperPath.endsWith("/red-sun.jpg") && wallpaper.status === Image.Ready
+                readonly property var sunRing: wallpaperHasSunRing ? {
+                    "x": wallpaper.x + 0.4907 * wallpaper.width - x,
+                    "y": wallpaper.y + 0.4312 * wallpaper.height - y,
+                    "r": 0.0369 * wallpaper.width
+                } : null
                 x: wallpaperTotalOffsetX * parallaxFactor * !locked
                 y: wallpaperTotalOffsetY * parallaxFactor * !locked
 
@@ -286,6 +295,7 @@ Variants {
                     }
 
                     Component.onCompleted: reload()
+                    onLoaded: item.sunRing = Qt.binding(() => widgetCanvas.sunRing)
 
                     Connections {
                         target: Config.options.background.widgets.revolver

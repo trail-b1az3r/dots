@@ -91,6 +91,9 @@ NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,31}$")
 SHELL_KEY = re.compile(r"^[A-Za-z][A-Za-z0-9]*(\.[A-Za-z][A-Za-z0-9]*)*$")
 ANIMATION_STYLE = re.compile(r"^[a-z]+( -?[0-9]{1,3}%)?$")
 EFFECT_LEVELS = ("full", "light", "off")
+# A screen shader with a trigger is not loaded with the theme. It is switched in only while something (the
+# revolver, for "revolver") arms it, so the rest of the time it costs nothing: see `halcyon-theme collapse`.
+SHADER_TRIGGERS = ("revolver",)
 SCHEMES = {
     "scheme-content", "scheme-expressive", "scheme-fidelity", "scheme-fruit-salad",
     "scheme-monochrome", "scheme-neutral", "scheme-rainbow", "scheme-tonal-spot",
@@ -288,8 +291,13 @@ def validate(theme_id, theme):
     if not isinstance(effects, dict):
         problems.append("effects must be an object")
         effects = {}
-    for key in set(effects) - {"default", "screen_shader", "native_blur"}:
+    for key in set(effects) - {"default", "screen_shader", "native_blur", "shader_trigger"}:
         problems.append(f"effects.{key} is not a known key")
+    if "shader_trigger" in effects:
+        if effects["shader_trigger"] not in SHADER_TRIGGERS:
+            problems.append(f"effects.shader_trigger must be one of {', '.join(SHADER_TRIGGERS)}")
+        elif "screen_shader" not in effects:
+            problems.append("effects.shader_trigger needs effects.screen_shader")
     if effects.get("default", "light") not in EFFECT_LEVELS:
         problems.append(f"effects.default must be one of {', '.join(EFFECT_LEVELS)}")
     if "screen_shader" in effects:
@@ -550,6 +558,8 @@ def render_shader(theme, flip, glass=None):
     text = (THEMES_DIR / shader).read_text(encoding="utf-8")
     cursor_shape = glass.get("lensShape") == "cursor"
     knobs = {
+        "COLLAPSE_ARMED": "0",
+        "ARM_AGE": "0.000",
         "FLIP_POINTER_Y": "1" if flip else "0",
         "LENS_ENABLED": "1" if glass["pointerLens"] else "0",
         "RIPPLES_ENABLED": "1" if glass["clickRipples"] else "0",
@@ -783,7 +793,8 @@ def write_window_style(theme_id, theme):
     shader_path = None
     if shader_text is not None and effects == "full":
         write_atomic(SCREEN_SHADER, shader_text)
-        shader_path = SCREEN_SHADER
+        # A triggered shader stays out of theme.lua; `collapse arm` switches it in when it is needed.
+        shader_path = None if theme.get("effects", {}).get("shader_trigger") else SCREEN_SHADER
     else:
         remove(SCREEN_SHADER)
     native = hyprland_has_option("decoration:blur:variant")
@@ -800,9 +811,10 @@ def leave_theme():
 
 
 def is_glass(theme):
-    """Whether a theme has glass windows or a glass screen shader (what the revolver follows)."""
+    """Whether a theme has glass windows or a glass screen shader (what the revolver follows). A triggered shader
+    (Red Sun's collapse) is not glass."""
     effects = theme.get("effects", {})
-    return bool(effects.get("screen_shader") or effects.get("native_blur"))
+    return bool((effects.get("screen_shader") and not effects.get("shader_trigger")) or effects.get("native_blur"))
 
 
 # ----------------------------------------------------------------------------
@@ -1143,6 +1155,8 @@ def cmd_render(args):
     if shader is not None:
         shader_path = out / "screen-shader.frag"
         write_atomic(shader_path, shader)
+        if theme.get("effects", {}).get("shader_trigger"):
+            shader_path = None   # as apply does: switched in by `collapse arm`, not loaded with the theme
     write_atomic(out / "theme.lua", render_lua(theme_id, theme, effects, "--native-blur" in args, shader_path))
     write_atomic(out / "colors.json", overlay_colors("", theme))
     write_atomic(out / "material_colors.scss", overlay_scss("", theme))
@@ -1233,7 +1247,9 @@ def cmd_apply(args):
     reload_hyprland()
 
     body = theme["description"]
-    if effects == "full" and theme.get("effects", {}).get("screen_shader"):
+    if effects == "full" and theme.get("effects", {}).get("shader_trigger") == "revolver":
+        body += "\nSpin the revolver to break the screen (Settings > Background > Widgets turns it on)."
+    elif effects == "full" and theme.get("effects", {}).get("screen_shader"):
         body += "\nScreen effects use more GPU. Settings > Halcyon to tone them down."
     notify(f"{theme['name']} theme", body)
     print(f"applied {theme_id} (effects: {effects}{', native glass' if native else ''})")
@@ -1562,6 +1578,89 @@ def cmd_placement(args):
     return 0
 
 
+COLLAPSE_STATE = HALCYON_STATE / "collapse.json"
+COLLAPSE_SECONDS = 7.0   # the shader's DURATION, plus a margin for the arm to arrive
+
+
+def hyprland_eval(lua):
+    """Run Lua in the running Hyprland. True when it answered without an error."""
+    if not hyprland_running():
+        return False
+    result = subprocess.run(["hyprctl", "eval", lua], capture_output=True, text=True, check=False)
+    text = (result.stdout + result.stderr).lower()
+    return result.returncode == 0 and "error" not in text
+
+
+def collapse_arm(age, ring_x, ring_y, ring_r):
+    """Switch the active theme's triggered shader in, armed for a spin that started `age` seconds ago at the
+    ring (x, y as 0..1 of the screen, r as a fraction of its height). Returns a reason when it does nothing."""
+    current = active()
+    if current is None:
+        return "no theme is active"
+    theme = load(current)
+    if theme.get("effects", {}).get("shader_trigger") != "revolver":
+        return f"{theme['name']} has no revolver effect"
+    if effects_for(theme) != "full":
+        return "the effects level is not full"
+    text = render_shader(theme, bool(read_state(FLIP_FILE)), glass_settings())
+    knobs = {"COLLAPSE_ARMED": "1", "ARM_AGE": f"{max(0.0, min(float(age), 5.0)):.3f}",
+             "RING_X": f"{float(ring_x):.4f}", "RING_Y": f"{float(ring_y):.4f}", "RING_R": f"{float(ring_r):.4f}"}
+    for name, value in knobs.items():
+        text = re.sub(rf"^#define {name} .*$", f"#define {name} {value}", text, count=1, flags=re.M)
+    # A new path each time, so Hyprland compiles the new copy instead of keeping the old one.
+    try:
+        previous = json.loads(COLLAPSE_STATE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        previous = {}
+    token = int(previous.get("token", 0)) + 1
+    path = HALCYON_STATE / f"screen-shader-armed-{token % 2}.frag"
+    write_atomic(path, text)
+    if not hyprland_eval(f'hl.config({{ decoration = {{ screen_shader = "{path}" }}, debug = {{ damage_tracking = 0 }} }})'):
+        return "Hyprland did not take the shader"
+    write_atomic(COLLAPSE_STATE, json.dumps({"token": token, "until": time.time() + COLLAPSE_SECONDS}) + "\n")
+    # Disarm by itself afterwards, unless a newer spin has armed it again by then.
+    subprocess.Popen(["sh", "-c", f'sleep {COLLAPSE_SECONDS}; exec "$0" collapse disarm --token {token}', str(HERE / "halcyon-theme")],
+                     start_new_session=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return None
+
+
+def collapse_disarm(token=None):
+    """Take the triggered shader out again, and turn damage tracking back on."""
+    try:
+        state = json.loads(COLLAPSE_STATE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        state = {}
+    if token is not None and int(state.get("token", -1)) != int(token):
+        return "a newer spin is running"
+    ok = hyprland_eval('hl.config({ decoration = { screen_shader = "" }, debug = { damage_tracking = 2 } })')
+    if not ok:
+        reload_hyprland()   # theme.lua has no shader for this theme, so a reload takes it out too
+    for slot in (0, 1):
+        remove(HALCYON_STATE / f"screen-shader-armed-{slot}.frag")
+    remove(COLLAPSE_STATE)
+    return None
+
+
+def cmd_collapse(args):
+    """`collapse arm AGE X Y R` (the revolver runs this when a spin lands), `collapse disarm`."""
+    if len(args) == 5 and args[0] == "arm":
+        try:
+            values = [float(a) for a in args[1:]]
+        except ValueError:
+            raise ThemeError("usage: halcyon-theme collapse arm AGE X Y R (numbers)")
+        reason = collapse_arm(*values)
+        if reason:
+            print(f"not armed: {reason}")
+        return 0
+    if args[:1] == ["disarm"]:
+        token = args[2] if args[1:2] == ["--token"] and len(args) == 3 else None
+        reason = collapse_disarm(token)
+        if reason:
+            print(f"not disarmed: {reason}")
+        return 0
+    raise ThemeError("usage: halcyon-theme collapse arm AGE X Y R | disarm")
+
+
 def cmd_hyprland(args):
     """Which Hyprland is running (or installed), and whether it is hyprland-plus and new enough for Plus Tiles."""
     import halcyon_compositor
@@ -1576,6 +1675,7 @@ def cmd_hyprland(args):
 
 
 COMMANDS = {
+    "collapse": cmd_collapse,
     "hyprland": cmd_hyprland,
     "revolver": cmd_revolver,
     "custom": cmd_custom,
