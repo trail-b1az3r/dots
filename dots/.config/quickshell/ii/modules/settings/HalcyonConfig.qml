@@ -58,6 +58,43 @@ ContentPage {
         onTriggered: Quickshell.execDetached([page.assistantTool, "reload"])
     }
 
+    // Server mode: the service's real state, read back after every change.
+    readonly property string serverTool: `${FileUtils.trimFileProtocol(Directories.config)}/hypr/hyprland/halcyon/halcyon_server.py`
+    property bool serverActive: false
+    property int serverLocks: 0
+    Process {
+        id: serverStatus
+        running: true
+        command: [page.serverTool, "status", "--json"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const info = JSON.parse(text);
+                    page.serverActive = info.active === true;
+                    page.serverLocks = (info.inhibitors ?? []).length;
+                } catch (e) {
+                    page.serverActive = false;
+                }
+            }
+        }
+    }
+    Timer {
+        id: serverRecheck
+        interval: 1200
+        onTriggered: serverStatus.running = true
+    }
+
+    // Turning a browser off takes its theme away; turning one on (or anything else) writes the themes now.
+    function browsersChanged(turnedOff) {
+        if (!page.ready)
+            return;
+        const tool = `${FileUtils.trimFileProtocol(Directories.config)}/hypr/hyprland/halcyon/halcyon_browsers.py`;
+        if (turnedOff.length > 0)
+            Quickshell.execDetached([tool, "off", turnedOff]);
+        else
+            Quickshell.execDetached([tool, "update", "--quiet"]);
+    }
+
     function reloadAssistant() {
         if (page.ready)
             assistantTimer.restart();
@@ -694,6 +731,97 @@ ContentPage {
             color: Appearance.colors.colSubtext
             font.pixelSize: Appearance.font.pixelSize.smallie
             text: Translation.tr("Full adds screen effects that follow the pointer. Hyprland then redraws every frame, which uses noticeably more GPU; Light keeps the glass look without that cost.")
+        }
+    }
+
+    ContentSection {
+        icon: "dns"
+        title: Translation.tr("Server mode")
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colSubtext
+            font.pixelSize: Appearance.font.pixelSize.smallie
+            text: Translation.tr("For a computer that serves something: it never suspends (idle, lid, or the suspend key), and the screen never locks or blanks by itself. Stays on after a restart until you stop it.")
+        }
+
+        RowLayout {
+            spacing: 10
+            RippleButtonWithIcon {
+                buttonRadius: Appearance.rounding.full
+                toggled: page.serverActive
+                colBackgroundToggled: Appearance.colors.colPrimaryContainer
+                colBackgroundToggledHover: Appearance.colors.colPrimaryContainerHover
+                materialIcon: page.serverActive ? "stop_circle" : "play_circle"
+                mainText: page.serverActive ? Translation.tr("Stop server mode") : Translation.tr("Start server mode")
+                onClicked: {
+                    const turnOn = !page.serverActive;
+                    // The tool saves the choice (halcyon.serverMode) itself, so there is one writer.
+                    page.serverActive = turnOn; // at once; the check below confirms it
+                    Quickshell.execDetached([page.serverTool, turnOn ? "on" : "off"]);
+                    serverRecheck.restart();
+                }
+                StyledToolTip {
+                    text: "halcyon server on | off"
+                }
+            }
+            StyledText {
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                color: page.serverActive ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
+                font.pixelSize: Appearance.font.pixelSize.smallie
+                text: page.serverActive
+                    ? Translation.tr("On: no suspend, no automatic lock")
+                    : Translation.tr("Off: locking, blanking and suspend as usual")
+            }
+        }
+    }
+
+    ContentSection {
+        icon: "web"
+        title: Translation.tr("Browsers")
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colSubtext
+            font.pixelSize: Appearance.font.pixelSize.smallie
+            text: Translation.tr("Firefox and Chromium take the desktop's colours, from a Halcyon theme or the wallpaper. They pick up new colours when they next start. Google Chrome: load ~/.local/share/halcyon/chromium-theme once in chrome://extensions (Developer mode, Load unpacked).")
+        }
+
+        ConfigRow {
+            uniform: true
+            ConfigSwitch {
+                buttonIcon: "public"
+                text: "Firefox"
+                checked: Config.options.halcyon.browsers.firefox
+                onCheckedChanged: {
+                    if (Config.options.halcyon.browsers.firefox === checked)
+                        return;
+                    Config.options.halcyon.browsers.firefox = checked;
+                    page.browsersChanged(checked ? "" : "firefox");
+                }
+                StyledToolTip {
+                    text: Translation.tr("Firefox, LibreWolf, Zen, Floorp and Waterfox: every profile")
+                }
+            }
+            ConfigSwitch {
+                buttonIcon: "language"
+                text: "Chromium"
+                checked: Config.options.halcyon.browsers.chromium
+                onCheckedChanged: {
+                    if (Config.options.halcyon.browsers.chromium === checked)
+                        return;
+                    Config.options.halcyon.browsers.chromium = checked;
+                    page.browsersChanged(checked ? "" : "chromium");
+                }
+                StyledToolTip {
+                    text: Translation.tr("Chromium and Brave load the theme by themselves; Chrome needs it loaded once")
+                }
+            }
         }
     }
 

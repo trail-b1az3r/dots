@@ -41,6 +41,13 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("sleep 1 && $HOME/.config/hypr/hyprland/halcyon/halcyon-theme cursor apply")
 end)
 
+-- A theme applied by an older Halcyon is brought up to date, and Firefox and Chromium get the current colours
+-- (a profile made since the last theme change is themed too). After the shell is up, since the theme may change
+-- its settings.
+hl.on("hyprland.start", function()
+    hl.exec_cmd("sleep 4 && $HOME/.config/hypr/hyprland/halcyon/halcyon-theme migrate >/dev/null 2>&1")
+end)
+
 -- The voice assistant daemon, if Settings > Halcyon > Assistant has it on.
 hl.on("hyprland.start", function()
     hl.exec_cmd("log=\"${XDG_STATE_HOME:-$HOME/.local/state}/halcyon\"; mkdir -p \"$log\" && " ..
@@ -62,5 +69,11 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE " ..
         "XDG_RUNTIME_DIR DISPLAY XDG_CURRENT_DESKTOP; " ..
         "systemctl --user daemon-reload; " ..
-        "systemctl --user restart halcyon-quickshell.service halcyon-gpu-guard.service halcyon-resume.service")
+        -- Older Halcyon enabled these for every login, which started the shell in KDE too. They are only
+        -- started from here now, so drop those links.
+        "w=\"${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/default.target.wants\"; " ..
+        "rm -f \"$w/halcyon-quickshell.service\" \"$w/halcyon-gpu-guard.service\" \"$w/halcyon-resume.service\"; " ..
+        "systemctl --user restart halcyon-quickshell.service halcyon-gpu-guard.service halcyon-resume.service; " ..
+        -- Server mode (Settings > Halcyon) stays on across restarts.
+        "$HOME/.config/hypr/hyprland/halcyon/halcyon_server.py apply")
 end)

@@ -121,6 +121,13 @@ apply() {
     if (( shell_changed )) && systemctl --user is-active --quiet halcyon-quickshell.service 2>/dev/null; then
         systemctl --user restart halcyon-quickshell.service || true
     fi
+    # A theme applied before this update may have gained settings (Red Sun turning on the revolver) or a new name;
+    # apply it again so they take effect. With no theme on, this just rewrites the browser themes.
+    local theme_tool="$HOME/.config/hypr/hyprland/halcyon/halcyon-theme"
+    if [[ -x "$theme_tool" ]]; then
+        # shellcheck disable=SC2086
+        "$theme_tool" migrate --changed $changed || echo "note: re-applying the theme failed; pick it again in the theme menu"
+    fi
     echo "$after" > "$SEEN_FILE"
     rm -f "$AVAILABLE_FILE"
     [[ -d "$backup" ]] && echo "Replaced files were backed up to $backup"

@@ -3,6 +3,9 @@ Description=Halcyon desktop shell (Quickshell)
 Documentation=file://%h/.config/quickshell/ii/shell.qml
 
 [Service]
+# Only inside a running Hyprland. systemd's user manager outlives a session, so without this a restart after
+# Hyprland exits (or an enabled unit at the next login) would start it in KDE or GNOME instead.
+ExecCondition=/bin/sh -c 'hyprctl version >/dev/null 2>&1 || exit 1'
 ExecStart=/usr/bin/env qs -c ii
 Restart=on-failure
 RestartSec=2
@@ -14,5 +17,4 @@ RestartSec=2
 KillMode=process
 OOMPolicy=continue
 
-[Install]
-WantedBy=default.target
+# Started by Hyprland (halcyon/init.lua), never enabled on its own: see ExecCondition.

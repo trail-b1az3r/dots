@@ -1,0 +1,11 @@
+[Unit]
+Description=Halcyon server mode: no suspend, no automatic lock, no screen blanking
+Documentation=file://%h/.config/hypr/hyprland/halcyon/halcyon_server.py
+
+[Service]
+# A blocking inhibitor lock, held for as long as this runs. hypridle pauses its lock, screen-off and suspend
+# timers while an idle lock is held, and logind refuses to suspend (lid, keys, or asked for) while a sleep lock is.
+ExecStart=/usr/bin/systemd-inhibit --what=sleep:idle:handle-lid-switch:handle-suspend-key:handle-hibernate-key --who=Halcyon "--why=Server mode (Settings > Halcyon, or: halcyon server off)" --mode=block /usr/bin/sleep infinity
+Restart=on-failure
+RestartSec=3
+# Started by `halcyon server on`, and at Hyprland login when Settings has it on. Not enabled on its own.

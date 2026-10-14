@@ -109,6 +109,20 @@ Item {
             tryVerify(() => widget.spinSpeed > 0.1, 1000, "the trails and the ring's light follow the speed");
         }
 
+        function test_red_sun_tells_the_eye_where_the_car_is() {
+            Config.options.halcyon.theme = "red-sun";
+            const widget = makeRevolver();
+            widget.sunRing = { x: 942, y: 466, r: 70.8 };
+            widget.sunCar = { x: 1245, y: 765 };
+            drag(widget, 20, 6, 8);
+            tryVerify(() => callsWith("collapse").length === 1, 1000);
+            const args = callsWith("collapse")[0];
+            compare(args.length, 9, "AGE X Y R and the car");
+            const ringY = parseFloat(args[5]), carX = parseFloat(args[7]), carY = parseFloat(args[8]);
+            verify(carX > parseFloat(args[4]) && carY > ringY, "the car is below and right of the ring: " + carX + ", " + carY);
+            verify(carX < 1 && carY < 1);
+        }
+
         function test_red_sun_nudge_does_not_arm() {
             Config.options.halcyon.theme = "red-sun";
             const widget = makeRevolver();
@@ -139,6 +153,23 @@ Item {
             Config.options.background.widgets.revolver.followRing = false;
             verify(!widget.ringAnchored, "followRing off keeps the saved place");
             Config.options.background.widgets.revolver.followRing = true;
+        }
+
+        // Off the painted ring (another wallpaper, the old theme name, followRing off) the drum draws the whole lit
+        // sun itself; before, only the beads showed, floating round nothing.
+        function test_red_sun_off_the_ring_draws_the_lit_ring() {
+            Config.options.halcyon.theme = "red-sun";
+            const widget = makeRevolver();
+            const drum = findChild(widget, "drum");
+            verify(drum, "the drum is reachable");
+            verify(!widget.ringAnchored);
+            verify(drum.standalone);
+            verify(drum.ringLight >= 0.8, "lit at rest");
+            widget.sunRing = { x: 942, y: 466, r: 70.8 };
+            verify(!drum.standalone, "on the painted ring the wallpaper is the ring");
+            compare(drum.ringLight, 0, "dark at rest there");
+            widget.sunRing = { x: 0, y: 0, r: 0 };
+            verify(!widget.ringAnchored, "a ring of no size is not a ring");
         }
     }
 

@@ -1,5 +1,35 @@
 # Browsers
 
+## Themes that follow Halcyon
+
+Firefox and Chromium take the desktop's colours: a Halcyon theme's, or the wallpaper's when no theme is on. Applying
+a theme, turning it off, or changing the wallpaper rewrites them. Browsers read their theme when they start, so a
+browser that is open changes the next time you start it.
+
+```sh
+halcyon browsers                 # what is themed, and where
+halcyon browsers update          # write them now
+halcyon browsers off [firefox|chromium]
+```
+
+**Firefox** (and LibreWolf, Zen, Floorp, Waterfox): every profile gets `chrome/halcyon.css`, which colours the tab
+strip, toolbars, address bar, menus and sidebar, and `chrome/halcyon-content.css` for the new tab and blank pages.
+Both are pulled in with one `@import` line at the top of your `userChrome.css` and `userContent.css`. `user.js` gets
+`toolkit.legacyUserProfileCustomizations.stylesheets`, without which Firefox ignores those files, and Firefox's dark or light base to match the palette, so its own text stays readable on Halcyon's colours. Your own rules in
+those files stay as they are, and `off` removes only Halcyon's lines.
+
+**Chromium**: a theme extension in `~/.local/share/halcyon/chromium-theme`, with the wallpaper on the new tab page.
+Chromium and Brave load it from `~/.config/chromium-flags.conf` and `brave-flags.conf` (`--load-extension`, merged
+with any you already have). Google Chrome stopped taking that flag, so load the folder once yourself:
+`chrome://extensions` > *Developer mode* > *Load unpacked*. After that it follows like the others. Each change gets
+a new version number, which is what makes Chromium rebuild the theme when it starts.
+
+Turn either off in **Settings > Halcyon > Browsers**.
+
+If Firefox doesn't change: close every Firefox window and start it again (it reads its theme only then), and check
+`halcyon browsers` lists your profile as themed. Logging in, `update apply`, and applying a theme all write the
+themes, so a profile made later is picked up too.
+
 ## USB devices in the browser
 
 Sites that talk to hardware (flashing a keyboard or a microcontroller, updating a controller, a serial console) use

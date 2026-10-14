@@ -27,6 +27,7 @@ On top of that, Halcyon adds:
 | **Wallpapers** | The hyperNeo fire wallpaper is the default. It and the three Halcyon wallpapers are copied into `~/Pictures/Wallpapers`, where the wallpaper picker looks. |
 | **Themes** | Five hand-made themes: HyperNeo, Star Rail, Shattered Glass, Fractured Glass and Red Sun. [More below.](themes.md) |
 | **Voice assistant** | Press `Super + Shift + Space` and speak. It answers aloud and can run the desktop. [More below.](voice-assistant.md) |
+| **Server mode** | One button in **Settings > Halcyon > Server mode** (or `halcyon server on`): no suspend (idle, lid or suspend key), and the screen never locks or blanks by itself, until you stop it. It survives a restart. It is a systemd-inhibit lock, so `systemd-inhibit --list` shows it. |
 | **Keybinds** | Extra shortcuts, listed below. They only use key combinations upstream leaves free. |
 | **hyprland-plus** | The compositor is [hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus): Hyprland 0.56.2 with mini windows, superposition windows, plustile windows and a drag fix. [More below.](hyprland-plus.md) |
 

@@ -239,12 +239,19 @@ Variants {
                 readonly property bool locked: GlobalStates.screenLocked
                 // The red ring painted in the Red Sun wallpaper, in this canvas's coordinates, so the revolver can
                 // sit on it and turn it. Follows the wallpaper as it slides with the workspaces.
-                readonly property bool wallpaperHasSunRing: Config.options.halcyon.theme === "red-sun"
-                    && bgRoot.wallpaperPath.endsWith("/red-sun.jpg") && wallpaper.status === Image.Ready
+                // (wallpaper-heaven-kenami is Red Sun's old name, still saved by a theme applied before the rename.)
+                readonly property bool wallpaperHasSunRing: ["red-sun", "wallpaper-heaven-kenami"].includes(Config.options.halcyon.theme)
+                    && /\/(red-sun|wallpaper-heaven-kenami|banner-red-sun)\.jpg$/.test(bgRoot.wallpaperPath)
+                    && wallpaper.status === Image.Ready && wallpaper.width > 0
                 readonly property var sunRing: wallpaperHasSunRing ? {
                     "x": wallpaper.x + 0.4907 * wallpaper.width - x,
                     "y": wallpaper.y + 0.4312 * wallpaper.height - y,
                     "r": 0.0369 * wallpaper.width
+                } : null
+                // The car on the road below it, which the eye in the Red Sun sequence ends up staring at.
+                readonly property var sunCar: wallpaperHasSunRing ? {
+                    "x": wallpaper.x + 0.6485 * wallpaper.width - x,
+                    "y": wallpaper.y + 0.7084 * wallpaper.height - y
                 } : null
                 x: wallpaperTotalOffsetX * parallaxFactor * !locked
                 y: wallpaperTotalOffsetY * parallaxFactor * !locked
@@ -295,7 +302,13 @@ Variants {
                     }
 
                     Component.onCompleted: reload()
-                    onLoaded: item.sunRing = Qt.binding(() => widgetCanvas.sunRing)
+                    onLoaded: {
+                        item.sunRing = Qt.binding(() => widgetCanvas.sunRing);
+                        item.sunCar = Qt.binding(() => widgetCanvas.sunCar);
+                    }
+                    // A revolver that fails to load leaves the rest of the background alone; this says why, in
+                    // `qs log -c ii`.
+                    onStatusChanged: if (status === Loader.Error) console.warn("[Halcyon] the revolver did not load; see the errors above")
 
                     Connections {
                         target: Config.options.background.widgets.revolver
