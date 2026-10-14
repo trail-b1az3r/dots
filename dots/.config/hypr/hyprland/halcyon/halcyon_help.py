@@ -23,6 +23,7 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
     ("Schedules", [
         ("auto list", "scheduled themes (Settings > Halcyon, Auto-apply), with today's sun times"),
         ("auto sun", "today's sunrise and sunset, as JSON"),
+        ("auto day [--json]", "today's sun and the next theme change (what the bar's sun dial shows)"),
         ("auto location [LAT,LON|clear]", "where the sun times are for; by default the bar's weather location"),
         ("auto", "apply what is due now (a timer runs this once a minute)"),
     ]),

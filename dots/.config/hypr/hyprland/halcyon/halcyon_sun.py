@@ -100,3 +100,54 @@ def describe(spec: str) -> str:
     if not amount or int(amount) == 0:
         return event
     return f"{int(amount)} min {'before' if sign == '-' else 'after'} {event}"
+
+
+def day_progress(now: datetime, location: tuple[float, float] | None) -> float | None:
+    """Where the sun is between sunrise (0) and sunset (1) right now; below 0 before dawn, above 1 after dusk.
+    None without a location, or on a day with no sunrise or sunset."""
+    if location is None:
+        return None
+    sunrise, sunset = sun_times(now.date(), *location)
+    if sunrise is None or sunset is None:
+        return None
+    span = (sunset - sunrise).total_seconds()
+    if span <= 0:
+        return None
+    return (now - sunrise).total_seconds() / span
+
+
+def next_due(entries: list[dict], now: datetime, location: tuple[float, float] | None,
+             names: dict[str, str] | None = None) -> dict | None:
+    """The next auto-apply schedule to fire after `now` (within two days): {theme, name, at, minutes, spec, weather}.
+
+    Weather-only schedules cannot be foreseen and are left out; a schedule that also needs some weather is
+    returned with that weather, since it fires only if the weather matches then.
+    """
+    best = None
+    for entry in entries:
+        spec = entry.get("time")
+        if not isinstance(spec, str) or not is_time_spec(spec):
+            continue
+        days = entry.get("days") or []
+        for offset in range(0, 3):
+            day = now + timedelta(days=offset)
+            if days and day.isoweekday() not in days:
+                continue
+            hhmm = resolve(spec, day, location)
+            if hhmm is None:
+                continue
+            hour, minute = (int(part) for part in hhmm.split(":"))
+            when = day.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            if when <= now:
+                continue
+            if best is None or when < best[0]:
+                best = (when, entry, spec)
+            break
+    if best is None:
+        return None
+    when, entry, spec = best
+    theme = entry["theme"]
+    return {"theme": theme, "name": (names or {}).get(theme, theme), "at": when.strftime("%H:%M"),
+            "day": {0: "today", 1: "tomorrow"}.get((when.date() - now.date()).days, when.strftime("%a")),
+            "minutes": int((when - now).total_seconds() // 60), "spec": spec, "when": describe(spec),
+            "weather": entry.get("weather") or ""}

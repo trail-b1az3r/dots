@@ -21,6 +21,19 @@ Item {
         }
         color: Config.options?.bar.borderless ? "transparent" : Appearance.colors.colLayer1
         radius: Appearance.rounding.small
+        // Halcyon themes edge each group in their own light: Red Sun's ember, Star Rail's gold, glass's frost.
+        readonly property string theme: Config.options?.halcyon.theme ?? ""
+        border.width: Config.options?.bar.borderless ? 0 : (edgeColour.a > 0 ? 1 : 0)
+        border.color: edgeColour
+        readonly property color edgeColour: {
+            switch (theme) {
+            case "red-sun": return Qt.rgba(1.0, 0.29, 0.25, 0.42);
+            case "hsr": return Qt.rgba(Appearance.colors.colPrimary.r, Appearance.colors.colPrimary.g, Appearance.colors.colPrimary.b, 0.38);
+            case "shattered-glass":
+            case "fractured-glass": return Qt.rgba(1, 1, 1, 0.16);
+            default: return "transparent";
+            }
+        }
     }
 
     GridLayout {

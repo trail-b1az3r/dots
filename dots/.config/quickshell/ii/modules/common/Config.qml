@@ -307,6 +307,7 @@ Singleton {
                     }
                 }
                 property bool bottom: false // Instead of top
+                property bool sunDial: true // Halcyon: the sun's place in today's sky, and the next scheduled theme
                 property int cornerStyle: 0 // 0: Hug | 1: Float | 2: Plain rectangle
                 property bool floatStyleShadow: true // Show shadow behind bar when cornerStyle == 1 (Float)
                 property bool borderless: false // true for no grouping of items

@@ -996,6 +996,26 @@ def cmd_auto(args):
         print(json.dumps({"location": list(location) if location else None, "source": place[2] if place else None,
                           "sunrise": sunrise, "sunset": sunset}))
         return 0
+    if args[:1] == ["day"]:
+        # For the bar's sun dial: today's sun, how far through the day it is, and the next theme change.
+        sunrise, sunset = (halcyon_sun.resolve(event, now, location) for event in ("sunrise", "sunset"))
+        names = {}
+        for theme_id in theme_ids():
+            try:
+                names[theme_id] = load(theme_id)["name"]
+            except (ThemeError, ValueError):
+                pass
+        info = {"location": list(location) if location else None, "source": place[2] if place else None,
+                "sunrise": sunrise, "sunset": sunset, "progress": halcyon_sun.day_progress(now, location),
+                "now": now.strftime("%H:%M"), "active": active(),
+                "next": halcyon_sun.next_due(scheduled_themes(), now, location, names)}
+        if args[1:] == ["--json"]:
+            print(json.dumps(info))
+        else:
+            print(f"sunrise {sunrise or '-'}  sunset {sunset or '-'}" + ("" if location else "  (no location yet)"))
+            nxt = info["next"]
+            print(f"next: {nxt['name']} {nxt['day']} at {nxt['at']}" if nxt else "next: nothing scheduled")
+        return 0
     if args and args[0] == "location":
         if len(args) == 1:
             print(f"{place[0]:.4f},{place[1]:.4f} (from {place[2]})" if place else
@@ -1024,7 +1044,7 @@ def cmd_auto(args):
             print(f"{entry['theme']:<16} " + ", ".join(parts))
         return 0
     if args:
-        raise ThemeError("usage: halcyon-theme auto [list|sun|location [LAT,LON|clear]]")
+        raise ThemeError("usage: halcyon-theme auto [list|sun|day [--json]|location [LAT,LON|clear]]")
     category = weather_category()
     entries = scheduled_themes()
     due = [entry for entry in entries if entry_due(entry, now, category, location)]

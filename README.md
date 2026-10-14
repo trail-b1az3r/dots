@@ -265,6 +265,12 @@ halcyon auto sun                    # today's sunrise and sunset
 halcyon auto location 51.51,-0.13   # set the location (clear: back to the weather's)
 ```
 
+The **sun dial** in the bar, beside the clock, shows where the sun is in today's sky. Hover it for sunrise,
+sunset, the length of the day and the next theme change your schedules will make ("Red Sun, today at 19:12 (30 min
+before sunset), in 2 h 10 min"); click it to open Settings. `bar.sunDial: false` in the shell config hides it, and
+`halcyon auto day` prints the same in a terminal. In the Halcyon themes the bar's groups are also edged in the
+theme's own light: ember in Red Sun, gold in Star Rail, frost in the glass themes.
+
 ### Effects
 
 | Level | What you get |
