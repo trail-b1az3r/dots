@@ -692,7 +692,7 @@ Singleton {
             }
 
             // How a new window is split from the others: "golden" or "cursor". Applied by halcyon-theme placement.
-            property string windowPlacement: "golden"
+            property string windowPlacement: "golden" // "golden", "cursor", "stacked", "side-by-side", "mondrian"
 
             // Other windows kept as live previews down the left edge; click one to bring it forward.
             property JsonObject stageManager: JsonObject {

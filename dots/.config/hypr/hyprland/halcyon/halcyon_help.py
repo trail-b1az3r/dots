@@ -33,7 +33,7 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("refresh", "re-apply Settings > Halcyon to the active theme"),
         ("cursor [on|off]", "the Halcyon Glass cursor, or upstream's"),
         ("cursor size N", "cursor size in pixels (16-96)"),
-        ("placement [golden|cursor]", "where a new window opens"),
+        ("placement [MODE|--list]", "where a new window opens: golden, cursor, stacked, side-by-side or mondrian"),
         ("settings", "open the Settings app"),
     ]),
     ("Plus Tiles and the config", [

@@ -575,6 +575,25 @@ halcyon browsers                  # what is themed, and where
 halcyon usb                       # why a browser can't find a USB device, and the fix
 ```
 
+## Where new windows open
+
+**Settings > Interface > Windows**, or `halcyon placement MODE` (`halcyon placement --list` shows them all):
+
+| Mode | What it does |
+| --- | --- |
+| `golden` (default) | Splits the space on the golden ratio, on the side the pointer is on. |
+| `cursor` | Splits in halves, on the side the pointer is on. |
+| `stacked` | Two windows at a time, one above the other. A third opens on the next empty workspace, and you go with it. |
+| `side-by-side` | Two windows at a time, next to each other. A third opens on the next empty workspace. |
+| `mondrian` | Each new window splits the biggest tile, on uneven ratios, each cut running the other way from the one before, into interlocking blocks like a Mondrian painting. |
+
+![The stacked, side-by-side and Mondrian layouts with one to eight windows](docs/assets/placement-modes.png)
+
+Golden and cursor are Hyprland's own dwindle layout. The other three are layouts written in Lua
+(`halcyon/layouts.lua`, registered with Hyprland 0.56's `hl.layout.register`), so they work on stock Hyprland
+too. Floating windows and special workspaces are left alone. In those three, tiles keep their places: dragging
+a tile's edge doesn't resize it.
+
 ## Server mode
 
 For a computer that serves something: **Settings > Halcyon > Server mode > Start server mode** (or `halcyon server

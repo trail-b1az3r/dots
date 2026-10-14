@@ -1629,16 +1629,34 @@ def revolver_status(revolver):
     return 0
 
 
-# How a new window is split from the others. Hyprland's dwindle layout does these two natively.
+# How a new window is placed. golden and cursor are Hyprland's dwindle layout; the rest are Halcyon's own layouts
+# in layouts.lua (registered as lua:halcyon-<mode>).
 PLACEMENTS = {
     "golden": (1.618, 0),   # the split follows the golden ratio, the side chosen by where the cursor is
     "cursor": (1.0, 0),     # halves, the side chosen by where the cursor is
 }
+LUA_PLACEMENTS = {
+    "stacked": "two windows at a time, one above the other; a third opens on the next empty workspace",
+    "side-by-side": "two windows at a time, next to each other; a third opens on the next empty workspace",
+    "mondrian": "each new window splits the biggest tile, on uneven ratios, like a Mondrian painting",
+}
 PLACEMENT_LUA = HALCYON_STATE / "placement.lua"
 
 
+def placement_lua(mode):
+    """The placement.lua for a mode. HALCYON_PLACEMENT tells layouts.lua which cap, if any, applies."""
+    if mode in PLACEMENTS:
+        ratio, force = PLACEMENTS[mode]
+        return (f"-- mode: {mode}\nHALCYON_PLACEMENT = \"{mode}\"\n"
+                f"hl.config({{ general = {{ layout = \"dwindle\" }}, "
+                f"dwindle = {{ default_split_ratio = {ratio}, force_split = {force} }} }})\n")
+    return (f"-- mode: {mode}\nHALCYON_PLACEMENT = \"{mode}\"\n"
+            f"hl.config({{ general = {{ layout = \"lua:halcyon-{mode}\" }} }})\n")
+
+
 def cmd_placement(args):
-    """`placement` shows how new windows are placed; `placement golden|cursor` changes it."""
+    """`placement` shows how new windows are placed; `placement MODE` changes it; `placement --list`."""
+    modes = list(PLACEMENTS) + list(LUA_PLACEMENTS)
     current = "golden"
     try:
         head = PLACEMENT_LUA.read_text(encoding="utf-8").splitlines()[0]
@@ -1648,11 +1666,15 @@ def cmd_placement(args):
     if not args:
         print(current)
         return 0
-    if args[0] not in PLACEMENTS or len(args) != 1:
-        raise ThemeError("usage: halcyon-theme placement golden|cursor")
-    ratio, force = PLACEMENTS[args[0]]
-    write_atomic(PLACEMENT_LUA, f"-- mode: {args[0]}\n"
-                 f"hl.config({{ dwindle = {{ default_split_ratio = {ratio}, force_split = {force} }} }})\n")
+    if args == ["--list"]:
+        descriptions = {"golden": "splits on the golden ratio, on the side the pointer is on (default)",
+                        "cursor": "splits in halves, on the side the pointer is on", **LUA_PLACEMENTS}
+        for mode in modes:
+            print(f"{'*' if mode == current else ' '} {mode:<13} {descriptions[mode]}")
+        return 0
+    if args[0] not in modes or len(args) != 1:
+        raise ThemeError("usage: halcyon-theme placement [" + "|".join(modes) + "|--list]")
+    write_atomic(PLACEMENT_LUA, placement_lua(args[0]))
     if hyprland_running():
         subprocess.run(["hyprctl", "reload"], capture_output=True, check=False)
     print(args[0])
