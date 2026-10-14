@@ -115,12 +115,20 @@ revolver), so Red Sun costs no GPU the rest of the time, unlike the glass themes
 turns, without the collapse. Applying Red Sun turns the revolver on (Settings > Revolver), and leaving it puts the setting
 back. Turn off "In Red Sun, sit on the wallpaper's red ring" there to keep the revolver where you placed it.
 
+![The Red Sun collapse: cracks run out from the ring, the shards sink towards it, then it heals](../assets/red-sun-collapse.jpg)
+
+![The Red Sun ring at rest and while it spins](../assets/red-sun-ring.jpg)
+
 ### The revolver, the clock and the weather card
 
 The wallpaper widgets take the active theme's shapes. The revolver's drum is a Material cookie dial with no theme,
 the red ring in Red Sun, a cut-glass disc with gem chambers in the glass themes, a squircle with icon-like chambers in
 HyperNeo, and a gold rail with star chambers in Star Rail. The analogue clock's face and the weather card follow the
 same shapes. Drag the drum to spin it: a flick fires the game under the hammer, a nudge only settles it.
+
+![The revolver in each theme](../assets/revolver-styles.jpg)
+
+![The clock face and weather card in each theme](../assets/widget-plates.jpg)
 
 **Shattered Glass at `full`** runs a screen shader
 (`themes/shaders/shattered-glass.frag`) that treats the screen as a

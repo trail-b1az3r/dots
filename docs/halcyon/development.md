@@ -44,3 +44,19 @@ git push origin main v1.0.1
 ```
 
 `scripts/release.sh <label> <outdir>` builds the same archive on your machine, if you want to look at it first.
+
+## The docs site
+
+The pages in `docs/` are also published as a website, <https://trail-b1az3r.github.io/dots/>, built by
+`docs/site/build.py` (Python and the `markdown` package). To look at it locally:
+
+```sh
+pip install markdown pillow
+python3 docs/site/build.py --out _site
+xdg-open _site/index.html
+```
+
+`.github/workflows/pages.yml` builds it on every push that touches the docs and checks every link, and publishes it
+from the default branch. GitHub Pages has to be switched to "GitHub Actions" once, in the repository's Settings >
+Pages. `tests/test_docs_site.py` is the link check; the full test suite runs in CI with `python3 -m unittest discover
+-s tests`.

@@ -432,11 +432,11 @@ Item {
 
                             Text {
                                 anchors.fill: parent
-                                anchors.margins: drum.style.chamber === "star" ? 9 : 6
+                                anchors.margins: 6
                                 visible: drum.style.names
                                 text: slot.entry ? slot.entry.name : ""
                                 font.family: drum.fontFamily
-                                font.pixelSize: slot.live ? 9 : 8
+                                font.pixelSize: slot.live && drum.style.chamber !== "star" ? 9 : 8
                                 font.bold: slot.live
                                 color: slot.live ? (drum.colAccent.hslLightness > 0.6 ? "#1a1014" : "#ffffff") : drum.colOn
                                 wrapMode: Text.WordWrap
