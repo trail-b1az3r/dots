@@ -30,6 +30,8 @@ ShellRoot {
         Cliphist.refresh()
         Wallpapers.load()
         Updates.load()
+        CalendarEvents.load() // reminders whichever panels are shown
+        MiniWindows.load() // its IPC (Super+Ctrl+N on stock Hyprland)
     }
 
 

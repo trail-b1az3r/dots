@@ -21,6 +21,37 @@ ContentPage {
     }
     
     ContentSection {
+        icon: "widgets"
+        title: Translation.tr("Halcyon extras")
+
+        ConfigRow {
+            uniform: true
+            ConfigSwitch {
+                buttonIcon: "picture_in_picture_alt"
+                text: Translation.tr("Window buttons")
+                checked: Config.options.bar.windowButtons
+                onCheckedChanged: {
+                    Config.options.bar.windowButtons = checked;
+                }
+                StyledToolTip {
+                    text: Translation.tr("Mini, float/tile and close for the focused window, next to its name. They work on tiled windows too")
+                }
+            }
+            ConfigSwitch {
+                buttonIcon: "event_upcoming"
+                text: Translation.tr("Next calendar event")
+                checked: Config.options.bar.nextEvent
+                onCheckedChanged: {
+                    Config.options.bar.nextEvent = checked;
+                }
+                StyledToolTip {
+                    text: Translation.tr("The next event this week from the calendar in the right sidebar. Click it to open the calendar")
+                }
+            }
+        }
+    }
+
+    ContentSection {
         icon: "spoke"
         title: Translation.tr("Positioning")
 

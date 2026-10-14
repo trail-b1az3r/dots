@@ -68,6 +68,17 @@ Rectangle {
         }
     }
 
+    // The bar's next event was clicked: show the calendar (CalendarWidget opens the day itself).
+    Connections {
+        target: CalendarEvents
+        function onOpenRequested(day) {
+            if (root.collapsed)
+                root.setCollapsed(false);
+            root.selectedTab = 0;
+            Persistent.states.sidebar.bottomGroup.tab = 0;
+        }
+    }
+
     Keys.onPressed: event => {
         if ((event.key === Qt.Key_PageDown || event.key === Qt.Key_PageUp) && event.modifiers === Qt.ControlModifier) {
             if (event.key === Qt.Key_PageDown) {
@@ -116,6 +127,7 @@ Rectangle {
             Layout.leftMargin: 0
             // text: `${DateTime.collapsedCalendarFormat}   •   ${remainingTasks} task${remainingTasks > 1 ? "s" : ""}`
             text: Translation.tr("%1   •   %2 tasks").arg(DateTime.collapsedCalendarFormat).arg(remainingTasks)
+                + (CalendarEvents.next && CalendarEvents.daysAway(CalendarEvents.next) === 0 ? `   •   ${CalendarEvents.describeTime(CalendarEvents.next)} ${CalendarEvents.next.title}` : "")
             font.pixelSize: Appearance.font.pixelSize.large
             color: Appearance.colors.colOnLayer1
         }

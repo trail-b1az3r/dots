@@ -86,7 +86,7 @@ If neither works, the installer says so and you switch back with Ctrl+Alt+F1 to 
 [hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus) is Hyprland 0.56.2 with the
 Halcyon additions. Its own README describes each one. The desktop uses:
 
-- **Mini windows**, `SUPER + CTRL + N`: a window shrinks to a small floating tile.
+- **Mini windows**, `SUPER + CTRL + N`: a window shrinks to a small floating tile. See [Mini windows](#mini-windows).
 - **Superposition windows**: Spotify stays on a thin strip at the right edge, above a fullscreen window.
 - **Plus Tiles**: terminals are ordinary tiles until you use Move Edge (`SUPER + ALT + E`) on one. Then you pick an
   edge, move it, see the preview and press Enter: the tiles sharing that edge adapt, and the tile keeps its custom
@@ -593,6 +593,44 @@ Golden and cursor are Hyprland's own dwindle layout. The other three are layouts
 (`halcyon/layouts.lua`, registered with Hyprland 0.56's `hl.layout.register`), so they work on stock Hyprland
 too. Floating windows and special workspaces are left alone. In those three, tiles keep their places: dragging
 a tile's edge doesn't resize it.
+
+## Mini windows
+
+A mini window is a window made small (240 × 150) and out of the way. A click brings it back to its full size and
+place. Any window can be made mini, tiled or floating, in three ways:
+
+- `SUPER + CTRL + N` does the focused window;
+- the bar's window buttons, next to the focused window's name: **mini**, **float/tile** and **close**;
+- the down arrow on a floating window's title bar.
+
+With hyprland-plus, Hyprland does it itself, and a mini window can be dragged anywhere and stays small. On stock
+Hyprland the shell does it (`services/MiniWindows.qml`): the window floats, and glides to a row in the bottom right
+corner. A click on it brings it back, tiled again if it was tiled. `qs -c ii ipc call miniWindows expandAll` brings
+them all back.
+
+**Minimise all** (the dock's button, or `SUPER + Backspace`) hides every window on the workspace. Press it again to
+bring them back.
+
+## Calendar events
+
+The calendar in the right sidebar has a **+** button for a new event, and a click on any day opens that day. A day
+lists its events (delete one with its bin). A new event has a title, a time (`9:30`, `930`, `2pm`; empty for all
+day) and a reminder: none, 5 or 15 minutes, an hour, or a day before. There is a notification at the reminder and
+again when the event starts. Days with events get a dot: a wider dot for more than one.
+
+The bar shows the next event this week ("21:20 Dentist", "Tomorrow 09:30 Standup") and turns it to the accent colour
+15 minutes before. Click it to open the calendar on that day. Events are saved in
+`~/.local/state/quickshell/user/events.json`. From a script:
+
+```sh
+qs -c ii ipc call calendarEvents add "Dentist" 2026-10-20 14:30
+qs -c ii ipc call calendarEvents next
+qs -c ii ipc call calendarEvents open ""       # the calendar, on today
+```
+
+**Settings > Bar > Halcyon extras** turns off the window buttons or the next event.
+
+![The bar's next event, the calendar with event dots and the new button, and a day's events](docs/assets/calendar-events.png)
 
 ## Server mode
 
