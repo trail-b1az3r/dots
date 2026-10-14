@@ -24,6 +24,8 @@ with any you already have). Google Chrome stopped taking that flag, so load the 
 `chrome://extensions` > *Developer mode* > *Load unpacked*. After that it follows like the others. Each change gets
 a new version number, which is what makes Chromium rebuild the theme when it starts.
 
+![Firefox in Red Sun, Star Rail and Fractured Glass](../assets/firefox-themes.jpg)
+
 Turn either off in **Settings > Halcyon > Browsers**.
 
 If Firefox doesn't change: close every Firefox window and start it again (it reads its theme only then), and check
