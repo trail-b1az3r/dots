@@ -327,6 +327,10 @@ Item { // Bar content region
                 }
             }
 
+            HalcyonUpdateButton {
+                Layout.alignment: Qt.AlignVCenter
+            }
+
             SysTray {
                 visible: root.useShortenedForm === 0
                 Layout.fillWidth: false

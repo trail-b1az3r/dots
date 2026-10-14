@@ -3,4 +3,5 @@ Description=Halcyon: check the repository for updates
 
 [Service]
 Type=oneshot
-ExecStart=%h/.config/hypr/hyprland/halcyon/update check
+# Through bash, so an installed copy without its executable bit (older Halcyon shipped it like that) still runs.
+ExecStart=/bin/bash %h/.config/hypr/hyprland/halcyon/update check
