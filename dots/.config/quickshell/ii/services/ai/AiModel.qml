@@ -13,6 +13,8 @@ import QtQuick;
  * - key_get_description: Description of pricing and how to get an API key
  * - api_format: The API format of the model. Can be "openai" or "gemini". Default is "openai".
  * - extraParams: Extra parameters to be passed to the model. This is a JSON object.
+ * - halcyon_prepare: A command run before each request that gets the model ready (starts LM Studio's server and
+ *   loads the model, or starts HyperNix's runtime). On failure it prints an SSE error line, shown in the chat.
  */
 
 QtObject {
@@ -29,4 +31,5 @@ QtObject {
     property string api_format: "openai"
     property var tools
     property var extraParams: ({})
+    property var halcyon_prepare: []
 }

@@ -20,12 +20,15 @@ SOCKET = RUNTIME / "halcyon-assistant.sock"
 if len(str(SOCKET)) > 100:  # Unix socket paths are limited to ~108 bytes
     SOCKET = Path(f"/tmp/halcyon-assistant-{os.getuid()}.sock")
 
-PROVIDERS = ("auto", "claude", "claude-code", "gemini", "ollama", "openai")
+PROVIDERS = ("auto", "claude", "claude-code", "gemini", "ollama", "lmstudio", "hypernix", "t1", "openai")
 DEFAULTS = {
     "enable": True,          # start the assistant with Hyprland
-    "provider": "auto",      # auto: Claude API key, else Claude plan (Claude Code), else Gemini, else Ollama
+    # auto: Claude API key, else Claude plan (Claude Code), else Gemini, else a T1 server with a key, else
+    # whichever of Ollama, LM Studio and HyperNix is on this machine.
+    "provider": "auto",
     "model": "",             # "" = the provider's default below
-    "endpoint": "",          # for "openai" (any OpenAI-compatible server) and "ollama"
+    "endpoint": "",          # for "openai" (any OpenAI-compatible server), "ollama", "lmstudio" and "hypernix"
+    "t1Server": "",          # a HyperNix T1 server, e.g. http://127.0.0.1:8000 (its key: `key t1 T1_...`)
     "keyId": "",             # which stored key "openai" uses (e.g. "mistral", "openrouter")
     "wakeWord": False,       # listen continuously for the wake phrase (local, offline)
     "wakePhrase": "hey halcyon",
@@ -44,10 +47,15 @@ DEFAULT_MODELS = {
     "gemini": "gemini-2.5-flash",
     "ollama": "llama3.2",
     "openai": "gpt-4o-mini",
+    "lmstudio": "",          # "" = what LM Studio has loaded, else the first model it has
+    "hypernix": "",          # "" = the newest model in ~/.hypernix/models
+    "t1": "",                # "" = what the T1 server's runner has loaded
 }
 DEFAULT_ENDPOINTS = {
     "ollama": "http://localhost:11434",
     "openai": "https://api.openai.com/v1",
+    "lmstudio": "http://127.0.0.1:1234",
+    "hypernix": "http://127.0.0.1:8080",
 }
 KEY_ENV = {
     "anthropic": "ANTHROPIC_API_KEY",
@@ -55,6 +63,7 @@ KEY_ENV = {
     "openai": "OPENAI_API_KEY",
     "mistral": "MISTRAL_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
+    "t1": "T1_API_KEY",
 }
 
 

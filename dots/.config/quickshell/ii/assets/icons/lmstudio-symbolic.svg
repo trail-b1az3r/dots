@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- LM Studio, as a mark: staggered bars, the way its logo stacks them. Drawn for Halcyon. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="#000000">
+  <rect x="2" y="2.5" width="11" height="2.6" rx="1.3"/>
+  <rect x="5" y="6.2" width="12" height="2.6" rx="1.3"/>
+  <rect x="3" y="9.9" width="10" height="2.6" rx="1.3"/>
+  <rect x="6" y="13.6" width="11" height="2.6" rx="1.3"/>
+  <rect x="2" y="17.3" width="8" height="1.6" rx="0.8" opacity="0.6"/>
+</svg>

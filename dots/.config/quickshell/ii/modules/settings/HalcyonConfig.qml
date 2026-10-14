@@ -718,7 +718,7 @@ ContentPage {
 
         ContentSubsection {
             title: Translation.tr("AI")
-            tooltip: Translation.tr("Auto uses an Anthropic API key if set, then your Claude plan, then Gemini, then a local Ollama model. Keys are shared with the AI sidebar.")
+            tooltip: Translation.tr("Auto uses an Anthropic API key if set, then your Claude plan, then Gemini, then a T1 server with a key, then whichever of Ollama, LM Studio and HyperNix is on this computer. Keys are shared with the AI sidebar.")
             ConfigSelectionArray {
                 currentValue: Config.options.halcyon.assistant.provider
                 onSelected: newValue => {
@@ -731,8 +731,50 @@ ContentPage {
                     { displayName: Translation.tr("Claude API"), icon: "neurology", value: "claude" },
                     { displayName: "Gemini", icon: "star", value: "gemini" },
                     { displayName: Translation.tr("Ollama (local)"), icon: "computer", value: "ollama" },
+                    { displayName: Translation.tr("LM Studio (local)"), icon: "dns", value: "lmstudio" },
+                    { displayName: Translation.tr("HyperNix (local)"), icon: "hexagon", value: "hypernix" },
+                    { displayName: Translation.tr("T1 server"), icon: "hub", value: "t1" },
                     { displayName: Translation.tr("OpenAI-compatible"), icon: "api", value: "openai" }
                 ]
+            }
+        }
+
+        StyledText {
+            visible: ["lmstudio", "hypernix"].includes(Config.options.halcyon.assistant.provider)
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colSubtext
+            font.pixelSize: Appearance.font.pixelSize.smallie
+            text: Config.options.halcyon.assistant.provider === "lmstudio"
+                ? Translation.tr("Halcyon starts LM Studio's server and loads a model when you ask something (needs LM Studio's `lms` command). Model: empty uses the loaded one.")
+                : Translation.tr("Halcyon starts HyperNix's runtime (`hnx runtime serve`) with a model from ~/.hypernix/models, sub-bit models included. Model: empty uses the newest.")
+        }
+
+        MaterialTextArea {
+            visible: ["lmstudio", "hypernix", "t1", "ollama", "openai"].includes(Config.options.halcyon.assistant.provider)
+            Layout.fillWidth: true
+            placeholderText: Translation.tr("Model (empty: the provider's default)")
+            text: Config.options.halcyon.assistant.model
+            onTextChanged: {
+                if (text.trim() === Config.options.halcyon.assistant.model)
+                    return;
+                Config.options.halcyon.assistant.model = text.trim();
+                page.reloadAssistant();
+            }
+        }
+
+        MaterialTextArea {
+            visible: Config.options.halcyon.assistant.provider === "t1" || Config.options.halcyon.assistant.provider === "auto"
+            Layout.fillWidth: true
+            placeholderText: Translation.tr("T1 server, e.g. http://127.0.0.1:8000 (key: /key in the AI sidebar on a T1 model, or halcyon assistant key t1)")
+            text: Config.options.halcyon.assistant.t1Server
+            onTextChanged: {
+                if (text.trim() === Config.options.halcyon.assistant.t1Server)
+                    return;
+                Config.options.halcyon.assistant.t1Server = text.trim();
+                page.reloadAssistant();
+                Ai.refreshHalcyonModels();
             }
         }
 

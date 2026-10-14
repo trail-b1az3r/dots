@@ -16,7 +16,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "dots/.config/hypr/hyprland/halcyon/assistant"))
 
-from halcyon_assistant import actions, audio, config, conversation, providers, wake  # noqa: E402
+from halcyon_assistant import actions, audio, config, conversation, localai, pcm, providers, wake  # noqa: E402
+
+_REAL_WHICH = __import__("shutil").which
 
 
 def frame(level, seed=0):
@@ -297,8 +299,10 @@ class SpeechTest(unittest.TestCase):
         return [unittest.mock.patch.object(config, "VENV", Path(root, "venv")),
                 unittest.mock.patch.object(config, "MODELS", Path(root, "models")),
                 unittest.mock.patch.object(config, "HOME", Path(root, "home")),
-                # Hyprland's PATH may lack the place setup put piper.
-                unittest.mock.patch("shutil.which", return_value=None)]
+                # Hyprland's PATH may lack the place setup put piper. Only the test's own bin is searched,
+                # so the fake player stands in for whatever this machine has.
+                unittest.mock.patch("shutil.which", side_effect=lambda name, *a, **k: _REAL_WHICH(name, path=f"{root}/bin")),
+                unittest.mock.patch.object(pcm, "pipewire_has_raw", return_value=False)]
 
     def test_piper_is_found_in_the_venv_when_it_is_off_the_path(self):
         from halcyon_assistant import speech

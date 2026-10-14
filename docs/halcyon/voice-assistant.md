@@ -50,12 +50,51 @@ another.
    never leaves your machine.
 3. The text goes to the AI you chose: **Claude on your Pro/Max plan**
    (through Claude Code), **Claude with an API key** (`claude-opus-5`),
-   **Gemini**, a local **Ollama** model, or any **OpenAI-compatible**
-   server. *Auto* picks an Anthropic API key if set, then your Claude
-   plan, then Gemini, then Ollama. Keys are shared with end-4's AI sidebar, so one entered
-   there works here too.
+   **Gemini**, a local **Ollama**, **LM Studio** or **HyperNix** model, a
+   **HyperNix T1** server, or any **OpenAI-compatible** server. *Auto*
+   picks an Anthropic API key if set, then your Claude plan, then Gemini,
+   then a T1 server with a key, then whichever local server is running.
+   Keys are shared with end-4's AI sidebar, so one entered there works
+   here too.
 4. The reply appears in a notification and is spoken, with Piper if you
-   set it up, otherwise espeak-ng.
+   set it up, otherwise espeak-ng. If one voice fails the next is tried.
+
+### Local models: LM Studio, HyperNix and T1
+
+The assistant and the AI sidebar both use these. The sidebar lists every
+model it finds (`/model` shows them), and gets the model ready before each
+question, so picking one is enough.
+
+| Provider | What Halcyon does |
+| --- | --- |
+| `lmstudio` | Starts LM Studio's server (`lms server start`) if it is off, and loads the model (`lms load`) if none is loaded. Needs LM Studio's `lms` command, which its installer puts in `~/.lmstudio/bin`. |
+| `hypernix` | Starts HyperNix's runtime, `hnx runtime serve MODEL.gguf`, with a model from `~/.hypernix/models` (the newest, or the one you name), sub-bit models included. It stays running for the next question. |
+| `t1` | Asks a HyperNix T1 server (`POST /inference/chat`) with your T1 key, so the server's registry, quotas and audit log apply. |
+
+```sh
+halcyon assistant set provider lmstudio          # or hypernix
+halcyon assistant set provider t1
+halcyon assistant set t1Server http://127.0.0.1:8000
+halcyon assistant key t1 T1_...                  # or /key in the sidebar, on a T1 model
+halcyon assistant models                         # what it found
+```
+
+Small local models often can't call tools. When a model refuses them, the
+question is asked again without them, and the desktop actions stay off
+for that conversation. T1 never gets tools: it only talks.
+
+### When it doesn't speak
+
+```sh
+halcyon assistant test-voice    # speaks with each voice in turn, and says why one fails
+halcyon assistant test-mic      # records 3 seconds and plays them back
+```
+
+PipeWire 1.2 changed `pw-play -` and `pw-record -` to mean a sound file,
+not raw audio. Arch ships a newer PipeWire, so older Halcyon played
+nothing and recorded noise: no voice, no wake word, and garbled
+transcription. Halcyon now asks `pw-cat` whether it takes `--raw` and
+passes it when it does.
 
 **What it can do.** Only these actions, each checked against a strict
 schema before anything runs:

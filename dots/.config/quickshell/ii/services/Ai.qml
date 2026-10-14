@@ -387,6 +387,50 @@ Singleton {
         }
     }
 
+    // LM Studio, HyperNix and T1 models, listed by the voice assistant's tool (the same code it uses itself).
+    readonly property string halcyonAssistantTool: `${CF.FileUtils.trimFileProtocol(Directories.config)}/hypr/hyprland/halcyon/assistant/halcyon-assistant`
+    property list<string> halcyonModelIds: []
+
+    function refreshHalcyonModels() {
+        getHalcyonModels.running = false;
+        getHalcyonModels.running = true;
+    }
+
+    Timer {
+        // LM Studio or a HyperNix model may show up after login; look again now and then.
+        interval: 180000
+        running: true
+        repeat: true
+        onTriggered: if (!getHalcyonModels.running) root.refreshHalcyonModels()
+    }
+
+    Process {
+        id: getHalcyonModels
+        running: true
+        command: [root.halcyonAssistantTool, "models", "--sidebar"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (text.trim().length === 0) return;
+                let found = {};
+                try {
+                    found = JSON.parse(text);
+                } catch (e) {
+                    console.log("[AI] Could not read Halcyon's local models:", e);
+                    return;
+                }
+                const stale = root.halcyonModelIds.filter(id => !(id in found));
+                if (stale.length > 0) {
+                    let kept = Object.assign({}, root.models);
+                    stale.forEach(id => delete kept[id]);
+                    root.models = kept;
+                }
+                Object.entries(found).forEach(([id, data]) => root.addModel(id, data));
+                root.halcyonModelIds = Object.keys(found);
+                root.modelList = Object.keys(root.models);
+            }
+        }
+    }
+
     Process {
         id: getDefaultPrompts
         running: true
@@ -489,7 +533,7 @@ Singleton {
         if (modelList.indexOf(modelId) !== -1) {
             const model = models[modelId]
             // See if policy prevents online models
-            if (Config.options.policies.ai === 2 && !model.endpoint.includes("localhost")) {
+            if (Config.options.policies.ai === 2 && !model.endpoint.includes("localhost") && !model.endpoint.includes("127.0.0.1")) {
                 root.addMessage(
                     Translation.tr("Online models disallowed\n\nControlled by `policies.ai` config option"),
                     root.interfaceRole
@@ -652,6 +696,14 @@ Singleton {
                 root.pendingFilePath = ""
             }
 
+            /* Get the model ready first (LM Studio, HyperNix): its errors come back as an SSE error line */
+            let scriptPrepareContent = ""
+            if (model.halcyon_prepare && model.halcyon_prepare.length > 0) {
+                scriptPrepareContent = model.halcyon_prepare
+                    .map(arg => `'${CF.StringUtils.shellSingleQuoteEscape(arg)}'`)
+                    .join(" ") + " --sse-error 2>/dev/null || exit 0\n";
+            }
+
             /* Create command string */
             let scriptRequestContent = ""
             scriptRequestContent += `curl --no-buffer "${endpoint}"`
@@ -661,7 +713,7 @@ Singleton {
                 + "\n"
             
             /* Send the request */
-            const scriptContent = requester.currentStrategy.finalizeScriptContent(scriptShebang + scriptFileSetupContent + scriptRequestContent)
+            const scriptContent = requester.currentStrategy.finalizeScriptContent(scriptShebang + scriptFileSetupContent + scriptPrepareContent + scriptRequestContent)
             const shellScriptPath = CF.FileUtils.trimFileProtocol(root.requestScriptFilePath)
             requesterScriptFile.path = Qt.resolvedUrl(shellScriptPath)
             requesterScriptFile.setText(scriptContent)
