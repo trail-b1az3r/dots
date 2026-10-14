@@ -52,6 +52,12 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("sleep 4 && $HOME/.config/hypr/hyprland/halcyon/halcyon-theme migrate >/dev/null 2>&1")
 end)
 
+-- Wi-Fi at login: wait for the card (a Surface's is slow), unblock the radio, take back a device NetworkManager left
+-- unmanaged, and connect. `halcyon wifi` says what is in the way; its log is ~/.local/state/halcyon/wifi.log.
+hl.on("hyprland.start", function()
+    hl.exec_cmd("python3 $HOME/.config/hypr/hyprland/halcyon/halcyon_wifi.py boot >/dev/null 2>&1")
+end)
+
 -- The voice assistant daemon, if Settings > Halcyon > Assistant has it on.
 hl.on("hyprland.start", function()
     hl.exec_cmd("log=\"${XDG_STATE_HOME:-$HOME/.local/state}/halcyon\"; mkdir -p \"$log\" && " ..
@@ -78,6 +84,8 @@ hl.on("hyprland.start", function()
         "w=\"${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/default.target.wants\"; " ..
         "rm -f \"$w/halcyon-quickshell.service\" \"$w/halcyon-gpu-guard.service\" \"$w/halcyon-resume.service\"; " ..
         "systemctl --user restart halcyon-quickshell.service halcyon-gpu-guard.service halcyon-resume.service; " ..
+        -- The hourly update check. An install made before it existed, or a timer turned off by mistake, gets it.
+        "systemctl --user enable --now halcyon-update.timer >/dev/null 2>&1; " ..
         -- Server mode (Settings > Halcyon) stays on across restarts.
         "$HOME/.config/hypr/hyprland/halcyon/halcyon_server.py apply")
 end)

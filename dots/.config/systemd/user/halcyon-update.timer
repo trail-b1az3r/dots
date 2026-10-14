@@ -1,9 +1,9 @@
 [Unit]
-Description=Halcyon: check for updates every few hours
+Description=Halcyon: check for updates every hour
 
 [Timer]
-OnBootSec=10min
-OnUnitActiveSec=6h
+OnBootSec=3min
+OnUnitActiveSec=1h
 Persistent=true
 
 [Install]

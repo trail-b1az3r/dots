@@ -1629,6 +1629,81 @@ def revolver_status(revolver):
     return 0
 
 
+def cmd_doctor(args):
+    """Why the revolver, the browser themes, updates or the Wi-Fi don't work, in one report; --fix fixes what it can.
+
+    One command's output is enough to tell what is wrong on a machine nobody else can look at."""
+    fix = "--fix" in args
+    sys.path.insert(0, str(HERE))
+    import halcyon_browsers
+    import halcyon_wifi
+    import revolver
+    todo = []
+
+    def heading(title):
+        print(f"\n== {title}")
+
+    heading("Updates")
+    updater = HERE / "update"
+    done = subprocess.run(["bash", str(updater), "status"], capture_output=True, text=True, check=False, timeout=60)
+    print((done.stdout + done.stderr).rstrip())
+    if "updates waiting: none" not in done.stdout:
+        todo.append("updates are waiting" if "updates waiting:" in done.stdout else "the updater can't run")
+        if fix:
+            print("-> applying them")
+            subprocess.run(["bash", str(updater), "apply"], check=False, timeout=600)
+
+    heading("Revolver")
+    shell_up = subprocess.run(["systemctl", "--user", "is-active", "--quiet", "halcyon-quickshell.service"],
+                              stderr=subprocess.DEVNULL, check=False).returncode == 0 or bool(shutil.which("pgrep") and subprocess.run(
+                                  ["pgrep", "-x", "qs"], capture_output=True, check=False).returncode == 0)
+    print(f"shell        {'running' if shell_up else 'NOT running (systemctl --user restart halcyon-quickshell)'}")
+    revolver_status(revolver)
+    if get_nested(read_shell_config(), "background.widgets.revolver.enable") is False:
+        todo.append("the revolver is off")
+        if fix:
+            print("-> turning it on")
+            set_shell_value("background.widgets.revolver.enable", True)
+    print("(it is on the desktop, under the windows: an empty workspace shows it)")
+
+    heading("Firefox and Chromium")
+    info = halcyon_browsers.status()
+    for item in info["firefox"]:
+        state = "themed" if item["themed"] else "NOT themed"
+        if item["restart_needed"]:
+            state += ", but running since before: restart it to see the colours"
+            todo.append(f"restart {item['browser']}")
+        print(f"{item['browser']:<10} {state}  {item['profile']}")
+        if not item["themed"]:
+            todo.append(f"{item['browser']} isn't themed")
+    if not info["firefox"]:
+        print("Firefox    no profiles found (start Firefox once)")
+    if not info["settings"]["firefox"]:
+        print("Firefox    turned off in Settings > Halcyon > Browsers")
+    if fix and info["settings"]["firefox"]:
+        print("-> writing the browser themes")
+        halcyon_browsers.update(quiet=True)
+
+    heading("Wi-Fi")
+    report = halcyon_wifi.status()
+    halcyon_wifi.print_status(report)
+    found = halcyon_wifi.problems(report)
+    if found:
+        todo.append("the Wi-Fi has problems")
+        if fix:
+            print("-> getting the Wi-Fi up for this session (halcyon wifi fix makes it last; it asks for sudo)")
+            halcyon_wifi.boot()
+
+    print()
+    if not todo:
+        print("Nothing wrong found.")
+    elif fix:
+        print("Fixed what could be fixed from here: " + "; ".join(todo) + ". Run halcyon doctor again to check.")
+    else:
+        print("To look at: " + "; ".join(todo) + ". `halcyon doctor --fix` fixes what it can.")
+    return 0
+
+
 # How a new window is placed. golden and cursor are Hyprland's dwindle layout; the rest are Halcyon's own layouts
 # in layouts.lua (registered as lua:halcyon-<mode>).
 PLACEMENTS = {
@@ -1837,6 +1912,7 @@ def cmd_hyprland(args):
 
 COMMANDS = {
     "collapse": cmd_collapse,
+    "doctor": cmd_doctor,
     "migrate": cmd_migrate,
     "hyprland": cmd_hyprland,
     "revolver": cmd_revolver,
@@ -1877,6 +1953,9 @@ def main(argv):
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and argv[0] == "browsers":
         tool = HERE / "halcyon_browsers.py"
+        os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
+    if argv and argv[0] == "wifi":
+        tool = HERE / "halcyon_wifi.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and argv[0] == "usb":
         tool = HERE / "halcyon_usb.py"

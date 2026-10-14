@@ -5,7 +5,6 @@ import qs.modules.common.widgets
 import qs.services
 import QtQuick
 import Quickshell
-import Quickshell.Io
 
 // Gets the newest Halcyon changes. `update apply` copies only what changed and reloads
 // just those parts, so this isn't a full ./setup install. While an update is waiting,
@@ -13,34 +12,11 @@ import Quickshell.Io
 QuickToggleButton {
     id: root
 
-    readonly property string updater: `${FileUtils.trimFileProtocol(Directories.config)}/hypr/hyprland/halcyon/update`
-    property bool updateAvailable: false
+    readonly property bool updateAvailable: HalcyonUpdates.available
 
-    buttonIcon: "system_update"
+    buttonIcon: HalcyonUpdates.applying ? "downloading" : "system_update"
     toggled: updateAvailable
-    onClicked: {
-        Quickshell.execDetached([root.updater, "apply"]);
-        root.updateAvailable = false;
-        stateTimer.restart();
-    }
-
-    // Checks for the file `update check` writes when there are commits waiting.
-    Process {
-        id: stateCheck
-        command: ["bash", "-c", "test -f \"${XDG_STATE_HOME:-$HOME/.local/state}/halcyon/update-available\""]
-        onExited: (exitCode, exitStatus) => {
-            root.updateAvailable = exitCode === 0;
-        }
-    }
-
-    Timer {
-        id: stateTimer
-        interval: 60000
-        running: true
-        repeat: true
-        triggeredOnStart: true
-        onTriggered: stateCheck.running = true
-    }
+    onClicked: HalcyonUpdates.apply()
 
     // The stars: a few small ones, each drifting up and fading in and out at its own pace.
     Repeater {
@@ -81,6 +57,9 @@ QuickToggleButton {
     }
 
     StyledToolTip {
-        text: root.updateAvailable ? Translation.tr("Update Halcyon (updates waiting)") : Translation.tr("Update Halcyon")
+        text: HalcyonUpdates.applying ? Translation.tr("Updating Halcyon…")
+            : root.updateAvailable ? Translation.tr("Update Halcyon (%1 waiting)").arg(HalcyonUpdates.count)
+            : HalcyonUpdates.error !== "" ? Translation.tr("Update Halcyon. Last problem: %1").arg(HalcyonUpdates.error)
+            : Translation.tr("Update Halcyon")
     }
 }

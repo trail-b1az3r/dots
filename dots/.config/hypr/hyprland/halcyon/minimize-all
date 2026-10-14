@@ -29,8 +29,14 @@ action, hidden = sys.argv[1], sys.argv[2]
 
 
 def hyprctl(*args):
-    out = subprocess.run(["hyprctl", *args], capture_output=True, text=True, check=True).stdout
-    return json.loads(out)
+    # -j: hyprctl prints text by default. Without it the JSON parse failed and nothing was ever minimised.
+    out = subprocess.run(["hyprctl", "-j", *args], capture_output=True, text=True, check=False).stdout
+    try:
+        return json.loads(out)
+    except ValueError:
+        subprocess.run(["notify-send", "-a", "Halcyon", "Minimise all", f"hyprctl {' '.join(args)} gave no data"],
+                       check=False)
+        sys.exit(1)
 
 
 def dispatch(expression):

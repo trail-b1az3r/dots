@@ -42,6 +42,7 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("plus edit rules|keys", "open your copy of app_rules.lua or plus_keys.lua"),
         ("config-check [--fix] [--json]", "check the Hyprland and Halcyon config, and say how to fix it"),
         ("crashes [--since 2d] [--json]", "why apps closed: core dumps, memory kills, and shell restarts that took apps with them"),
+        ("doctor [--fix]", "why updates, the revolver, the browser themes or the Wi-Fi don't work, in one report; --fix fixes what it can"),
         ("migrate", "bring a theme applied by an older Halcyon up to date (login and `update apply` do this)"),
         ("hyprland [--json]", "which Hyprland is running: stock, hyprland-plus, or a hyprland-plus too old for Plus Tiles"),
     ]),
@@ -58,6 +59,9 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("usb [--json]", "why a browser can't find or open a USB, HID or serial device (WebUSB, WebHID, Web Serial)"),
         ("usb allow VID:PID ... | --all", "let you open those devices from the browser (a udev rule; asks for sudo)"),
         ("usb remove", "take that rule away again"),
+        ("wifi [--json]", "why the Wi-Fi isn't up: NetworkManager, iwd, the radio, an unmanaged card (a Surface's)"),
+        ("wifi boot", "get the Wi-Fi up now: login runs this (log: ~/.local/state/halcyon/wifi.log)"),
+        ("wifi fix [--dry-run]", "the lasting fixes, as root: keep the card managed, iwd off, Surface card settings"),
     ]),
     ("Widgets, characters and extras", [
         ("revolver status", "whether the revolver is on and where, its games, and any error the shell logged for it"),
