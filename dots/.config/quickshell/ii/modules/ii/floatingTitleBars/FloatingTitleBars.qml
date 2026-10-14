@@ -33,14 +33,8 @@ Scope {
     id: root
 
     readonly property int barHeight: 26
-    readonly property int miniWidth: 240
-    readonly property int miniHeight: 150
-    readonly property int miniGap: 10
     // Windows the shell opens for itself; they keep their own frame.
     readonly property string settingsTitle: "Halcyon Settings"
-
-    // Mini windows: address -> the size and place they had before, and their monitor.
-    property var minis: ({})
 
     // A tiled window that a press in its top band turns floating (an app's own title bar starts a move,
     // or a drag does): Hyprland centres it on the cursor, which is the jump. While such a window floats,
@@ -145,66 +139,6 @@ Scope {
         Hyprland.dispatch(`hl.dsp.window.move({ x = ${Math.round(x)}, y = ${Math.round(y)}, relative = false, window = "address:${address}" })`);
     }
 
-    // Eased moves: a window moved to its mini place, or back to its full place, follows the
-    // average of a sine curve and a cubic Bezier curve, so it starts and stops gently.
-    readonly property int moveDuration: 320
-    property var tweens: []
-
-    function sineEase(t) {
-        return (1 - Math.cos(Math.PI * t)) / 2;
-    }
-
-    // Cubic Bezier from (0, 0) to (1, 1), control points (0.4, 0) and (0.2, 1): find the
-    // curve's parameter for this time by bisection, then read the height there.
-    function bezierEase(t) {
-        const x = s => 3 * (1 - s) * (1 - s) * s * 0.4 + 3 * (1 - s) * s * s * 0.2 + s * s * s;
-        const y = s => 3 * (1 - s) * s * s + s * s * s;
-        let low = 0;
-        let high = 1;
-        for (let i = 0; i < 24; i++) {
-            const mid = (low + high) / 2;
-            if (x(mid) < t)
-                low = mid;
-            else
-                high = mid;
-        }
-        return y((low + high) / 2);
-    }
-
-    function moveEase(t) {
-        return (root.sineEase(t) + root.bezierEase(t)) / 2;
-    }
-
-    // Moves a window from one place and size to another over the same curve, so its size and place
-    // change together rather than the size snapping first.
-    function animateWindow(address, from, to) {
-        root.cancelTween(address);
-        root.tweens = root.tweens.concat([{ address: address, from: from, to: to, start: Date.now() }]);
-        tweenTimer.restart();
-    }
-
-    function cancelTween(address) {
-        root.tweens = root.tweens.filter(tween => tween.address !== address);
-    }
-
-    Timer {
-        id: tweenTimer
-        interval: 16
-        repeat: true
-        onTriggered: {
-            const now = Date.now();
-            root.tweens.forEach(tween => {
-                const e = root.moveEase(Math.min(1, (now - tween.start) / root.moveDuration));
-                const at = i => Math.round(tween.from[i] + (tween.to[i] - tween.from[i]) * e);
-                root.resizeWindow(tween.address, at(2), at(3));
-                root.moveWindow(tween.address, at(0), at(1));
-            });
-            root.tweens = root.tweens.filter(tween => now - tween.start < root.moveDuration);
-            if (root.tweens.length === 0)
-                tweenTimer.stop();
-        }
-    }
-
     // The window's position, kept so the window and its bar stay on the monitor: the bar
     // is always visible, and the window never goes off the edge.
     function clampToMonitor(win, monitor, x, y) {
@@ -224,53 +158,7 @@ Scope {
         Hyprland.dispatch(`hl.dsp.window.resize({ x = ${Math.round(width)}, y = ${Math.round(height)}, relative = false, window = "address:${address}" })`);
     }
 
-    // The Halcyon Hyprland fork reports a `mini` flag on every window and has hl.dsp.window.mini, which keeps the
-    // window small wherever it is moved and restores it on a click. Stock Hyprland has neither, so the bar falls
-    // back to its own mini windows in the bottom right corner.
-    function hasMiniApi(address) {
-        return (HyprlandData.windowByAddress[address]?.mini) !== undefined;
-    }
-
-    function setMini(address, on) {
-        Hyprland.dispatch(`hl.dsp.window.mini({ action = "${on ? "enable" : "disable"}", window = "address:${address}" })`);
-    }
-
-    // Makes a window a mini window in the bottom right corner of its monitor, next to any others.
-    function minimize(win, monitor) {
-        if (win.mini !== undefined) {
-            root.setMini(win.address, true);
-            return;
-        }
-        const origin = { x: win.at[0], y: win.at[1], width: win.size[0], height: win.size[1], monitor: monitor.id };
-        const others = Object.keys(root.minis).filter(address => root.minis[address].monitor === monitor.id).length;
-        const right = monitor.x + monitor.width / monitor.scale;
-        const bottom = monitor.y + monitor.height / monitor.scale;
-        const x = right - root.miniGap - (others + 1) * (root.miniWidth + root.miniGap);
-        const y = bottom - root.miniHeight - root.miniGap;
-        const copy = Object.assign({}, root.minis);
-        copy[win.address] = origin;
-        root.minis = copy;
-        root.animateWindow(win.address, [win.at[0], win.at[1], win.size[0], win.size[1]],
-            [x, y, root.miniWidth, root.miniHeight]);
-    }
-
-    // Brings a mini window back to the size and place it had before.
-    function expand(address) {
-        if (root.hasMiniApi(address)) {
-            root.setMini(address, false);
-            return;
-        }
-        const origin = root.minis[address];
-        if (!origin)
-            return;
-        const copy = Object.assign({}, root.minis);
-        delete copy[address];
-        root.minis = copy;
-        // Read fresh: the window list can lag the mini move that just happened.
-        const now = HyprlandData.windowByAddress[address] ?? null;
-        const from = now ? [now.at[0], now.at[1], now.size[0], now.size[1]] : [origin.x, origin.y, root.miniWidth, root.miniHeight];
-        root.animateWindow(address, from, [origin.x, origin.y, origin.width, origin.height]);
-    }
+    // Mini windows (the down arrow) are the MiniWindows service's, shared with the bar's window buttons.
 
     Variants {
         model: Quickshell.screens
@@ -330,7 +218,7 @@ Scope {
 
                         required property var modelData
                         readonly property var win: modelData
-                        readonly property bool isMini: root.hasMiniApi(win.address) ? win.mini === true : root.minis[win.address] !== undefined
+                        readonly property bool isMini: MiniWindows.isMini(win.address)
                         readonly property bool muted: root.isMuted(win)
                         readonly property bool hasSound: root.audioStreams(win).length > 0
                         // Set in the drag: the position asked of Hyprland, shown until its window list catches up.
@@ -341,7 +229,7 @@ Scope {
                         readonly property real shownY: moving ? movedY : win.at[1]
                         // Stock Hyprland only: the bar's own zone over the mini body takes the click. The fork's
                         // window receives the click itself, so nothing is laid over it.
-                        readonly property Item hoverZone: (isMini && !root.hasMiniApi(win.address)) ? zone : null
+                        readonly property Item hoverZone: (isMini && !MiniWindows.hasApi(win.address)) ? zone : null
 
                         // Window and monitor positions are both global, so the difference is the offset on this screen.
                         x: shownX - overlay.monitorInfo.x
@@ -368,7 +256,7 @@ Scope {
 
                             MouseArea {
                                 anchors.fill: parent
-                                onClicked: root.expand(bar.win.address)
+                                onClicked: MiniWindows.expand(bar.win.address)
                             }
                         }
 
@@ -448,7 +336,7 @@ Scope {
                                 MouseArea {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: bar.isMini ? root.expand(bar.win.address) : root.minimize(bar.win, overlay.monitorInfo)
+                                    onClicked: bar.isMini ? MiniWindows.expand(bar.win.address) : MiniWindows.minimize(bar.win.address)
                                     StyledToolTip {
                                         text: bar.isMini ? Translation.tr("Bring back to full size") : Translation.tr("Make a mini window")
                                     }
@@ -490,7 +378,7 @@ Scope {
 
                             onPressed: mouse => {
                                 // A drag takes over from any move still easing.
-                                root.cancelTween(bar.win.address);
+                                MiniWindows.cancelTween(bar.win.address);
                                 const p = mapToItem(stage, mouse.x, mouse.y);
                                 // The window's place now, not the one the list had before the last move.
                                 const fresh = HyprlandData.windowByAddress[bar.win.address] ?? bar.win;
@@ -525,7 +413,7 @@ Scope {
                             onReleased: {
                                 if (!mover.dragging) {
                                     if (bar.isMini)
-                                        root.expand(bar.win.address);
+                                        MiniWindows.expand(bar.win.address);
                                     else
                                         Hyprland.dispatch(`hl.dsp.focus({ window = "address:${bar.win.address}" })`);
                                 }
