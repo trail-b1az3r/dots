@@ -128,7 +128,8 @@ class Assistant:
         notify.show(f"“{text}”", reply, icon="audio-input-microphone", timeout_ms=max(6000, 90 * len(reply)))
         if self.settings["speak"] and not speech.say(reply, should_stop=self.cancel.is_set):
             # Without this the reply just goes silent. The reason is in the log.
-            notify.show("The reply couldn't be spoken", f"The reason is in {config.LOG}",
+            notify.show("The reply couldn't be spoken",
+                        f"`halcyon assistant test-voice` says why; the reason is also in {config.LOG}",
                         icon="dialog-warning", timeout_ms=10000)
 
     # -- wake word ------------------------------------------------------------

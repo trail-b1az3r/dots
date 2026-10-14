@@ -1,8 +1,10 @@
 -- Turns the smart window rules in app_rules.lua (or ~/.config/hypr/custom/app_rules.lua) into window rules.
 --
--- Native fields become native Hyprland rule effects. Plus fields become the hyprland-plus effects, and are skipped
--- on stock Hyprland. Unknown fields and wrong values are reported once, in a notification, and the rest of the
--- entry still applies, so one typo does not lose a whole rule.
+-- Native fields become native Hyprland rule effects. Plus fields become the hyprland-plus effects. Each is skipped
+-- quietly when the running Hyprland lacks it (compositor.lua says which build has what), so the rules shipped with
+-- Halcyon never warn on stock Hyprland or an older hyprland-plus. `halcyon config-check` lists what was skipped.
+-- Unknown fields and wrong values are reported once, in a notification, and the rest of the entry still applies,
+-- so one typo does not lose a whole rule.
 
 local M = {}
 
@@ -32,23 +34,37 @@ local PLUS = {
     superposition = function(v, fx, bad) if type(v) == "boolean" then fx.superposition = v else bad("superposition must be true or false") end end,
 }
 
+-- Which compositor feature (compositor.lua) each Plus field needs.
+local NEEDS = { plus = "strips", superposition = "strips", keep_size = "tiles" }
+
+-- caps: the table from compositor.lua. A plain true or false (the old argument) means all or nothing.
+local function capsOf(caps)
+    if type(caps) == "table" then
+        return caps
+    end
+    return { plus = caps == true, strips = caps == true, tiles = caps == true }
+end
+
 local ROLES = {
     tile = function(fx) fx.tile = true end,
     float = function(fx) fx.float = true; fx.center = true end,
-    plus = function(fx, plusAvailable) if plusAvailable then fx.plustile = true end; fx.tile = true end,
+    plus = function(fx, caps) if caps.strips then fx.plustile = true end; fx.tile = true end,
     pinned = function(fx) fx.float = true; fx.center = true; fx.pin = true end,
 }
 
--- Builds the effects for one entry. Returns match, effects, problems (a list of strings).
-function M.translate(entry, plusAvailable)
+-- Builds the effects for one entry. Returns match, effects, problems (a list of strings) and skipped (Plus fields
+-- the running Hyprland lacks, as strings).
+function M.translate(entry, caps)
+    caps = capsOf(caps)
     local problems = {}
+    local skipped = {}
     local function bad(text) problems[#problems + 1] = text end
 
     if type(entry) ~= "table" then
-        return nil, nil, { "an entry is not a table" }
+        return nil, nil, { "an entry is not a table" }, skipped
     end
     if type(entry.class) ~= "string" and type(entry.title) ~= "string" then
-        return nil, nil, { "an entry has neither class nor title to match" }
+        return nil, nil, { "an entry has neither class nor title to match" }, skipped
     end
 
     local match = { class = entry.class, title = entry.title }
@@ -59,11 +75,15 @@ function M.translate(entry, plusAvailable)
             -- the match
         elseif key == "role" then
             local role = ROLES[value]
-            if role then role(fx, plusAvailable) else bad("role must be tile, float, plus or pinned, not " .. tostring(value)) end
+            if role then role(fx, caps) else bad("role must be tile, float, plus or pinned, not " .. tostring(value)) end
         elseif NATIVE[key] then
             NATIVE[key](value, fx, bad)
         elseif PLUS[key] then
-            if plusAvailable then PLUS[key](value, fx, bad) else bad(key .. " needs hyprland-plus, skipped") end
+            if caps[NEEDS[key]] then
+                PLUS[key](value, fx, bad)
+            else
+                skipped[#skipped + 1] = key .. " (" .. (caps.plus and "needs a newer hyprland-plus" or "needs hyprland-plus") .. ")"
+            end
         else
             bad("unknown field " .. tostring(key))
         end
@@ -74,16 +94,20 @@ function M.translate(entry, plusAvailable)
         fx.tile = nil
     end
 
-    return match, fx, problems
+    return match, fx, problems, skipped
 end
 
-function M.apply(rules, plusAvailable)
+function M.apply(rules, caps)
     local report = {}
+    M.skipped = {}
     for i, entry in ipairs(rules) do
-        local match, fx, problems = M.translate(entry, plusAvailable)
+        local match, fx, problems, skipped = M.translate(entry, caps)
         local label = (type(entry) == "table" and (entry.class or entry.title)) or ("entry " .. i)
         for _, p in ipairs(problems) do
             report[#report + 1] = label .. ": " .. p
+        end
+        for _, s in ipairs(skipped or {}) do
+            M.skipped[#M.skipped + 1] = label .. ": " .. s
         end
         if match and next(fx) then
             fx.match = match

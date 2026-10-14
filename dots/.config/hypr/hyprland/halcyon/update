@@ -75,7 +75,7 @@ check() {
 apply() {
     repo
     git -C "$REPO" diff --quiet || die "the repository has uncommitted changes; commit or stash them first"
-    local before after changed ts backup copied=0 needs_install=0 hypr_changed=0 shell_changed=0
+    local before after changed ts backup copied=0 needs_install=0 hypr_changed=0 shell_changed=0 units_changed=0
     before="$(git -C "$REPO" rev-parse HEAD)"
     git -C "$REPO" pull --ff-only --quiet || die "couldn't fast-forward the repository; see: git -C $REPO status"
     after="$(git -C "$REPO" rev-parse HEAD)"
@@ -104,7 +104,14 @@ apply() {
         copied=$((copied + 1))
         [[ "$rel" == .config/hypr/* ]] && hypr_changed=1
         [[ "$rel" == .config/quickshell/* ]] && shell_changed=1
+        [[ "$rel" == .config/systemd/user/* ]] && units_changed=1
     done <<< "$changed"
+
+    # New unit files first, so a shell restart below already uses them (KillMode=process keeps the apps the
+    # shell opened running through the restart).
+    if (( units_changed )); then
+        systemctl --user daemon-reload 2>/dev/null || true
+    fi
 
     # Only what changed is reloaded: Hyprland reads its config once, and the shell's QML is
     # restarted (not the whole session) so new files are compiled.

@@ -1,45 +1,85 @@
 name: Stable release
 
-# A normal release. Push a tag that matches VERSION, or run this by hand with the tag.
+# A normal release, named after the VERSION file. Either:
 #
-#   echo 1.0.1 > VERSION && git commit -am "Release 1.0.1" && git tag v1.0.1 && git push origin main v1.0.1
+#   - Actions > Stable release > Run workflow, on the branch to release (main, usually). The version box can stay
+#     empty: it then releases the VERSION on that branch. The tag v<version> is made on that branch's latest
+#     commit if it does not exist yet, so nothing has to be tagged by hand.
+#   - or push a tag that matches VERSION:
+#       echo 1.0.1 > VERSION && git commit -am "Release 1.0.1" && git tag v1.0.1 && git push origin main v1.0.1
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
     inputs:
-      tag:
-        description: "The tag to release, for example v1.0.1. It must match the VERSION file."
-        required: true
+      version:
+        description: "Version to release, e.g. 1.0.1. Empty: the VERSION file on the branch you picked. It must match that file."
+        required: false
         type: string
 
 permissions:
   contents: write
+
+concurrency:
+  group: stable-release
+  cancel-in-progress: false
 
 jobs:
   release:
     name: Build and publish the stable release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # The branch (a run by hand) or the tag (a tag push). A run by hand never checks out a tag that is not there
+      # yet: that is what failed before, when the tag had not been pushed.
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
-          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
 
       - name: Work out the tag and version
         env:
-          TAG_INPUT: ${{ inputs.tag || github.ref_name }}
+          EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          VERSION_INPUT: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          tag="$TAG_INPUT"
-          version="$(tr -d '[:space:]' < VERSION)"
-          if [[ "$tag" != "v$version" ]]; then
-            echo "The tag is $tag, but VERSION says $version. Make them match, then release again." >&2
-            exit 1
+          file_version="$(tr -d '[:space:]' < VERSION)"
+          if [[ "$EVENT" == "push" ]]; then
+            tag="$REF_NAME"
+            if [[ "$tag" != "v$file_version" ]]; then
+              echo "::error::The tag is $tag, but VERSION says $file_version. Make them match, then release again."
+              exit 1
+            fi
+            create=false
+          else
+            version="${VERSION_INPUT#v}"
+            version="${version//[[:space:]]/}"
+            version="${version:-$file_version}"
+            if [[ ! "$version" =~ ^[0-9A-Za-z._-]+$ ]]; then
+              echo "::error::'$version' is not a version (use something like 1.0.1)."
+              exit 1
+            fi
+            tag="v$version"
+            if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+              # Already tagged: release exactly what the tag points at.
+              git checkout -q "$tag"
+              git submodule update --init --recursive
+              file_version="$(tr -d '[:space:]' < VERSION)"
+              create=false
+            else
+              create=true
+            fi
+            if [[ "$version" != "$file_version" ]]; then
+              echo "::error::VERSION on $REF_NAME says $file_version, not $version. Change VERSION to $version, commit and push it, then run this again (or leave the version box empty to release $file_version)."
+              exit 1
+            fi
           fi
           echo "TAG=$tag" >> "$GITHUB_ENV"
-          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "VERSION=$file_version" >> "$GITHUB_ENV"
+          echo "SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "CREATE_TAG=$create" >> "$GITHUB_ENV"
+          echo "Releasing $tag from $(git rev-parse --short HEAD)$([[ $create == true ]] && echo ', making the tag')"
 
       - name: Stop if the release already exists
         env:
@@ -47,7 +87,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "A release for $TAG already exists. Delete it first, or use a new version." >&2
+            echo "::error::A release for $TAG already exists. Delete it first, or bump VERSION."
             exit 1
           fi
 
@@ -70,9 +110,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
+          set -euo pipefail
+          if [[ "$CREATE_TAG" == true ]]; then
+            where=(--target "$SHA")   # gh makes the tag on this commit
+          else
+            where=(--verify-tag)
+          fi
           gh release create "$TAG" \
             "dist/halcyon-$VERSION.tar.gz" \
             "dist/halcyon-$VERSION.tar.gz.sha256" \
-            --verify-tag \
+            "${where[@]}" \
+            --latest \
             --title "Halcyon $VERSION" \
             --generate-notes

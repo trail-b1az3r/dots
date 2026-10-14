@@ -9,8 +9,10 @@ import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import Quickshell.Io
 
+import qs.modules.ii.background.widgets
 import qs.modules.ii.background.widgets.clock.dateIndicator
 import qs.modules.ii.background.widgets.clock.minuteMarks
+import "../revolver/RevolverStyles.js" as Styles
 
 Item {
     id: root
@@ -76,8 +78,23 @@ Item {
         }
     }
 
+    // Under a Halcyon theme the face takes the theme's shape (the same as the revolver's drum); otherwise it is
+    // upstream's cookie.
+    readonly property string themeId: Config.options.halcyon.theme
+    readonly property bool themedFace: Styles.styleFor(themeId).id !== "default"
+    ThemedPlate {
+        anchors.fill: parent
+        visible: root.themedFace
+        themeId: root.themeId
+        kind: "disc"
+        colBase: Appearance.colors.colLayer1
+        colOn: root.colOnBackground
+        colAccent: Appearance.colors.colPrimary
+    }
+
     property bool useSineCookie: Config.options.background.widgets.clock.cookie.useSineCookie
     StyledDropShadow {
+        visible: !root.themedFace
         target: root.useSineCookie ? sineCookieLoader : roundedPolygonCookieLoader
 
         RotationAnimation on rotation {

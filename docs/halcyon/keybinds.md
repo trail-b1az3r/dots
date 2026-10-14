@@ -87,6 +87,26 @@ Lua that does not parse, malformed chords, two binds on one chord, repeated
 lines in your custom files, missing plugins, Plus settings that contradict each
 other, and wrong file permissions. It never rewrites your configuration.
 
+### Text from the screen
+
+```sh
+halcyon text                  # pick a region, copy the text in it (Super + Shift + X does the same)
+halcyon text --window         # the focused window; --screen for the whole monitor
+halcyon text --clipboard      # a screenshot you copied
+halcyon text scan.pdf --print # an image or PDF, scanned or not; --join rejoins wrapped lines
+```
+
+It uses Tesseract with every language you have installed (`--lang eng+deu` to choose), copies the text and shows the
+start of it in a notification.
+
+### When apps close by themselves
+
+`halcyon crashes` lists what closed recently and why: crashes systemd recorded, programs the kernel killed for lack of
+memory, and restarts of the shell. Until this version, apps opened from the shell (launcher, dock, search) shared the
+shell service's cgroup, so a shell restart, an update, or one app running out of memory closed all of them at once,
+which looked like Vesktop and media players crashing after a while. The shell's service now stops only the shell.
+Update, then log out and back in once for it to take effect.
+
 ### Hypr mode: a second set of keybinds
 
 Hypr mode gives you a second layer, so the same chords can do something

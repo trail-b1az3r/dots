@@ -24,7 +24,17 @@ ContentPage {
             checked: Config.options.background.widgets.revolver.enable
             onCheckedChanged: Config.options.background.widgets.revolver.enable = checked
             StyledToolTip {
-                text: Translation.tr("A drum of your installed games. Drag it to spin, release, then click the centre to start the chamber under the pin.")
+                text: Translation.tr("A drum of your installed games, drawn in the theme's shapes. Flick it to spin: the game that stops under the hammer starts. A slow nudge only turns it.")
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "radio_button_unchecked"
+            text: Translation.tr("In Red Sun, sit on the wallpaper's red ring")
+            checked: Config.options.background.widgets.revolver.followRing
+            onCheckedChanged: Config.options.background.widgets.revolver.followRing = checked
+            StyledToolTip {
+                text: Translation.tr("The ring is the drum: it lights up as it turns, and at the Full effects level a spin breaks the screen")
             }
         }
 

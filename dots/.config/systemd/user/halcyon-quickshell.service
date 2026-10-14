@@ -3,11 +3,16 @@ Description=Halcyon desktop shell (Quickshell)
 Documentation=file://%h/.config/quickshell/ii/shell.qml
 
 [Service]
-# Started by Hyprland at login (see hyprland/halcyon/init.lua). Restarted
-# if it exits, so a crash does not leave the desktop without its bar.
 ExecStart=/usr/bin/env qs -c ii
 Restart=on-failure
 RestartSec=2
+# Apps opened from the shell (launcher, dock, search, revolver) are its child processes, so they run in this
+# service's cgroup. With systemd's defaults, a restart of the shell would kill them all, and so would one of them
+# being killed for memory (OOMPolicy=stop stops the whole unit). That is what made Vesktop, Spotify and media
+# players close "after a while". Only the shell itself is stopped now, and an app killed for memory takes nothing
+# else with it.
+KillMode=process
+OOMPolicy=continue
 
 [Install]
 WantedBy=default.target

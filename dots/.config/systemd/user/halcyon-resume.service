@@ -5,6 +5,9 @@ Description=Halcyon: restart the network and Razer tools after suspend
 ExecStart=%h/.config/hypr/hyprland/halcyon/resume
 Restart=on-failure
 RestartSec=5
+# It starts the Razer tray applet and the Wi-Fi reconnect helper; restarting this service must not kill them.
+KillMode=process
+OOMPolicy=continue
 
 [Install]
 WantedBy=default.target

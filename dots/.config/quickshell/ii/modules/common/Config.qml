@@ -109,9 +109,10 @@ Singleton {
                 }
                 property JsonObject assistant: JsonObject {
                     property bool enable: true // Start the voice assistant with Hyprland (Super+Shift+Space)
-                    property string provider: "auto" // "auto", "claude-code" (Claude Pro/Max plan), "claude" (API key), "gemini", "ollama", "openai"
+                    property string provider: "auto" // "auto", "claude-code" (Claude Pro/Max plan), "claude" (API key), "gemini", "ollama", "lmstudio", "hypernix", "t1", "openai"
                     property string model: "" // "" = the provider's default
-                    property string endpoint: "" // For "openai" (any OpenAI-compatible server) and "ollama"
+                    property string endpoint: "" // For "openai" (any OpenAI-compatible server), "ollama", "lmstudio" and "hypernix"
+                    property string t1Server: "" // A HyperNix T1 server, e.g. http://127.0.0.1:8000; its key is stored as "t1"
                     property string keyId: "" // Which stored key "openai" uses, e.g. "mistral"
                     property bool wakeWord: false // Listen for the wake phrase (offline, on this computer)
                     property string wakePhrase: "hey halcyon"
@@ -279,6 +280,7 @@ Singleton {
                         property string source: "steam" // "steam" or "prismlauncher"
                         property string mode: "recent" // "recent", "random" or "recommended"
                         property int size: 300
+                        property bool followRing: true // In the Red Sun theme, sit on the wallpaper's red ring (it is the drum)
                     }
                 }
                 property string wallpaperPath: ""
@@ -306,6 +308,7 @@ Singleton {
                     }
                 }
                 property bool bottom: false // Instead of top
+                property bool sunDial: true // Halcyon: the sun's place in today's sky, and the next scheduled theme
                 property int cornerStyle: 0 // 0: Hug | 1: Float | 2: Plain rectangle
                 property bool floatStyleShadow: true // Show shadow behind bar when cornerStyle == 1 (Float)
                 property bool borderless: false // true for no grouping of items

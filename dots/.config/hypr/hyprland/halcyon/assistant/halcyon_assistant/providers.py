@@ -24,7 +24,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-from . import config
+from . import config, localai
 
 
 class ProviderError(Exception):
@@ -282,6 +282,17 @@ def _parse_arguments(raw):
         return {}
 
 
+def _openai_reply(data):
+    try:
+        message = data["choices"][0]["message"]
+    except (KeyError, IndexError, TypeError):
+        raise ProviderError(f"unexpected reply: {str(data)[:200]}") from None
+    calls = [{"id": c.get("id") or _new_id(), "name": c["function"]["name"],
+              "args": _parse_arguments(c["function"].get("arguments"))}
+             for c in message.get("tool_calls") or []]
+    return {"text": (message.get("content") or "").strip(), "calls": calls, "raw": None}
+
+
 class OpenAICompatible:
     name = "openai"
 
@@ -294,14 +305,117 @@ class OpenAICompatible:
             body["tools"] = _openai_tools(tools)
         headers = {"Authorization": f"Bearer {self.key}"} if self.key else {}
         data = self.post(f"{self.endpoint}/chat/completions", body, headers)
+        return _openai_reply(data)
+
+
+# Errors that mean "this model or server can't do tool calls", not "the request failed": llama.cpp without
+# --jinja, chat templates with no tool support, LM Studio models that were not trained for it.
+_NO_TOOLS = ("tool", "jinja", "function call", "template")
+
+
+class _LocalServer(OpenAICompatible):
+    """An OpenAI-compatible server on this machine that Halcyon gets ready first (starts it, loads the model),
+    and that may not do tool calls: then the question is asked again without them, and the desktop actions
+    stay off for the rest of the conversation."""
+
+    timeout = 240  # a local model can take a while, the first time especially
+
+    def __init__(self, model, base, post=_post, ensure=None):
+        super().__init__(model, base.rstrip("/") + "/v1", None, post)
+        self.base, self.wanted, self._ensure, self.ready, self.tools_ok = base.rstrip("/"), model, ensure, False, True
+
+    def prepare(self):
+        if self.ready:
+            return
         try:
-            message = data["choices"][0]["message"]
-        except (KeyError, IndexError, TypeError):
-            raise ProviderError(f"unexpected reply: {str(data)[:200]}") from None
-        calls = [{"id": c.get("id") or _new_id(), "name": c["function"]["name"],
-                  "args": _parse_arguments(c["function"].get("arguments"))}
-                 for c in message.get("tool_calls") or []]
-        return {"text": (message.get("content") or "").strip(), "calls": calls, "raw": None}
+            self.model = self._ensure(self.wanted, self.base)
+        except localai.LocalAIError as error:
+            raise ProviderError(str(error)) from None
+        self.ready = True
+
+    def chat(self, history, system, tools):
+        self.prepare()
+        body = {"model": self.model, "messages": _openai_messages(history, system)}
+        if tools and self.tools_ok:
+            body["tools"] = _openai_tools(tools)
+        url = f"{self.endpoint}/chat/completions"
+        try:
+            data = self.post(url, body, {}, timeout=self.timeout)
+        except ProviderError as error:
+            if "tools" not in body or not any(word in str(error).lower() for word in _NO_TOOLS):
+                if "can't reach" in str(error):
+                    self.ready = False  # it stopped; get it ready again next time
+                raise
+            self.tools_ok = False
+            body.pop("tools")
+            # Tool turns from earlier in the conversation would be refused too.
+            body["messages"] = [m for m in body["messages"] if m["role"] != "tool"]
+            for m in body["messages"]:
+                m.pop("tool_calls", None)
+            data = self.post(url, body, {}, timeout=self.timeout)
+        return _openai_reply(data)
+
+
+class LMStudio(_LocalServer):
+    """LM Studio's server. Halcyon starts it (`lms server start`) and loads a model (`lms load`) when needed."""
+
+    name = "lmstudio"
+
+    def __init__(self, model="", endpoint="", post=_post, ensure=None):
+        base = (endpoint or localai.LMSTUDIO_URL).rstrip("/")
+        base = base[:-3] if base.endswith("/v1") else base
+        super().__init__(model, base, post, ensure or (lambda m, b: localai.lmstudio_ensure(m, b)))
+        self.model = model or "the model LM Studio has loaded"
+
+
+class HyperNix(_LocalServer):
+    """A model from ~/.hypernix/models, served by HyperNix's runtime (`hnx runtime serve`), which Halcyon starts."""
+
+    name = "hypernix"
+
+    def __init__(self, model="", endpoint="", post=_post, ensure=None):
+        base = (endpoint or localai.HYPERNIX_URL).rstrip("/")
+        base = base[:-3] if base.endswith("/v1") else base
+        super().__init__(model, base, post, ensure or (lambda m, b: localai.hypernix_ensure(m, b)))
+        self.model = model or "the newest model in ~/.hypernix/models"
+
+
+def _t1_messages(history, system):
+    """T1's chat takes plain role/content messages: tool turns become text, so a conversation that started with
+    another provider still reads right."""
+    out = [{"role": "system", "content": system}]
+    for turn in history:
+        if turn["role"] == "user":
+            out.append({"role": "user", "content": turn["text"]})
+        elif turn["role"] == "assistant" and (turn.get("text") or "").strip():
+            out.append({"role": "assistant", "content": turn["text"]})
+        elif turn["role"] == "tool":
+            out.append({"role": "user", "content": f"[{turn['name']} result] {turn['result']}"})
+    return out
+
+
+class T1:
+    """A HyperNix T1 server's governed inference (POST /inference/chat with a T1_ or T2_ key). The server picks
+    the backend and applies the key's plan, quota and audit log. It has no tool calls, so it only talks."""
+
+    name = "t1"
+
+    def __init__(self, model, server, key, chat=None):
+        self.server, self.key, self.wanted = server.rstrip("/"), key, model
+        self.model = model or "the server's default"
+        self._chat = chat or localai.t1_chat
+
+    def chat(self, history, system, tools):
+        try:
+            if not self.wanted:
+                self.wanted = self.model = localai.t1_default_model(self.server, self.key)
+            data = self._chat(self.server, self.key, self.wanted, _t1_messages(history, system))
+        except localai.LocalAIError as error:
+            raise ProviderError(f"T1: {error}") from None
+        text = (data.get("content") or "").strip() if isinstance(data, dict) else ""
+        if not text and isinstance(data, dict) and data.get("finish_reason") not in (None, "stop"):
+            raise ProviderError(f"T1 stopped without an answer ({data.get('finish_reason')})")
+        return {"text": text, "calls": [], "raw": None}
 
 
 class Ollama:
@@ -398,9 +512,24 @@ def _anthropic_credentials():
                 or (Path.home() / ".config/anthropic").is_dir())
 
 
+def _local_choice():
+    """For "auto" with nothing in the cloud set up: the local server that is running, else one that can be
+    started. Quick: each probe gives up after a fraction of a second."""
+    if localai.reachable(config.DEFAULT_ENDPOINTS["ollama"], "/api/tags"):
+        return "ollama"
+    if localai.reachable(localai.LMSTUDIO_URL):
+        return "lmstudio"
+    if localai.hypernix_served() or (localai.hnx_cli() and localai.hypernix_models()):
+        return "hypernix"
+    if localai.lms_cli() and not shutil.which("ollama"):
+        return "lmstudio"
+    return "ollama"
+
+
 def resolve(settings):
     """The provider the settings ask for; "auto" picks the first one set up."""
     provider = settings["provider"]
+    t1_server = settings.get("t1Server") or ""
     if provider == "auto":
         if _anthropic_credentials():
             provider = "claude"
@@ -408,8 +537,10 @@ def resolve(settings):
             provider = "claude-code"
         elif config.api_key("gemini"):
             provider = "gemini"
+        elif t1_server and config.api_key("t1"):
+            provider = "t1"
         else:
-            provider = "ollama"
+            provider = _local_choice()
     model = settings["model"] or config.DEFAULT_MODELS[provider]
     if provider == "claude-code":
         if not shutil.which("claude"):
@@ -429,4 +560,15 @@ def resolve(settings):
         key_id = settings["keyId"] or "openai"
         return OpenAICompatible(model, settings["endpoint"] or config.DEFAULT_ENDPOINTS["openai"],
                                 config.api_key(key_id))
+    if provider == "lmstudio":
+        return LMStudio(model, settings["endpoint"])
+    if provider == "hypernix":
+        return HyperNix(model, settings["endpoint"])
+    if provider == "t1":
+        if not t1_server:
+            raise ProviderError("no T1 server: `halcyon assistant set t1Server http://HOST:PORT`")
+        key = config.api_key("t1")
+        if not key:
+            raise ProviderError("no T1 key: `halcyon assistant key t1 T1_...`, or /key in the AI sidebar")
+        return T1(model, t1_server, key)
     return Ollama(model, settings["endpoint"] or config.DEFAULT_ENDPOINTS["ollama"])

@@ -8,8 +8,9 @@ noise floor: no extra dependencies, and good enough for push-to-talk.
 
 import array
 import math
-import shutil
 import subprocess
+
+from . import pcm
 
 RATE = 16000
 FRAME_MS = 30
@@ -17,11 +18,8 @@ FRAME_BYTES = RATE * FRAME_MS // 1000 * 2  # 16-bit mono
 
 
 def recorder_command():
-    if shutil.which("pw-record"):
-        return ["pw-record", "--rate", str(RATE), "--channels", "1", "--format", "s16", "-"]
-    if shutil.which("arecord"):
-        return ["arecord", "-q", "-f", "S16_LE", "-r", str(RATE), "-c", "1", "-t", "raw"]
-    return None
+    # pcm.recorder knows that PipeWire 1.2 and later need --raw for headerless samples.
+    return pcm.recorder(RATE)
 
 
 class Microphone:

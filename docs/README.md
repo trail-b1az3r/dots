@@ -1,5 +1,7 @@
 # Documentation
 
+Also on the web: <https://trail-b1az3r.github.io/dots/>.
+
 | Folder | What it covers |
 |---|---|
 | [`halcyon/`](halcyon/README.md) | Halcyon: what it adds to the desktop, installing it, themes, the voice assistant, keybinds, and how the repository is laid out. |

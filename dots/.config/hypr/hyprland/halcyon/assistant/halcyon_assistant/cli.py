@@ -1,6 +1,7 @@
 """halcyon assistant: the command line."""
 
 import getpass
+import json
 import logging
 import os
 import subprocess
@@ -9,7 +10,7 @@ import time
 import urllib.request
 import zipfile
 
-from . import audio, config, daemon, providers, speech, stt, wake
+from . import audio, config, daemon, localai, pcm, providers, speech, stt, wake
 
 USAGE = """Halcyon's voice assistant.
 
@@ -17,13 +18,22 @@ USAGE = """Halcyon's voice assistant.
     halcyon assistant ask TEXT      ask in writing; prints the reply
     halcyon assistant cancel        stop whatever it is doing
     halcyon assistant doctor        what is set up and what isn't
+    halcyon assistant test-voice    say a sentence with each voice engine; says why one fails
+    halcyon assistant test-mic      record 3 seconds and play them back
+    halcyon assistant models        the LM Studio, HyperNix and T1 models it can use
 
     halcyon assistant setup         install speech recognition (one time, ~300 MB)
           --wake                    ...and the offline "hey halcyon" wake word model
           --piper                   ...and a natural Piper voice instead of espeak-ng
     halcyon assistant login         use your Claude Pro/Max plan instead of an API key
-    halcyon assistant key ID [KEY]  store an API key: anthropic, gemini, openai, mistral...
-    halcyon assistant set NAME VALUE  change a setting (provider, model, wakeWord, speak...)
+    halcyon assistant key ID [KEY]  store an API key: anthropic, gemini, openai, mistral, t1...
+    halcyon assistant set NAME VALUE  change a setting (provider, model, t1Server, wakeWord, speak...)
+    halcyon assistant ensure lmstudio|hypernix [MODEL]
+                                    start LM Studio's server or HyperNix's runtime with a model
+
+Providers: claude, claude-code (your Claude plan), gemini, ollama, lmstudio (LM Studio), hypernix
+(`hnx runtime serve` with a model from ~/.hypernix/models), t1 (a HyperNix T1 server: set t1Server and
+`key t1 T1_...`), openai (any OpenAI-compatible server). The AI sidebar lists the same local models.
 
     halcyon assistant daemon        run the assistant (Hyprland starts it for you)
 
@@ -142,12 +152,16 @@ def login(_args):
 
 def doctor(_args):
     settings = config.settings()
+    engines = speech.engines()
     rows = [
-        ("microphone recorder", " ".join(audio.recorder_command() or ["missing: install pipewire"])[:40]),
+        ("microphone recorder", " ".join(audio.recorder_command() or ["missing: install pipewire"])[:48]),
+        ("audio player", " ".join(pcm.player(22050) or ["missing: install pipewire"])[:48]),
         ("speech recognition", "ready" if stt.available() else "not set up: halcyon assistant setup"),
         ("wake word", ("on, " if settings["wakeWord"] else "off, ") +
          ("model ready" if wake.available() else "not set up (setup --wake)")),
-        ("voice", speech.engine() or "none: install espeak-ng, or setup --piper"),
+        ("voice", ", ".join(engines) + "  (test-voice tries them)" if engines
+         else "none: install espeak-ng, or setup --piper"),
+        ("speak replies", "on" if settings["speak"] else "off (Settings > Halcyon > Assistant)"),
         ("daemon", "running" if daemon.send("status") is not None else "not running"),
     ]
     try:
@@ -158,7 +172,14 @@ def doctor(_args):
     rows.append(("Claude plan", "signed in (Claude Code)" if providers.claude_code_signed_in(settings["claudeConfigDir"]) else
                  ("Claude Code installed, not signed in" if providers.shutil.which("claude") else
                   "-  (halcyon assistant login)")))
-    for key_id in ("anthropic", "gemini", "openai", "mistral"):
+    rows.append(("LM Studio", "running" if localai.reachable(localai.LMSTUDIO_URL) else
+                 ("installed (`lms`), server off" if localai.lms_cli() else "-")))
+    hnx_models = localai.hypernix_models()
+    rows.append(("HyperNix", ("runtime serving " + ", ".join(localai.hypernix_served())) if localai.hypernix_served() else
+                 (f"{len(hnx_models)} model(s) in ~/.hypernix/models" + ("" if localai.hnx_cli() else ", `hnx` missing"))
+                 if hnx_models else ("installed, no models" if localai.hnx_cli() else "-")))
+    rows.append(("T1 server", settings["t1Server"] or "-  (halcyon assistant set t1Server URL)"))
+    for key_id in ("anthropic", "gemini", "openai", "mistral", "t1"):
         rows.append((f"{key_id} key", "set" if config.api_key(key_id) else "-"))
     width = max(len(r[0]) for r in rows)
     for name, value in rows:
@@ -180,6 +201,96 @@ def ask(args):
         print(f"error: {error}", file=sys.stderr)
         return 1
     print(reply)
+    return 0
+
+
+def test_voice(args):
+    """Speak with every installed engine, the way replies are spoken, and say what went wrong."""
+    text = " ".join(args) or "Hello. This is Halcyon's voice."
+    player = pcm.player(speech.piper_rate(speech.piper_voice()) if speech.piper_voice() else speech.DEFAULT_RATE)
+    print(f"audio player: {' '.join(player) if player else 'none (install pipewire)'}")
+    if pcm.pipewire_has_raw():
+        print("PipeWire 1.2 or later: raw audio needs --raw, which Halcyon passes")
+    engines = speech.engines()
+    if not engines:
+        print("no voice engine: install espeak-ng, or run `halcyon assistant setup --piper`")
+        return 1
+    worked = []
+    for name in engines:
+        print(f"{name}: speaking…", flush=True)
+        problem = speech.speak_once(name, text)
+        print(f"{name}: " + ("ok" if problem is None else f"failed: {problem}"))
+        if problem is None:
+            worked.append(name)
+    if not config.settings()["speak"]:
+        print("note: speaking replies is off in Settings > Halcyon > Assistant")
+    if worked:
+        print(f"replies will be spoken with {worked[0]}")
+        return 0
+    return 1
+
+
+def test_mic(_args):
+    """Record three seconds from the default microphone and play them back."""
+    recorder, player = pcm.recorder(audio.RATE), pcm.player(audio.RATE)
+    if not recorder or not player:
+        print("missing a recorder or player: install pipewire (pw-record, pw-play)")
+        return 1
+    print(f"recording 3 s with: {' '.join(recorder)}")
+    try:
+        done = subprocess.run(recorder, capture_output=True, timeout=3.5)
+        data = done.stdout
+    except subprocess.TimeoutExpired as expired:
+        data = expired.stdout or b""
+    if not data:
+        print("nothing was recorded: is a microphone connected and not muted? (pavucontrol, wpctl status)")
+        return 1
+    import array
+    samples = array.array("h", data[: len(data) // 2 * 2])
+    peak = max((abs(x) for x in samples), default=0)
+    print(f"got {len(data) // 2 / audio.RATE:.1f} s, loudest {peak * 100 // 32768}% of full scale"
+          + ("  (very quiet: check the input volume)" if peak < 600 else ""))
+    print("playing it back…")
+    subprocess.run(player, input=data, check=False)
+    return 0
+
+
+def models(args):
+    """The local and T1 models. --sidebar prints them for the AI sidebar (JSON); --json as data."""
+    settings = config.settings()
+    found = localai.sidebar_models(settings["t1Server"], bool(config.api_key("t1")))
+    if "--sidebar" in args or "--json" in args:
+        print(json.dumps(found))
+        return 0
+    if not found:
+        print("no LM Studio, HyperNix or T1 models found.\n"
+              "  LM Studio: download a model in LM Studio (or `lms get MODEL`)\n"
+              "  HyperNix:  put a .gguf in ~/.hypernix/models (or HyperLink / `hypernix download`)\n"
+              "  T1:        halcyon assistant set t1Server http://HOST:PORT")
+        return 0
+    for entry in found.values():
+        print(f"{entry['name']:<44} {entry['model']}")
+    return 0
+
+
+def ensure(args):
+    """Start LM Studio's server or HyperNix's runtime with a model. The AI sidebar runs this before a request;
+    with --sse-error a failure is printed as the error line its stream reader shows."""
+    sse = "--sse-error" in args
+    rest = [a for a in args if a != "--sse-error"]
+    if not rest or rest[0] not in ("lmstudio", "hypernix"):
+        print("usage: halcyon assistant ensure lmstudio|hypernix [MODEL]", file=sys.stderr)
+        return 2
+    model = rest[1] if len(rest) > 1 else ""
+    try:
+        ready = localai.lmstudio_ensure(model) if rest[0] == "lmstudio" else localai.hypernix_ensure(model)
+    except localai.LocalAIError as error:
+        if sse:
+            print("data: " + json.dumps({"error": {"message": str(error)}}), flush=True)
+        else:
+            print(f"error: {error}", file=sys.stderr)
+        return 1
+    print(ready, file=sys.stderr if sse else sys.stdout)
     return 0
 
 
@@ -226,12 +337,23 @@ def main(argv):
         return login(args)
     if command == "doctor":
         return doctor(args)
+    if command == "test-voice":
+        return test_voice(args)
+    if command == "test-mic":
+        return test_mic(args)
+    if command == "models":
+        return models(args)
+    if command == "ensure":
+        return ensure(args)
     if command == "key" and args:
         value = args[1] if len(args) > 1 else getpass.getpass(f"{args[0]} API key: ")
         config.store_api_key(args[0], value)
         print(f"stored the {args[0]} key in the keyring")
         return 0
     if command == "set" and len(args) == 2 and args[0] in config.DEFAULTS:
+        if args[0] == "provider" and args[1] not in config.PROVIDERS:
+            print(f"error: provider is one of {', '.join(config.PROVIDERS)}", file=sys.stderr)
+            return 2
         try:
             config.write_setting(args[0], parse_value(args[0], args[1]))
         except ValueError as error:

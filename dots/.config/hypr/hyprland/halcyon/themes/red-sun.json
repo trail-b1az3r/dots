@@ -1,7 +1,7 @@
 {
-  "name": "Wallpaper Heaven",
+  "name": "Red Sun",
   "description": "A road at sunset under a red ring: warm rose and ember accents over deep dusk violet. Wallpaper by Kenami, from Wallpaper Heaven.",
-  "wallpaper": "wallpapers/wallpaper-heaven-kenami.jpg",
+  "wallpaper": "wallpapers/red-sun.jpg",
   "seed": "#FF4940",
   "scheme": "scheme-fidelity",
   "shell": {
@@ -139,7 +139,7 @@
     ]
   },
   "effects": {
-    "default": "light",
+    "default": "full",
     "native_blur": {
       "variant": 8,
       "options": {
@@ -149,12 +149,15 @@
         "acrylic:aberration": 0.012,
         "acrylic:tint": "rgba(FF6A5A14)"
       }
-    }
+    },
+    "screen_shader": "shaders/red-sun.frag",
+    "shader_trigger": "revolver"
   },
   "shell_config": {
     "appearance.transparency.enable": true,
     "appearance.transparency.automatic": false,
     "appearance.transparency.backgroundTransparency": 0.22,
-    "appearance.transparency.contentTransparency": 0.5
+    "appearance.transparency.contentTransparency": 0.5,
+    "background.widgets.revolver.enable": true
   }
 }

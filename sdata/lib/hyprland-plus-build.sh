@@ -55,6 +55,11 @@ if [[ "$(command -v Hyprland)" != /usr/local/bin/Hyprland ]]; then
     printf '\033[33mPATH finds %s first, not /usr/local/bin/Hyprland. Put /usr/local/bin before /usr/bin in PATH.\033[0m\n' "$(command -v Hyprland)"
 fi
 
+# pacman does not know about /usr/local. Without this, packages that depend on hyprland would pull the stock
+# hyprland package in beside the fork.
+source "$(dirname "$(readlink -f "$0")")/hyprland-plus-detect.sh"
+hyprland_plus_register_with_pacman || true
+
 mkdir -p "$STATE"
 git -C "$REPO" rev-parse --short HEAD > "$STATE/hyprland-plus-commit"
 printf '\n\033[32mInstalled hyprland-plus %s from %s.\033[0m\n' "$(cat "$STATE/hyprland-plus-commit")" "$REF"

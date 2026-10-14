@@ -10,7 +10,7 @@ style, animations, wallpaper and, for some, shell layout and effects:
 | **Star Rail** | `hsr` | Astral gold and lavender on deep-space navy, over a golden rail curving through a nebula. Can show the current banner character. |
 | **Shattered Glass** | `shattered-glass` | Liquid glass: a glass lens follows the pointer, clicks crack the screen, windows turn to frosted glass. Ice blue and prism violet, sharp corners. |
 | **Fractured Glass** | `fractured-glass` | Refraction only, like Apple's Liquid Glass: a squircle glass lens follows the pointer and bends what's behind its rim. No ripples or cracks. Soft blue, lavender and pink over calm fragments of thick glass. |
-| **Wallpaper Heaven** | `wallpaper-heaven-kenami` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. Wallpaper by Kenami, from Wallpaper Heaven. |
+| **Red Sun** | `red-sun` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. The ring is the revolver: spin it and the screen cracks and caves in. Wallpaper by Kenami, from Wallpaper Heaven. |
 
 Pick one in **Settings > Halcyon**, with **`Ctrl + Super + Shift + T`**,
 or from a terminal:
@@ -68,6 +68,12 @@ halcyon auto sun                    # today's sunrise and sunset
 halcyon auto location 51.51,-0.13   # set the location (clear: back to the weather's)
 ```
 
+The **sun dial** in the bar, beside the clock, shows where the sun is in today's sky. Hover it for sunrise,
+sunset, the length of the day and the next theme change your schedules will make ("Red Sun, today at 19:12 (30 min
+before sunset), in 2 h 10 min"); click it to open Settings. `bar.sunDial: false` in the shell config hides it, and
+`halcyon auto day` prints the same in a terminal. In the Halcyon themes the bar's groups are also edged in the
+theme's own light: ember in Red Sun, gold in Star Rail, frost in the glass themes.
+
 ### Effects
 
 | Level | What you get |
@@ -100,6 +106,29 @@ active theme straight away:
 
 They're stored under `halcyon` in `~/.config/illogical-impulse/config.json`,
 which `halcyon refresh` re-reads.
+
+**Red Sun at `full`**: the red ring in the wallpaper is the revolver. It sits on the painted ring, lights up while it
+turns, and a real spin breaks the screen (`themes/shaders/red-sun.frag`): cracks run out from the ring, the screen
+splits into bevelled shards at different depths that sink towards it, the gaps glow red, and then it all heals. A
+slow nudge does nothing. The shader is only switched in for those few seconds (`halcyon collapse arm`, run by the
+revolver), so Red Sun costs no GPU the rest of the time, unlike the glass themes. At `light` or `off` the ring still
+turns, without the collapse. Applying Red Sun turns the revolver on (Settings > Revolver), and leaving it puts the setting
+back. Turn off "In Red Sun, sit on the wallpaper's red ring" there to keep the revolver where you placed it.
+
+![The Red Sun collapse: cracks run out from the ring, the shards sink towards it, then it heals](../assets/red-sun-collapse.jpg)
+
+![The Red Sun ring at rest and while it spins](../assets/red-sun-ring.jpg)
+
+### The revolver, the clock and the weather card
+
+The wallpaper widgets take the active theme's shapes. The revolver's drum is a Material cookie dial with no theme,
+the red ring in Red Sun, a cut-glass disc with gem chambers in the glass themes, a squircle with icon-like chambers in
+HyperNeo, and a gold rail with star chambers in Star Rail. The analogue clock's face and the weather card follow the
+same shapes. Drag the drum to spin it: a flick fires the game under the hammer, a nudge only settles it.
+
+![The revolver in each theme](../assets/revolver-styles.jpg)
+
+![The clock face and weather card in each theme](../assets/widget-plates.jpg)
 
 **Shattered Glass at `full`** runs a screen shader
 (`themes/shaders/shattered-glass.frag`) that treats the screen as a

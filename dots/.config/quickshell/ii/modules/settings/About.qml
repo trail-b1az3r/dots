@@ -152,7 +152,7 @@ ContentPage {
                   "- [hyprland-revolver](https://github.com/minerofthesoal/hyprland-revolver) by minerofthesoal (MIT): the revolver's look and the game scan.\n" +
                   "- [StarRailRes](https://github.com/Mar-7th/StarRailRes) (AGPL-3.0): the Star Rail character index and portraits, downloaded when you ask for them. Not bundled.\n" +
                   "- [Bibata cursor](https://github.com/ful1e5/Bibata_Cursor) by ful1e5 (GPL-3.0): the cursor that Halcyon's glass cursor replaces.\n" +
-                  "- The Wallpaper Heaven theme's wallpaper, a road at sunset under a red ring, is by Kenami, from Wallpaper Heaven.\n" +
+                  "- The Red Sun theme's wallpaper, a road at sunset under a red ring, is by Kenami, from Wallpaper Heaven.\n" +
                   "- [Quickshell](https://quickshell.org), [Hyprland](https://hyprland.org) and the Material Design symbols."
             onLinkActivated: (link) => {
                 Qt.openUrlExternally(link)

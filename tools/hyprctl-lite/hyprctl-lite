@@ -21,7 +21,7 @@ set -euo pipefail
 REPO_URL="https://github.com/trail-b1az3r/hyprland-plus"
 REF="halcyon-0.56.2"
 # Bumped with each change, so an old downloaded copy is easy to spot in its output.
-LITE_VERSION="2026-10-13"
+LITE_VERSION="2026-10-14"
 
 usage() {
     printf 'usage: sudo hyprctl-lite install full\n'
@@ -104,6 +104,27 @@ if [[ "$(command -v Hyprland)" != /usr/local/bin/Hyprland ]]; then
     echo "warning: PATH finds $(command -v Hyprland) first, not /usr/local/bin/Hyprland. Put /usr/local/bin before /usr/bin in PATH." >&2
 fi
 
+# pacman does not know about /usr/local. If nothing in pacman provides hyprland, install a small empty package that
+# does, so packages that depend on hyprland (illogical-impulse-hyprland, for one) do not pull the stock hyprland in
+# beside the fork. Remove it with: sudo pacman -R hyprland-plus-local
+if ! pacman -T hyprland >/dev/null 2>&1 && ! pacman -Q hyprland-plus-local >/dev/null 2>&1; then
+    step "Telling pacman that hyprland-plus provides hyprland"
+    version_line="$(/usr/local/bin/Hyprland --version 2>/dev/null || true)"
+    version_line="${version_line%%$'\n'*}"
+    base="$(sed -nE 's/.*\(Hyprland ([0-9.]+)\).*/\1/p' <<<"$version_line" || true)"
+    [[ -n "$base" ]] || base="$(sed -nE 's/^hyprland-plus ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' <<<"$version_line" || true)"
+    [[ -n "$base" ]] || base=0
+    pkgdir_tmp="$(as_user mktemp -d)"
+    printf 'pkgname=hyprland-plus-local\npkgver=%s\npkgrel=1\npkgdesc="Marks hyprland-plus in /usr/local as the installed Hyprland, for pacman"\narch=(any)\nlicense=(BSD-3-Clause)\nprovides=("hyprland=%s")\n' "$base" "$base" \
+        | as_user tee "$pkgdir_tmp/PKGBUILD" >/dev/null
+    if (cd "$pkgdir_tmp" && as_user makepkg -f --noconfirm >/dev/null 2>&1); then
+        pacman -U --noconfirm "$pkgdir_tmp"/hyprland-plus-local-*.pkg.tar.* >/dev/null || echo "warning: could not install hyprland-plus-local" >&2
+    else
+        echo "warning: could not build hyprland-plus-local; pacman may install the stock hyprland beside the fork" >&2
+    fi
+    rm -rf -- "$pkgdir_tmp"
+fi
+
 commit="$(as_user git -C "$repo" rev-parse --short HEAD)"
 as_user mkdir -p "$state"
 printf '%s\n' "$commit" | as_user tee "$state/hyprland-plus-commit" >/dev/null
@@ -112,4 +133,4 @@ trap - ERR
 step "Cleaning up hyprctl-lite"
 rm -f -- "$self"
 
-printf '\nInstalled hyprland-plus %s. Log out and back in, or restart Hyprland, to run it.\n' "$commit"
+printf '\nInstalled hyprland-plus %s.\nhyprland-plus is not a command: it is Hyprland itself. Log out and back in and start Hyprland as usual,\nthen run hyprctl version to check that it says hyprland-plus.\n' "$commit"

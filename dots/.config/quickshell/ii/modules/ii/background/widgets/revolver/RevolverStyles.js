@@ -1,0 +1,222 @@
+.pragma library
+
+// The revolver's look for each Halcyon theme, and the outlines it is drawn with.
+//
+// Everything is laid out on the drum's 230 × 230 stage, centre (115, 115). The outlines are SVG path strings for
+// QtQuick.Shapes' PathSvg, built here so the shapes are exact and the same everywhere they are used.
+
+var CENTRE = 115;
+
+// drum: the plate behind the chambers. chamber: each chamber's outline. orbit: chamber centres' distance from the
+// middle. names: whether the chambers carry the game's name (small chambers only show the live one, below).
+var STYLES = {
+    "default": { id: "default", drum: "cookie", chamber: "circle", chamberSize: 50, orbit: 80, names: true,
+                 hub: "dial", hammer: "block", glow: 0.35, waves: 8, statusLabel: true },
+    "red-sun": { id: "red-sun", drum: "ring", chamber: "bead", chamberSize: 22, orbit: 92, names: false,
+                 hub: "void", hammer: "notch", glow: 1.0, waves: 0, statusLabel: true },
+    "glass":   { id: "glass", drum: "facets", chamber: "gem", chamberSize: 50, orbit: 80, names: true,
+                 hub: "prism", hammer: "shard", glow: 0.5, waves: 0, statusLabel: true },
+    "hyperneo": { id: "hyperneo", drum: "squircle", chamber: "squircle", chamberSize: 48, orbit: 79, names: true,
+                  hub: "squircle", hammer: "pill", glow: 0.45, waves: 0, statusLabel: true },
+    "hsr":     { id: "hsr", drum: "rail", chamber: "star", chamberSize: 52, orbit: 80, names: true,
+                 hub: "sparkle", hammer: "sparkle", glow: 0.6, waves: 0, statusLabel: true }
+};
+
+function styleFor(themeId) {
+    switch (themeId) {
+    case "red-sun":
+    case "wallpaper-heaven-kenami":
+        return STYLES["red-sun"];
+    case "shattered-glass":
+    case "fractured-glass":
+        return STYLES["glass"];
+    case "hyperneo":
+        return STYLES["hyperneo"];
+    case "hsr":
+        return STYLES["hsr"];
+    default:
+        return STYLES["default"];
+    }
+}
+
+function f(n) {
+    return (Math.round(n * 100) / 100).toString();
+}
+
+function closedPoly(points) {
+    var d = "M " + f(points[0][0]) + " " + f(points[0][1]);
+    for (var i = 1; i < points.length; i++)
+        d += " L " + f(points[i][0]) + " " + f(points[i][1]);
+    return d + " Z";
+}
+
+// A circle as two arcs.
+function circle(cx, cy, r) {
+    return "M " + f(cx - r) + " " + f(cy) + " A " + f(r) + " " + f(r) + " 0 1 0 " + f(cx + r) + " " + f(cy)
+         + " A " + f(r) + " " + f(r) + " 0 1 0 " + f(cx - r) + " " + f(cy) + " Z";
+}
+
+// An arc from a0 to a1 degrees (0 = right, clockwise on screen), not closed: for strokes.
+function arc(cx, cy, r, a0, a1) {
+    var t0 = a0 * Math.PI / 180, t1 = a1 * Math.PI / 180;
+    var large = Math.abs(a1 - a0) > 180 ? 1 : 0;
+    var sweep = a1 > a0 ? 1 : 0;
+    return "M " + f(cx + r * Math.cos(t0)) + " " + f(cy + r * Math.sin(t0))
+         + " A " + f(r) + " " + f(r) + " 0 " + large + " " + sweep + " " + f(cx + r * Math.cos(t1)) + " " + f(cy + r * Math.sin(t1));
+}
+
+// A wavy disc, like Material's cookie shapes: r·(1 + depth·cos(waves·θ)).
+function cookie(cx, cy, r, waves, depth) {
+    var pts = [];
+    var n = 180;
+    for (var i = 0; i < n; i++) {
+        var t = i / n * Math.PI * 2;
+        var rr = r * (1 + depth * Math.cos(waves * t));
+        pts.push([cx + rr * Math.cos(t), cy + rr * Math.sin(t)]);
+    }
+    return closedPoly(pts);
+}
+
+// A superellipse |x|^k + |y|^k = r^k: Apple's squircle at k ≈ 4.5.
+function squircle(cx, cy, r, k) {
+    k = k || 4.5;
+    var pts = [];
+    var n = 120;
+    for (var i = 0; i < n; i++) {
+        var t = i / n * Math.PI * 2;
+        var c = Math.cos(t), s = Math.sin(t);
+        var x = r * Math.sign(c) * Math.pow(Math.abs(c), 2 / k);
+        var y = r * Math.sign(s) * Math.pow(Math.abs(s), 2 / k);
+        pts.push([cx + x, cy + y]);
+    }
+    return closedPoly(pts);
+}
+
+// A regular polygon with n sides, the first vertex at rot degrees.
+function polygon(cx, cy, r, n, rot) {
+    var pts = [];
+    for (var i = 0; i < n; i++) {
+        var t = (rot + i * 360 / n) * Math.PI / 180;
+        pts.push([cx + r * Math.cos(t), cy + r * Math.sin(t)]);
+    }
+    return closedPoly(pts);
+}
+
+// A star with n points.
+function star(cx, cy, rOut, rIn, n, rot) {
+    var pts = [];
+    for (var i = 0; i < n * 2; i++) {
+        var r = i % 2 === 0 ? rOut : rIn;
+        var t = (rot + i * 180 / n) * Math.PI / 180;
+        pts.push([cx + r * Math.cos(t), cy + r * Math.sin(t)]);
+    }
+    return closedPoly(pts);
+}
+
+// A four-pointed sparkle with curved sides, the Star Rail mark.
+function sparkle(cx, cy, r) {
+    var p = [];
+    var tips = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+    var d = "M " + f(cx) + " " + f(cy - r);
+    for (var i = 0; i < 4; i++) {
+        var a = tips[i], b = tips[(i + 1) % 4];
+        // Control point pulled in towards the middle makes the concave sides.
+        var mx = cx + (a[0] + b[0]) * r * 0.16, my = cy + (a[1] + b[1]) * r * 0.16;
+        d += " Q " + f(mx) + " " + f(my) + " " + f(cx + b[0] * r) + " " + f(cy + b[1] * r);
+    }
+    return d + " Z";
+}
+
+// One of the triangles a faceted (glass) disc is cut into: centre, then two rim vertices.
+function facet(cx, cy, r, n, i, rot) {
+    var t0 = (rot + i * 360 / n) * Math.PI / 180, t1 = (rot + (i + 1) * 360 / n) * Math.PI / 180;
+    return closedPoly([[cx, cy], [cx + r * Math.cos(t0), cy + r * Math.sin(t0)], [cx + r * Math.cos(t1), cy + r * Math.sin(t1)]]);
+}
+
+// A cut gem for a glass chamber: an octagon with its top face.
+function gem(cx, cy, r) {
+    return polygon(cx, cy, r, 8, 22.5);
+}
+
+function gemTable(cx, cy, r) {
+    return polygon(cx, cy, r * 0.56, 8, 22.5);
+}
+
+// The tick marks of a dial, as one path of short strokes.
+function ticks(cx, cy, r0, r1, n, rot) {
+    var d = "";
+    for (var i = 0; i < n; i++) {
+        var t = (rot + i * 360 / n) * Math.PI / 180;
+        d += "M " + f(cx + r0 * Math.cos(t)) + " " + f(cy + r0 * Math.sin(t)) + " L " + f(cx + r1 * Math.cos(t)) + " " + f(cy + r1 * Math.sin(t)) + " ";
+    }
+    return d;
+}
+
+// The two lit arcs of the Red Sun ring, broken where the painted ring is broken (measured from the wallpaper:
+// a wide gap at the upper right and a narrow one at the upper left).
+var RING_ARCS = [[-150, -42], [-8, 196]];
+
+// Where the ring is painted in the Red Sun wallpaper, as fractions of the image: centre, and radius of its width.
+var SUN_RING = { u: 0.4907, v: 0.4312, r: 0.0369 };
+
+// The stage radius the lit ring is drawn at, to scale the drum onto the painted ring.
+var SUN_RING_STAGE_RADIUS = 92;
+
+// Chamber position on the stage, for chamber i of n.
+function chamberPoint(i, n, orbit) {
+    var t = i * (2 * Math.PI / n);
+    return { x: CENTRE + Math.cos(t) * orbit, y: CENTRE + Math.sin(t) * orbit };
+}
+
+// ── Cards and plates for the other wallpaper widgets (ThemedPlate.qml) ──────────────────────────────────
+
+// A superellipse stretched to rx × ry.
+function squircleRect(cx, cy, rx, ry, k) {
+    k = k || 5;
+    var pts = [];
+    var n = 160;
+    for (var i = 0; i < n; i++) {
+        var t = i / n * Math.PI * 2;
+        var c = Math.cos(t), s = Math.sin(t);
+        pts.push([cx + rx * Math.sign(c) * Math.pow(Math.abs(c), 2 / k), cy + ry * Math.sign(s) * Math.pow(Math.abs(s), 2 / k)]);
+    }
+    return closedPoly(pts);
+}
+
+// A rectangle with its corners cut off at 45°, like a cut stone.
+function chamferRect(x, y, w, h, c) {
+    return closedPoly([[x + c, y], [x + w - c, y], [x + w, y + c], [x + w, y + h - c], [x + w - c, y + h],
+                       [x + c, y + h], [x, y + h - c], [x, y + c]]);
+}
+
+// A rectangle with round corners of radius r.
+function roundRect(x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    return "M " + f(x + r) + " " + f(y) + " L " + f(x + w - r) + " " + f(y)
+         + " A " + f(r) + " " + f(r) + " 0 0 1 " + f(x + w) + " " + f(y + r)
+         + " L " + f(x + w) + " " + f(y + h - r)
+         + " A " + f(r) + " " + f(r) + " 0 0 1 " + f(x + w - r) + " " + f(y + h)
+         + " L " + f(x + r) + " " + f(y + h)
+         + " A " + f(r) + " " + f(r) + " 0 0 1 " + f(x) + " " + f(y + h - r)
+         + " L " + f(x) + " " + f(y + r)
+         + " A " + f(r) + " " + f(r) + " 0 0 1 " + f(x + r) + " " + f(y) + " Z";
+}
+
+// The outline of a plate of a given kind ("disc" or "card") in a style, inside w × h with an inset.
+function plateOutline(style, kind, w, h, inset) {
+    var cx = w / 2, cy = h / 2, rx = w / 2 - inset, ry = h / 2 - inset;
+    if (kind === "disc") {
+        switch (style.drum) {
+        case "facets": return polygon(cx, cy, Math.min(rx, ry), 8, 22.5);
+        case "squircle": return squircle(cx, cy, Math.min(rx, ry), 4.6);
+        case "cookie": return cookie(cx, cy, Math.min(rx, ry) * 0.95, style.waves || 8, 0.04);
+        default: return circle(cx, cy, Math.min(rx, ry));
+        }
+    }
+    switch (style.drum) {
+    case "facets": return chamferRect(inset, inset, w - 2 * inset, h - 2 * inset, Math.min(w, h) * 0.18);
+    case "squircle": return squircleRect(cx, cy, rx, ry, 5);
+    case "rail": return roundRect(inset, inset, w - 2 * inset, h - 2 * inset, 10);
+    default: return roundRect(inset, inset, w - 2 * inset, h - 2 * inset, Math.min(w, h) / 2);
+    }
+}

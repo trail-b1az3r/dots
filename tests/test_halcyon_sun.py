@@ -107,7 +107,7 @@ class EntryDueTests(unittest.TestCase):
 
     def test_sunset_entry_fires_at_sunset_only(self):
         when = sun.resolve("sunset", self.at("12:00"), LONDON)
-        entry = {"theme": "wallpaper-heaven-kenami", "time": "sunset"}
+        entry = {"theme": "red-sun", "time": "sunset"}
         self.assertTrue(theme.entry_due(entry, self.at(when), None, LONDON))
         minute_later = (datetime.strptime(when, "%H:%M") + timedelta(minutes=1)).strftime("%H:%M")
         self.assertFalse(theme.entry_due(entry, self.at(minute_later), None, LONDON))
@@ -125,6 +125,43 @@ class EntryDueTests(unittest.TestCase):
         self.assertTrue(theme.entry_due({"theme": "x", "time": "19:00"}, self.at("19:00"), None))
         self.assertFalse(theme.entry_due({"theme": "x", "time": "19:00"}, self.at("19:01"), None))
         self.assertFalse(theme.entry_due({"theme": "x", "time": "nonsense"}, self.at("19:00"), None))
+
+
+class DayTests(unittest.TestCase):
+    NOON = datetime(2026, 6, 21, 12, 0, tzinfo=BST)   # a Sunday
+
+    def test_progress(self):
+        mid = sun.day_progress(self.NOON, LONDON)
+        self.assertTrue(0.3 < mid < 0.6, mid)
+        self.assertLess(sun.day_progress(datetime(2026, 6, 21, 3, 0, tzinfo=BST), LONDON), 0)
+        self.assertGreater(sun.day_progress(datetime(2026, 6, 21, 23, 0, tzinfo=BST), LONDON), 1)
+        self.assertIsNone(sun.day_progress(self.NOON, None))
+        self.assertIsNone(sun.day_progress(self.NOON, TROMSO))
+
+    def test_next_due_picks_the_earliest(self):
+        entries = [{"theme": "hsr", "time": "22:30"}, {"theme": "red-sun", "time": "sunset-30"}, {"theme": "x", "weather": "rain"}]
+        nxt = sun.next_due(entries, self.NOON, LONDON, {"red-sun": "Red Sun"})
+        self.assertEqual(nxt["theme"], "red-sun")
+        self.assertEqual(nxt["name"], "Red Sun")
+        self.assertEqual(nxt["day"], "today")
+        self.assertIn(nxt["at"], {"20:49", "20:50", "20:51", "20:52", "20:53"})
+        self.assertTrue(500 < nxt["minutes"] < 540, nxt["minutes"])
+
+    def test_next_due_rolls_to_tomorrow_and_respects_days(self):
+        late = datetime(2026, 6, 21, 23, 0, tzinfo=BST)
+        nxt = sun.next_due([{"theme": "hsr", "time": "07:00"}], late, None)
+        self.assertEqual((nxt["day"], nxt["at"], nxt["minutes"]), ("tomorrow", "07:00", 480))
+        # Monday only: from Sunday noon, tomorrow
+        self.assertEqual(sun.next_due([{"theme": "hsr", "time": "13:00", "days": [1]}], self.NOON, None)["day"], "tomorrow")
+        # Tuesday only: two days away, named by its day
+        self.assertEqual(sun.next_due([{"theme": "hsr", "time": "13:00", "days": [2]}], self.NOON, None)["day"], "Tue")
+        # Wednesday only: further than the two days looked at
+        self.assertIsNone(sun.next_due([{"theme": "hsr", "time": "13:00", "days": [3]}], self.NOON, None))
+
+    def test_next_due_without_a_location_skips_sun_times(self):
+        self.assertIsNone(sun.next_due([{"theme": "red-sun", "time": "sunset"}], self.NOON, None))
+        nxt = sun.next_due([{"theme": "a", "time": "sunset", "weather": "clear"}], self.NOON, LONDON)
+        self.assertEqual(nxt["weather"], "clear")
 
 
 class CommandTests(unittest.TestCase):
@@ -162,9 +199,23 @@ class CommandTests(unittest.TestCase):
             home = Path(d)
             cfg = home / ".config/illogical-impulse/config.json"
             cfg.parent.mkdir(parents=True)
-            cfg.write_text(json.dumps({"halcyon": {"autoApply": [{"theme": "wallpaper-heaven-kenami", "time": "sunset-30"}]}}))
+            cfg.write_text(json.dumps({"halcyon": {"autoApply": [{"theme": "red-sun", "time": "sunset-30"}]}}))
             out = self.run_tool(home, "list").stdout
             self.assertIn("30 min before sunset (no location yet)", out)
+
+    def test_day_json(self):
+        with tempfile.TemporaryDirectory() as d:
+            home = Path(d)
+            state = home / ".local/state/halcyon"
+            state.mkdir(parents=True)
+            (state / "weather.json").write_text(json.dumps({"code": "113", "time": 0, "lat": 51.5, "lon": -0.13}))
+            cfg = home / ".config/illogical-impulse/config.json"
+            cfg.parent.mkdir(parents=True)
+            cfg.write_text(json.dumps({"halcyon": {"autoApply": [{"theme": "red-sun", "time": "sunset"}]}}))
+            info = json.loads(self.run_tool(home, "day", "--json").stdout)
+            self.assertEqual(info["source"], "weather")
+            self.assertIsNotNone(info["sunset"])
+            self.assertEqual(info["next"]["name"], "Red Sun")
 
 
 if __name__ == "__main__":

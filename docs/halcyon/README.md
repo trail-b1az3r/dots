@@ -25,7 +25,7 @@ On top of that, Halcyon adds:
 | **Glass panels** | Shell transparency is on by default. It can still be turned off in Settings. |
 | **Softer layout** | Wider gaps, rounder corners, deeper blur (popups too), a softer shadow. |
 | **Wallpapers** | The hyperNeo fire wallpaper is the default. It and the three Halcyon wallpapers are copied into `~/Pictures/Wallpapers`, where the wallpaper picker looks. |
-| **Themes** | Five hand-made themes: HyperNeo, Star Rail, Shattered Glass, Fractured Glass and Wallpaper Heaven. [More below.](themes.md) |
+| **Themes** | Five hand-made themes: HyperNeo, Star Rail, Shattered Glass, Fractured Glass and Red Sun. [More below.](themes.md) |
 | **Voice assistant** | Press `Super + Shift + Space` and speak. It answers aloud and can run the desktop. [More below.](voice-assistant.md) |
 | **Keybinds** | Extra shortcuts, listed below. They only use key combinations upstream leaves free. |
 | **hyprland-plus** | The compositor is [hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus): Hyprland 0.56.2 with mini windows, superposition windows, plustile windows and a drag fix. [More below.](hyprland-plus.md) |
@@ -37,7 +37,8 @@ On top of that, Halcyon adds:
 | [Install](install.md) | Installing Halcyon, the walkthrough, options and uninstall |
 | [hyprland-plus](hyprland-plus.md) | The compositor fork, dot sets, saves, and hyprctl-lite |
 | [Themes](themes.md) | The five themes, effects, cursor, banners, and making your own |
-| [Voice assistant](voice-assistant.md) | Setup, the Claude plan, what it can do |
+| [Voice assistant](voice-assistant.md) | Setup, the Claude plan, LM Studio, HyperNix and T1, what it can do |
+| [Browsers and USB](browsers.md) | Firefox and Chromium themes that follow Halcyon, and USB devices in the browser |
 | [Keybinds](keybinds.md) | The shortcuts Halcyon adds, and Hypr mode |
 | [Architecture](architecture.md) | How the config is laid out, and taking updates from upstream |
 | [Development](development.md) | Validation, releases |

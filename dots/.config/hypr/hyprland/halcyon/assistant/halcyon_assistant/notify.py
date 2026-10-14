@@ -34,12 +34,13 @@ def reset():
 
 def chime(kind="start"):
     """A short soft tone: rising when listening starts, falling when it stops."""
-    player = shutil.which("pw-play") or shutil.which("aplay")
-    if not player:
+    from . import pcm
+    rate = 22050
+    command = pcm.player(rate)
+    if not command:
         return
     import array
     import math
-    rate = 22050
     notes = (660, 880) if kind == "start" else (880, 587)
     samples = array.array("h")
     for freq in notes:
@@ -47,8 +48,6 @@ def chime(kind="start"):
         for i in range(n):
             envelope = math.sin(math.pi * i / n)
             samples.append(int(5000 * envelope * math.sin(2 * math.pi * freq * i / rate)))
-    command = ["pw-play", "--rate", str(rate), "--format", "s16", "--channels", "1", "-"] if player.endswith("pw-play") \
-        else ["aplay", "-q", "-r", str(rate), "-f", "S16_LE", "-c", "1", "-t", "raw"]
     try:
         subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL).communicate(samples.tobytes(), timeout=3)
     except (OSError, subprocess.SubprocessError):

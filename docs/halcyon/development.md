@@ -27,14 +27,17 @@ fire at once.
 Two kinds of release are on the repository's Releases page. GitHub Actions builds both.
 
 - **Stable** (`.github/workflows/stable.yml`): a normal release, numbered by the `VERSION` file. It is published
-  when a `v` tag matching `VERSION` is pushed. You can also run it by hand from the Actions tab, with the tag.
+  when a `v` tag matching `VERSION` is pushed, or when you run it by hand: **Actions > Stable release > Run
+  workflow**, on `main`. Leave the version empty to release what `VERSION` says; the `v` tag is made for you if it
+  isn't there yet.
 - **Nightly** (`.github/workflows/nightly.yml`): a prerelease built from `main` each night. It replaces the previous
   nightly. If `main` has not changed since the last one, the run stops without building.
 
 Each archive is `halcyon-<version>.tar.gz` with a `.sha256` file next to it. Check a download with
 `sha256sum -c halcyon-<version>.tar.gz.sha256`.
 
-To make a stable release:
+To make a stable release, change `VERSION`, push it, and run **Stable release** from the Actions tab. Or tag it
+yourself:
 
 ```sh
 echo 1.0.1 > VERSION
@@ -44,3 +47,19 @@ git push origin main v1.0.1
 ```
 
 `scripts/release.sh <label> <outdir>` builds the same archive on your machine, if you want to look at it first.
+
+## The docs site
+
+The pages in `docs/` are also published as a website, <https://trail-b1az3r.github.io/dots/>, built by
+`docs/site/build.py` (Python and the `markdown` package). To look at it locally:
+
+```sh
+pip install markdown pillow
+python3 docs/site/build.py --out _site
+xdg-open _site/index.html
+```
+
+`.github/workflows/pages.yml` builds it on every push that touches the docs and checks every link, and publishes it
+from the default branch. GitHub Pages has to be switched to "GitHub Actions" once, in the repository's Settings >
+Pages. `tests/test_docs_site.py` is the link check; the full test suite runs in CI with `python3 -m unittest discover
+-s tests`.
