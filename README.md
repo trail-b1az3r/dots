@@ -67,6 +67,24 @@ Useful options (`./setup install -h` lists all of them):
 When logging in from a display manager, choose **Hyprland**, not
 *Hyprland (uwsm)*.
 
+### Updates
+
+Halcyon checks the repository for new commits every hour, and a couple of minutes after you log in. When there are
+some, you get a notification with an **Update now** button, and the bar shows a download icon with the number
+waiting. Click it, or the sidebar's **Update Halcyon** button, to update: only the files that changed are copied,
+and only what they change is reloaded. Files it replaces are backed up under `~/.local/state/halcyon/backups`.
+
+It follows `main`, whatever your clone is on: another branch, a detached checkout, or a release archive (which
+becomes a git clone on its first update). Edits you made inside the clone are put aside and back. If an update
+fails, the notification and the bar say why.
+
+```sh
+~/.config/hypr/hyprland/halcyon/update status   # what is installed, what is waiting, the last problem
+~/.config/hypr/hyprland/halcyon/update apply    # update now
+halcyon doctor                                  # updates, the revolver, the browser themes and the Wi-Fi, in one report
+halcyon doctor --fix                            # and fix what can be fixed from there
+```
+
 ### Automatic install, step by step
 
 `./setup walkthrough` is the install with the steps shown as it goes. It lists the eight steps, asks once
@@ -570,10 +588,30 @@ time the browser starts. Google Chrome needs the theme folder loaded once: see [
 
 ![Firefox in Red Sun, Star Rail and Fractured Glass](docs/assets/firefox-themes.jpg)
 
+Firefox reads its theme only when it starts, so restart it after the first one. `halcyon browsers` says when a
+running Firefox still shows the old colours.
+
 ```sh
 halcyon browsers                  # what is themed, and where
 halcyon usb                       # why a browser can't find a USB device, and the fix
 ```
+
+## Wi-Fi at login
+
+At every Hyprland login, Halcyon gets the Wi-Fi up. It waits for the card (a Surface's Marvell card is slow to
+start), unblocks the radio, takes the card back if NetworkManager left it **unmanaged**, and connects. If it can't,
+a notification says why. Its log is `~/.local/state/halcyon/wifi.log`.
+
+```sh
+halcyon wifi          # what NetworkManager sees, and what stands in the way
+halcyon wifi fix      # the lasting fixes, as root (asks for sudo)
+```
+
+`halcyon wifi fix` does three things, and only what your machine needs. It keeps Wi-Fi cards managed by
+NetworkManager, whatever marked them unmanaged. It turns `iwd` off when it runs beside NetworkManager, unless
+NetworkManager is set to use it. And on Surface (`mwifiex`) cards it turns off random MAC addresses while scanning,
+and power saving, which make those cards fail to connect. It writes
+`/etc/NetworkManager/conf.d/90-halcyon-wifi.conf`; delete that file and restart NetworkManager to undo it.
 
 ## Where new windows open
 

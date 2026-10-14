@@ -23,7 +23,7 @@ _loader.exec_module(theme)
 # Run by other scripts, not typed.
 INTERNAL = {"detach"}
 # Handled in main() before the table: they hand over to another program.
-HANDED_OVER = {"assistant", "config-check", "plus", "crashes", "text", "usb", "browsers", "server"}
+HANDED_OVER = {"assistant", "config-check", "plus", "crashes", "text", "usb", "browsers", "server", "wifi"}
 
 
 class CoverageTests(unittest.TestCase):

@@ -308,7 +308,34 @@ def firefox_profiles(roots=None) -> list[tuple[str, Path]]:
             if path.is_dir() and path.resolve() not in seen:
                 seen.add(path.resolve())
                 found.append((browser, path))
+        # Profiles profiles.ini doesn't list (Firefox's newer profile manager keeps its own list): any folder here, or
+        # under Profiles/, that a browser has used, which it shows by writing prefs.js.
+        for parent in (root, root / "Profiles"):
+            try:
+                children = sorted(parent.iterdir())
+            except OSError:
+                continue
+            for path in children:
+                if path.is_dir() and (path / "prefs.js").is_file() and path.resolve() not in seen:
+                    seen.add(path.resolve())
+                    found.append((browser, path))
     return found
+
+
+def running_since_before(profile: Path) -> bool:
+    """Whether a browser using this profile was started before its Halcyon theme was last written, so it still shows
+    the old colours (Firefox reads userChrome.css only when it starts). Firefox's lock file is a link it makes when it
+    starts and removes when it quits."""
+    theme = profile / "chrome/halcyon.css"
+    lock = profile / "lock"
+    try:
+        started = os.lstat(lock).st_mtime
+    except OSError:
+        return False
+    try:
+        return started < theme.stat().st_mtime
+    except OSError:
+        return False
 
 
 def _strip_block(text: str, begin: str, end: str) -> str:
@@ -585,7 +612,8 @@ def status() -> dict:
     return {
         "settings": settings(),
         "colors": str(COLORS),
-        "firefox": [{"browser": b, "profile": str(p), "themed": (p / "chrome/halcyon.css").is_file()}
+        "firefox": [{"browser": b, "profile": str(p), "themed": (p / "chrome/halcyon.css").is_file(),
+                     "restart_needed": running_since_before(p)}
                     for b, p in profiles],
         "chromium_theme": str(CHROMIUM_THEME) if (CHROMIUM_THEME / "manifest.json").is_file() else "",
         "chromium": [{"browser": n, "flags": str(f),
@@ -627,7 +655,10 @@ def main(argv: list[str]) -> int:
         print(json.dumps(info, indent=2))
         return 0
     for item in info["firefox"]:
-        print(f"{item['browser']:<10} {'themed' if item['themed'] else 'not themed'}  {item['profile']}")
+        state = "themed" if item["themed"] else "not themed"
+        if item["restart_needed"]:
+            state += ", but it has been running since before: restart it to see the colours"
+        print(f"{item['browser']:<10} {state}  {item['profile']}")
     if not info["firefox"]:
         print("Firefox    no profiles found")
     print(f"Chromium   theme {'at ' + info['chromium_theme'] if info['chromium_theme'] else 'not written yet'}")

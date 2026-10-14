@@ -3,6 +3,7 @@ and flags files, and taken out again without touching anything else. Run: python
 
 import importlib.util
 import json
+import os
 import re
 import tempfile
 import unittest
@@ -84,6 +85,30 @@ class FirefoxTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, Sandbox(tmp) as box:
             found = browsers.firefox_profiles()
         self.assertEqual([(b, p.name) for b, p in found], [("Firefox", "abc.default-release"), ("LibreWolf", "xyz.default")])
+
+    def test_finds_a_profile_profiles_ini_does_not_list(self):
+        # Firefox's newer profile manager keeps its own list; a used profile has prefs.js.
+        with tempfile.TemporaryDirectory() as tmp, Sandbox(tmp) as box:
+            extra = box.ff / "Profiles/qrs.work"
+            extra.mkdir(parents=True)
+            (extra / "prefs.js").write_text("// prefs\n")
+            (box.ff / "unused-folder").mkdir()
+            found = browsers.firefox_profiles()
+        self.assertIn(("Firefox", "qrs.work"), [(b, p.name) for b, p in found])
+        self.assertNotIn("unused-folder", [p.name for _b, p in found])
+
+    def test_says_when_firefox_needs_a_restart_to_show_it(self):
+        with tempfile.TemporaryDirectory() as tmp, Sandbox(tmp) as box:
+            profile = box.ff / "abc.default-release"
+            browsers.install_firefox(profile, browsers.load_colors())
+            os.symlink("127.0.0.1:+1234", profile / "lock")       # Firefox's own lock, made when it starts
+            os.utime(profile / "lock", (1000, 1000), follow_symlinks=False)
+            self.assertTrue(browsers.running_since_before(profile))
+            os.utime(profile / "lock", None, follow_symlinks=False)
+            os.utime(profile / "chrome/halcyon.css", (1000, 1000))
+            self.assertFalse(browsers.running_since_before(profile))
+            os.unlink(profile / "lock")
+            self.assertFalse(browsers.running_since_before(profile), "not running")
 
     def test_install_keeps_the_users_own_css_and_prefs(self):
         with tempfile.TemporaryDirectory() as tmp, Sandbox(tmp) as box:
