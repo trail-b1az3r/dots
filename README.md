@@ -28,7 +28,7 @@ On top of that, Halcyon adds:
 | **Glass panels** | Shell transparency is on by default. It can still be turned off in Settings. |
 | **Softer layout** | Wider gaps, rounder corners, deeper blur (popups too), a softer shadow. |
 | **Wallpapers** | The hyperNeo fire wallpaper is the default. It and the three Halcyon wallpapers are copied into `~/Pictures/Wallpapers`, where the wallpaper picker looks. |
-| **Themes** | Five hand-made themes: HyperNeo, Star Rail, Shattered Glass, Fractured Glass and Wallpaper Heaven. [More below.](#themes) |
+| **Themes** | Five hand-made themes: HyperNeo, Star Rail, Shattered Glass, Fractured Glass and Red Sun. [More below.](#themes) |
 | **Voice assistant** | Press `Super + Shift + Space` and speak. It answers aloud and can run the desktop. [More below.](#voice-assistant) |
 | **Keybinds** | Extra shortcuts, listed below. They only use key combinations upstream leaves free. |
 | **hyprland-plus** | The compositor is [hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus): Hyprland 0.56.2 with mini windows, superposition windows, plustile windows and a drag fix. [More below.](#hyprland-plus) |
@@ -88,9 +88,23 @@ Halcyon additions. Its own README describes each one. The desktop uses:
 
 The settings are in `~/.config/hypr/hyprland/halcyon/plus.lua`. They only take effect with the fork.
 
-On Arch, `./setup install` checks for the hyprland-plus package first. If it is installed (from the AUR,
-see `packaging/aur` in the fork), nothing is built. Otherwise the installer builds the fork on a text console
-of its own and installs it to `/usr/local`, ahead of the packaged Hyprland in PATH. The packaged `hyprland` stays installed, because other packages depend on it. Set `HALCYON_SKIP_HYPRLAND_PLUS=1` to skip that.
+hyprland-plus is not a command. It is Hyprland itself, built with the Halcyon additions, and it takes the place of
+the `Hyprland` program. After installing it, log out and back in and start Hyprland as you always do. To check, run
+`halcyon hyprland`, which says whether you run stock Hyprland, hyprland-plus, or a hyprland-plus built before Plus
+Tiles (that one still has mini windows and the superposition strip; `sudo hyprctl-lite install full` updates it).
+`hyprctl version` says `hyprland-plus` too. (`hyprctl dots plus` below uses `plus` as the name of a dot set, not a
+command.)
+
+On Arch, `./setup install` looks for hyprland-plus however it was installed: the AUR package (see `packaging/aur`
+in the fork), or a build in `/usr/local` from hyprctl-lite or an earlier install. A build that is already up to date
+is not built again; one behind its branch is updated. Otherwise the installer builds the fork on a text console of its
+own and installs it to `/usr/local`, ahead of any packaged Hyprland in PATH. Set `HALCYON_SKIP_HYPRLAND_PLUS=1` to
+skip that, or `HALCYON_REBUILD_HYPRLAND_PLUS=1` to rebuild anyway.
+
+You do not need the stock `hyprland` package. pacman does not know about `/usr/local`, so when nothing in pacman
+provides `hyprland`, the installer (and hyprctl-lite) adds a small empty package, `hyprland-plus-local`, that does.
+Packages that depend on Hyprland, like `illogical-impulse-hyprland`, are then satisfied by the fork, and the stock
+package is never pulled in beside it. `sudo pacman -R hyprland-plus-local` takes it away again.
 
 Once hyprland-plus is running, `hyprctl dots plus` shows the dots checkout the installer recorded.
 `hyprctl dots plus --install` runs `./setup install --force` in that checkout, without asking questions and without
@@ -193,7 +207,7 @@ style, animations, wallpaper and, for some, shell layout and effects:
 | **Star Rail** | `hsr` | Astral gold and lavender on deep-space navy, over a golden rail curving through a nebula. Can show the current banner character. |
 | **Shattered Glass** | `shattered-glass` | Liquid glass: a glass lens follows the pointer, clicks crack the screen, windows turn to frosted glass. Ice blue and prism violet, sharp corners. |
 | **Fractured Glass** | `fractured-glass` | Refraction only, like Apple's Liquid Glass: a squircle glass lens follows the pointer and bends what's behind its rim. No ripples or cracks. Soft blue, lavender and pink over calm fragments of thick glass. |
-| **Wallpaper Heaven** | `wallpaper-heaven-kenami` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. Wallpaper by Kenami, from Wallpaper Heaven. |
+| **Red Sun** | `red-sun` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. Wallpaper by Kenami, from Wallpaper Heaven. |
 
 Pick one in **Settings > Halcyon**, with **`Ctrl + Super + Shift + T`**,
 or from a terminal:
@@ -583,6 +597,26 @@ It reports Hyprland's own config errors, Plus options without hyprland-plus,
 Lua that does not parse, malformed chords, two binds on one chord, repeated
 lines in your custom files, missing plugins, Plus settings that contradict each
 other, and wrong file permissions. It never rewrites your configuration.
+
+### Text from the screen
+
+```sh
+halcyon text                  # pick a region, copy the text in it (Super + Shift + X does the same)
+halcyon text --window         # the focused window; --screen for the whole monitor
+halcyon text --clipboard      # a screenshot you copied
+halcyon text scan.pdf --print # an image or PDF, scanned or not; --join rejoins wrapped lines
+```
+
+It uses Tesseract with every language you have installed (`--lang eng+deu` to choose), copies the text and shows the
+start of it in a notification.
+
+### When apps close by themselves
+
+`halcyon crashes` lists what closed recently and why: crashes systemd recorded, programs the kernel killed for lack of
+memory, and restarts of the shell. Until this version, apps opened from the shell (launcher, dock, search) shared the
+shell service's cgroup, so a shell restart, an update, or one app running out of memory closed all of them at once,
+which looked like Vesktop and media players crashing after a while. The shell's service now stops only the shell.
+Update, then log out and back in once for it to take effect.
 
 ### Hypr mode: a second set of keybinds
 

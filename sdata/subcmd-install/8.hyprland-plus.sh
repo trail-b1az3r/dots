@@ -24,17 +24,31 @@ function setup_hyprland_plus(){
     return 0
   fi
 
-  # Installed from the AUR (package hyprland-plus): nothing to build here.
+  source "$REPO_ROOT/sdata/lib/hyprland-plus-detect.sh"
+  local job="$REPO_ROOT/sdata/lib/hyprland-plus-build.sh"
+  local console="${HALCYON_HYPRLAND_CONSOLE:-3}"
+  local repo="${HALCYON_HYPRLAND_REPO:-$HOME/hyprland-plus}"
+  local ref="${HALCYON_HYPRLAND_REF:-halcyon-0.56.2}"
+  local url="https://github.com/trail-b1az3r/hyprland-plus"
+  local state="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon"
+
+  # Installed from the AUR (package hyprland-plus): pacman updates it, nothing to build here.
   if pacman -Q hyprland-plus >/dev/null 2>&1; then
     printf "${STY_BLUE}hyprland-plus $(pacman -Q hyprland-plus | cut -d' ' -f2) is already installed (from the AUR), so it is not built again.${STY_RST}\n"
     return 0
   fi
 
-  local job="$REPO_ROOT/sdata/lib/hyprland-plus-build.sh"
-  local console="${HALCYON_HYPRLAND_CONSOLE:-3}"
-  local repo="${HALCYON_HYPRLAND_REPO:-$HOME/hyprland-plus}"
-  local ref="${HALCYON_HYPRLAND_REF:-halcyon-0.56.2}"
-  local state="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon"
+  # Installed some other way (hyprctl-lite, an earlier run of this installer, by hand). Rebuilt only when the
+  # branch has moved on, or when HALCYON_REBUILD_HYPRLAND_PLUS=1 asks for it.
+  local found
+  if found="$(hyprland_plus_installed)"; then
+    hyprland_plus_register_with_pacman || true
+    if [[ "${HALCYON_REBUILD_HYPRLAND_PLUS:-0}" != 1 ]] && hyprland_plus_up_to_date "$url" "$ref"; then
+      printf "${STY_BLUE}hyprland-plus is already installed and up to date: ${found}. Not built again.${STY_RST}\n"
+      return 0
+    fi
+    printf "${STY_BLUE}hyprland-plus is installed (${found}), but ${ref} has newer commits, so it is updated now.${STY_RST}\n"
+  fi
 
   if ! command -v openvt >/dev/null 2>&1; then
     printf "${STY_YELLOW}openvt is not installed (Arch: the kbd package), so hyprland-plus will build in this terminal.${STY_RST}\n"
@@ -71,7 +85,7 @@ function setup_hyprland_plus(){
     return 1
   fi
 
-  printf "${STY_BLUE}Log out and back in, or restart Hyprland, to run hyprland-plus.${STY_RST}\n"
+  printf "${STY_BLUE}Log out and back in to start it. hyprland-plus is not a command: it is Hyprland itself, so you start Hyprland as usual. Run hyprctl version to check.${STY_RST}\n"
 }
 
 setup_hyprland_plus

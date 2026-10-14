@@ -6,12 +6,14 @@
 -- The drag options (binds:drag_keep_grab_point and binds:drag_guide) are on by default in the fork, so they
 -- are not set here. Set them to false in ~/.config/hypr/custom if you want upstream's drag behaviour.
 
-local PLUS_AVAILABLE = hl.dsp and hl.dsp.plus ~= nil
+local caps = require("hyprland.halcyon.compositor")
 
-if PLUS_AVAILABLE then
+if caps.strips then
     -- Superposition strip at the right edge, 12% of the screen wide. It overlays the tiles (reserve = false).
     hl.config({ superposition = { edge = 1, size = 0.12, reserve = false } })
+end
 
+if caps.tiles then
     -- Plus Tiles. These are the defaults, written out so they are easy to find and change in
     -- ~/.config/hypr/custom (anything set there wins).
     hl.config({
@@ -46,4 +48,4 @@ local function loadAppRules()
     return require("hyprland.halcyon.app_rules")
 end
 
-require("hyprland.halcyon.rules").apply(loadAppRules(), PLUS_AVAILABLE)
+require("hyprland.halcyon.rules").apply(loadAppRules(), caps)

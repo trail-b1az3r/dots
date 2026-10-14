@@ -96,6 +96,14 @@ metapkgs+=(./sdata/dist-arch/illogical-impulse-microtex-git)
 metapkgs+=(./sdata/dist-arch/illogical-impulse-quickshell-git)
 metapkgs+=(./sdata/dist-arch/illogical-impulse-bibata-modern-classic-bin)
 
+# A hyprland-plus installed outside pacman (hyprctl-lite, or this installer's build in /usr/local) is the Hyprland
+# here. Register it with pacman first, so illogical-impulse-hyprland does not pull in the stock hyprland package.
+source "${REPO_ROOT}/sdata/lib/hyprland-plus-detect.sh"
+if hyprland_plus_found="$(hyprland_plus_installed)"; then
+  printf "${STY_CYAN}[$0]: Found ${hyprland_plus_found}. It is used as Hyprland; the stock hyprland package is not needed.${STY_RST}\n"
+  hyprland_plus_register_with_pacman || true
+fi
+
 for i in "${metapkgs[@]}"; do
   metainstallflags="--needed"
   $ask && showfun install-local-pkgbuild || metainstallflags="$metainstallflags --noconfirm"

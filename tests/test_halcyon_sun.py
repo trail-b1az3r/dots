@@ -107,7 +107,7 @@ class EntryDueTests(unittest.TestCase):
 
     def test_sunset_entry_fires_at_sunset_only(self):
         when = sun.resolve("sunset", self.at("12:00"), LONDON)
-        entry = {"theme": "wallpaper-heaven-kenami", "time": "sunset"}
+        entry = {"theme": "red-sun", "time": "sunset"}
         self.assertTrue(theme.entry_due(entry, self.at(when), None, LONDON))
         minute_later = (datetime.strptime(when, "%H:%M") + timedelta(minutes=1)).strftime("%H:%M")
         self.assertFalse(theme.entry_due(entry, self.at(minute_later), None, LONDON))
@@ -162,7 +162,7 @@ class CommandTests(unittest.TestCase):
             home = Path(d)
             cfg = home / ".config/illogical-impulse/config.json"
             cfg.parent.mkdir(parents=True)
-            cfg.write_text(json.dumps({"halcyon": {"autoApply": [{"theme": "wallpaper-heaven-kenami", "time": "sunset-30"}]}}))
+            cfg.write_text(json.dumps({"halcyon": {"autoApply": [{"theme": "red-sun", "time": "sunset-30"}]}}))
             out = self.run_tool(home, "list").stdout
             self.assertIn("30 min before sunset (no location yet)", out)
 

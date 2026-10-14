@@ -132,12 +132,10 @@ def hyprland_running() -> bool:
     return bool(shutil.which("hyprctl") and os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"))
 
 
-def plus_running() -> bool:
-    """Whether the running compositor is hyprland-plus: it has the plus:enabled option."""
-    if not hyprland_running():
-        return False
-    result = subprocess.run(["hyprctl", "getoption", "plus:enabled", "-j"], capture_output=True, text=True, check=False)
-    return result.returncode == 0 and "no such option" not in (result.stdout + result.stderr).lower()
+def plus_running() -> dict:
+    """What the running compositor can do: see halcyon_compositor.py. An older hyprland-plus is still hyprland-plus."""
+    import halcyon_compositor
+    return halcyon_compositor.detect()
 
 
 def custom_copy(which: str) -> Path:
@@ -171,9 +169,13 @@ def main(argv: list[str]) -> int:
         print(f"wrote {PLUS_LUA}")
         return 0
     if argv == ["status"]:
+        info = plus_running()
         print(json.dumps({
             "running": hyprland_running(),
-            "plus": plus_running(),
+            "plus": bool(info.get("plus")),
+            # False: a hyprland-plus from before Plus Tiles, which needs updating for these settings
+            "tiles": bool(info.get("tiles")) if info.get("running") else None,
+            "version": info.get("version", ""),
             "file": str(PLUS_LUA),
             "applied": PLUS_LUA.exists(),
             "customRules": (CUSTOM / EDITABLE["rules"]).exists(),

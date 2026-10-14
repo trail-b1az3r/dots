@@ -1,52 +1,8 @@
 #!/usr/bin/env python3
 """Halcyon themes: hand-made palettes on top of illogical-impulse's colours.
 
-    halcyon-theme list                  the themes, and which one is active
-    halcyon-theme apply NAME            switch to a theme
-    halcyon-theme off                   back to colours from the wallpaper
-    halcyon-theme menu                  pick a theme or effects level with fuzzel
-
-    halcyon-theme effects               show the effects level
-    halcyon-theme effects LEVEL         full | light | off | default
-    halcyon-theme refresh               re-apply Settings > Halcyon to the
-                                        active theme (the Settings page runs
-                                        this for you)
-    halcyon-theme settings              open the Settings app
-    halcyon-theme starrail next         another Star Rail character on the banner
-    halcyon-theme starrail refresh      download the public character index now
-    halcyon-theme starrail status       what is cached and what is showing
-    halcyon-theme revolver scan         the revolver's games and their weights
-    halcyon-theme revolver fire SOURCE ID   start one of them
-    halcyon-theme fetch [--spin [S]]    a system summary beside the mark; --spin
-                                        turns it for S seconds (default 3)
-    halcyon-theme fetch --json          the same fields as JSON
-    halcyon-theme fetch --fastfetch [--spin [S]]   fastfetch's summary, beside the turning mark
-
-    halcyon-theme cursor                show the cursor setting
-    halcyon-theme cursor on|off         the Halcyon Glass cursor, or upstream's
-    halcyon-theme cursor size N         cursor size in pixels (16-96)
-    halcyon-theme cursor apply          apply the setting (run at startup)
-
-    halcyon-theme assistant ...         the voice assistant (`halcyon assistant help`)
-    halcyon-theme config-check [--fix]  check the Hyprland and Halcyon config, and say how to fix it
-    halcyon-theme auto list             scheduled themes (Settings > Halcyon, Auto-apply)
-    halcyon-theme auto sun              today's sunrise and sunset, for "sunset" schedules
-    halcyon-theme auto location [LAT,LON|clear]   where the sun times are for (default:
-                                        the bar's weather location)
-    halcyon-theme plus [apply|status]   Plus Tiles settings from Settings > Halcyon
-    halcyon-theme plus edit rules|keys  open your copy of app_rules.lua or plus_keys.lua
-    halcyon-theme effects flip          mirror pointer effects vertically,
-                                        if the glass lens trails the pointer
-                                        upside down
-
-    halcyon-theme banner NAME IMAGE [--title T] [--subtitle S]
-                                        put character art on a theme's banner
-    halcyon-theme banner NAME --clear   remove it
-    halcyon-theme banner NAME           show what is set
-
-    halcyon-theme check                 validate every theme (used by CI)
-    halcyon-theme render NAME DIR [--effects LEVEL] [--native-blur]
-                                        write what apply would, into DIR only
+The commands, with what each does, are listed by `halcyon help` (or `halcyon help COMMAND`). The text is
+in halcyon_help.py, and a test checks that it covers every command here.
 
 A theme is a JSON file in themes/ next to this script. Applying one:
 
@@ -97,7 +53,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import halcyon_sun  # noqa: E402  (next to this script)
+import halcyon_help  # noqa: E402  (next to this script)
+import halcyon_sun  # noqa: E402
 
 THEMES_DIR = HERE / "themes"
 BANNER_TOOL = HERE / "halcyon-banner"
@@ -746,8 +703,13 @@ def read_state(path):
         return None
 
 
+# Themes that were renamed, so a saved choice or schedule keeps working.
+RENAMED = {"wallpaper-heaven-kenami": "red-sun"}
+
+
 def active():
-    return read_state(ACTIVE_FILE)
+    current = read_state(ACTIVE_FILE)
+    return RENAMED.get(current, current)
 
 
 def effects_setting(config=None):
@@ -950,7 +912,8 @@ def scheduled_themes():
     value = get_nested(read_shell_config(), "halcyon.autoApply")
     if not isinstance(value, list):
         return []
-    return [entry for entry in value if isinstance(entry, dict) and entry.get("theme")]
+    entries = [entry for entry in value if isinstance(entry, dict) and entry.get("theme")]
+    return [dict(entry, theme=RENAMED.get(entry["theme"], entry["theme"])) for entry in entries]
 
 
 # wttr.in weather codes, grouped the way the Settings card names them.
@@ -1231,7 +1194,7 @@ def ensure_starrail_banner():
 def cmd_apply(args):
     if len(args) != 1:
         raise ThemeError("usage: halcyon-theme apply NAME")
-    theme_id = args[0]
+    theme_id = RENAMED.get(args[0], args[0])
     theme = load(theme_id)
     if not SWITCHWALL.is_file():
         raise ThemeError(f"{SWITCHWALL} not found. Is illogical-impulse installed?")
@@ -1599,7 +1562,21 @@ def cmd_placement(args):
     return 0
 
 
+def cmd_hyprland(args):
+    """Which Hyprland is running (or installed), and whether it is hyprland-plus and new enough for Plus Tiles."""
+    import halcyon_compositor
+    info = halcyon_compositor.detect()
+    if args == ["--json"]:
+        print(json.dumps(info))
+    elif args:
+        raise ThemeError("usage: halcyon-theme hyprland [--json]")
+    else:
+        print(halcyon_compositor.describe(info))
+    return 0
+
+
 COMMANDS = {
+    "hyprland": cmd_hyprland,
     "revolver": cmd_revolver,
     "custom": cmd_custom,
     "show": cmd_show,
@@ -1614,6 +1591,12 @@ COMMANDS = {
 }
 
 
+def program_name():
+    """The name to show in help: `halcyon` when that is how it was run (the link or alias), else this file's name."""
+    name = Path(sys.argv[0]).name
+    return "halcyon" if name in ("halcyon", "halcyon-theme", "-c", "") else name
+
+
 def main(argv):
     if argv and argv[0] == "assistant":
         launcher = HERE / "assistant/halcyon-assistant"
@@ -1621,15 +1604,26 @@ def main(argv):
     if argv and argv[0] == "config-check":
         checker = HERE / "halcyon_config_check.py"
         os.execv(sys.executable, [sys.executable, str(checker), *argv[1:]])
+    if argv and argv[0] == "text":
+        tool = HERE / "halcyon_text.py"
+        os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
+    if argv and argv[0] == "crashes":
+        tool = HERE / "halcyon_crashes.py"
+        os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and argv[0] == "plus":
         settings = HERE / "halcyon_plus_settings.py"
         os.execv(sys.executable, [sys.executable, str(settings), *argv[1:]])
     if not argv or argv[0] in ("-h", "--help", "help"):
-        print(__doc__.strip())
+        topic = argv[1] if len(argv) > 1 else None
+        try:
+            print(halcyon_help.render(topic, program=program_name()), end="")
+        except KeyError:
+            print(f"no command called '{topic}'. `{program_name()} help` lists them.", file=sys.stderr)
+            return 2
         return 0
     command = COMMANDS.get(argv[0])
     if command is None:
-        print(f"unknown command '{argv[0]}'\n\n{__doc__.strip()}", file=sys.stderr)
+        print(f"unknown command '{argv[0]}'.\n\n{halcyon_help.render(program=program_name())}", file=sys.stderr, end="")
         return 2
     try:
         return command(argv[1:])

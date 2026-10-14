@@ -113,7 +113,7 @@ ContentPage {
         { id: "hsr", name: "Star Rail", icon: "train" },
         { id: "shattered-glass", name: "Shattered Glass", icon: "broken_image" },
         { id: "fractured-glass", name: "Fractured Glass", icon: "lens_blur" },
-        { id: "wallpaper-heaven-kenami", name: "Wallpaper Heaven", icon: "wb_twilight" }
+        { id: "red-sun", name: "Red Sun", icon: "wb_twilight" }
     ]
     property bool showHidden: false
     property string openThemeMenu: "" // Id of the row whose menu is dropped down
@@ -1072,6 +1072,13 @@ ContentPage {
             visible: page.plusStatus.running === true && page.plusStatus.plus !== true
             materialIcon: "info"
             text: Translation.tr("These need hyprland-plus, the Halcyon Hyprland fork. On stock Hyprland they are saved but do nothing; the app rules that stock Hyprland has still work.")
+        }
+
+        NoticeBox {
+            Layout.fillWidth: true
+            visible: page.plusStatus.plus === true && page.plusStatus.tiles === false
+            materialIcon: "update"
+            text: Translation.tr("You are running hyprland-plus, but a build from before Plus Tiles, so these settings have no effect yet. Mini windows and the superposition strip still work. Update it with `sudo hyprctl-lite install full`, then log out and back in.")
         }
 
         ConfigRow {
