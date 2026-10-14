@@ -1730,6 +1730,9 @@ def main(argv):
     if argv and argv[0] == "crashes":
         tool = HERE / "halcyon_crashes.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
+    if argv and argv[0] == "usb":
+        tool = HERE / "halcyon_usb.py"
+        os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and argv[0] == "plus":
         settings = HERE / "halcyon_plus_settings.py"
         os.execv(sys.executable, [sys.executable, str(settings), *argv[1:]])

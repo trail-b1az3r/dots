@@ -37,7 +37,8 @@ On top of that, Halcyon adds:
 | [Install](install.md) | Installing Halcyon, the walkthrough, options and uninstall |
 | [hyprland-plus](hyprland-plus.md) | The compositor fork, dot sets, saves, and hyprctl-lite |
 | [Themes](themes.md) | The five themes, effects, cursor, banners, and making your own |
-| [Voice assistant](voice-assistant.md) | Setup, the Claude plan, what it can do |
+| [Voice assistant](voice-assistant.md) | Setup, the Claude plan, LM Studio, HyperNix and T1, what it can do |
+| [Browsers and USB](browsers.md) | Firefox and Chromium themes that follow Halcyon, and USB devices in the browser |
 | [Keybinds](keybinds.md) | The shortcuts Halcyon adds, and Hypr mode |
 | [Architecture](architecture.md) | How the config is laid out, and taking updates from upstream |
 | [Development](development.md) | Validation, releases |

@@ -43,6 +43,7 @@ HALCYON_PAGES = [
     ("keybinds.md", "keybinds.html", "Keybinds"),
     ("hyprland-plus.md", "hyprland-plus.html", "hyprland-plus"),
     ("voice-assistant.md", "voice-assistant.html", "Voice assistant"),
+    ("browsers.md", "browsers.html", "Browsers and USB"),
     ("architecture.md", "architecture.html", "Architecture"),
     ("development.md", "development.html", "Development"),
 ]

@@ -49,6 +49,11 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("text --window|--screen|--clipboard", "the focused window, the whole monitor, or the image in the clipboard"),
         ("text FILE [--print] [--join] [--lang eng+deu]", "read an image or a PDF (scanned or not); print it, rejoin lines, pick languages"),
     ]),
+    ("Devices", [
+        ("usb [--json]", "why a browser can't find or open a USB, HID or serial device (WebUSB, WebHID, Web Serial)"),
+        ("usb allow VID:PID ... | --all", "let you open those devices from the browser (a udev rule; asks for sudo)"),
+        ("usb remove", "take that rule away again"),
+    ]),
     ("Widgets, characters and extras", [
         ("revolver scan [--json]", "the revolver's games and their weights"),
         ("collapse arm AGE X Y R | disarm", "the Red Sun screen collapse (the revolver runs this when a spin lands)"),
