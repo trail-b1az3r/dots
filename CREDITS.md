@@ -42,3 +42,4 @@ Files from other projects keep their own licence notice. Copies of those licence
 # Art Work
 Wallpaper: "red sun" (*Eclipse* by Alena Aenami, 2017)
 Source: https://wallhaven.vip/w/yjl8mk
+-# buy it [here](https://www.artstation.com/marketplace/p/oAol/wallpaper-pack-02)
