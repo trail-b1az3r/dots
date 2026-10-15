@@ -73,7 +73,7 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("starrail next|refresh|status", "Star Rail banner character: another one, download the index, what is showing"),
         ("banner NAME IMAGE [--title T] [--subtitle S]", "put character art on a theme's banner"),
         ("banner NAME [--clear]", "show what is set, or remove it"),
-        ("fetch [--spin [S]] [--json] [--fastfetch]", "a system summary beside the turning Halcyon mark"),
+        ("fetch [--json] [--fastfetch]", "a summary of this system"),
         ("assistant ...", "the voice assistant ('halcyon assistant help')"),
     ]),
 ]

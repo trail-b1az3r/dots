@@ -1490,22 +1490,18 @@ def cmd_menu(_args):
 
 
 def cmd_fetch(args):
-    """A system summary beside the Halcyon mark, turning in 3D (see halcyon_fetch)."""
+    """A system summary of this machine (see halcyon_fetch)."""
     import argparse
 
     sys.path.insert(0, str(HERE))
     import halcyon_fetch
 
     parser = argparse.ArgumentParser(prog="halcyon-theme fetch")
-    parser.add_argument("--spin", nargs="?", type=float, const=0.0,
-                        default=None, metavar="SECONDS",
-                        help="turn the mark in a loop, for SECONDS or until Ctrl+C (terminal only)")
     parser.add_argument("--json", action="store_true", help="print the fields as JSON")
     parser.add_argument("--fastfetch", action="store_true",
-                        help="take the text beside the mark from fastfetch, when it is installed")
+                        help="take the summary from fastfetch, when it is installed")
     options = parser.parse_args(args)
-    return halcyon_fetch.run(spin_seconds=options.spin, as_json_out=options.json,
-                             use_fastfetch=options.fastfetch)
+    return halcyon_fetch.run(as_json_out=options.json, use_fastfetch=options.fastfetch)
 
 
 def cmd_starrail(args):

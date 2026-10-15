@@ -33,8 +33,4 @@ if status is-interactive
     if test "$TERM" = "xterm-kitty"
         alias ssh 'kitten ssh'
     end
-    # The animated fastfetch, when ./setup install was told to set it up
-    if test -f ~/.local/state/halcyon/animated-fetch; and test "$TERM" != "linux"
-        ~/.config/hypr/hyprland/halcyon/halcyon-theme fetch --fastfetch --spin 3
-    end
 end

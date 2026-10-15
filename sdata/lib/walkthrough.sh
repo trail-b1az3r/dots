@@ -1,6 +1,6 @@
 # Guided automatic install: ./setup walkthrough.
 # Shows the steps, asks once, then runs ./setup install --force, so nothing else is asked. Each step prints
-# "Step n of 8" while it runs. The hyprland-plus step switches to its own console by itself, builds there, and
+# "Step n of 7" while it runs. The hyprland-plus step switches to its own console by itself, builds there, and
 # switches back when it is done. Sourced by ./setup; it does nothing until walkthrough_run is called.
 
 WALK_TITLES=(
@@ -8,7 +8,6 @@ WALK_TITLES=(
   "Dependencies"
   "Permissions and services"
   "Config files"
-  "Fetch"
   "Sleep hook"
   "Updater"
   "Theme"
@@ -20,7 +19,6 @@ WALK_SUMMARIES=(
   "Installs the packages Halcyon needs, with pacman and the AUR where needed."
   "Sets up permissions and the services the desktop runs."
   "Copies the Halcyon config into ~/.config. What is there now is backed up first."
-  "Gets the animated fetch and the Halcyon assets."
   "Sets up the sleep hook for the power menu and resume."
   "Records this checkout for the updater and starts its timer."
   "Applies the automatic theme."
