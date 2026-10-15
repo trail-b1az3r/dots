@@ -681,6 +681,14 @@ them all back.
 **Minimise all** (the dock's button, or `SUPER + Backspace`) hides every window on the workspace. Press it again to
 bring them back.
 
+With hyprland-plus 0.56.2.p2 or newer (`hypr/hyprland/halcyon/desk.lua`) there are three more:
+
+| Keys | Does |
+|---|---|
+| `SUPER + CTRL + SHIFT + N` | Every window on the workspace becomes mini, in a row along the bottom. Again to bring them back. |
+| `SUPER + ALT + D` | Desktop peek: the windows fade and the pointer goes through them, so you can spin the revolver. Again to bring them back. |
+| `SUPER + CTRL + .` | A ring shows where the pointer is. Shaking the mouse does it too. |
+
 ## Calendar events
 
 The calendar in the right sidebar has a **+** button for a new event, and a click on any day opens that day. A day

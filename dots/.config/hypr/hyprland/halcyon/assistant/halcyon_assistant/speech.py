@@ -97,12 +97,16 @@ def _speak_with_piper(text, should_stop):
     except OSError as error:
         return f"could not start piper or {player[0]}: {error}"
     synth.stdout.close()  # piper gets a broken pipe if the player stops early
+    # A piper that dies at once (a bad voice, say) breaks the pipe; the write is buffered, so that can surface on
+    # close as well. Its exit code and message are reported below.
     try:
         synth.stdin.write(text.encode())
-    except BrokenPipeError:
-        pass
-    finally:
         synth.stdin.close()
+    except BrokenPipeError:
+        try:
+            synth.stdin.close()
+        except BrokenPipeError:
+            pass
     stopped = _wait([synth, play], should_stop)
     problems = []
     for name, handle, proc in (("piper", synth_errors, synth), (player[0], play_errors, play)):

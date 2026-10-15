@@ -39,6 +39,7 @@ if is_file_exists(gamesFile) then
     dofile(gamesFile)
 end
 require("hyprland.halcyon.games")
+require("hyprland.halcyon.desk")
 
 -- How new windows are placed, from Settings > Interface > Windows (halcyon-theme placement).
 local placementFile = stateHome .. "/halcyon/placement.lua"
