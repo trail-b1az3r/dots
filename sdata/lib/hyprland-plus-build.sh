@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds the Halcyon Hyprland fork (hyprland-plus) and installs it in place of the packaged Hyprland.
-# ./setup install runs this on a text console of its own (see sdata/subcmd-install/8.hyprland-plus.sh),
+# ./setup install runs this on a text console of its own (see sdata/subcmd-install/7.hyprland-plus.sh),
 # so the compositor can be replaced without the graphical session running it. It runs as your user;
 # the steps that need root call sudo, and sudo asks for your password on this console.
 #

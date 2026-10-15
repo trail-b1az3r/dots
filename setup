@@ -98,15 +98,13 @@ case ${SUBCMD_NAME} in
       source ${SUBCMD_DIR}/3.files.sh
     fi
     walk_step 4
-    source ${SUBCMD_DIR}/4.animated-fetch.sh
+    source ${SUBCMD_DIR}/4.sleep-hook.sh
     walk_step 5
-    source ${SUBCMD_DIR}/5.sleep-hook.sh
+    source ${SUBCMD_DIR}/5.updater.sh
     walk_step 6
-    source ${SUBCMD_DIR}/6.updater.sh
+    source ${SUBCMD_DIR}/6.auto-theme.sh
     walk_step 7
-    source ${SUBCMD_DIR}/7.auto-theme.sh
-    walk_step 8
-    source ${SUBCMD_DIR}/8.hyprland-plus.sh
+    source ${SUBCMD_DIR}/7.hyprland-plus.sh
     ;;
   install-deps)
     for function in ${print_os_group_id_functions[@]}; do
