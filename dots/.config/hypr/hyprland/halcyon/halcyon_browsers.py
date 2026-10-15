@@ -153,110 +153,149 @@ def settings() -> dict[str, bool]:
 # --- Firefox ------------------------------------------------------------------------------------------------------
 
 def firefox_css(c: dict[str, str], theme: str = "") -> str:
-    """userChrome: Firefox's own colour variables, set from the shell's palette."""
+    """userChrome: Firefox's frame, tabs, toolbars and menus in the shell's palette, as rounded glass."""
     dark = luminance(c["surface"]) < 0.4
     frame = c["surface_container_lowest"] if dark else c["surface_container"]
     accent_line = c["primary"]
     extra = ""
     if theme == "red-sun":
-        # The ring: an ember line under the selected tab, brightest in the middle.
+        # The ring: an ember line under the selected tab, brightest in the middle, and one along the toolbar.
         accent_line = f"linear-gradient(90deg, transparent, {c['primary']} 30%, {c['tertiary']} 50%, {c['primary']} 70%, transparent)"
         extra = f"""
-.tab-background:is([selected], [multiselected]) {{
-  box-shadow: 0 0 14px {rgba(c['primary'], 0.28)}, inset 0 0 0 1px {rgba(c['primary'], 0.35)} !important;
-}}"""
+#nav-bar {{ border-bottom: 1px solid transparent !important;
+  border-image: linear-gradient(90deg, transparent, {rgba(c['primary'], 0.55)}, transparent) 1 !important; }}"""
     return f"""{CSS_BEGIN}
 /* Written by `halcyon browsers update` from the Halcyon colours{f" ({theme})" if theme else ""}. Edits are replaced. */
 :root, #navigator-toolbox, #main-window {{
   --lwt-accent-color: {frame} !important;
   --lwt-accent-color-inactive: {frame} !important;
   --lwt-text-color: {c['on_surface']} !important;
-  --toolbar-bgcolor: {c['surface_container']} !important;
+  --toolbar-bgcolor: transparent !important;
   --toolbar-color: {c['on_surface']} !important;
   --toolbarbutton-icon-fill: {c['on_surface_variant']} !important;
   --toolbarbutton-icon-fill-attention: {c['primary']} !important;
-  --toolbarbutton-hover-background: {rgba(c['on_surface'], 0.08)} !important;
-  --toolbarbutton-active-background: {rgba(c['on_surface'], 0.14)} !important;
-  --toolbar-field-background-color: {c['surface_container_high']} !important;
+  --toolbarbutton-hover-background: {rgba(c['on_surface'], 0.09)} !important;
+  --toolbarbutton-active-background: {rgba(c['on_surface'], 0.16)} !important;
+  --toolbarbutton-border-radius: 10px !important;
+  --toolbar-field-background-color: {rgba(c['surface_container_highest'], 0.7)} !important;
   --toolbar-field-color: {c['on_surface']} !important;
-  --toolbar-field-border-color: transparent !important;
+  --toolbar-field-border-color: {rgba(c['outline_variant'], 0.6)} !important;
   --toolbar-field-focus-background-color: {c['surface_container_highest']} !important;
   --toolbar-field-focus-color: {c['on_surface']} !important;
   --toolbar-field-focus-border-color: {c['primary']} !important;
   --urlbar-box-bgcolor: {c['surface_container_high']} !important;
   --urlbar-box-hover-bgcolor: {c['surface_container_highest']} !important;
   --urlbar-box-text-color: {c['on_surface']} !important;
-  --tab-selected-bgcolor: {c['surface_container']} !important;
+  --tab-selected-bgcolor: {c['surface_container_high']} !important;
   --tab-selected-textcolor: {c['on_surface']} !important;
-  --tab-hover-background-color: {rgba(c['on_surface'], 0.06)} !important;
+  --tab-hover-background-color: {rgba(c['on_surface'], 0.07)} !important;
+  --tab-border-radius: 12px !important;
   --tab-loading-fill: {c['primary']} !important;
   --tab-attention-icon-color: {c['primary']} !important;
   --focus-outline-color: {c['primary']} !important;
-  --chrome-content-separator-color: {c['outline_variant']} !important;
+  --chrome-content-separator-color: transparent !important;
   --arrowpanel-background: {c['surface_container']} !important;
   --arrowpanel-color: {c['on_surface']} !important;
-  --arrowpanel-border-color: {c['outline_variant']} !important;
+  --arrowpanel-border-color: {rgba(c['outline_variant'], 0.7)} !important;
+  --arrowpanel-border-radius: 14px !important;
+  --panel-border-radius: 14px !important;
   --panel-separator-color: {c['outline_variant']} !important;
   --sidebar-background-color: {c['surface_container_low']} !important;
   --sidebar-text-color: {c['on_surface']} !important;
-  --sidebar-border-color: {c['outline_variant']} !important;
+  --sidebar-border-color: transparent !important;
   --button-primary-bgcolor: {c['primary']} !important;
   --button-primary-color: {c['on_primary']} !important;
   --color-accent-primary: {c['primary']} !important;
   --link-color: {c['primary']} !important;
   accent-color: {c['primary']} !important;
 }}
-#navigator-toolbox {{ background-color: {frame} !important; border-bottom-color: {c['outline_variant']} !important; }}
-#TabsToolbar, #titlebar {{ background-color: {frame} !important; color: {c['on_surface']} !important; }}
-#nav-bar, #PersonalToolbar {{ background-color: {c['surface_container']} !important; }}
-.tab-background:is([selected], [multiselected]) {{ background: {c['surface_container']} !important; }}
+
+/* The frame: one gradient from the tab strip down through the toolbars, so they read as a single glass panel. */
+#navigator-toolbox {{
+  background: linear-gradient(180deg, {frame} 0%, {mix(frame, c['surface_container'], 0.6)} 55%, {c['surface_container']} 100%) !important;
+  border-bottom: 0 !important;
+}}
+#TabsToolbar, #titlebar, #nav-bar, #PersonalToolbar, #toolbar-menubar {{ background: transparent !important; color: {c['on_surface']} !important; }}
+#browser, #tabbrowser-tabpanels {{ background-color: {c['surface']} !important; }}
+
+/* Tabs: rounded pills; the selected one raised, with the theme's light under it. */
+.tabbrowser-tab {{ padding-inline: 2px !important; }}
+.tab-background {{ position: relative; border-radius: 12px !important; margin-block: 5px !important; transition: background-color 0.18s, box-shadow 0.18s !important; }}
+.tab-background:is([selected], [multiselected]) {{
+  background: {c['surface_container_high']} !important;
+  box-shadow: 0 2px 10px {rgba('#000000', 0.25)}, 0 0 16px {rgba(c['primary'], 0.22)}, inset 0 0 0 1px {rgba(c['primary'], 0.32)} !important;
+}}
 .tab-background:is([selected], [multiselected])::before {{
-  content: ""; position: absolute; inset: auto 12px 0 12px; height: 2px; border-radius: 2px;
+  content: ""; position: absolute; inset: auto 14px -1px 14px; height: 2px; border-radius: 2px;
   background: {accent_line};
 }}
-.tab-background {{ position: relative; }}
-/* Set directly as well: Firefox's own rules for these do not all go through the variables above. */
-#TabsToolbar, #nav-bar, #PersonalToolbar, #toolbar-menubar, #sidebar-box, #sidebar-main {{ color: {c['on_surface']} !important; }}
+.tabbrowser-tab:not([selected]):hover .tab-background {{ background: {rgba(c['on_surface'], 0.07)} !important; }}
 .tabbrowser-tab .tab-label {{ color: {c['on_surface_variant']} !important; }}
-.tabbrowser-tab:is([selected], [multiselected]) .tab-label {{ color: {c['on_surface']} !important; }}
+.tabbrowser-tab:is([selected], [multiselected]) .tab-label {{ color: {c['on_surface']} !important; font-weight: 600 !important; }}
+.tab-close-button {{ border-radius: 8px !important; }}
+.tab-close-button:hover {{ background-color: {rgba(c['primary'], 0.22)} !important; }}
+#tabs-newtab-button .toolbarbutton-icon, #new-tab-button .toolbarbutton-icon {{ border-radius: 10px !important; }}
+
+/* Toolbar buttons and the address bar. */
+#nav-bar toolbarbutton .toolbarbutton-icon, #nav-bar toolbarbutton .toolbarbutton-badge-stack {{ border-radius: 10px !important; }}
+#TabsToolbar, #nav-bar, #PersonalToolbar, #toolbar-menubar, #sidebar-box, #sidebar-main {{ color: {c['on_surface']} !important; }}
 #personal-toolbar-empty-description, #PersonalToolbar .toolbarbutton-text {{ color: {c['on_surface_variant']} !important; }}
 #urlbar-background, #searchbar {{
-  background-color: {c['surface_container_high']} !important; border-color: transparent !important;
+  background-color: {rgba(c['surface_container_highest'], 0.7)} !important;
+  border: 1px solid {rgba(c['outline_variant'], 0.6)} !important;
   border-radius: 999px !important;
 }}
 #urlbar:is([focused], [open]) > #urlbar-background, #urlbar[breakout-extend] > #urlbar-background {{
   background-color: {c['surface_container_highest']} !important;
-  outline: 1px solid {c['primary']} !important; border-radius: 18px !important;
+  border-color: {c['primary']} !important; border-radius: 18px !important;
+  box-shadow: 0 0 0 1px {c['primary']}, 0 8px 28px {rgba('#000000', 0.35)}, 0 0 22px {rgba(c['primary'], 0.25)} !important;
+  outline: none !important;
 }}
 #urlbar, #urlbar-input, .urlbar-input, #searchbar {{ color: {c['on_surface']} !important; }}
 #urlbar-input::placeholder, .urlbar-input::placeholder, .searchbar-textbox::placeholder {{
   color: {c['on_surface_variant']} !important; opacity: 1 !important;
 }}
+#identity-box, #tracking-protection-icon-container, #page-action-buttons > * {{ border-radius: 999px !important; }}
 .urlbarView {{ color: {c['on_surface']} !important; }}
+.urlbarView-row {{ border-radius: 12px !important; }}
 .urlbarView-row[selected] {{ background-color: {c['secondary_container']} !important; color: {c['on_secondary_container']} !important; }}
 .urlbarView-url, .urlbarView-action {{ color: {c['primary']} !important; }}
-menupopup, panel {{ --panel-background: {c['surface_container']} !important; --panel-color: {c['on_surface']} !important; }}
+
+/* Menus and panels: rounded, with a soft shadow. */
+menupopup, panel {{
+  --panel-background: {c['surface_container']} !important; --panel-color: {c['on_surface']} !important;
+  --panel-border-color: {rgba(c['outline_variant'], 0.7)} !important; --panel-border-radius: 14px !important;
+  --panel-shadow: 0 10px 34px {rgba('#000000', 0.45)} !important;
+}}
+menupopup > menuitem, menupopup > menu {{ border-radius: 8px !important; }}
 menupopup > menuitem[_moz-menuactive], menupopup > menu[_moz-menuactive] {{
   background-color: {c['secondary_container']} !important; color: {c['on_secondary_container']} !important;
 }}
+.subviewbutton:hover, .subviewbutton[open] {{ background-color: {rgba(c['primary'], 0.14)} !important; border-radius: 8px !important; }}
+findbar {{ background: {c['surface_container']} !important; border-top: 1px solid {c['outline_variant']} !important; }}
 ::selection {{ background-color: {c['primary_container']} !important; color: {c['on_primary_container']} !important; }}{extra}
 {CSS_END}
 """
 
 
-def firefox_content_css(c: dict[str, str]) -> str:
-    """userContent: the new tab, home and blank pages, where Firefox shows no website of its own."""
+def firefox_content_css(c: dict[str, str], has_wallpaper: bool = False) -> str:
+    """userContent: the new tab and home page on the wallpaper, as glass, and Firefox's own pages in the palette."""
+    page = (f"linear-gradient(180deg, {rgba(c['surface'], 0.35)} 0%, {rgba(c['surface'], 0.62)} 55%, {rgba(c['surface'], 0.9)} 100%), "
+            f'url("halcyon-wallpaper.jpg") center / cover no-repeat fixed') if has_wallpaper else c['surface']
+    glass = rgba(c['surface_container'], 0.55)
     return f"""{CSS_BEGIN}
 @-moz-document url("about:newtab"), url("about:home"), url("about:blank"), url("about:privatebrowsing") {{
   :root {{
     --newtab-background-color: {c['surface']} !important;
-    --newtab-background-color-secondary: {c['surface_container']} !important;
+    --newtab-background-color-secondary: {glass} !important;
     --newtab-text-primary-color: {c['on_surface']} !important;
     --newtab-text-secondary-color: {c['on_surface_variant']} !important;
     --newtab-primary-action-background: {c['primary']} !important;
-    --newtab-element-hover-color: {c['surface_container_high']} !important;
+    --newtab-element-hover-color: {rgba(c['surface_container_high'], 0.7)} !important;
     --newtab-element-active-color: {c['surface_container_highest']} !important;
     --newtab-search-icon-color: {c['primary']} !important;
+    --newtab-border-radius-medium: 16px !important;
+    --newtab-wallpaper: none !important;
     --in-content-page-background: {c['surface']} !important;
     --in-content-page-color: {c['on_surface']} !important;
     --in-content-box-background: {c['surface_container']} !important;
@@ -265,8 +304,39 @@ def firefox_content_css(c: dict[str, str]) -> str:
     --in-content-link-color: {c['primary']} !important;
     --color-accent-primary: {c['primary']} !important;
     background-color: {c['surface']} !important;
+    scrollbar-color: {rgba(c['primary'], 0.6)} transparent !important;
   }}
-  body {{ background-color: {c['surface']} !important; color: {c['on_surface']} !important; }}
+  body {{ background: {page} !important; color: {c['on_surface']} !important; }}
+  .outer-wrapper, .outer-wrapper.newtab-experience, main, .wallpaper-input {{ background: transparent !important; }}
+  .logo-and-wordmark, .logo-and-wordmark-wrapper {{ filter: drop-shadow(0 4px 22px {rgba(c['primary'], 0.45)}); }}
+  .wordmark {{ fill: {c['on_surface']} !important; color: {c['on_surface']} !important; }}
+  /* The search box: a glass pill that glows when it has the focus. */
+  .search-handoff-button, .search-wrapper input, .search-inner-wrapper > input {{
+    background-color: {glass} !important; color: {c['on_surface']} !important;
+    border: 1px solid {rgba(c['outline_variant'], 0.7)} !important; border-radius: 999px !important;
+    backdrop-filter: blur(18px) saturate(1.3) !important; box-shadow: 0 10px 34px {rgba('#000000', 0.35)} !important;
+  }}
+  .search-handoff-button:hover, .search-wrapper input:focus, .search-handoff-button.focused {{
+    border-color: {c['primary']} !important; box-shadow: 0 0 0 1px {c['primary']}, 0 0 26px {rgba(c['primary'], 0.35)} !important;
+  }}
+  /* Shortcuts and widgets: glass tiles that light up in the accent. */
+  .top-site-outer .tile, .top-site-outer .top-site-icon, .top-site-button .tile {{
+    background-color: {glass} !important; border-radius: 18px !important;
+    border: 1px solid {rgba(c['outline_variant'], 0.55)} !important; backdrop-filter: blur(14px) !important;
+  }}
+  .top-site-outer:hover .tile, .top-site-outer:focus-within .tile {{
+    box-shadow: 0 0 0 2px {c['primary']}, 0 0 24px {rgba(c['primary'], 0.38)} !important;
+  }}
+  .top-site-outer .title, .top-site-outer .title span {{ color: {c['on_surface']} !important; text-shadow: 0 1px 6px {rgba('#000000', 0.6)}; }}
+  .card-outer, .ds-card, .widget, [class*="widget"] > .card, .weather, .weatherInfoLink, .personalize-button, .context-menu-button {{
+    background-color: {glass} !important; backdrop-filter: blur(16px) !important;
+    border: 1px solid {rgba(c['outline_variant'], 0.5)} !important; border-radius: 18px !important;
+  }}
+  .personalize-button:hover {{ background-color: {c['primary']} !important; color: {c['on_primary']} !important; }}
+}}
+@-moz-document url-prefix("about:") {{
+  :root {{ scrollbar-color: {rgba(c['primary'], 0.6)} transparent !important; }}
+  ::selection {{ background-color: {c['primary_container']} !important; color: {c['on_primary_container']} !important; }}
 }}
 {CSS_END}
 """
@@ -368,11 +438,31 @@ def write_if_changed(path: Path, text: str) -> bool:
     return True
 
 
+def firefox_wallpaper(target: Path) -> bool:
+    """The wallpaper for Firefox's new tab, at the screen's size, next to the CSS (which refers to it by its name).
+    Rewritten only when the wallpaper itself changed, so Firefox's cache keeps it. False when there is none."""
+    source = wallpaper()
+    stamp = target.with_name(target.name + ".source")
+    key = f"{source}:{source.stat().st_mtime_ns if source else 0}"
+    try:
+        if source and target.is_file() and stamp.read_text(encoding="utf-8") == key:
+            return True
+    except OSError:
+        pass
+    if source is None or not ntp_image(source, target):
+        target.unlink(missing_ok=True)
+        stamp.unlink(missing_ok=True)
+        return False
+    stamp.write_text(key, encoding="utf-8")
+    return True
+
+
 def install_firefox(profile: Path, colors: dict[str, str], theme: str = "") -> bool:
     """Theme one profile. Returns whether anything changed (Firefox then needs a restart)."""
     chrome = profile / "chrome"
+    has_wallpaper = firefox_wallpaper(chrome / "halcyon-wallpaper.jpg")
     changed = write_if_changed(chrome / "halcyon.css", firefox_css(colors, theme))
-    changed |= write_if_changed(chrome / "halcyon-content.css", firefox_content_css(colors))
+    changed |= write_if_changed(chrome / "halcyon-content.css", firefox_content_css(colors, has_wallpaper))
     for name, imported in (("userChrome.css", "halcyon.css"), ("userContent.css", "halcyon-content.css")):
         path = chrome / name
         current = path.read_text(encoding="utf-8") if path.is_file() else ""
@@ -386,7 +476,7 @@ def install_firefox(profile: Path, colors: dict[str, str], theme: str = "") -> b
 
 def remove_firefox(profile: Path) -> None:
     chrome = profile / "chrome"
-    for name in ("halcyon.css", "halcyon-content.css"):
+    for name in ("halcyon.css", "halcyon-content.css", "halcyon-wallpaper.jpg", "halcyon-wallpaper.jpg.source"):
         (chrome / name).unlink(missing_ok=True)
     for name in ("userChrome.css", "userContent.css"):
         path = chrome / name
@@ -464,8 +554,24 @@ def version_now(now: float | None = None) -> str:
     return f"{t.tm_year}.{t.tm_mon * 100 + t.tm_mday}.{t.tm_hour * 100 + t.tm_min}.{t.tm_sec}"
 
 
-def ntp_image(source: Path | None, target: Path, width: int = 1600) -> bool:
-    """The wallpaper as a PNG for the new tab page. Without Pillow there is no image, and the colour is used."""
+def screen_size() -> tuple[int, int]:
+    """The largest monitor's size in real pixels, from Hyprland. 2560 x 1440 when it can't be asked."""
+    try:
+        out = subprocess.run(["hyprctl", "-j", "monitors"], capture_output=True, text=True, timeout=5, check=False).stdout
+        monitors = json.loads(out)
+        best = max(monitors, key=lambda m: m["width"] * m["height"])
+        return int(best["width"]), int(best["height"])
+    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
+        return 2560, 1440
+
+
+def ntp_image(source: Path | None, target: Path, size: tuple[int, int] | None = None) -> bool:
+    """The wallpaper for the new tab page, at the screen's own size and shape.
+
+    Chromium draws a theme's new tab image at its own size, centred: one smaller than the page leaves bands of plain
+    colour around it and looks soft on a large screen. So it is cropped to the screen's shape (like a wallpaper,
+    from the middle) and resized to the screen's real pixels with a high-quality filter. Without Pillow there is no
+    image, and the colour is used."""
     target.unlink(missing_ok=True)
     if source is None:
         return False
@@ -473,12 +579,20 @@ def ntp_image(source: Path | None, target: Path, width: int = 1600) -> bool:
         from PIL import Image
     except ImportError:
         return False
+    width, height = size or screen_size()
+    width, height = max(640, min(width, 7680)), max(360, min(height, 4320))
     try:
         with Image.open(source) as img:
             img = img.convert("RGB")
-            img.thumbnail((width, width))
+            scale = max(width / img.width, height / img.height)
+            crop_w, crop_h = round(width / scale), round(height / scale)
+            left, top = (img.width - crop_w) // 2, (img.height - crop_h) // 2
+            img = img.resize((width, height), Image.LANCZOS, box=(left, top, left + crop_w, top + crop_h))
             target.parent.mkdir(parents=True, exist_ok=True)
-            img.save(target, optimize=True)
+            if target.suffix.lower() in (".jpg", ".jpeg"):
+                img.save(target, quality=90, optimize=True)
+            else:
+                img.save(target, optimize=True)
         return True
     except (OSError, ValueError):
         return False

@@ -38,6 +38,25 @@ ContentPage {
             }
         }
 
+        ConfigSwitch {
+            buttonIcon: "rocket_launch"
+            text: Translation.tr("Launch animation when it starts a game")
+            checked: Config.options.background.widgets.revolver.launchAnimation
+            onCheckedChanged: Config.options.background.widgets.revolver.launchAnimation = checked
+            StyledToolTip {
+                text: Translation.tr("A shot from the drum, and the game's own art flying in while it starts")
+            }
+        }
+
+        RippleButtonWithIcon {
+            Layout.leftMargin: 10
+            buttonRadius: Appearance.rounding.full
+            materialIcon: "play_arrow"
+            mainText: Translation.tr("Preview the launch animation")
+            enabled: Config.options.background.widgets.revolver.launchAnimation && Config.options.background.widgets.revolver.enable
+            onClicked: Quickshell.execDetached(["qs", "-c", "ii", "ipc", "call", "revolver", "preview"])
+        }
+
         ContentSubsection {
             title: Translation.tr("Games come from")
             ConfigSelectionArray {
@@ -72,6 +91,57 @@ ContentPage {
                     { displayName: "Small", value: 240 },
                     { displayName: "Medium", value: 300 },
                     { displayName: "Large", value: 380 }
+                ]
+            }
+        }
+    }
+
+    ContentSection {
+        icon: "visibility"
+        title: Translation.tr("Red Sun sequence")
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colSubtext
+            font.pixelSize: Appearance.font.pixelSize.smallie
+            text: Translation.tr("In Red Sun, at the Full effects level, a real spin of the ring breaks the screen: an eye opens in the sun, finds the car, and the tape rewinds. It is drawn over the whole screen while it runs (about 10 seconds), so Light is easier on a slower GPU or a 4K screen.")
+        }
+        ConfigSwitch {
+            buttonIcon: "broken_image"
+            text: Translation.tr("A spin breaks the screen")
+            checked: Config.options.background.widgets.revolver.sequence
+            onCheckedChanged: Config.options.background.widgets.revolver.sequence = checked
+        }
+        ConfigSwitch {
+            buttonIcon: "visibility"
+            enabled: Config.options.background.widgets.revolver.sequence
+            text: Translation.tr("The eye")
+            checked: Config.options.background.widgets.revolver.eye
+            onCheckedChanged: Config.options.background.widgets.revolver.eye = checked
+            StyledToolTip {
+                text: Translation.tr("Off: the sun's hole stays an empty glowing void")
+            }
+        }
+        ConfigSwitch {
+            buttonIcon: "videocam"
+            enabled: Config.options.background.widgets.revolver.sequence
+            text: Translation.tr("The tape and rewind")
+            checked: Config.options.background.widgets.revolver.tape
+            onCheckedChanged: Config.options.background.widgets.revolver.tape = checked
+            StyledToolTip {
+                text: Translation.tr("Off: after the eye, the broken screen fades back (about 7 seconds in all)")
+            }
+        }
+        ContentSubsection {
+            title: Translation.tr("Quality")
+            ConfigSelectionArray {
+                currentValue: Config.options.background.widgets.revolver.quality
+                onSelected: newValue => Config.options.background.widgets.revolver.quality = newValue
+                options: [
+                    { displayName: Translation.tr("Full"), value: "full" },
+                    { displayName: Translation.tr("Light"), value: "light" }
                 ]
             }
         }

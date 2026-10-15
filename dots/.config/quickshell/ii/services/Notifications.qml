@@ -26,10 +26,10 @@ Singleton {
         })) ?? []
         property bool popup: false
         property bool isTransient: notification?.hints.transient ?? false
-        property string appIcon: notification?.appIcon ?? ""
+        property string appIcon: root.usableAppIcon(notification?.appIcon ?? "", notification?.appName ?? "")
         property string appName: notification?.appName ?? ""
         property string body: notification?.body ?? ""
-        property string image: notification?.image ?? ""
+        property string image: root.usableImage(notification?.image ?? "")
         property string summary: notification?.summary ?? ""
         property double time
         property string urgency: notification?.urgency.toString() ?? "normal"
@@ -40,6 +40,33 @@ Singleton {
                 root.discardNotification(notificationId);
             }
         }
+    }
+
+    // An icon the icon theme doesn't have would be drawn as Quickshell's magenta and black "missing" checkerboard.
+    // `notify-send -i NAME` sends the name both as the app icon and as an image (image://icon/NAME), so both are
+    // checked: one that isn't there is dropped, and the usual symbol for the summary is shown instead.
+    // Halcyon's own notifications get its mark.
+    readonly property string halcyonIcon: Quickshell.shellPath("assets/icons/halcyon-mono.svg")
+
+    function iconExists(name) {
+        if (!name)
+            return false;
+        if (name.startsWith("/") || name.startsWith("file:"))
+            return true;
+        return Quickshell.iconPath(name, true) !== "";
+    }
+
+    function usableAppIcon(icon, appName) {
+        if (root.iconExists(icon))
+            return icon;
+        return appName === "Halcyon" ? root.halcyonIcon : "";
+    }
+
+    function usableImage(image) {
+        const named = /^image:\/\/icon\/(.+)$/.exec(image ?? "");
+        if (named && !root.iconExists(decodeURIComponent(named[1])))
+            return "";
+        return image ?? "";
     }
 
     function notifToJSON(notif) {
@@ -273,10 +300,10 @@ Singleton {
                 return notifComponent.createObject(root, {
                     "notificationId": notif.notificationId,
                     "actions": [], // Notification actions are meaningless if they're not tracked by the server or the sender is dead
-                    "appIcon": notif.appIcon,
+                    "appIcon": root.usableAppIcon(notif.appIcon, notif.appName),
                     "appName": notif.appName,
                     "body": notif.body,
-                    "image": notif.image,
+                    "image": root.usableImage(notif.image),
                     "summary": notif.summary,
                     "time": notif.time,
                     "urgency": notif.urgency,

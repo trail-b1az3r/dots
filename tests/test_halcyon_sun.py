@@ -185,6 +185,13 @@ class CommandTests(unittest.TestCase):
             self.assertEqual(info["source"], "weather")
             self.assertEqual(info["location"], [51.5, -0.13])
 
+            # Location on: the shell saves the device's position, which comes before the weather's place.
+            (state / "location.json").write_text(json.dumps({"lat": 48.857, "lon": 2.352, "time": 0}))
+            info = json.loads(self.run_tool(home, "sun").stdout)
+            self.assertEqual(info["source"], "device")
+            self.assertEqual(info["location"], [48.857, 2.352])
+            self.assertIsNotNone(info["sunset"])
+
             self.assertEqual(self.run_tool(home, "location", "40.71,-74.0").returncode, 0)
             info = json.loads(self.run_tool(home, "sun").stdout)
             self.assertEqual(info["source"], "settings")
@@ -192,7 +199,7 @@ class CommandTests(unittest.TestCase):
 
             self.assertNotEqual(self.run_tool(home, "location", "400,0").returncode, 0)
             self.assertEqual(self.run_tool(home, "location", "clear").returncode, 0)
-            self.assertEqual(json.loads(self.run_tool(home, "sun").stdout)["source"], "weather")
+            self.assertEqual(json.loads(self.run_tool(home, "sun").stdout)["source"], "device")
 
     def test_list_describes_sun_times(self):
         with tempfile.TemporaryDirectory() as d:

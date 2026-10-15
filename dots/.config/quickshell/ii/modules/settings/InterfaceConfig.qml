@@ -179,7 +179,7 @@ ContentPage {
                   }
                 }).concat([{
                   displayName: "",
-                  iconSource: Qt.resolvedUrl("../../assets/icons/halcyon-key.svg"),
+                  iconSource: Qt.resolvedUrl("../../assets/icons/halcyon-symbolic.svg"),
                   value: "halcyon"
                 }])
             }

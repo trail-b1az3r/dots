@@ -86,7 +86,8 @@ Singleton {
         const wasTiled = !win.floating;
         if (wasTiled)
             Hyprland.dispatch(`hl.dsp.window.float({ action = "enable", window = "address:${address}" })`);
-        const origin = { x: win.at[0], y: win.at[1], width: win.size[0], height: win.size[1], monitor: monitor.id, wasTiled: wasTiled };
+        const origin = { x: win.at[0], y: win.at[1], width: win.size[0], height: win.size[1], monitor: monitor.id, wasTiled: wasTiled,
+            since: Date.now() };
         const others = Object.keys(root.minis).filter(a => root.minis[a].monitor === monitor.id).length;
         const right = monitor.x + monitor.width / monitor.scale;
         const bottom = monitor.y + monitor.height / monitor.scale;
@@ -109,6 +110,11 @@ Singleton {
         const copy = Object.assign({}, root.minis);
         delete copy[address];
         root.minis = copy;
+        // Tiled meanwhile (another way than the bar's button): the layout has placed it already.
+        if (root.window(address) && !root.window(address).floating) {
+            root.cancelTween(address);
+            return;
+        }
         if (origin.wasTiled) {
             // It goes back into its tile; the layout decides where.
             root.cancelTween(address);
@@ -119,6 +125,23 @@ Singleton {
         const now = root.window(address);
         const from = now ? [now.at[0], now.at[1], now.size[0], now.size[1]] : [origin.x, origin.y, root.miniWidth, root.miniHeight];
         root.animate(address, from, [origin.x, origin.y, origin.width, origin.height]);
+    }
+
+    // Lets go of a mini window without moving it: Hyprland's mini is turned off, the shell's record and any glide
+    // still under way are dropped. Used before the window is tiled, so "back to full size" never replays an old
+    // floating place onto a tiled window.
+    function release(address) {
+        root.cancelTween(address);
+        if (root.hasApi(address)) {
+            if (root.window(address)?.mini === true)
+                Hyprland.dispatch(`hl.dsp.window.mini({ action = "disable", window = "address:${address}" })`);
+            return;
+        }
+        if (root.minis[address] === undefined)
+            return;
+        const copy = Object.assign({}, root.minis);
+        delete copy[address];
+        root.minis = copy;
     }
 
     function moveWindow(address, x, y) {
@@ -175,11 +198,14 @@ Singleton {
         }
     }
 
-    // A window that closed while mini is forgotten.
+    // A window that closed, or was tiled, while mini is forgotten: a tiled window is the layout's to place.
     Connections {
         target: HyprlandData
         function onWindowListChanged() {
-            const gone = Object.keys(root.minis).filter(address => !root.window(address));
+            // A window just made mini may still be listed as tiled for a moment (it is floated first): give it time.
+            const now = Date.now();
+            const gone = Object.keys(root.minis).filter(address => !root.window(address)
+                || (!root.window(address).floating && now - (root.minis[address].since ?? 0) > 2000));
             if (gone.length === 0)
                 return;
             const copy = Object.assign({}, root.minis);

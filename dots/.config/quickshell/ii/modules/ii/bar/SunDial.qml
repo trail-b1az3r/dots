@@ -13,7 +13,7 @@ import qs.services
  * such as "Red Sun at sunset, in 2 h 10 min".
  *
  * The times come from `halcyon-theme auto day`, worked out on this computer for the location in Settings >
- * Halcyon (Auto-apply), or else the bar's weather location. Clicking opens Settings > Halcyon.
+ * Halcyon (Auto-apply), else the device's location (HalcyonLocation), else the weather's place. Clicking opens Settings > Halcyon.
  */
 Item {
     id: root
@@ -72,6 +72,10 @@ Item {
         function onAutoApplyChanged() { root.refresh(); }
         function onLocationChanged() { root.refresh(); }
     }
+    Connections {
+        target: HalcyonLocation
+        function onUpdated() { root.refresh(); }
+    }
 
     SunArc {
         id: dial
@@ -122,8 +126,15 @@ Item {
                 StyledPopupValueRow {
                     visible: !root.day.location
                     icon: "location_off"
-                    label: Translation.tr("No location yet: set one in Settings > Halcyon")
+                    label: Translation.tr("No location yet: turn location on, or set a place in Settings > Halcyon")
                     value: ""
+                }
+                StyledPopupValueRow {
+                    visible: !!root.day.location
+                    icon: "location_on"
+                    label: Translation.tr("Place:")
+                    value: ({ "settings": Translation.tr("set in Settings"), "device": Translation.tr("this device's location"),
+                              "weather": Translation.tr("the weather's place") })[root.day.source] ?? ""
                 }
                 StyledPopupValueRow {
                     visible: !!root.day.next

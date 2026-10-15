@@ -189,3 +189,24 @@ class TestPool(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SteamArtTest(unittest.TestCase):
+    """The launch card's art, from both of Steam's library cache layouts."""
+
+    def test_flat_and_per_game_folder_layouts(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp, "Steam/appcache/librarycache")
+            (cache / "730").mkdir(parents=True)
+            (cache / "570_header.jpg").write_bytes(b"x")                 # the old, flat layout
+            (cache / "730/header.jpg").write_bytes(b"x")                 # the folder per game
+            (cache / "730/a1b2").mkdir()
+            (cache / "730/a1b2/library_hero.jpg").write_bytes(b"x")      # one level deeper
+            roots = [Path(tmp, "Steam")]
+            self.assertEqual(revolver.steam_art("570", roots), {"header": str(cache / "570_header.jpg")})
+            art = revolver.steam_art("730", roots)
+            self.assertEqual(art["header"], str(cache / "730/header.jpg"))
+            self.assertEqual(art["hero"], str(cache / "730/a1b2/library_hero.jpg"))
+            self.assertEqual(revolver.steam_art("../etc", roots), {}, "only numeric ids")

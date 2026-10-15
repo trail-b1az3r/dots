@@ -56,7 +56,7 @@ Variants {
             readonly property real offsetX: (width - imageW * coverScale) / 2
             readonly property real offsetY: (height - imageH * coverScale) / 2
             readonly property bool hasSunRing: ["red-sun", "wallpaper-heaven-kenami"].includes(Config.options.halcyon.theme)
-                && /\/(red-sun|wallpaper-heaven-kenami|banner-red-sun)\.jpg$/.test(Config.options.background.wallpaperPath)
+                && /\/(banner-)?(red-sun|wallpaper-heaven-kenami)[^\/]*\.(jpe?g|png|webp)$/i.test(Config.options.background.wallpaperPath)
                 && wallpaper.status === Image.Ready && coverScale > 0
 
             function wallpaperPoint(u: real, v: real): var {

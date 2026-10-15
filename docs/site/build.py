@@ -174,7 +174,7 @@ def page_html(template: str, *, title: str, body: str, nav: str, toc: str, curre
                 "<p>end-4's illogical-impulse, with hand-made themes, a voice assistant, and hyprland-plus underneath.</p>"
                 f'<p class="hero-links"><a class="button" href="{root}install.html">Install</a>'
                 f'<a class="button ghost" href="{root}themes.html">See the themes</a></p></div>'
-                '<p class="hero-credit">Wallpaper: Red Sun, by Kenami, from Wallpaper Heaven</p></header>')
+                '<p class="hero-credit">Wallpaper: <em>Eclipse</em> by Alena Aenami (2017), via wallhaven</p></header>')
     canonical = f'<link rel="canonical" href="{base_url.rstrip("/")}/{current}">' if base_url else ""
     return (template.replace("{{title}}", html.escape(title))
             .replace("{{root}}", root)

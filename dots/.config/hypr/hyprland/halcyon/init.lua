@@ -33,6 +33,13 @@ end
 -- placement.lua can pick one; see layouts.lua.
 require("hyprland.halcyon.layouts")
 
+-- Whether games keep the keyboard when the pointer leaves them (games.lua; Settings > Halcyon > Games).
+local gamesFile = stateHome .. "/halcyon/games.lua"
+if is_file_exists(gamesFile) then
+    dofile(gamesFile)
+end
+require("hyprland.halcyon.games")
+
 -- How new windows are placed, from Settings > Interface > Windows (halcyon-theme placement).
 local placementFile = stateHome .. "/halcyon/placement.lua"
 if is_file_exists(placementFile) then

@@ -59,7 +59,9 @@ Scope {
                 // changing it would make the app leave fullscreen, so the bar only overlays it on hover.
                 readonly property var fullscreenWindow: (Config.options.bar.autoHide.hideInFullscreen ?? true)
                     ? HyprlandData.fullscreenWindowOnMonitor(barRoot.screen?.name ?? "") : null
+                // A game is never resized: changing its size mid-game stalls or pauses it. The bar overlays it instead.
                 readonly property bool forcedHere: fullscreenWindow !== null && fullscreenWindow.fullscreenClient === 0
+                    && !HyprlandData.isGame(fullscreenWindow)
                 // The window this bar made maximized, until the bar hides.
                 property string resizedAddress: ""
                 readonly property bool resizedNow: resizedAddress !== ""
@@ -78,8 +80,22 @@ Scope {
                         resizeWindow(fullscreenWindow.address, "maximized");
                         resizedAddress = fullscreenWindow.address;
                     } else if (!mustShow && resizedNow) {
-                        resizeWindow(resizedAddress, "fullscreen");
+                        // Only a window still maximized goes back to fullscreen: one dragged, floated or un-maximized
+                        // meanwhile (Super + drag past the bar) is left as it is now.
+                        if (HyprlandData.windowByAddress[resizedAddress]?.fullscreen === 1)
+                            resizeWindow(resizedAddress, "fullscreen");
                         resizedAddress = "";
+                    }
+                }
+
+                // Forget the window as soon as it isn't the maximized one the bar made, so nothing later makes it
+                // fullscreen again.
+                Connections {
+                    target: HyprlandData
+                    function onWindowListChanged() {
+                        // 0: neither fullscreen nor maximized any more (2 can still show just after the bar asked).
+                        if (barRoot.resizedAddress !== "" && (HyprlandData.windowByAddress[barRoot.resizedAddress]?.fullscreen ?? 0) === 0)
+                            barRoot.resizedAddress = "";
                     }
                 }
 

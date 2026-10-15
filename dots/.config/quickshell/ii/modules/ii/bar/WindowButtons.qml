@@ -26,6 +26,8 @@ Item {
     clip: true
 
     function dispatchFloat() {
+        // A mini window is let go of first, so tiling it (and later "back to full size") starts from a clean state.
+        MiniWindows.release(root.address);
         Hyprland.dispatch(`hl.dsp.window.float({ action = "toggle", window = "address:${root.address}" })`);
     }
 

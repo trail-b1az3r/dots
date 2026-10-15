@@ -161,7 +161,7 @@ repository says it was archived in March 2026 and is now maintained at
 
 | Command | Does |
 |---|---|
-| `hyprctl store -n <name>` | Saves the dot files as `~/.local/share/halcyon/saves/<name>.dhyprsave` |
+| `hyprctl store -n <name>` | Saves the dot files as `~/.local/share/halcyon/saves/<name>.dhyprsave` (`hyprctl save` does the same) |
 | `hyprctl load -l` | Lists the saves. The one in use is marked `(active)` |
 | `hyprctl load -n <name>` | Loads a save |
 | `hyprctl load -a` | Loads the save before the latest switch, so running it again goes back |
@@ -169,8 +169,11 @@ repository says it was archived in March 2026 and is now maintained at
 
 A `.dhyprsave` is a gzipped tar. It holds the entries of `~/.config` that the dot sets install, as they are now.
 It also holds the `.local` files the config refers to: scripts in `~/.local/bin`, fonts, icons and themes, and the
-Halcyon state files `theme.lua` and `placement.lua`. Nothing else in `~/.local` is saved. Its `manifest.txt` lists
-what it holds.
+Halcyon state files (`theme.lua`, `placement.lua`, `games.lua`, the active save) and the shell's own settings in
+`~/.local/state/quickshell/user`. Nothing else in `~/.local` is saved. Its `manifest.txt` lists what it holds, and
+`store` prints how many files and how much it saved. Entries that are links (as the installer makes them) are saved
+as the files they point to; before 0.56.2.p2 only the links were, so a save came out at about 10 KB. `store` warns
+when a save holds fewer than 50 files.
 
 Loading first backs up the files it replaces to `~/.local/state/halcyon/backups/before-load-<time>`. Each dot set
 install, and each `hyprctl dots plus --install`, stores the dots it switched to, so `load -a` has something to go
@@ -236,7 +239,7 @@ style, animations, wallpaper and, for some, shell layout and effects:
 | **Star Rail** | `hsr` | Astral gold and lavender on deep-space navy, over a golden rail curving through a nebula. Can show the current banner character. |
 | **Shattered Glass** | `shattered-glass` | Liquid glass: a glass lens follows the pointer, clicks crack the screen, windows turn to frosted glass. Ice blue and prism violet, sharp corners. |
 | **Fractured Glass** | `fractured-glass` | Refraction only, like Apple's Liquid Glass: a squircle glass lens follows the pointer and bends what's behind its rim. No ripples or cracks. Soft blue, lavender and pink over calm fragments of thick glass. |
-| **Red Sun** | `red-sun` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. The ring is the revolver: spin it and the screen breaks, an eye opens in the sun and finds the car, and the tape rewinds. Wallpaper by Kenami, from Wallpaper Heaven. |
+| **Red Sun** | `red-sun` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. The ring is the revolver: spin it and the screen breaks, an eye opens in the sun and finds the car, and the tape rewinds. Wallpaper: *Eclipse* by Alena Aenami (2017), from [wallhaven](https://wallhaven.vip/w/yjl8mk); [buy it here](https://www.artstation.com/marketplace/p/oAol/wallpaper-pack-02). |
 
 ![HyperNeo, Star Rail, Shattered Glass and Fractured Glass, each with its wallpaper, its revolver, and Firefox in its colours](docs/assets/preview-themes.jpg)
 
@@ -352,6 +355,11 @@ revolver), so Red Sun costs no GPU the rest of the time. At `light` or `off` the
 sequence. The revolver is on in every theme (`halcyon revolver on|off`, or Settings > Revolver), and glows on the
 ring even at rest so you can find it; `halcyon revolver status` says why if it doesn't show.
 
+Settings > Revolver > Red Sun sequence turns the parts on and off: the whole sequence, the eye, and the videotape and
+rewind (without it, the broken screen fades back on its own after about seven seconds). **Quality** set to `Light`
+drops the bevels, light rays and embers and takes one sample of the screen per pixel instead of several, for weaker
+GPUs. At `Full` a frame now costs about half what it used to.
+
 ![The Red Sun sequence: the sun spins and the screen breaks, an eye opens and finds the car, then the tape rewinds](docs/assets/red-sun-sequence.webp)
 
 <sub>Rendered frame by frame from the shader itself.</sub>
@@ -364,6 +372,11 @@ The wallpaper widgets take the active theme's shapes. The revolver's drum is a M
 the red ring in Red Sun, a cut-glass disc with gem chambers in the glass themes, a squircle with icon-like chambers in
 HyperNeo, and a gold rail with star chambers in Star Rail. The analogue clock's face and the weather card follow the
 same shapes. Drag the drum to spin it: a flick fires the game under the hammer, a nudge only settles it.
+
+When a spin starts a game, a shot leaves the drum, a shockwave hits the middle of the screen, and the game's Steam
+art spins in like a chamber turning into place, with its name typed out under LOADING. It goes when the game's window
+opens (at most nine seconds), takes no clicks or keys, and Settings > Revolver > Launch animation turns it off.
+**Preview** there plays it without starting anything (`qs -c ii ipc call revolver preview`).
 
 ![The revolver in each theme](docs/assets/revolver-styles.jpg)
 
@@ -588,6 +601,10 @@ time the browser starts. Google Chrome needs the theme folder loaded once: see [
 
 ![Firefox in Red Sun, Star Rail and Fractured Glass](docs/assets/firefox-themes.jpg)
 
+Firefox gets pill tabs with a glow on the selected one, see-through toolbars over a gradient, a glowing address bar,
+rounded menus, and a new tab page with the theme's wallpaper behind glass tiles. Chromium's new tab page gets the
+wallpaper too, cut to the size of your largest screen so it isn't stretched.
+
 Firefox reads its theme only when it starts, so restart it after the first one. `halcyon browsers` says when a
 running Firefox still shows the old colours.
 
@@ -595,6 +612,21 @@ running Firefox still shows the old colours.
 halcyon browsers                  # what is themed, and where
 halcyon usb                       # why a browser can't find a USB device, and the fix
 ```
+
+## Games
+
+A game keeps the keyboard when the pointer leaves its window, on a second screen or past the edge of a window that
+isn't fullscreen. Many games pause or stop drawing when they lose focus, which looks like a freeze. Click another
+window to leave the game; outside games, focus follows the mouse as before. A window counts as a game when it is a Steam game
+(`steam_app_*`), says it is one (content type `game`), or has the `game` tag. The top bar also leaves fullscreen
+games alone when the pointer reaches it.
+
+```sh
+halcyon games focus off           # focus follows the mouse into and out of games as well
+halcyon games status
+```
+
+Settings > Halcyon > Games has the same switch.
 
 ## Wi-Fi at login
 

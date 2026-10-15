@@ -86,6 +86,19 @@ class CollapseTests(unittest.TestCase):
         self.assertIn("#define CAR_X 0.6485", text)
         self.assertIn("#define CAR_Y 0.7084", text)
 
+    def test_settings_reach_the_shader(self):
+        config = self.home / ".config/illogical-impulse/config.json"
+        config.parent.mkdir(parents=True)
+        revolver = {"eye": False, "tape": False, "quality": "light"}
+        config.write_text(json.dumps({"background": {"widgets": {"revolver": revolver}}}))
+        self.tool("collapse", "arm", "0.2", "0.49", "0.43", "0.073")
+        text = next(self.state.glob("screen-shader-armed-*.frag")).read_text()
+        for line in ("#define EYE 0", "#define TAPE 0", "#define QUALITY 0"):
+            self.assertIn(line, text)
+        revolver["sequence"] = False
+        config.write_text(json.dumps({"background": {"widgets": {"revolver": revolver}}}))
+        self.assertIn("off in Settings", self.tool("collapse", "arm", "0.2", "0.49", "0.43", "0.073").stdout)
+
     def test_disarm_waits_for_the_whole_sequence(self):
         duration = float(re.search(r"const float DURATION = ([0-9.]+);", SHADER.read_text()).group(1))
         theme = (HALCYON / "halcyon-theme").read_text()

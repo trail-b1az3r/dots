@@ -122,6 +122,7 @@ Singleton {
                     property bool allowActions: true // Let it control the desktop
                 }
                 property bool serverMode: false // No suspend, no automatic lock, no screen blanking (halcyon server)
+                property bool gameFocus: true // A game keeps the keyboard when the pointer leaves it (halcyon games focus)
                 // Firefox and Chromium themes from the shell's colours (halcyon browsers)
                 property JsonObject browsers: JsonObject {
                     property bool firefox: true // userChrome/userContent in every Firefox, LibreWolf and Zen profile
@@ -287,6 +288,12 @@ Singleton {
                         property string mode: "recent" // "recent", "random" or "recommended"
                         property int size: 300
                         property bool followRing: true // In the Red Sun theme, sit on the wallpaper's red ring (it is the drum)
+                        // The Red Sun sequence a real spin starts: the screen breaks, an eye opens in the sun, the tape rewinds.
+                        property bool sequence: true
+                        property bool eye: true // the eye that opens in the sun and finds the car
+                        property bool tape: true // the VHS tape and rewind at the end; off: the screen fades back
+                        property string quality: "full" // "full", or "light" for slower GPUs
+                        property bool launchAnimation: true // the shot and the game's card when a spin starts a game
                     }
                 }
                 property string wallpaperPath: ""
