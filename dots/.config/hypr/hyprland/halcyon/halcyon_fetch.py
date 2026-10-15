@@ -6,6 +6,8 @@ says something the machine does not support.
 
 The mark is drawn by `logo3d`. Without `--spin` it prints one settled
 frame; with `--spin` it turns for a few seconds in place and then settles.
+A key pressed while it turns settles it at once, and the key is left for the
+shell, so a new terminal can be typed in straight away.
 Motion is never used when output is not a terminal, or when the user has
 asked for reduced motion.
 """
@@ -23,8 +25,9 @@ import socket
 import subprocess
 import sys
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Callable, Optional, Sequence, TextIO
+from typing import Callable, Iterator, Optional, Sequence, TextIO
 
 import fetch_mark as logo3d
 
@@ -331,28 +334,80 @@ def spin(
     seconds: Optional[float] = None,
     sleep: Callable[[float], None] = time.sleep,
     text: Optional[list[str]] = None,
+    key_pressed: Optional[Callable[[float], bool]] = None,
 ) -> None:
     """Turn the mark in a loop, redrawing in place: for `seconds`, or until
-    interrupted when `seconds` is None. Assumes `out` is a terminal."""
+    interrupted when `seconds` is None. Assumes `out` is a terminal.
+
+    `key_pressed(timeout)` waits up to `timeout` seconds between frames and says
+    whether a key came in; when one does, the mark settles straight away."""
     info = text if text is not None else info_lines(fields, colour=colour)
     height = max(FRAME_ROWS, len(info))
     total = None if seconds is None else max(1, int(seconds / FRAME_SECONDS))
+
+    def draw(yaw: float, again: bool) -> None:
+        lines = compose(logo3d.render_frame(yaw, cols=FRAME_COLS, rows=FRAME_ROWS), info)
+        if again:
+            out.write(f"\x1b[{height}A\r")
+        out.write("\n".join(line + "\x1b[K" for line in _pad(lines, height)) + "\n")
+        out.flush()
+
     out.write("\x1b[?25l")  # hide the cursor while the mark moves
     try:
         step = 0
         while total is None or step < total:
             # One full turn every 2π / SPIN_RATE seconds, so the loop is seamless.
-            yaw = (step * SPIN_RATE * FRAME_SECONDS) % (2 * math.pi)
-            lines = compose(logo3d.render_frame(yaw, cols=FRAME_COLS, rows=FRAME_ROWS), info)
-            if step:
-                out.write(f"\x1b[{height}A\r")
-            out.write("\n".join(line + "\x1b[K" for line in _pad(lines, height)) + "\n")
-            out.flush()
-            sleep(FRAME_SECONDS)
+            draw((step * SPIN_RATE * FRAME_SECONDS) % (2 * math.pi), step > 0)
             step += 1
+            if key_pressed is None:
+                sleep(FRAME_SECONDS)
+            elif key_pressed(FRAME_SECONDS):
+                draw(SETTLED_YAW, True)
+                break
     finally:
         out.write("\x1b[?25h")
         out.flush()
+
+
+@contextmanager
+def _watch_keys(stream: TextIO) -> Iterator[Optional[Callable[[float], bool]]]:
+    """While the mark turns, notice a key without taking it: the terminal is put
+    in non-canonical, no-echo mode (Ctrl+C still works), polled, and set back
+    without flushing, so the key stays queued for the shell's prompt."""
+    try:
+        import select
+        import termios
+        fd = stream.fileno()
+        if not os.isatty(fd):
+            raise OSError
+        saved = termios.tcgetattr(fd)
+    except (ImportError, OSError, ValueError, AttributeError):
+        yield None
+        return
+    quiet = termios.tcgetattr(fd)
+    quiet[3] &= ~(termios.ICANON | termios.ECHO)
+    quiet[6][termios.VMIN] = 1
+    quiet[6][termios.VTIME] = 0
+    try:
+        termios.tcsetattr(fd, termios.TCSANOW, quiet)
+    except termios.error:
+        yield None
+        return
+
+    def key_pressed(timeout: float) -> bool:
+        try:
+            return bool(select.select([fd], [], [], timeout)[0])
+        except (OSError, ValueError):
+            time.sleep(timeout)
+            return False
+
+    try:
+        yield key_pressed
+    finally:
+        try:
+            termios.tcsetattr(fd, termios.TCSANOW, saved)  # TCSANOW: keep what was typed
+        except termios.error:
+            pass
 
 
 def _pad(lines: list[str], height: int) -> list[str]:
@@ -360,7 +415,7 @@ def _pad(lines: list[str], height: int) -> list[str]:
 
 
 def run(*, spin_seconds: Optional[float], as_json_out: bool, reduce_motion: bool = False,
-        use_fastfetch: bool = False, out: TextIO = sys.stdout) -> int:
+        use_fastfetch: bool = False, out: TextIO = sys.stdout, keys: Optional[TextIO] = None) -> int:
     fields = collect()
     if as_json_out:
         out.write(json.dumps(as_json(fields), ensure_ascii=False, indent=2) + "\n")
@@ -374,7 +429,9 @@ def run(*, spin_seconds: Optional[float], as_json_out: bool, reduce_motion: bool
     colour = _colour_enabled(out)
     # spin_seconds of 0 means loop until interrupted; None means not to spin.
     if spin_seconds is not None and out.isatty() and not reduce_motion:
-        spin(fields, out, colour=colour, seconds=(spin_seconds or None), text=text)
+        with _watch_keys(keys if keys is not None else sys.stdin) as key_pressed:
+            spin(fields, out, colour=colour, seconds=(spin_seconds or None), text=text,
+                 key_pressed=key_pressed)
     else:
         print_static(fields, out, colour=colour, text=text)
     return 0
