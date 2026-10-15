@@ -242,6 +242,9 @@ AbstractBackgroundWidget {
     function fireShot(): void {
         if (!root.pendingChosen)
             return;
+        // The launch: a shot from the drum's centre, and the game's card (RevolverLaunch).
+        root.launch?.play(root.pendingChosen, root.QsWindow?.window?.screen ?? null,
+            root.mapToItem(null, Styles.CENTRE * root.scaleFactor, Styles.CENTRE * root.scaleFactor));
         Quickshell.execDetached([root.tool, "revolver", "fire", root.pendingChosen.source, root.pendingChosen.id]);
         root.ejectingIndex = root.landedIndex;
         root.pendingChosen = null;
@@ -333,6 +336,30 @@ AbstractBackgroundWidget {
         }
     }
     onSpinningChanged: if (!spinning && !dragArea.pressed) root.spinSpeed = 0
+
+    // `qs ipc call revolver preview`: the launch animation, without starting anything (the first screen's revolver).
+    IpcHandler {
+        target: "revolver"
+        enabled: root.QsWindow?.window?.screen === (Quickshell.screens ?? [])[0]
+        function preview(): void {
+            const chosen = root.chambers[0] ?? { id: "570", name: "Dota 2", source: "steam" };
+            root.launch?.play(chosen, root.QsWindow?.window?.screen ?? null,
+                root.mapToItem(null, Styles.CENTRE * root.scaleFactor, Styles.CENTRE * root.scaleFactor));
+        }
+    }
+
+    // Loaded only while the setting is on, so a turned-off animation costs nothing.
+    Loader {
+        id: launchLoader
+        active: Config.options.background.widgets.revolver.launchAnimation
+        source: "RevolverLaunch.qml"
+        onLoaded: {
+            item.colGlow = Qt.binding(() => root.colGlow);
+            item.colHot = Qt.binding(() => root.colHot);
+            item.tool = Qt.binding(() => root.tool);
+        }
+    }
+    readonly property var launch: launchLoader.item
 
     SequentialAnimation {
         id: fireSequence

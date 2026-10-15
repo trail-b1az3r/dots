@@ -241,19 +241,31 @@ Variants {
                 // The red ring painted in the Red Sun wallpaper, in this canvas's coordinates, so the revolver can
                 // sit on it and turn it. Follows the wallpaper as it slides with the workspaces.
                 // (wallpaper-heaven-kenami is Red Sun's old name, still saved by a theme applied before the rename.)
+                // Any copy of the picture counts: renamed, upscaled (red-sun_upscayl_2x.png) or in another format.
                 readonly property bool wallpaperHasSunRing: ["red-sun", "wallpaper-heaven-kenami"].includes(Config.options.halcyon.theme)
-                    && /\/(red-sun|wallpaper-heaven-kenami|banner-red-sun)\.jpg$/.test(bgRoot.wallpaperPath)
-                    && wallpaper.status === Image.Ready && wallpaper.width > 0
-                readonly property var sunRing: wallpaperHasSunRing ? {
-                    "x": wallpaper.x + 0.4907 * wallpaper.width - x,
-                    "y": wallpaper.y + 0.4312 * wallpaper.height - y,
-                    "r": 0.0369 * wallpaper.width
-                } : null
+                    && /\/(banner-)?(red-sun|wallpaper-heaven-kenami)[^\/]*\.(jpe?g|png|webp)$/i.test(bgRoot.wallpaperPath)
+                    && wallpaper.status === Image.Ready && sunCover > 0
+                // Where the picture is really drawn: the wallpaper item crops it to fill (PreserveAspectCrop), so a
+                // point of the picture is found from the picture's own size, not the item's (they differ when the
+                // item's shape isn't the picture's, as when ImageMagick isn't there to measure it).
+                readonly property real sunImageW: wallpaper.implicitWidth
+                readonly property real sunImageH: wallpaper.implicitHeight
+                readonly property real sunCover: sunImageW > 0 && sunImageH > 0
+                    ? Math.max(wallpaper.width / sunImageW, wallpaper.height / sunImageH) : 0
+                function wallpaperPoint(u, v) {
+                    return {
+                        "x": wallpaper.x + (wallpaper.width - sunImageW * sunCover) / 2 + u * sunImageW * sunCover - x,
+                        "y": wallpaper.y + (wallpaper.height - sunImageH * sunCover) / 2 + v * sunImageH * sunCover - y
+                    };
+                }
+                readonly property var sunRing: {
+                    if (!wallpaperHasSunRing)
+                        return null;
+                    const p = wallpaperPoint(0.4907, 0.4312);
+                    return { "x": p.x, "y": p.y, "r": 0.0369 * sunImageW * sunCover };
+                }
                 // The car on the road below it, which the eye in the Red Sun sequence ends up staring at.
-                readonly property var sunCar: wallpaperHasSunRing ? {
-                    "x": wallpaper.x + 0.6485 * wallpaper.width - x,
-                    "y": wallpaper.y + 0.7084 * wallpaper.height - y
-                } : null
+                readonly property var sunCar: wallpaperHasSunRing ? wallpaperPoint(0.6485, 0.7084) : null
                 x: wallpaperTotalOffsetX * parallaxFactor * !locked
                 y: wallpaperTotalOffsetY * parallaxFactor * !locked
 

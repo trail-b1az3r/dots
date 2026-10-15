@@ -34,6 +34,10 @@ precision highp float;
 #define CAR_X 0.6485
 #define CAR_Y 0.7084
 #define STRENGTH 0.5
+// Settings > Background > Revolver > Red Sun sequence: the eye, the tape and rewind, and how much it draws.
+#define EYE 1
+#define TAPE 1
+#define QUALITY 1      // 1: everything; 0: light (no smear, bevels, light rays or embers), for slower GPUs
 
 in vec2 v_texcoord;
 uniform sampler2D tex;
@@ -46,7 +50,11 @@ uniform float pointer_pressed_times[32];     // seconds since each press; negati
 layout(location = 0) out vec4 fragColor;
 
 const float TAU = 6.28318531;
+#if TAPE
 const float DURATION = 10.6;      // s, the whole episode, counted from the press
+#else
+const float DURATION = 6.7;       // no tape: the broken screen fades back after the eye
+#endif
 const float T_VHS = 6.1;          // the picture turns to tape
 const float T_REW = 6.9;          // and rewinds
 const float REW_SPEED = 2.7;      // times faster than it happened
@@ -115,8 +123,12 @@ vec3 sampleScreen(vec2 hu, vec2 ringUV, float aspect, float st) {
     float w = exp(-pow((r - RING_R) / (RING_R * 0.55), 2.0)) + (1.0 - smoothstep(0.0, RING_R, r));
     w = clamp(w, 0.0, 1.0);
     float angle = spinAngle(st) * w;
+#if QUALITY
     if (angle < 1e-4)
         return sampleTex(ringUV + hu / vec2(aspect, 1.0));
+#else
+    return sampleTex(ringUV + rotate(hu, -angle) / vec2(aspect, 1.0));
+#endif
     float smear = min(spinRate(st) * 0.035, 0.45) * w;
     vec3 sum = vec3(0.0);
     for (int i = 0; i < 5; i++) {
@@ -290,8 +302,10 @@ vec3 scene(vec2 uv, float st, float strength, vec2 ringUV, vec2 carP, float aspe
 
     float edgeQ = 1e9;
     vec2 edgeDir = vec2(1.0, 0.0);
-    for (int j = -2; j <= 2; j++) {
-        for (int i = -2; i <= 2; i++) {
+    // The nearest edge is between the cell and one of its 8 neighbours: a 3 x 3 search is enough, and a third of
+    // the cost of 5 x 5.
+    for (int j = -1; j <= 1; j++) {
+        for (int i = -1; i <= 1; i++) {
             vec2 cell = bestCell + vec2(float(i), float(j));
             if (cell == bestCell)
                 continue;
@@ -326,11 +340,14 @@ vec3 scene(vec2 uv, float st, float strength, vec2 ringUV, vec2 carP, float aspe
     vec2 source = centre + rotate(pulled - centre - move, -turn) / shrink + tilt;
 
     vec2 split = radialC * (0.0012 + 0.003 * depth) * own;
-    vec3 colour = vec3(
-        sampleScreen(source + split, ringUV, aspect, st).r,
-        sampleScreen(source, ringUV, aspect, st).g,
-        sampleScreen(source - split, ringUV, aspect, st).b
-    );
+    vec3 colour = sampleScreen(source, ringUV, aspect, st);
+#if QUALITY
+    // The colours part only where a shard has moved: elsewhere one read is the same picture.
+    if (own > 0.002) {
+        colour.r = sampleScreen(source + split, ringUV, aspect, st).r;
+        colour.b = sampleScreen(source - split, ringUV, aspect, st).b;
+    }
+#endif
 
     float facet = dot(normalize(h - 0.5 + 1e-4), LIGHT) * own * (0.4 + 0.6 * depth);
     colour *= 1.0 + facet * 0.16 + (h.x - 0.5) * 0.08 * own;
@@ -348,12 +365,14 @@ vec3 scene(vec2 uv, float st, float strength, vec2 ringUV, vec2 carP, float aspe
     float halfGap = gap * 0.5;
     float aa = 0.9;
 
+    float lit = dot(edgeFacing, LIGHT);
+#if QUALITY
     float bevelWidth = 2.5 + 5.0 * depth;
     float t = clamp((edgePx - halfGap) / bevelWidth, 0.0, 1.0);
-    float lit = dot(edgeFacing, LIGHT);
     float bevel = (1.0 - t) * (1.0 - t);
     colour += HOT * max(lit, 0.0) * bevel * 0.55 * live * (0.5 + 0.5 * strength);
     colour *= 1.0 - max(-lit, 0.0) * bevel * 0.5 * live;
+#endif
     colour += vec3(1.0) * (1.0 - smoothstep(halfGap, halfGap + 1.3, edgePx)) * max(lit, 0.0) * 0.5 * live;
     colour *= 1.0 - 0.38 * exp(-(edgePx - halfGap) / (6.0 + 6.0 * depth)) * live * own;
 
@@ -365,9 +384,11 @@ vec3 scene(vec2 uv, float st, float strength, vec2 ringUV, vec2 carP, float aspe
     colour = mix(colour, abyss, inGap * live);
 
     // Light rays out through the cracks, turning slowly.
+#if QUALITY
     vec2 dir = p / r;
     float rays = pow(noise(dir * 6.0 + vec2(st * 0.12, -st * 0.07)), 3.0) * 2.2;
     colour += EMBER * rays * collapse * strength * 0.32 * exp(-max(r - RING_R, 0.0) * 2.6) * step(RING_R, r);
+#endif
 
     // Inside the ring the glass is gone: a dark core with the ring's light pouring in from its rim.
     float holeR = holeRadius(st);
@@ -378,12 +399,16 @@ vec3 scene(vec2 uv, float st, float strength, vec2 ringUV, vec2 carP, float aspe
     float voidAmount = core01 * collapse * strength * 0.92;
     colour = mix(colour, voidColour, voidAmount);
 
+#if EYE
     // The eye, in the void.
     vec2 carDir = normalize(carP + vec2(1e-5));
     colour = drawEye(colour, p, st, carDir, clamp(voidAmount / max(strength * 0.92, 1e-3), 0.0, 1.0));
 
     // Once it has the car: a red ring closes on it, and a faint line runs from the eye to it.
     float lockVis = smoothstep(T_LOCK, T_LOCK + 0.15, st) * (1.0 - smoothstep(T_LOCK + 1.2, T_LOCK + 2.4, st));
+#else
+    float lockVis = 0.0;
+#endif
     if (lockVis > 0.0) {
         float dc = length(p - carP);
         float rad = mix(0.09, 0.024, smoothstep(T_LOCK, T_LOCK + 0.5, st));
@@ -397,7 +422,11 @@ vec3 scene(vec2 uv, float st, float strength, vec2 ringUV, vec2 carP, float aspe
         colour += EMBER * beam * 0.35 * lockVis * (0.6 + 0.4 * sin(time * 30.0 - hseg * 40.0));
     }
 
-    colour += embers(p, st) * strength;
+#if QUALITY
+    // Embers fly between 0.35 s and about 5.2 s; outside that the loop has nothing to draw.
+    if (st > 0.3 && st < 5.4)
+        colour += embers(p, st) * strength;
+#endif
 
     // The whole screen darkens towards its edges, and the middle burns.
     float vignette = collapse * strength * 0.5 * smoothstep(0.25, 1.35, r);
@@ -496,6 +525,13 @@ void main() {
     float st = sceneTime(age);
     vec2 uv = v_texcoord;
 
+#if !TAPE
+    // No tape: after the eye, the broken screen fades back to the real one.
+    float back = smoothstep(T_VHS, DURATION, age);
+    vec3 broken = back < 0.999 ? scene(uv, st, strength, ringUV, carP, aspect) : vec3(0.0);
+    fragColor = vec4(mix(broken, texture(tex, uv).rgb, back), 1.0);
+    return;
+#endif
     // How much of a videotape it is: in at T_VHS, out at the end.
     float vhs = smoothstep(T_VHS, T_VHS + 0.45, age) * (1.0 - smoothstep(DURATION - 0.8, DURATION, age));
     if (vhs < 0.001) {
@@ -521,9 +557,12 @@ void main() {
 
     // Colour bleeds sideways, as tape's colour is soft next to its brightness.
     float bleed = (0.0025 + 0.004 * rew) * vhs;
+    // The scene is drawn once; the bleed is the picture's own colour edges shifted sideways, which is what reads as
+    // tape (drawing the whole scene three times for it tripled the cost of this part).
     vec3 mid = scene(uv, st, strength, ringUV, carP, aspect);
-    vec3 col = vec3(scene(uv + vec2(bleed, 0.0), st, strength, ringUV, carP, aspect).r, mid.g,
-                    scene(uv - vec2(bleed, 0.0), st, strength, ringUV, carP, aspect).b);
+    vec3 here = sampleTex(uv);
+    vec3 col = vec3(mid.r + sampleTex(uv + vec2(bleed, 0.0)).r - here.r, mid.g,
+                    mid.b + sampleTex(uv - vec2(bleed, 0.0)).b - here.b);
     float luma = dot(col, vec3(0.299, 0.587, 0.114));
     vec3 tape = mix(vec3(luma), col, 0.78);                      // a little washed out
     tape = tape * vec3(1.04, 0.98, 0.94) + vec3(0.035, 0.025, 0.04);   // warm, with lifted blacks

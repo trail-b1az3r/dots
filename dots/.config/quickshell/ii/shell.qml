@@ -32,6 +32,7 @@ ShellRoot {
         Updates.load()
         HalcyonUpdates.load() // the bar's and sidebar's Halcyon update buttons, and a check soon after start
         CalendarEvents.load() // reminders whichever panels are shown
+        HalcyonLocation.load() // the device's location, for the sun dial and sunset themes
         MiniWindows.load() // its IPC (Super+Ctrl+N on stock Hyprland)
     }
 

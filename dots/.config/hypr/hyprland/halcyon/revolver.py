@@ -152,6 +152,32 @@ def steam_roots() -> list[Path]:
     return seen
 
 
+# The art Steam keeps for each game, for the revolver's launch card. Its library cache has had two layouts: flat files
+# (<id>_header.jpg) and, since 2024, a folder per game (<id>/header.jpg, sometimes one level deeper).
+ART_KINDS = {"header": "header", "hero": "library_hero", "logo": "logo", "capsule": "library_600x900"}
+
+
+def steam_art(app_id: str, roots: Optional[list[Path]] = None) -> dict[str, str]:
+    """{kind: path} for the art of one Steam game: header (460 x 215), hero (the wide banner), logo, capsule."""
+    if not _STEAM_ID.match(app_id):
+        return {}
+    found: dict[str, str] = {}
+    for root in roots if roots is not None else steam_roots():
+        cache = root / "appcache" / "librarycache"
+        for kind, stem in ART_KINDS.items():
+            if kind in found:
+                continue
+            candidates = [cache / f"{app_id}_{stem}.jpg", cache / f"{app_id}_{stem}.png"]
+            folder = cache / app_id
+            if folder.is_dir():
+                candidates += sorted(folder.glob(f"{stem}.*")) + sorted(folder.glob(f"*/{stem}.*"))
+            for path in candidates:
+                if path.is_file():
+                    found[kind] = str(path)
+                    break
+    return found
+
+
 def steam_libraries(root: Path) -> list[Path]:
     """Every library folder Steam knows about, including the default one."""
     libraries = [root]

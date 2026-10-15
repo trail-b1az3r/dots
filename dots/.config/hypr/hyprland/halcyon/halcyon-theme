@@ -953,10 +953,18 @@ def weather_category():
 
 
 def sun_location():
-    """(lat, lon, source) for sun times: Settings first, then the bar's weather location. None if neither."""
+    """(lat, lon, source) for sun times: Settings first, then the device's location (the shell saves it from GeoClue
+    when location is on), then the weather's place. None if none of them."""
     stored = halcyon_sun.parse_location(get_nested(read_shell_config(), "halcyon.location"))
     if stored:
         return (*stored, "settings")
+    try:
+        device = json.loads((STATE_DIR / "location.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        device = None
+    found = halcyon_sun.parse_location(device) if isinstance(device, dict) else None
+    if found:
+        return (*found, "device")
     try:
         data = json.loads((STATE_DIR / "weather.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -1563,6 +1571,9 @@ def cmd_revolver(args):
     fire = sub.add_parser("fire", help="start one game")
     fire.add_argument("source", choices=revolver.SOURCES)
     fire.add_argument("game_id")
+    art = sub.add_parser("art", help="the art Steam keeps for a game, as JSON (the launch card uses it)")
+    art.add_argument("source", choices=revolver.SOURCES)
+    art.add_argument("game_id")
     sub.add_parser("status", help="whether it is on, where it shows, and any error the shell logged for it")
     sub.add_parser("on", help="turn it on")
     sub.add_parser("off", help="turn it off")
@@ -1574,6 +1585,9 @@ def cmd_revolver(args):
         return 0
     if options.action == "status":
         return revolver_status(revolver)
+    if options.action == "art":
+        print(json.dumps(revolver.steam_art(options.game_id) if options.source == "steam" else {}))
+        return 0
 
     if options.action == "scan":
         chambers = revolver.pool(options.source, options.mode)
@@ -1601,7 +1615,17 @@ def revolver_status(revolver):
     family = family if isinstance(family, str) else "ii"
     theme = active()
     print(f"enabled      {'yes' if enabled else 'no  (halcyon revolver on, or Settings > Background > Widgets)'}")
-    print(f"theme        {theme or 'none'}" + ("  (sits on the painted ring)" if theme == "red-sun" and entry.get("followRing", True) else ""))
+    print(f"theme        {theme or 'none'}")
+    if theme == "red-sun":
+        wallpaper = str(get_nested(config, "background.wallpaperPath") or "")
+        # The same test the shell makes (Background.qml): any copy of the Red Sun picture.
+        is_red_sun = re.search(r"/(banner-)?(red-sun|wallpaper-heaven-kenami)[^/]*\.(jpe?g|png|webp)$", wallpaper, re.I)
+        if entry.get("followRing", True) is False:
+            print("on the ring  no: Follow the ring is off (Settings > Background > Revolver)")
+        elif not is_red_sun:
+            print(f"on the ring  no: the wallpaper isn't the Red Sun picture ({wallpaper or 'none'})")
+        else:
+            print("on the ring  yes (it sits on the painted ring)")
     print(f"panel family {family}")
     if not (theme == "red-sun" and entry.get("followRing", True)):
         print(f"place        x {entry.get('x', 1400)}, y {entry.get('y', 520)}, size {entry.get('size', 300)}")
@@ -1627,6 +1651,27 @@ def revolver_status(revolver):
     else:
         print("shell log    nothing about the revolver (it loaded, or the shell has not started it)")
     return 0
+
+
+GAMES_LUA = HALCYON_STATE / "games.lua"
+
+
+def cmd_games(args):
+    """Games: `games focus on|off` (whether a game keeps the keyboard when the pointer leaves it), `games status`."""
+    if args[:1] == ["focus"] and args[1:] in (["on"], ["off"]):
+        on = args[1] == "on"
+        write_atomic(GAMES_LUA, f"-- Written by halcyon-theme games (Settings > Halcyon > Games).\n"
+                                f"HALCYON_GAME_FOCUS = {'true' if on else 'false'}\n")
+        if hyprland_running():
+            subprocess.run(["hyprctl", "reload"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        print(f"games keep the keyboard when the pointer leaves them: {'on' if on else 'off'}")
+        return 0
+    if args in ([], ["status"]):
+        text = read_state(GAMES_LUA) or ""
+        on = "HALCYON_GAME_FOCUS = false" not in text
+        print(f"focus   {'on' if on else 'off'}: a game keeps the keyboard when the pointer leaves it")
+        return 0
+    raise ThemeError("usage: halcyon-theme games [status] | games focus on|off")
 
 
 def cmd_doctor(args):
@@ -1758,6 +1803,7 @@ def cmd_placement(args):
 
 COLLAPSE_STATE = HALCYON_STATE / "collapse.json"
 COLLAPSE_SECONDS = 11.4  # the shader's DURATION (spin, eye, tape, rewind), plus a margin for the arm to arrive
+COLLAPSE_SECONDS_NO_TAPE = 7.5  # without the tape the screen fades back after the eye (DURATION 6.7)
 # Where the car on the road is, from the ring's centre, as fractions of the screen, in the Red Sun wallpaper
 # (the car is at 0.6485, 0.7084 of it, the ring at 0.4907, 0.4312). Used when the revolver does not say.
 CAR_FROM_RING = (0.1578, 0.2772)
@@ -1784,8 +1830,16 @@ def collapse_arm(age, ring_x, ring_y, ring_r, car_x=None, car_y=None):
         return f"{theme['name']} has no revolver effect"
     if effects_for(theme) != "full":
         return "the effects level is not full"
+    # Settings > Revolver > Red Sun sequence.
+    revolver = get_nested(read_shell_config(), "background.widgets.revolver")
+    revolver = revolver if isinstance(revolver, dict) else {}
+    if revolver.get("sequence", True) is False:
+        return "the Red Sun sequence is off in Settings"
+    tape = revolver.get("tape", True) is not False
     text = render_shader(theme, bool(read_state(FLIP_FILE)), glass_settings())
-    knobs = {"COLLAPSE_ARMED": "1", "ARM_AGE": f"{max(0.0, min(float(age), 5.0)):.3f}",
+    knobs = {"EYE": "0" if revolver.get("eye", True) is False else "1", "TAPE": "1" if tape else "0",
+             "QUALITY": "0" if revolver.get("quality") == "light" else "1",
+             "COLLAPSE_ARMED": "1", "ARM_AGE": f"{max(0.0, min(float(age), 5.0)):.3f}",
              "RING_X": f"{float(ring_x):.4f}", "RING_Y": f"{float(ring_y):.4f}", "RING_R": f"{float(ring_r):.4f}"}
     if car_x is None or car_y is None:
         car_x, car_y = float(ring_x) + CAR_FROM_RING[0], float(ring_y) + CAR_FROM_RING[1]
@@ -1803,9 +1857,10 @@ def collapse_arm(age, ring_x, ring_y, ring_r, car_x=None, car_y=None):
     write_atomic(path, text)
     if not hyprland_eval(f'hl.config({{ decoration = {{ screen_shader = "{path}" }}, debug = {{ damage_tracking = 0 }} }})'):
         return "Hyprland did not take the shader"
-    write_atomic(COLLAPSE_STATE, json.dumps({"token": token, "until": time.time() + COLLAPSE_SECONDS}) + "\n")
+    seconds = COLLAPSE_SECONDS if tape else COLLAPSE_SECONDS_NO_TAPE
+    write_atomic(COLLAPSE_STATE, json.dumps({"token": token, "until": time.time() + seconds}) + "\n")
     # Disarm by itself afterwards, unless a newer spin has armed it again by then.
-    subprocess.Popen(["sh", "-c", f'sleep {COLLAPSE_SECONDS}; exec "$0" collapse disarm --token {token}', str(HERE / "halcyon-theme")],
+    subprocess.Popen(["sh", "-c", f'sleep {seconds}; exec "$0" collapse disarm --token {token}', str(HERE / "halcyon-theme")],
                      start_new_session=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return None
 
@@ -1913,6 +1968,7 @@ def cmd_hyprland(args):
 COMMANDS = {
     "collapse": cmd_collapse,
     "doctor": cmd_doctor,
+    "games": cmd_games,
     "migrate": cmd_migrate,
     "hyprland": cmd_hyprland,
     "revolver": cmd_revolver,

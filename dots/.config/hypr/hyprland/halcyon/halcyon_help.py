@@ -42,6 +42,7 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("plus edit rules|keys", "open your copy of app_rules.lua or plus_keys.lua"),
         ("config-check [--fix] [--json]", "check the Hyprland and Halcyon config, and say how to fix it"),
         ("crashes [--since 2d] [--json]", "why apps closed: core dumps, memory kills, and shell restarts that took apps with them"),
+        ("games focus on|off", "whether a game keeps the keyboard when the pointer leaves it (on: games don't pause)"),
         ("doctor [--fix]", "why updates, the revolver, the browser themes or the Wi-Fi don't work, in one report; --fix fixes what it can"),
         ("migrate", "bring a theme applied by an older Halcyon up to date (login and `update apply` do this)"),
         ("hyprland [--json]", "which Hyprland is running: stock, hyprland-plus, or a hyprland-plus too old for Plus Tiles"),

@@ -48,6 +48,15 @@ Singleton {
             && (isFullscreenState(win.fullscreen) || isFullscreenState(win.fullscreenClient))) ?? null;
     }
 
+    // A game: a Steam game, a window that says it is one (content type "game"), or one tagged "game".
+    // Matches hyprland/halcyon/games.lua.
+    function isGame(win) {
+        if (!win)
+            return false;
+        return /^steam_app_/.test(win.class ?? win.initialClass ?? "") || win.contentType === "game"
+            || (win.tags ?? []).some(tag => tag === "game" || tag === "game*");
+    }
+
     function fullscreenOnMonitor(monitorName) {
         return fullscreenWindowOnMonitor(monitorName) !== null;
     }

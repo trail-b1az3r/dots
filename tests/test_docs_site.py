@@ -68,7 +68,7 @@ class SiteTests(unittest.TestCase):
     def test_home_has_the_hero_and_credits_the_wallpaper(self):
         text = (self.out / "index.html").read_text(encoding="utf-8")
         self.assertIn('class="hero"', text)
-        self.assertIn("Kenami", text)
+        self.assertIn("Alena Aenami", text)
         self.assertEqual(text.count("<h1"), 1)
 
 

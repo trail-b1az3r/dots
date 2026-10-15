@@ -780,6 +780,26 @@ ContentPage {
     }
 
     ContentSection {
+        icon: "sports_esports"
+        title: Translation.tr("Games")
+
+        ConfigSwitch {
+            buttonIcon: "mouse"
+            text: Translation.tr("Games keep the keyboard when the pointer leaves them")
+            checked: Config.options.halcyon.gameFocus
+            onCheckedChanged: {
+                if (Config.options.halcyon.gameFocus === checked)
+                    return;
+                Config.options.halcyon.gameFocus = checked;
+                Quickshell.execDetached([page.tool, "games", "focus", checked ? "on" : "off"]);
+            }
+            StyledToolTip {
+                text: Translation.tr("Most games pause or stop drawing when they lose focus, so they look frozen when the pointer slips onto another monitor or the bar. With this on, focus follows clicks while a game is focused: click another window, or use a keybind, to leave it. Steam games, and windows that say they are games, count.")
+            }
+        }
+    }
+
+    ContentSection {
         icon: "web"
         title: Translation.tr("Browsers")
 

@@ -129,7 +129,7 @@ class FirefoxTest(unittest.TestCase):
             self.assertEqual(user_js.count("legacyUserProfileCustomizations"), 1)
             theme = (profile / "chrome/halcyon.css").read_text()
             self.assertIn(f"--toolbar-field-focus-border-color: {RED_SUN['primary'].upper()}", theme)
-            self.assertIn("box-shadow: 0 0 14px", theme)  # Red Sun's ember on the selected tab
+            self.assertIn("0 0 16px rgba(255, 138, 122, 0.22)", theme)  # Red Sun's ember glow on the selected tab
             self.assertIn('@import url("halcyon-content.css")', (profile / "chrome/userContent.css").read_text())
 
             browsers.remove_firefox(profile)
@@ -162,6 +162,21 @@ class FirefoxTest(unittest.TestCase):
 
 
 class ChromiumTest(unittest.TestCase):
+    def test_new_tab_image_fills_the_screen(self):
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("no Pillow")
+        with tempfile.TemporaryDirectory() as tmp:
+            src = Path(tmp, "wall.jpg")
+            Image.new("RGB", (2560, 1440), (200, 40, 60)).save(src)
+            out = Path(tmp, "ntp.png")
+            # A 3:2 screen (a Surface): cropped from the middle to its shape, at its full size.
+            self.assertTrue(browsers.ntp_image(src, out, size=(2736, 1824)))
+            with Image.open(out) as img:
+                self.assertEqual(img.size, (2736, 1824))
+            self.assertFalse(browsers.ntp_image(None, out))
+
     def test_manifest_is_a_valid_theme(self):
         manifest = browsers.chromium_manifest(browsers.load_colors(Path("/nonexistent")), "2026.1014.1530.5", True,
                                               "red-sun")
