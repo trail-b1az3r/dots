@@ -37,3 +37,8 @@ The dots are licensed under the GPL-3.0, like upstream. See [LICENSE](LICENSE).
 
 Files from other projects keep their own licence notice. Copies of those licences are in
 [licenses/](licenses/).
+
+
+# Art Work
+Wallpaper: "red sun" (*Eclipse* by Alena Aenami, 2017)
+Source: https://wallhaven.vip/w/yjl8mk
