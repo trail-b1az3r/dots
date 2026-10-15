@@ -6,10 +6,12 @@ import io
 import math
 import os
 import sys
+import time
 import unittest
 import unittest.mock
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "dots", ".config", "hypr", "hyprland", "halcyon"))
+TOOL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dots", ".config", "hypr", "hyprland", "halcyon"))
+sys.path.insert(0, TOOL_DIR)
 
 import fetch_mark as logo3d  # noqa: E402
 import halcyon_fetch as fetch  # noqa: E402
@@ -165,6 +167,66 @@ class TestFetch(unittest.TestCase):
         text = out.getvalue()
         self.assertGreaterEqual(text.count(f"\x1b[{fetch.FRAME_ROWS}A"), 3, "the frame should redraw in place")
         self.assertTrue(text.endswith("\x1b[?25h"), "the cursor should be restored on interrupt")
+
+    def test_a_key_settles_the_mark_at_once(self) -> None:
+        out = io.StringIO()
+        calls = []
+
+        def key_pressed(timeout: float) -> bool:
+            calls.append(timeout)
+            return len(calls) == 3
+
+        fetch.spin([fetch.Field("OS", "Linux")], out, colour=False, seconds=60.0, key_pressed=key_pressed)
+        text = out.getvalue()
+        self.assertEqual(len(calls), 3, "it stops at the frame the key came in, not after 60 seconds")
+        settled = fetch.compose(logo3d.render_frame(fetch.SETTLED_YAW, cols=fetch.FRAME_COLS,
+                                                    rows=fetch.FRAME_ROWS), fetch.info_lines([fetch.Field("OS", "Linux")], colour=False))
+        last = text.rsplit(f"\x1b[{fetch.FRAME_ROWS}A\r", 1)[-1]
+        self.assertTrue(last.startswith(settled[0] + "\x1b[K"), "the last frame is the settled one")
+        self.assertTrue(text.endswith("\x1b[?25h"))
+
+    def test_on_a_terminal_a_key_stops_it_and_is_left_for_the_shell(self) -> None:
+        # A new terminal: the fetch turns for 3 s, someone starts typing. It must stop at once, and the key
+        # must still be there for the shell's prompt to read.
+        import pty
+        import select
+        child = (
+            "import sys, os, time, termios; sys.path.insert(0, %r)\n"
+            "import halcyon_fetch as f\n"
+            "f.collect = lambda: [f.Field('OS', 'Linux')]\n"
+            "start = time.monotonic(); f.run(spin_seconds=3.0, as_json_out=False)\n"
+            "took = time.monotonic() - start\n"
+            "mode = termios.tcgetattr(0)\n"
+            "mode[3] &= ~termios.ICANON; mode[6][termios.VMIN] = 0; mode[6][termios.VTIME] = 5\n"
+            "termios.tcsetattr(0, termios.TCSANOW, mode)\n"
+            "sys.stdout.write('TOOK %%.2f LEFT %%r\\n' %% (took, os.read(0, 16))); sys.stdout.flush()\n"
+        ) % str(TOOL_DIR)
+        pid, fd = pty.fork()
+        if pid == 0:
+            os.execvp(sys.executable, [sys.executable, "-c", child])
+        output = b""
+        time.sleep(0.6)
+        os.write(fd, b"l")
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            ready, _, _ = select.select([fd], [], [], 0.2)
+            if not ready:
+                continue
+            try:
+                chunk = os.read(fd, 65536)
+            except OSError:
+                break
+            if not chunk:
+                break
+            output += chunk
+            if b"LEFT" in output and output.rstrip().endswith((b")", b"'")):
+                break
+        os.waitpid(pid, 0)
+        tail = output.decode(errors="replace").split("TOOK", 1)
+        self.assertEqual(len(tail), 2, output[-400:])
+        took = float(tail[1].split()[0])
+        self.assertLess(took, 1.5, "the spin stops when a key comes, not after 3 s")
+        self.assertIn("LEFT b'l'", tail[1], "the key is left queued for the shell")
 
     def test_reduced_motion_or_no_terminal_prints_once(self) -> None:
         out = io.StringIO()  # not a terminal
