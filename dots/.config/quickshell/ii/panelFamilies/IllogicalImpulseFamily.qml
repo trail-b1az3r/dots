@@ -37,7 +37,8 @@ Scope {
     PanelLoader { component: Lock {} }
     PanelLoader { component: MediaControls {} }
     PanelLoader { component: NotificationPopup {} }
-    PanelLoader { component: OnScreenDisplay {} }
+    // Avizo draws the volume and brightness popup instead when it is chosen (halcyon osd avizo).
+    PanelLoader { extraCondition: (Config.options.osd.provider ?? "shell") === "shell"; component: OnScreenDisplay {} }
     PanelLoader { component: OnScreenKeyboard {} }
     PanelLoader { component: Overlay {} }
     PanelLoader { component: Overview {} }

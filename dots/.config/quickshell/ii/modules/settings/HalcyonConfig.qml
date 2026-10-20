@@ -800,6 +800,63 @@ ContentPage {
     }
 
     ContentSection {
+        icon: "brush"
+        title: Translation.tr("On the screen")
+
+        ContentSubsection {
+            title: Translation.tr("Volume and brightness popup")
+            tooltip: Translation.tr("The popup that shows when you change the volume, the microphone or the brightness with the keys. Avizo draws its own, in the theme's colours and shape. It has to be installed (yay -S avizo).")
+
+            ConfigSelectionArray {
+                currentValue: Config.options.osd.provider ?? "shell"
+                onSelected: newValue => {
+                    if ((Config.options.osd.provider ?? "shell") === newValue)
+                        return;
+                    Config.options.osd.provider = newValue;
+                    Quickshell.execDetached([page.tool, "osd", newValue]);
+                }
+                options: [
+                    { displayName: Translation.tr("The shell's"), icon: "dashboard", value: "shell" },
+                    { displayName: Translation.tr("Avizo"), icon: "volume_up", value: "avizo" }
+                ]
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "draw"
+            text: Translation.tr("Drawing overlay (Wayscriber) at login")
+            checked: Config.options.halcyon.annotate.enable
+            onCheckedChanged: {
+                if (Config.options.halcyon.annotate.enable === checked)
+                    return;
+                Config.options.halcyon.annotate.enable = checked;
+                Quickshell.execDetached([page.tool, "annotate", checked ? "on" : "off"]);
+            }
+            StyledToolTip {
+                text: Translation.tr("Draw on top of anything with a pen, shapes, text and a whiteboard, like ZoomIt. Super + Shift + D shows and hides it. Wayscriber (called Hyprmarker before it was renamed) has to be installed (yay -S wayscriber-bin). Its pen colours follow the theme.")
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            spacing: 8
+
+            RippleButtonWithIcon {
+                materialIcon: "draw"
+                mainText: Translation.tr("Draw now")
+                onClicked: Quickshell.execDetached([page.tool, "annotate", "toggle"])
+            }
+            RippleButtonWithIcon {
+                materialIcon: "notifications"
+                mainText: Translation.tr("Test the popup")
+                visible: (Config.options.osd.provider ?? "shell") === "avizo"
+                onClicked: Quickshell.execDetached([page.tool, "osd", "test"])
+            }
+        }
+    }
+
+    ContentSection {
         icon: "web"
         title: Translation.tr("Browsers")
 

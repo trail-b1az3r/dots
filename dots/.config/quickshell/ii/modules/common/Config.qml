@@ -123,6 +123,9 @@ Singleton {
                 }
                 property bool serverMode: false // No suspend, no automatic lock, no screen blanking (halcyon server)
                 property bool gameFocus: true // A game keeps the keyboard when the pointer leaves it (halcyon games focus)
+                property JsonObject annotate: JsonObject {
+                    property bool enable: true // Wayscriber's drawing overlay starts at login (halcyon annotate on|off)
+                }
                 // Firefox and Chromium themes from the shell's colours (halcyon browsers)
                 property JsonObject browsers: JsonObject {
                     property bool firefox: true // userChrome/userContent in every Firefox, LibreWolf and Zen profile
@@ -504,6 +507,7 @@ Singleton {
 
             property JsonObject osd: JsonObject {
                 property int timeout: 1000
+                property string provider: "shell" // "shell": the shell's own volume and brightness popup; "avizo": Avizo's (halcyon osd)
             }
 
             property JsonObject osk: JsonObject {

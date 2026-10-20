@@ -39,6 +39,13 @@ if is_file_exists(gamesFile) then
     dofile(gamesFile)
 end
 require("hyprland.halcyon.games")
+
+-- Which volume and brightness popup is on, and whether the drawing overlay starts at login (overlays.lua).
+local overlaysFile = stateHome .. "/halcyon/overlays.lua"
+if is_file_exists(overlaysFile) then
+    dofile(overlaysFile)
+end
+require("hyprland.halcyon.overlays")
 require("hyprland.halcyon.desk")
 
 -- How new windows are placed, from Settings > Interface > Windows (halcyon-theme placement).

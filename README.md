@@ -628,6 +628,37 @@ halcyon games status
 
 Settings > Halcyon > Games has the same switch.
 
+## Volume popup and drawing on the screen
+
+Two small tools, both optional, both in the theme's colours.
+
+**Avizo** draws the popup you get from the volume, microphone and brightness keys, in the theme's colours and with
+its rounding. Settings > Halcyon > On the screen picks it over the shell's own popup, which then stays hidden.
+
+```sh
+yay -S avizo                      # once
+halcyon osd avizo                 # use it (halcyon osd shell goes back)
+halcyon osd test                  # show a popup now
+```
+
+The keys still change the level themselves; they then call `halcyon-osd`, which shows the new level through Avizo
+and does nothing at all while the shell's popup is selected.
+
+**Wayscriber** (called Hyprmarker before it was renamed) draws on top of anything, like ZoomIt: a pen, shapes, text, a
+whiteboard, zoom. Its daemon starts at login and **Super + Shift + D** shows and hides it.
+
+```sh
+yay -S wayscriber-bin             # once
+halcyon annotate                  # status
+halcyon annotate off              # not at login (on turns it back on)
+halcyon annotate toggle           # show or hide it, as the key does
+```
+
+Its pen palette is the theme's accent and tertiary colour and the usual pen colours leaning toward the accent, and
+its status bar and help panel use the theme's surfaces. Applying a theme or a wallpaper rewrites
+`~/.config/avizo/config.ini` and `~/.config/wayscriber/config.toml`, but only files that start with a
+`halcyon-managed` line: a config you edited yourself is never touched. `halcyon overlays sync` does it on demand.
+
 ## Wi-Fi at login
 
 At every Hyprland login, Halcyon gets the Wi-Fi up. It waits for the card (a Surface's Marvell card is slow to

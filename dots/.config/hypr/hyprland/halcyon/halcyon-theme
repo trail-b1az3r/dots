@@ -1286,13 +1286,15 @@ def cmd_apply(args):
 
 
 def update_browsers():
-    """Firefox and Chromium follow the new colours (halcyon_browsers.py). Never fatal: a theme is not a browser."""
-    try:
-        subprocess.run([sys.executable, str(HERE / "halcyon_browsers.py"), "update", "--quiet"],
-                       stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                       timeout=60, check=False)
-    except (OSError, subprocess.SubprocessError):
-        pass
+    """Firefox and Chromium follow the new colours (halcyon_browsers.py), and so do Avizo and Wayscriber
+    (halcyon_overlays.py). Never fatal: a theme is not a browser."""
+    for tool, args in (("halcyon_browsers.py", ["update", "--quiet"]), ("halcyon_overlays.py", ["overlays", "sync", "--quiet"])):
+        try:
+            subprocess.run([sys.executable, str(HERE / tool), *args],
+                           stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           timeout=60, check=False)
+        except (OSError, subprocess.SubprocessError):
+            pass
 
 
 def cmd_effects(args):
@@ -2009,6 +2011,9 @@ def main(argv):
     if argv and argv[0] == "wifi":
         tool = HERE / "halcyon_wifi.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
+    if argv and (argv[0] == "osd" or argv[0] == "annotate" or argv[0] == "overlays"):
+        tool = HERE / "halcyon_overlays.py"
+        os.execv(sys.executable, [sys.executable, str(tool), *argv])
     if argv and argv[0] == "usb":
         tool = HERE / "halcyon_usb.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])

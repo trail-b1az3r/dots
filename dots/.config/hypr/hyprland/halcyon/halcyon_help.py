@@ -64,6 +64,11 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("wifi boot", "get the Wi-Fi up now: login runs this (log: ~/.local/state/halcyon/wifi.log)"),
         ("wifi fix [--dry-run]", "the lasting fixes, as root: keep the card managed, iwd off, Surface card settings"),
     ]),
+    ("On the screen", [
+        ("osd [avizo|shell|test] [--json]", "which volume and brightness popup is on: Avizo's, or the shell's own"),
+        ("annotate [on|off|toggle] [--json]", "draw on the screen with Wayscriber (SUPER + SHIFT + D): status, at login, show or hide"),
+        ("overlays sync", "write Avizo's and Wayscriber's colours from the current theme (applying a theme does this)"),
+    ]),
     ("Widgets, characters and extras", [
         ("revolver status", "whether the revolver is on and where, its games, and any error the shell logged for it"),
         ("revolver on|off", "show or hide it, on every theme"),
