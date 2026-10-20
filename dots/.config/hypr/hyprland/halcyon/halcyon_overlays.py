@@ -90,30 +90,6 @@ def save_settings(settings: dict) -> None:
         AVIZO_FLAG.unlink(missing_ok=True)
 
 
-def set_shell_option(dotted: str, value) -> None:
-    """Keep the shell's own setting in step (Settings shows it; the shell's popup hides when Avizo is on).
-    A config that can't be read is left alone rather than overwritten."""
-    path = browsers.SHELL_CONFIG
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        data = {}
-    except (OSError, ValueError):
-        return
-    if not isinstance(data, dict):
-        return
-    node = data
-    parts = dotted.split(".")
-    for part in parts[:-1]:
-        if not isinstance(node.get(part), dict):
-            node[part] = {}
-        node = node[part]
-    if node.get(parts[-1]) == value:
-        return
-    node[parts[-1]] = value
-    write_atomic(path, json.dumps(data, indent=2) + "\n")
-
-
 # --- the theme ----------------------------------------------------------------------------------------------------
 
 def theme_file(theme_id: str) -> dict:
@@ -334,7 +310,7 @@ def cmd_osd(args: argparse.Namespace) -> int:
         settings = load_settings()
         settings["osd"] = action
         save_settings(settings)
-        set_shell_option("osd.provider", action)
+        browsers.set_shell_option("osd.provider", action)
         if action == "avizo":
             sync(quiet=True)
             ensure_avizo()
@@ -368,7 +344,7 @@ def cmd_annotate(args: argparse.Namespace) -> int:
         settings = load_settings()
         settings["annotate"] = action == "on"
         save_settings(settings)
-        set_shell_option("halcyon.annotate.enable", action == "on")
+        browsers.set_shell_option("halcyon.annotate.enable", action == "on")
         if action == "on":
             sync(quiet=True)
             if not ensure_wayscriber():

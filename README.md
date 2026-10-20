@@ -608,6 +608,17 @@ wallpaper too, cut to the size of your largest screen so it isn't stretched.
 Firefox reads its theme only when it starts, so restart it after the first one. `halcyon browsers` says when a
 running Firefox still shows the old colours.
 
+**Other sites.** How far the Firefox theme reaches into web pages is a setting (Settings > Halcyon > Browsers, or
+`halcyon browsers sites off|accents|override`):
+
+| Level | What every site gets |
+|---|---|
+| `off` | nothing: the new tab and Firefox's own pages only |
+| `accents` (default) | the theme's accent on scrollbars, selected text, checkboxes, sliders and progress bars, the caret and the focus ring. Sites that have a dark mode use it when the theme is dark. A site that styles the same thing itself still wins. |
+| `override` | the theme's background, text and link colours, as Firefox's "override the colours specified by the page" set to Always. Every site looks like the desktop, and loses the colours of its own design (a coloured note or banner goes plain). |
+
+Leaving `override` gives sites their own colours back at the next Firefox start.
+
 ```sh
 halcyon browsers                  # what is themed, and where
 halcyon usb                       # why a browser can't find a USB device, and the fix

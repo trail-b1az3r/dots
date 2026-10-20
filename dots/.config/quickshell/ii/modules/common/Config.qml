@@ -130,6 +130,7 @@ Singleton {
                 property JsonObject browsers: JsonObject {
                     property bool firefox: true // userChrome/userContent in every Firefox, LibreWolf and Zen profile
                     property bool chromium: true // a theme extension Chromium and Brave load (Chrome: load it once)
+                    property string sites: "accents" // how far Firefox's theme reaches into web pages: "off", "accents" or "override" (halcyon browsers sites)
                 }
                 property JsonObject cursor: JsonObject {
                     property bool enable: true // Halcyon Glass cursor; off restores upstream's Bibata

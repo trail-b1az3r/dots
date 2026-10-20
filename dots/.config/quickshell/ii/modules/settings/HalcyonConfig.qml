@@ -900,6 +900,27 @@ ContentPage {
                 }
             }
         }
+
+        ContentSubsection {
+            title: Translation.tr("Firefox: other sites")
+            tooltip: Translation.tr("How far the theme reaches into web pages. Accents colour what a page leaves to the browser: scrollbars, selected text, checkboxes and sliders, the caret and the focus ring, and sites with a dark mode use it when the theme is dark. A site's own design still wins. Theme colours is Firefox's \"override the colours specified by the page\" set to Always: every site gets the theme's background, text and link colours, but loses the colours of its own design. Restart Firefox to see a change.")
+
+            ConfigSelectionArray {
+                currentValue: Config.options.halcyon.browsers.sites ?? "accents"
+                onSelected: newValue => {
+                    if ((Config.options.halcyon.browsers.sites ?? "accents") === newValue)
+                        return;
+                    Config.options.halcyon.browsers.sites = newValue;
+                    if (page.ready)
+                        Quickshell.execDetached([`${FileUtils.trimFileProtocol(Directories.config)}/hypr/hyprland/halcyon/halcyon_browsers.py`, "sites", newValue, "--quiet"]);
+                }
+                options: [
+                    { displayName: Translation.tr("Leave alone"), icon: "block", value: "off" },
+                    { displayName: Translation.tr("Accents"), icon: "palette", value: "accents" },
+                    { displayName: Translation.tr("Theme colours"), icon: "format_color_fill", value: "override" }
+                ]
+            }
+        }
     }
 
     ContentSection {

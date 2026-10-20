@@ -161,6 +161,115 @@ class FirefoxTest(unittest.TestCase):
         self.assertNotRegex(css, r":\s*!important")  # no empty values
 
 
+class SitesTest(unittest.TestCase):
+    """How far the Firefox theme reaches into web pages: off, accents (the default) or override."""
+
+    def test_the_default_is_accents_and_a_bad_value_falls_back_to_it(self):
+        with tempfile.TemporaryDirectory() as tmp, Sandbox(tmp) as box:
+            self.assertEqual(browsers.sites_level(), "accents")
+            for stored, expected in (("off", "off"), ("override", "override"), ("accents", "accents"),
+                                     ("everything", "accents"), (7, "accents"), (None, "accents")):
+                box.config.write_text(json.dumps({"halcyon": {"browsers": {"sites": stored}}}))
+                self.assertEqual(browsers.sites_level(), expected, stored)
+
+    def test_accents_colour_what_a_page_leaves_to_the_browser_and_nothing_more(self):
+        colors = browsers.load_colors(Path("/nonexistent"))
+        block = browsers.sites_css(colors, "accents")
+        self.assertIn(f"accent-color: {colors['primary']}", block)
+        self.assertIn(f"caret-color: {colors['primary']}", block)
+        self.assertIn("scrollbar-color: rgba(", block)
+        self.assertIn(":focus-visible", block)
+        self.assertNotIn("!important", block, "user styles without !important: a site that styles it itself wins")
+        self.assertNotIn("background:", block.replace("background-color", ""), "no page background is painted")
+        body = re.sub(r"/\*.*?\*/", "", block, flags=re.S)
+        self.assertEqual(body.count("{"), body.count("}"))
+        self.assertEqual(browsers.sites_css(colors, "off"), "")
+        self.assertEqual(browsers.sites_css(colors, "override"), block)
+
+    def test_the_content_css_carries_the_block_unless_it_is_off(self):
+        colors = browsers.load_colors(Path("/nonexistent"))
+        self.assertIn("Every site:", browsers.firefox_content_css(colors))
+        self.assertIn("Every site:", browsers.firefox_content_css(colors, sites="override"))
+        self.assertNotIn("Every site:", browsers.firefox_content_css(colors, sites="off"))
+        # The new tab and Firefox's own pages are styled either way.
+        self.assertIn('url("about:newtab")', browsers.firefox_content_css(colors, sites="off"))
+
+    def test_only_override_forces_page_colours(self):
+        colors = browsers.load_colors(Path("/nonexistent"))
+        for level in ("off", "accents"):
+            self.assertNotIn("document_color_use", browsers.user_js(colors, level))
+        forced = browsers.user_js(colors, "override")
+        self.assertIn('user_pref("browser.display.document_color_use", 2);', forced)
+        self.assertIn(f'user_pref("browser.display.background_color", "{colors["surface"]}");', forced)
+        self.assertIn(f'user_pref("browser.display.foreground_color", "{colors["on_surface"]}");', forced)
+        self.assertIn(f'user_pref("browser.anchor_color", "{colors["primary"]}");', forced)
+        self.assertRegex(forced, r'user_pref\("browser.visited_color", "#[0-9A-F]{6}"\);')
+
+    def test_leaving_override_says_so_out_loud_because_firefox_keeps_the_pref(self):
+        with tempfile.TemporaryDirectory() as tmp, Sandbox(tmp) as box:
+            profile = box.ff / "abc.default-release"
+            colors = browsers.load_colors()
+            browsers.install_firefox(profile, colors, "red-sun", "override")
+            self.assertIn('"browser.display.document_color_use", 2', (profile / "user.js").read_text())
+            browsers.install_firefox(profile, colors, "red-sun", "accents")
+            text = (profile / "user.js").read_text()
+            self.assertIn('"browser.display.document_color_use", 0', text)
+            self.assertNotIn('"browser.display.document_color_use", 2', text)
+            self.assertNotIn("browser.display.background_color", text)
+            # It stays: a second update before Firefox has restarted must not undo it, and it asks for no restart.
+            self.assertFalse(browsers.install_firefox(profile, colors, "red-sun", "accents"))
+            self.assertEqual(text, (profile / "user.js").read_text())
+            # Back to override: the restore line goes, the override comes back.
+            browsers.install_firefox(profile, colors, "red-sun", "override")
+            self.assertNotIn('"browser.display.document_color_use", 0', (profile / "user.js").read_text())
+            self.assertIn('"browser.display.document_color_use", 2', (profile / "user.js").read_text())
+
+    def test_a_profile_that_never_overrode_gets_no_restore_line(self):
+        with tempfile.TemporaryDirectory() as tmp, Sandbox(tmp) as box:
+            profile = box.ff / "abc.default-release"
+            browsers.install_firefox(profile, browsers.load_colors(), "red-sun", "accents")
+            self.assertNotIn("document_color_use", (profile / "user.js").read_text())
+
+    def test_taking_the_theme_away_while_overriding_gives_sites_their_colours_back(self):
+        with tempfile.TemporaryDirectory() as tmp, Sandbox(tmp) as box:
+            profile = box.ff / "abc.default-release"
+            (profile / "user.js").write_text('user_pref("browser.startup.page", 3);\n')
+            browsers.install_firefox(profile, browsers.load_colors(), "red-sun", "override")
+            browsers.remove_firefox(profile)
+            text = (profile / "user.js").read_text()
+            self.assertIn('"browser.startup.page", 3', text, "the user's own prefs stay")
+            self.assertIn('"browser.display.document_color_use", 0', text)
+            self.assertNotIn('"browser.display.document_color_use", 2', text)
+            self.assertNotIn("legacyUserProfileCustomizations", text)
+
+    def test_the_command_sets_the_level_and_writes_the_profiles(self):
+        with tempfile.TemporaryDirectory() as tmp, Sandbox(tmp) as box:
+            box.config.write_text(json.dumps({"bar": {"vertical": True}}))
+            self.assertEqual(browsers.main(["sites", "override", "--quiet"]), 0)
+            stored = json.loads(box.config.read_text())
+            self.assertEqual(stored["halcyon"]["browsers"]["sites"], "override")
+            self.assertEqual(stored["bar"], {"vertical": True}, "the rest of the config is kept")
+            for profile in (box.ff / "abc.default-release", box.lw / "xyz.default"):
+                self.assertIn("document_color_use", (profile / "user.js").read_text())
+                self.assertIn("Every site:", (profile / "chrome/halcyon-content.css").read_text())
+            self.assertEqual(browsers.main(["sites", "off", "--quiet"]), 0)
+            profile = box.ff / "abc.default-release"
+            self.assertNotIn("Every site:", (profile / "chrome/halcyon-content.css").read_text())
+            self.assertIn('"browser.display.document_color_use", 0', (profile / "user.js").read_text())
+
+    def test_the_command_refuses_an_unknown_level_and_an_unreadable_config(self):
+        with tempfile.TemporaryDirectory() as tmp, Sandbox(tmp) as box:
+            with self.assertRaises(SystemExit):
+                browsers.main(["sites", "everything"])
+            box.config.write_text("{ not json")
+            self.assertEqual(browsers.main(["sites", "override", "--quiet"]), 1)
+            self.assertEqual(box.config.read_text(), "{ not json")
+
+    def test_status_reports_the_level(self):
+        with tempfile.TemporaryDirectory() as tmp, Sandbox(tmp):
+            self.assertEqual(browsers.status()["sites"], "accents")
+
+
 class ChromiumTest(unittest.TestCase):
     def test_new_tab_image_fills_the_screen(self):
         try:
