@@ -180,6 +180,6 @@
     "dock.pinnedOnStartup": true,
     "dock.hoverToReveal": true,
     "dock.monochromeIcons": false,
-    "appearance.fakeScreenRounding": 1
+    "appearance.fakeScreenRounding": 2
   }
 }

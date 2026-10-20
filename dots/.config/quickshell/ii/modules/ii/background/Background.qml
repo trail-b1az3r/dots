@@ -28,10 +28,10 @@ Variants {
 
         required property var modelData
 
-        // Hide when fullscreen
-        property list<HyprlandWorkspace> workspacesForMonitor: Hyprland.workspaces.values.filter(workspace => workspace.monitor && workspace.monitor.name == monitor.name)
-        property var activeWorkspaceWithFullscreen: workspacesForMonitor.filter(workspace => ((workspace.toplevels.values.filter(window => window.wayland?.fullscreen)[0] != undefined) && workspace.active))[0]
-        visible: GlobalStates.screenLocked || (!(activeWorkspaceWithFullscreen != undefined)) || !Config?.options.background.hideWhenFullscreen
+        // Hide when something is fullscreen on this monitor, and only then: asked of Hyprland per monitor, so a
+        // fullscreen window on another screen, or one only told it is fullscreen, never hides this wallpaper.
+        readonly property bool fullscreenHere: HyprlandData.compositorFullscreenOnMonitor(modelData.name)
+        visible: GlobalStates.screenLocked || !fullscreenHere || !Config?.options.background.hideWhenFullscreen
 
         // Workspaces
         property HyprlandMonitor monitor: Hyprland.monitorFor(modelData)
