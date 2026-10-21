@@ -759,11 +759,15 @@ a notification says why. Its log is `~/.local/state/halcyon/wifi.log`.
 ```sh
 halcyon wifi          # what NetworkManager sees, and what stands in the way
 halcyon wifi fix      # the lasting fixes, as root (asks for sudo)
+halcyon wifi report   # everything above and NetworkManager's log in ~/halcyon-wifi-report.txt, to send
 ```
 
-`halcyon wifi fix` does three things, and only what your machine needs. It keeps Wi-Fi cards managed by
-NetworkManager, whatever marked them unmanaged. It turns `iwd` off when it runs beside NetworkManager, unless
-NetworkManager is set to use it. And on Surface (`mwifiex`) cards it turns off random MAC addresses while scanning,
+`halcyon wifi fix` does only what your machine needs. It installs NetworkManager if it is missing (the shell's
+network menu uses it) and starts it at every boot. It keeps Wi-Fi cards managed by NetworkManager, whatever marked
+them unmanaged. When `iwd` runs beside NetworkManager, it makes NetworkManager use iwd (`wifi.backend=iwd`) so the two
+stop fighting over the card and the networks iwd knows stay known; it no longer turns iwd off, which left computers
+set up with iwd alone without Wi-Fi. On a computer with iwd and no NetworkManager, login just waits for iwd to
+connect. And on Surface (`mwifiex`) cards it turns off random MAC addresses while scanning,
 and power saving, which make those cards fail to connect. It writes
 `/etc/NetworkManager/conf.d/90-halcyon-wifi.conf`; delete that file and restart NetworkManager to undo it.
 

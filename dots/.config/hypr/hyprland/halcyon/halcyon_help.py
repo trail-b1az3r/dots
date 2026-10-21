@@ -68,7 +68,9 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("usb remove", "take that rule away again"),
         ("wifi [--json]", "why the Wi-Fi isn't up: NetworkManager, iwd, the radio, an unmanaged card (a Surface's)"),
         ("wifi boot", "get the Wi-Fi up now: login runs this (log: ~/.local/state/halcyon/wifi.log)"),
-        ("wifi fix [--dry-run]", "the lasting fixes, as root: keep the card managed, iwd off, Surface card settings"),
+        ("wifi fix [--dry-run]", "the lasting fixes, as root: install and enable NetworkManager, keep the card managed, "
+                                 "NetworkManager on iwd when you use iwd, Surface card settings"),
+        ("wifi report", "everything about the Wi-Fi in ~/halcyon-wifi-report.txt, to send when it still fails"),
     ]),
     ("On the screen", [
         ("osd [avizo|shell|test] [--json]", "which volume and brightness popup is on: Avizo's, or the shell's own"),

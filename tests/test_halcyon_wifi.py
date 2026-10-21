@@ -64,6 +64,8 @@ elif name == "udevadm":
     out = "NM_UNMANAGED=1" if state.get("udev_unmanaged") else "ID_NET_NAME=wlp1s0"
 elif name == "NetworkManager":
     out = state.get("nm_config", "[main]\nplugins=keyfile\n")
+elif name == "iwctl":
+    out = "  wlan0  " + ("connected" if state.get("iwd_connected") else "disconnected")
 elif name == "rfkill":
     open(os.path.join(os.environ["HALCYON_SYSFS"], "class/rfkill/rfkill0/soft"), "w").write("0\n")
 save()
@@ -79,7 +81,7 @@ class WifiTest(unittest.TestCase):
         self.tmp = Path(tmp.name)
         self.bin = self.tmp / "bin"
         self.bin.mkdir()
-        for name in ("nmcli", "systemctl", "udevadm", "NetworkManager", "rfkill"):
+        for name in ("nmcli", "systemctl", "udevadm", "NetworkManager", "rfkill", "iwctl", "pacman"):
             (self.bin / name).write_text(FAKE)
             (self.bin / name).chmod(0o755)
         (self.bin / "notify-send").write_text("#!/bin/sh\necho \"$@\" >> \"$NOTIFY_LOG\"\n")
@@ -116,10 +118,10 @@ class WifiTest(unittest.TestCase):
     def state(self):
         return json.loads(self.state_file.read_text())
 
-    def run_tool(self, *args):
-        env = {**os.environ, "PATH": f"{self.bin}:{os.environ['PATH']}", "FAKE_STATE": str(self.state_file),
+    def run_tool(self, *args, path=None):
+        env = {**os.environ, "PATH": path or f"{self.bin}:{os.environ['PATH']}", "FAKE_STATE": str(self.state_file),
                "HALCYON_SYSFS": str(self.sys), "HALCYON_NM_CONF": str(self.conf), "NOTIFY_LOG": str(self.notify_log),
-               "XDG_STATE_HOME": str(self.tmp / "state"), "HALCYON_WIFI_WAIT_NM": "0.3",
+               "XDG_STATE_HOME": str(self.tmp / "state"), "HALCYON_WIFI_REPORT": str(self.tmp / "report.txt"), "HALCYON_WIFI_WAIT_NM": "0.3",
                "HALCYON_WIFI_WAIT_DEVICE": "0.3", "HALCYON_WIFI_WAIT_CONNECT": "0.3", "HALCYON_WIFI_POLL": "0.05"}
         return subprocess.run([sys.executable, str(TOOL), *args], capture_output=True, text=True, env=env, timeout=60)
 
@@ -175,8 +177,53 @@ class WifiTest(unittest.TestCase):
         self.assertIn("match-device=driver:mwifiex_pcie", out)
         self.assertIn("wifi.scan-rand-mac-address=no", out)
         self.assertIn("wifi.powersave=2", out)
-        self.assertIn("systemctl disable --now iwd.service", out, "iwd beside NetworkManager is turned off")
+        self.assertIn("[device]\nwifi.backend=iwd", out, "NetworkManager drives the card through iwd")
+        self.assertNotIn("disable", out, "iwd stays on, so the networks it knows stay known")
         self.assertIn("systemctl enable NetworkManager.service", out)
+
+    def without_networkmanager(self):
+        """A PATH with only the fakes, and no nmcli or NetworkManager among them: an iwd-only computer."""
+        for name in ("nmcli", "NetworkManager"):
+            (self.bin / name).unlink()
+        (self.bin / "python3").symlink_to(sys.executable)   # the fakes' interpreter
+        (self.bin / "sh").symlink_to("/bin/sh")
+        return str(self.bin)
+
+    def test_fix_installs_networkmanager_when_it_is_missing(self):
+        self.set_state(running=False, radio=True, devices=[], active=["iwd.service"], enabled=["iwd.service"])
+        done = self.run_tool("fix", "--dry-run", path=self.without_networkmanager())
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("pacman -S --needed --noconfirm networkmanager", done.stdout)
+        self.assertIn("wifi.backend=iwd", done.stdout)
+        self.assertNotIn("disable", done.stdout)
+
+    def test_status_says_networkmanager_is_missing(self):
+        self.set_state(running=False, radio=True, devices=[], active=["iwd.service"])
+        done = self.run_tool(path=self.without_networkmanager())
+        self.assertIn("NetworkManager  NOT installed", done.stdout)
+        self.assertIn("isn't installed", done.stdout)
+
+    def test_boot_on_iwd_alone_is_happy_once_iwd_connects(self):
+        self.set_state(running=False, radio=True, devices=[], active=["iwd.service"], iwd_connected=True)
+        done = self.run_tool("boot", path=self.without_networkmanager())
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("connected by iwd", done.stdout)
+        self.assertFalse(self.notify_log.exists(), "no warning when iwd has a network")
+
+    def test_boot_on_iwd_alone_says_what_to_do_when_it_does_not_connect(self):
+        self.set_state(running=False, radio=True, devices=[], active=["iwd.service"])
+        done = self.run_tool("boot", path=self.without_networkmanager())
+        self.assertEqual(done.returncode, 1)
+        self.assertIn("iwctl station list", self.notify_log.read_text())
+
+    def test_report_writes_one_file_with_everything(self):
+        done = self.run_tool("report")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        text = (self.tmp / "report.txt").read_text()
+        self.assertIn("# halcyon wifi report", text)
+        self.assertIn("mwifiex_pcie", text)
+        self.assertIn("## nmcli -f DEVICE,TYPE,STATE,CONNECTION device", text)
+        self.assertIn('"problems"', text)
 
     def test_fix_leaves_iwd_when_networkmanager_uses_it(self):
         self.set_state(running=True, radio=True, devices=[{"device": "wlp1s0", "state": "disconnected"}],
