@@ -17,6 +17,10 @@ import Quickshell.Hyprland
 import qs.modules.ii.background.widgets
 import qs.modules.ii.background.widgets.clock
 import qs.modules.ii.background.widgets.weather
+import qs.modules.ii.background.widgets.visualizer
+import qs.modules.ii.background.widgets.system
+import qs.modules.ii.background.widgets.nowplaying
+import qs.modules.ii.background.widgets.lyrics
 import qs.modules.ii.background.widgets.revolver
 
 Variants {
@@ -28,10 +32,10 @@ Variants {
 
         required property var modelData
 
-        // Hide when fullscreen
-        property list<HyprlandWorkspace> workspacesForMonitor: Hyprland.workspaces.values.filter(workspace => workspace.monitor && workspace.monitor.name == monitor.name)
-        property var activeWorkspaceWithFullscreen: workspacesForMonitor.filter(workspace => ((workspace.toplevels.values.filter(window => window.wayland?.fullscreen)[0] != undefined) && workspace.active))[0]
-        visible: GlobalStates.screenLocked || (!(activeWorkspaceWithFullscreen != undefined)) || !Config?.options.background.hideWhenFullscreen
+        // Hide when something is fullscreen on this monitor, and only then: asked of Hyprland per monitor, so a
+        // fullscreen window on another screen, or one only told it is fullscreen, never hides this wallpaper.
+        readonly property bool fullscreenHere: HyprlandData.compositorFullscreenOnMonitor(modelData.name)
+        visible: GlobalStates.screenLocked || !fullscreenHere || !Config?.options.background.hideWhenFullscreen
 
         // Workspaces
         property HyprlandMonitor monitor: Hyprland.monitorFor(modelData)
@@ -286,6 +290,51 @@ Variants {
                 FadeLoader {
                     shown: Config.options.background.widgets.weather.enable
                     sourceComponent: WeatherWidget {
+                        screenWidth: bgRoot.screen.width
+                        screenHeight: bgRoot.screen.height
+                        scaledScreenWidth: bgRoot.screen.width
+                        scaledScreenHeight: bgRoot.screen.height
+                        wallpaperScale: 1
+                    }
+                }
+
+                // The audio visualizer is a desktop widget, unless it is set to be a window (VisualizerWindow).
+                FadeLoader {
+                    shown: Config.options.background.widgets.visualizer.enable && !Config.options.background.widgets.visualizer.asWindow
+                    sourceComponent: VisualizerWidget {
+                        screenWidth: bgRoot.screen.width
+                        screenHeight: bgRoot.screen.height
+                        scaledScreenWidth: bgRoot.screen.width
+                        scaledScreenHeight: bgRoot.screen.height
+                        wallpaperScale: 1
+                    }
+                }
+
+                FadeLoader {
+                    shown: Config.options.background.widgets.system.enable
+                    sourceComponent: SystemWidget {
+                        screenWidth: bgRoot.screen.width
+                        screenHeight: bgRoot.screen.height
+                        scaledScreenWidth: bgRoot.screen.width
+                        scaledScreenHeight: bgRoot.screen.height
+                        wallpaperScale: 1
+                    }
+                }
+
+                FadeLoader {
+                    shown: Config.options.background.widgets.lyrics.enable
+                    sourceComponent: LyricsWidget {
+                        screenWidth: bgRoot.screen.width
+                        screenHeight: bgRoot.screen.height
+                        scaledScreenWidth: bgRoot.screen.width
+                        scaledScreenHeight: bgRoot.screen.height
+                        wallpaperScale: 1
+                    }
+                }
+
+                FadeLoader {
+                    shown: Config.options.background.widgets.nowPlaying.enable
+                    sourceComponent: NowPlayingWidget {
                         screenWidth: bgRoot.screen.width
                         screenHeight: bgRoot.screen.height
                         scaledScreenWidth: bgRoot.screen.width

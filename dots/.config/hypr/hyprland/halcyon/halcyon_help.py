@@ -52,10 +52,16 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("text --window|--screen|--clipboard", "the focused window, the whole monitor, or the image in the clipboard"),
         ("text FILE [--print] [--join] [--lang eng+deu]", "read an image or a PDF (scanned or not); print it, rejoin lines, pick languages"),
     ]),
+    ("Animated wallpapers", [
+        ("wallpapers [--json]", "the anime themes' video wallpapers and which are on this machine"),
+        ("wallpapers get ID [--4k]", "download one (After ICEY) into ~/.local/share/halcyon/wallpapers"),
+        ("wallpapers import ID FILE", "put one you downloaded yourself in its place (Anime Girl x Cat comes from its page)"),
+    ]),
     ("Browsers and devices", [
         ("browsers [--json]", "the Firefox and Chromium themes that follow Halcyon's colours, and where they are"),
         ("browsers update", "write them now (applying a theme or a wallpaper does this)"),
         ("browsers off [firefox|chromium]", "take them out of the browsers again"),
+        ("browsers sites off|accents|override", "how far Firefox's theme reaches into web pages: not at all, the accent on every site (default), or the theme's colours on every site"),
         ("server on|off|status", "server mode: no suspend, no automatic lock or screen blanking (Settings > Halcyon has the button)"),
         ("usb [--json]", "why a browser can't find or open a USB, HID or serial device (WebUSB, WebHID, Web Serial)"),
         ("usb allow VID:PID ... | --all", "let you open those devices from the browser (a udev rule; asks for sudo)"),
@@ -63,6 +69,11 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("wifi [--json]", "why the Wi-Fi isn't up: NetworkManager, iwd, the radio, an unmanaged card (a Surface's)"),
         ("wifi boot", "get the Wi-Fi up now: login runs this (log: ~/.local/state/halcyon/wifi.log)"),
         ("wifi fix [--dry-run]", "the lasting fixes, as root: keep the card managed, iwd off, Surface card settings"),
+    ]),
+    ("On the screen", [
+        ("osd [avizo|shell|test] [--json]", "which volume and brightness popup is on: Avizo's, or the shell's own"),
+        ("annotate [on|off|toggle] [--json]", "draw on the screen with Wayscriber (SUPER + SHIFT + D): status, at login, show or hide"),
+        ("overlays sync", "write Avizo's and Wayscriber's colours from the current theme (applying a theme does this)"),
     ]),
     ("Widgets, characters and extras", [
         ("revolver status", "whether the revolver is on and where, its games, and any error the shell logged for it"),

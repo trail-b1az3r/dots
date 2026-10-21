@@ -1,0 +1,157 @@
+{
+  "name": "Manga Ink",
+  "description": "Black ink on paper with a blush accent. The animated Anime Girl x Cat wallpaper: `halcyon wallpapers import anime-girl-cat FILE`.",
+  "wallpaper": "~/.local/share/halcyon/wallpapers/anime-girl-x-cat.mp4",
+  "seed": "#F4A6BE",
+  "scheme": "scheme-neutral",
+  "shell": {
+    "background": "#0E0E10",
+    "on_background": "#EDEAE4",
+    "surface": "#0E0E10",
+    "surface_dim": "#0E0E10",
+    "surface_bright": "#38373C",
+    "surface_container_lowest": "#0A0A0C",
+    "surface_container_low": "#161618",
+    "surface_container": "#1B1B1E",
+    "surface_container_high": "#252528",
+    "surface_container_highest": "#303033",
+    "surface_variant": "#38373C",
+    "on_surface": "#EDEAE4",
+    "on_surface_variant": "#CFCBC3",
+    "outline": "#938F99",
+    "outline_variant": "#49474D",
+    "primary": "#F4A6BE",
+    "on_primary": "#541D31",
+    "primary_container": "#6F3348",
+    "on_primary_container": "#FFD9E3",
+    "secondary": "#D8D2C4",
+    "on_secondary": "#383428",
+    "secondary_container": "#4F4A3C",
+    "on_secondary_container": "#F4EEDF",
+    "tertiary": "#A9B4CC",
+    "on_tertiary": "#232F44",
+    "tertiary_container": "#394560",
+    "on_tertiary_container": "#D5E2FF",
+    "surface_tint": "#F4A6BE",
+    "inverse_surface": "#EDEAE4",
+    "inverse_on_surface": "#2F2F32",
+    "inverse_primary": "#8D4A62",
+    "error": "#FFB4AB",
+    "on_error": "#690005",
+    "error_container": "#93000A",
+    "on_error_container": "#FFDAD6",
+    "shadow": "#000000",
+    "scrim": "#000000"
+  },
+  "terminal": {
+    "term0": "#141416",
+    "term1": "#F07A8A",
+    "term2": "#9EDB9A",
+    "term3": "#F2D58A",
+    "term4": "#8FA8E8",
+    "term5": "#F4A6BE",
+    "term6": "#8FD3D0",
+    "term7": "#CFCBC3",
+    "term8": "#4A484E",
+    "term9": "#FF9AA8",
+    "term10": "#B8EBB4",
+    "term11": "#FFE6A8",
+    "term12": "#AFC2F4",
+    "term13": "#FFC4D6",
+    "term14": "#B5E8E5",
+    "term15": "#EDEAE4"
+  },
+  "hyprland": {
+    "rounding": 14,
+    "gaps_in": 6,
+    "gaps_out": 12,
+    "border_size": 2,
+    "active_border": "rgba(F4A6BEEE) rgba(EDEAE4EE) 45deg",
+    "inactive_border": "rgba(49474D55)",
+    "blur_size": 12,
+    "blur_passes": 4,
+    "shadow_color": "rgba(00000055)",
+    "curves": {
+      "pop": [
+        0.34,
+        1.56,
+        0.64,
+        1.0
+      ],
+      "snap": [
+        0.2,
+        0.9,
+        0.2,
+        1.0
+      ],
+      "linear": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ]
+    },
+    "animations": [
+      {
+        "leaf": "windowsIn",
+        "speed": 3.6,
+        "curve": "pop",
+        "style": "popin 80%"
+      },
+      {
+        "leaf": "windowsOut",
+        "speed": 2.4,
+        "curve": "snap",
+        "style": "popin 90%"
+      },
+      {
+        "leaf": "windowsMove",
+        "speed": 3.4,
+        "curve": "pop"
+      },
+      {
+        "leaf": "fadeIn",
+        "speed": 2.6,
+        "curve": "snap"
+      },
+      {
+        "leaf": "fadeOut",
+        "speed": 2.0,
+        "curve": "snap"
+      },
+      {
+        "leaf": "workspaces",
+        "speed": 4.4,
+        "curve": "snap",
+        "style": "slide"
+      },
+      {
+        "leaf": "layersIn",
+        "speed": 3.2,
+        "curve": "pop",
+        "style": "popin 80%"
+      },
+      {
+        "leaf": "layersOut",
+        "speed": 2.2,
+        "curve": "snap",
+        "style": "popin 92%"
+      },
+      {
+        "leaf": "specialWorkspaceIn",
+        "speed": 3.0,
+        "curve": "snap",
+        "style": "slidevert"
+      },
+      {
+        "leaf": "border",
+        "speed": 6.0,
+        "curve": "snap"
+      }
+    ]
+  },
+  "banner": {
+    "frame": "#F4A6BE",
+    "glow": "#EDEAE4"
+  }
+}

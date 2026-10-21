@@ -30,7 +30,8 @@ PLUS_LUA = STATE / "halcyon/plus.lua"
 CUSTOM = HOME / ".config/hypr/custom"
 EDITABLE = {"rules": "app_rules.lua", "keys": "plus_keys.lua"}
 
-# Settings key -> (Lua path under hl.config, kind, default, low, high). The defaults match plus.lua.
+# Settings key -> (Lua path under hl.config, kind, default, low, high[, option]). The defaults match plus.lua. An
+# entry with an option is written only when the running hyprland-plus has that option: older builds lack it.
 SETTINGS = {
     "allTiled": ("plus.all_tiled", "bool", False, None, None),
     "editPreview": ("plus.edit_preview", "bool", True, None, None),
@@ -43,6 +44,8 @@ SETTINGS = {
     "minHeight": ("plus.min_height", "int", 90, 20, 2000),
     "feedback": ("plus.feedback.enabled", "bool", True, None, None),
     "feedbackDuration": ("plus.feedback.duration", "int", 450, 0, 3000),
+    "dragFullscreenEdge": ("binds.drag_fullscreen_edge", "int", 8, 0, 512, "binds:drag_fullscreen_edge"),
+    "stripOverFullscreen": ("superposition.over_fullscreen", "bool", False, None, None, "superposition:over_fullscreen"),
 }
 
 
@@ -51,7 +54,7 @@ def resolve(stored: object) -> tuple[dict[str, object], list[str]]:
     stored = stored if isinstance(stored, dict) else {}
     values: dict[str, object] = {}
     notes: list[str] = []
-    for key, (_path, kind, default, low, high) in SETTINGS.items():
+    for key, (_path, kind, default, low, high, *_option) in SETTINGS.items():
         value = stored.get(key, default)
         if kind == "bool":
             if not isinstance(value, bool):
@@ -84,8 +87,9 @@ def lua_value(value: object) -> str:
 def render(values: dict[str, object]) -> str:
     """The Lua file. Nested tables are written in SETTINGS order, so the output is stable."""
     tree: dict = {}
-    for key, (path, *_rest) in SETTINGS.items():
-        node = tree
+    guarded: dict[str, dict] = {}
+    for key, (path, _kind, _default, _low, _high, *option) in SETTINGS.items():
+        node = guarded.setdefault(option[0], {}) if option else tree
         parts = path.split(".")
         for part in parts[:-1]:
             node = node.setdefault(part, {})
@@ -104,13 +108,18 @@ def render(values: dict[str, object]) -> str:
         return lines
 
     body = "\n".join(table(tree, 2))
+    # Options only some builds have, each behind a check for it
+    extra = ""
+    for option, subtree in guarded.items():
+        extra += (f'if hl.get_config and hl.get_config("{option}") ~= nil then\n'
+                  "    hl.config({\n" + "\n".join(table(subtree, 2)) + "\n    })\nend\n")
     return ("-- Written by `halcyon plus apply` from Settings > Halcyon > Plus Tiles. Do not edit: it is rewritten\n"
             "-- when the settings change. ~/.config/hypr/custom is loaded after this, so set things there instead.\n"
             "if hl.dsp and hl.dsp.plus then\n"
             "    hl.config({\n"
             f"{body}\n"
             "    })\n"
-            "end\n")
+            "end\n" + extra)
 
 
 def read_settings() -> object:

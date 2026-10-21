@@ -18,6 +18,14 @@ Chromium   A theme extension in ~/.local/share/halcyon/chromium-theme, with the 
            flag: load the folder once in chrome://extensions (Developer mode > Load unpacked), and it follows from
            then on. Chromium-based browsers re-read it when they start.
 
+Other sites  How far the Firefox theme reaches into web pages (`halcyon browsers sites off|accents|override`):
+           off       the new tab and Firefox's own pages only
+           accents   the default: scrollbars, selection, form controls, the caret and the focus ring take the theme's
+                     accent on every site, and sites with a dark mode use it when the theme is dark. A page that
+                     styles the same thing itself still wins.
+           override  Firefox's "override the colours specified by the page", set to Always, with the theme's text,
+                     background and link colours: every site wears the theme, at the price of its own design.
+
 Everything Halcyon adds is marked, and `off` takes exactly that away.
 """
 
@@ -150,6 +158,44 @@ def settings() -> dict[str, bool]:
     return {key: stored.get(key, True) is not False for key in ("firefox", "chromium")}
 
 
+SITES_LEVELS = ("off", "accents", "override")
+SITES_DEFAULT = "accents"
+
+
+def sites_level() -> str:
+    """How far the Firefox theme reaches into web pages (Settings > Halcyon > Browsers > Other sites)."""
+    stored = (shell_config().get("halcyon") or {}).get("browsers") or {}
+    value = stored.get("sites") if isinstance(stored, dict) else None
+    return value if value in SITES_LEVELS else SITES_DEFAULT
+
+
+def set_shell_option(dotted: str, value) -> bool:
+    """Write one setting into the shell's config.json, keeping the rest. A config that can't be read is left alone."""
+    path = SHELL_CONFIG
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        data = {}
+    except (OSError, ValueError):
+        return False
+    if not isinstance(data, dict):
+        return False
+    node = data
+    parts = dotted.split(".")
+    for part in parts[:-1]:
+        if not isinstance(node.get(part), dict):
+            node[part] = {}
+        node = node[part]
+    if node.get(parts[-1]) == value:
+        return True
+    node[parts[-1]] = value
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp")
+    tmp.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    tmp.replace(path)
+    return True
+
+
 # --- Firefox ------------------------------------------------------------------------------------------------------
 
 def firefox_css(c: dict[str, str], theme: str = "") -> str:
@@ -278,8 +324,25 @@ findbar {{ background: {c['surface_container']} !important; border-top: 1px soli
 """
 
 
-def firefox_content_css(c: dict[str, str], has_wallpaper: bool = False) -> str:
-    """userContent: the new tab and home page on the wallpaper, as glass, and Firefox's own pages in the palette."""
+def sites_css(c: dict[str, str], level: str = SITES_DEFAULT) -> str:
+    """userContent for every web page: the theme's accent where a page has not chosen its own. These are user
+    styles, so anything a site styles itself wins; they only colour what it leaves to the browser."""
+    if level not in ("accents", "override"):
+        return ""
+    return f"""/* Every site: the accent of the theme on what a page leaves to the browser. */
+:root {{
+  accent-color: {c['primary']};
+  caret-color: {c['primary']};
+  scrollbar-color: {rgba(c['primary'], 0.55)} transparent;
+}}
+::selection {{ background-color: {rgba(c['primary'], 0.4)}; }}
+:focus-visible {{ outline-color: {c['primary']}; }}
+"""
+
+
+def firefox_content_css(c: dict[str, str], has_wallpaper: bool = False, sites: str = SITES_DEFAULT) -> str:
+    """userContent: the new tab and home page on the wallpaper, as glass, Firefox's own pages in the palette, and,
+    unless `sites` is "off", the theme's accent on every site."""
     page = (f"linear-gradient(180deg, {rgba(c['surface'], 0.35)} 0%, {rgba(c['surface'], 0.62)} 55%, {rgba(c['surface'], 0.9)} 100%), "
             f'url("halcyon-wallpaper.jpg") center / cover no-repeat fixed') if has_wallpaper else c['surface']
     glass = rgba(c['surface_container'], 0.55)
@@ -338,14 +401,33 @@ def firefox_content_css(c: dict[str, str], has_wallpaper: bool = False) -> str:
   :root {{ scrollbar-color: {rgba(c['primary'], 0.6)} transparent !important; }}
   ::selection {{ background-color: {c['primary_container']} !important; color: {c['on_primary_container']} !important; }}
 }}
-{CSS_END}
+{sites_css(c, sites)}{CSS_END}
 """
 
 
-def user_js(c: dict[str, str]) -> str:
+OVERRIDE_PREF = 'user_pref("browser.display.document_color_use", 2);'
+RESTORE_PREF = 'user_pref("browser.display.document_color_use", 0);'
+
+
+def user_js(c: dict[str, str], sites: str = SITES_DEFAULT, restore: bool = False) -> str:
     """The prefs: read userChrome.css at all, and use Firefox's dark (or light) base to match the palette. Without the
-    second, a light system theme leaves Firefox's own text dark on Halcyon's dark toolbars."""
+    second, a light system theme leaves Firefox's own text dark on Halcyon's dark toolbars. At the "override" level,
+    every site's colours too. Firefox keeps user.js prefs in prefs.js, so leaving that level (`restore`) says
+    "only with high contrast themes" (0), Firefox's default, out loud rather than just dropping the lines."""
     mode = 0 if luminance(c["surface"]) < 0.4 else 1   # Firefox: 0 dark, 1 light
+    sites_prefs = ""
+    if sites == "override":
+        visited = mix(c["primary"], c["on_surface_variant"], 0.45)
+        sites_prefs = f"""// Every site in the theme's colours: "override the colours specified by the page" set to Always.
+{OVERRIDE_PREF}
+user_pref("browser.display.foreground_color", "{c['on_surface']}");
+user_pref("browser.display.background_color", "{c['surface']}");
+user_pref("browser.anchor_color", "{c['primary']}");
+user_pref("browser.visited_color", "{visited}");
+user_pref("browser.active_color", "{c['tertiary']}");
+"""
+    elif restore:
+        sites_prefs = f"// Sites keep their own colours again.\n{RESTORE_PREF}\n"
     return f"""{JS_BEGIN}
 // Halcyon's Firefox theme lives in chrome/halcyon.css; Firefox only reads userChrome.css with this on.
 user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
@@ -353,7 +435,7 @@ user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
 user_pref("ui.systemUsesDarkTheme", {1 - mode});
 user_pref("browser.theme.toolbar-theme", {mode});
 user_pref("browser.theme.content-theme", {mode});
-{JS_END}
+{sites_prefs}{JS_END}
 """
 
 
@@ -457,19 +539,22 @@ def firefox_wallpaper(target: Path) -> bool:
     return True
 
 
-def install_firefox(profile: Path, colors: dict[str, str], theme: str = "") -> bool:
+def install_firefox(profile: Path, colors: dict[str, str], theme: str = "", sites: str = SITES_DEFAULT) -> bool:
     """Theme one profile. Returns whether anything changed (Firefox then needs a restart)."""
     chrome = profile / "chrome"
     has_wallpaper = firefox_wallpaper(chrome / "halcyon-wallpaper.jpg")
     changed = write_if_changed(chrome / "halcyon.css", firefox_css(colors, theme))
-    changed |= write_if_changed(chrome / "halcyon-content.css", firefox_content_css(colors, has_wallpaper))
+    changed |= write_if_changed(chrome / "halcyon-content.css", firefox_content_css(colors, has_wallpaper, sites))
     for name, imported in (("userChrome.css", "halcyon.css"), ("userContent.css", "halcyon-content.css")):
         path = chrome / name
         current = path.read_text(encoding="utf-8") if path.is_file() else ""
         changed |= write_if_changed(path, _with_import(current, imported))
     prefs = profile / "user.js"
     current = prefs.read_text(encoding="utf-8") if prefs.is_file() else ""
-    wanted = (_strip_block(current, JS_BEGIN, JS_END) + "\n\n" + user_js(colors)).lstrip("\n")
+    # Leaving the override level: the pref is in prefs.js once Firefox has run, so it has to be set back, not just
+    # dropped, and the line stays (it is Firefox's default) so a second update before the next start can't undo it.
+    restore = (OVERRIDE_PREF in current or RESTORE_PREF in current) and sites != "override"
+    wanted = (_strip_block(current, JS_BEGIN, JS_END) + "\n\n" + user_js(colors, sites, restore)).lstrip("\n")
     changed |= write_if_changed(prefs, wanted)
     return changed
 
@@ -488,9 +573,13 @@ def remove_firefox(profile: Path) -> None:
                 path.unlink()
     user_js = profile / "user.js"
     if user_js.is_file():
-        rest = _strip_block(user_js.read_text(encoding="utf-8"), JS_BEGIN, JS_END)
+        text = user_js.read_text(encoding="utf-8")
+        rest = _strip_block(text, JS_BEGIN, JS_END)
+        if OVERRIDE_PREF in text:
+            # Firefox kept the override in prefs.js: say "default" again so sites get their own colours back.
+            rest = (rest.rstrip("\n") + f"\n\n{JS_BEGIN}\n{RESTORE_PREF}\n{JS_END}\n").lstrip("\n")
         if rest.strip():
-            user_js.write_text(rest + "\n", encoding="utf-8")
+            user_js.write_text(rest + "\n" if not rest.endswith("\n") else rest, encoding="utf-8")
         else:
             user_js.unlink()
 
@@ -675,13 +764,14 @@ def _update(quiet: bool) -> dict:
     wants = settings()
     colors = load_colors()
     theme = active_theme()
+    sites = sites_level()
     report = {"firefox": [], "chromium": [], "chrome": chrome_installed(), "restart": []}
     first_time = []
     if wants["firefox"]:
         for browser, profile in firefox_profiles():
             if not (profile / "chrome/halcyon.css").is_file() and browser not in first_time:
                 first_time.append(browser)
-            changed = install_firefox(profile, colors, theme)
+            changed = install_firefox(profile, colors, theme, sites)
             report["firefox"].append({"browser": browser, "profile": str(profile), "changed": changed})
             if changed and browser not in report["restart"]:
                 report["restart"].append(browser)
@@ -725,6 +815,7 @@ def status() -> dict:
     profiles = firefox_profiles()
     return {
         "settings": settings(),
+        "sites": sites_level(),
         "colors": str(COLORS),
         "firefox": [{"browser": b, "profile": str(p), "themed": (p / "chrome/halcyon.css").is_file(),
                      "restart_needed": running_since_before(p)}
@@ -752,8 +843,8 @@ def print_report(report: dict) -> None:
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="halcyon browsers", description="Firefox and Chromium themes that follow Halcyon.")
-    parser.add_argument("action", nargs="?", default="status", choices=("status", "update", "off"))
-    parser.add_argument("which", nargs="?", default="", choices=("", "firefox", "chromium"))
+    parser.add_argument("action", nargs="?", default="status", choices=("status", "update", "off", "sites"))
+    parser.add_argument("which", nargs="?", default="", choices=("", "firefox", "chromium") + SITES_LEVELS)
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args(argv)
@@ -761,6 +852,16 @@ def main(argv: list[str]) -> int:
         report = update(quiet=args.quiet or args.json)
         if args.json:
             print(json.dumps(report, indent=2))
+        return 0
+    if args.action == "sites":
+        if args.which not in SITES_LEVELS:
+            print(f"usage: halcyon browsers sites {'|'.join(SITES_LEVELS)} (now: {sites_level()})", file=sys.stderr)
+            return 0 if not args.which else 2
+        if not set_shell_option("halcyon.browsers.sites", args.which):
+            print("halcyon browsers: the shell's config.json can't be read, so the setting was not saved", file=sys.stderr)
+            return 1
+        update(quiet=args.quiet)
+        print(f"other sites: {args.which}; restart Firefox to see it")
         return 0
     if args.action == "off":
         return off(args.which)
@@ -775,6 +876,9 @@ def main(argv: list[str]) -> int:
         print(f"{item['browser']:<10} {state}  {item['profile']}")
     if not info["firefox"]:
         print("Firefox    no profiles found")
+    print(f"Sites      {info['sites']}" + {"off": " (the new tab and Firefox's pages only)",
+                                          "accents": " (the accent on every site's scrollbars, selection and controls)",
+                                          "override": " (every site in the theme's colours)"}[info["sites"]])
     print(f"Chromium   theme {'at ' + info['chromium_theme'] if info['chromium_theme'] else 'not written yet'}")
     for item in info["chromium"]:
         print(f"{item['browser']:<10} {'loads it' if item['loads_theme'] else 'does not load it'} ({item['flags']})")

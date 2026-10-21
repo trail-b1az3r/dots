@@ -4,14 +4,22 @@
 Halcyon additions. Its own README describes each one. The desktop uses:
 
 - **Mini windows**, `SUPER + CTRL + N`: a window shrinks to a small floating tile.
-- **Superposition windows**: Spotify stays on a thin strip at the right edge, above a fullscreen window.
+- **Superposition windows**: Spotify stays on a thin strip at the right edge. A fullscreen window has the whole screen
+  and the strip waits behind it (`superposition:over_fullscreen = false`); Settings > Halcyon > Plus Tiles >
+  **Music strip over fullscreen** keeps it on top instead, covering that edge of the fullscreen window.
 - **Plus Tiles**: terminals are ordinary tiles until you use Move Edge (`SUPER + ALT + E`) on one. Then you pick an
   edge, move it, see the preview and press Enter: the tiles sharing that edge adapt, and the tile keeps its custom
   size from then on. See [Plus Tiles](keybinds.md#plus-tiles) below.
 - **Drag fix**: a tiled window keeps the grab point when it floats during a drag, so it does not jump.
   The drag guide tints the tile a dropped window would swap with.
+- **Drop at the top to fullscreen**: hold `SUPER`, drag a window by its middle and let go at the very top of the
+  screen, and it becomes fullscreen (`binds:drag_fullscreen_edge = 8`, the size of that strip in pixels; 0 turns it
+  off, and Settings > Halcyon > Plus Tiles has it). A click is not a drag, and a window already at the top is left
+  alone. `SUPER + F` still toggles fullscreen.
 
-The settings are in `~/.config/hypr/hyprland/halcyon/plus.lua`. They only take effect with the fork.
+The settings are in `~/.config/hypr/hyprland/halcyon/plus.lua`. They only take effect with the fork, and each option
+added after Plus Tiles is set only when the running build has it, so an older hyprland-plus loads the config without
+errors (update it with `sudo hyprctl-lite install full` to get them).
 
 hyprland-plus is not a command. It is Hyprland itself, built with the Halcyon additions, and it takes the place of
 the `Hyprland` program. After installing it, log out and back in and start Hyprland as you always do. To check, run

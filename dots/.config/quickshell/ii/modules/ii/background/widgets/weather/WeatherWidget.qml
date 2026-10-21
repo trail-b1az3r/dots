@@ -21,6 +21,7 @@ AbstractBackgroundWidget {
     readonly property string themeId: Config.options.halcyon.theme
     readonly property bool themedCard: Styles.styleFor(themeId).id !== "default"
     readonly property bool redSun: Styles.styleFor(themeId).id === "red-sun"
+    readonly property ThemeLook look: ThemeLook {}
 
     StyledDropShadow {
         visible: !root.themedCard
@@ -50,11 +51,13 @@ AbstractBackgroundWidget {
         font {
             pixelSize: 80
             family: Appearance.font.family.expressive
-            weight: Font.Medium
+            weight: root.look.id === "keycap" ? Font.Black : Font.Medium
+            letterSpacing: root.look.id === "hsr" ? 2 : 0
         }
-        color: root.redSun ? "#ffe2d6" : Appearance.colors.colPrimary
-        style: root.redSun ? Text.Raised : Text.Normal
-        styleColor: "#ff4940"
+        // Red Sun lights the number like its ring; the keycaps ink it with an outline; glass frosts it white.
+        color: !root.themedCard ? Appearance.colors.colPrimary : (root.look.id === "glass" || root.redSun ? root.look.text : root.look.accentA)
+        style: root.redSun ? Text.Raised : (root.look.id === "keycap" ? Text.Outline : Text.Normal)
+        styleColor: root.redSun ? root.look.glow : Qt.darker(Appearance.colors.colLayer1, 2.6)
         text: Weather.data?.temp.substring(0,Weather.data?.temp.length - 1) ?? "--°"
         anchors {
             right: parent.right
@@ -66,7 +69,7 @@ AbstractBackgroundWidget {
 
     MaterialSymbol {
         iconSize: 80
-        color: root.redSun ? "#ff4940" : Appearance.colors.colOnPrimaryContainer
+        color: !root.themedCard ? Appearance.colors.colOnPrimaryContainer : (root.redSun ? root.look.glow : root.look.accentB)
         text: Icons.getWeatherIcon(Weather.data.wCode) ?? "cloud"
         anchors {
             left: parent.left

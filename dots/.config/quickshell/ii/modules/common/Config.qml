@@ -123,10 +123,14 @@ Singleton {
                 }
                 property bool serverMode: false // No suspend, no automatic lock, no screen blanking (halcyon server)
                 property bool gameFocus: true // A game keeps the keyboard when the pointer leaves it (halcyon games focus)
+                property JsonObject annotate: JsonObject {
+                    property bool enable: true // Wayscriber's drawing overlay starts at login (halcyon annotate on|off)
+                }
                 // Firefox and Chromium themes from the shell's colours (halcyon browsers)
                 property JsonObject browsers: JsonObject {
                     property bool firefox: true // userChrome/userContent in every Firefox, LibreWolf and Zen profile
                     property bool chromium: true // a theme extension Chromium and Brave load (Chrome: load it once)
+                    property string sites: "accents" // how far Firefox's theme reaches into web pages: "off", "accents" or "override" (halcyon browsers sites)
                 }
                 property JsonObject cursor: JsonObject {
                     property bool enable: true // Halcyon Glass cursor; off restores upstream's Bibata
@@ -145,6 +149,8 @@ Singleton {
                     property int minHeight: 90
                     property bool feedback: true // Outlines and flashes for edits, the drag guide and the inspector
                     property int feedbackDuration: 450 // How long a flash lasts, in ms
+                    property int dragFullscreenEdge: 8 // Drop a dragged window within this many px of the top: fullscreen. 0 = off
+                    property bool stripOverFullscreen: false // The music player's strip stays over a fullscreen window (covering its edge)
                 }
             }
 
@@ -277,6 +283,46 @@ Singleton {
                         property real x: 400
                         property real y: 100
                     }
+                    // The audio visualizer: the spectrum of what plays, from cava, as a desktop widget or as a window that
+                    // hyprland-plus keeps on the screen-edge strip (superposition), above fullscreen windows too.
+                    property JsonObject visualizer: JsonObject {
+                        property bool enable: false
+                        property string placementStrategy: "free" // "free", "leastBusy", "mostBusy"
+                        property real x: 120
+                        property real y: 760
+                        property string style: "bars" // "bars", "mirror", "wave", "ring"
+                        property int bars: 48
+                        property int fps: 30 // 10-60; every frame is a cava read and a redraw
+                        property int width: 520
+                        property int height: 150
+                        property bool panel: false // a card behind it, in the theme's shape
+                        property bool hideWhenSilent: false // fades out while nothing plays
+                        property bool asWindow: false // a window (kept on the superposition strip by hyprland-plus) instead of a desktop widget
+                    }
+                    // Processor, memory and swap as three rings.
+                    property JsonObject system: JsonObject {
+                        property bool enable: false
+                        property string placementStrategy: "free"
+                        property real x: 120
+                        property real y: 120
+                    }
+                    // The cover, title, artist and transport buttons of whatever is playing.
+                    property JsonObject nowPlaying: JsonObject {
+                        property bool enable: false
+                        property string placementStrategy: "free"
+                        property real x: 120
+                        property real y: 300
+                    }
+                    // The words of the song that is playing, from LRCLIB, with the line being sung in the accent colour.
+                    property JsonObject lyrics: JsonObject {
+                        property bool enable: false
+                        property string placementStrategy: "free"
+                        property real x: 120
+                        property real y: 460
+                        property int width: 480
+                        property bool panel: false // a card behind it, in the theme's shape
+                        property string align: "center" // "left", "center" or "right"
+                    }
                     // The revolver: a drum of installed games, on every theme (Red Sun's ring is one).
                     // Games are read from local files only, by halcyon-theme.
                     property JsonObject revolver: JsonObject {
@@ -299,6 +345,7 @@ Singleton {
                 property string wallpaperPath: ""
                 property string thumbnailPath: ""
                 property bool hideWhenFullscreen: true
+                property bool pauseVideoWhenHidden: true // Rest the animated wallpaper (mpvpaper) while locked or fully covered
                 property JsonObject parallax: JsonObject {
                     property bool vertical: false
                     property bool autoVertical: false
@@ -504,6 +551,7 @@ Singleton {
 
             property JsonObject osd: JsonObject {
                 property int timeout: 1000
+                property string provider: "shell" // "shell": the shell's own volume and brightness popup; "avizo": Avizo's (halcyon osd)
             }
 
             property JsonObject osk: JsonObject {

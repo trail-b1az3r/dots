@@ -240,6 +240,8 @@ style, animations, wallpaper and, for some, shell layout and effects:
 | **Shattered Glass** | `shattered-glass` | Liquid glass: a glass lens follows the pointer, clicks crack the screen, windows turn to frosted glass. Ice blue and prism violet, sharp corners. |
 | **Fractured Glass** | `fractured-glass` | Refraction only, like Apple's Liquid Glass: a squircle glass lens follows the pointer and bends what's behind its rim. No ripples or cracks. Soft blue, lavender and pink over calm fragments of thick glass. |
 | **Red Sun** | `red-sun` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. The ring is the revolver: spin it and the screen breaks, an eye opens in the sun and finds the car, and the tape rewinds. Wallpaper: *Eclipse* by Alena Aenami (2017), from [wallhaven](https://wallhaven.vip/w/yjl8mk); [buy it here](https://www.artstation.com/marketplace/p/oAol/wallpaper-pack-02). |
+| **After ICEY** | `after-icey` | Silver hair, cyan light and ink-dark navy, over the animated *After ICEY* wallpaper (fan art, by way of [MotionBGs](https://motionbgs.com/after-icey)). `halcyon wallpapers get after-icey` fetches it. |
+| **Manga Ink** | `manga-ink` | Black ink on paper with a blush accent, over the animated *Anime Girl x Cat* wallpaper by fw_storm ([DesktopHut](https://www.desktophut.com/anime-girl-x-cat-pl2s)). The site gives the file out from its page: download it there, then `halcyon wallpapers import anime-girl-cat FILE`. |
 
 ![HyperNeo, Star Rail, Shattered Glass and Fractured Glass, each with its wallpaper, its revolver, and Firefox in its colours](docs/assets/preview-themes.jpg)
 
@@ -381,6 +383,42 @@ opens (at most nine seconds), takes no clicks or keys, and Settings > Revolver >
 ![The revolver in each theme](docs/assets/revolver-styles.jpg)
 
 ![The clock face and weather card in each theme](docs/assets/widget-plates.jpg)
+
+### More desktop widgets
+
+Settings > Background has a section for each. They are all off until you turn them on, and each one can be dragged
+or placed in the least or most busy part of the wallpaper.
+
+- **Audio visualizer**: the spectrum of what is playing, from cava (already a dependency), in the theme's two accent
+  colours. Four styles: bars, mirror, wave and ring. It can sit on a card in the theme's shape, fade out while
+  nothing plays, and takes the number of bars and the frame rate (30 by default; cava only runs while the widget is
+  shown, and one cava serves everything that draws a spectrum).
+  **As a window (superposition)** shows it as a window instead: with hyprland-plus the rule on its title
+  (`app_rules.lua`) keeps it tiled on the thin screen-edge strip. The strip waits behind a fullscreen window unless
+  Settings > Halcyon > Plus Tiles > **Music strip over fullscreen** is on. On stock Hyprland it is an ordinary
+  window. Close the window to turn the widget off.
+- **System**: processor, memory and swap on a card in the theme's shape.
+- **Now playing**: the cover, title and artist of the active player, how far along it is, and previous, play/pause
+  and next. It fades away when no player is running.
+- **Lyrics**: the words of the song that is playing, a few lines at a time, the one being sung large. They come from
+  [LRCLIB](https://lrclib.net) (free, no account): the artist, title and length are sent once per song, and only
+  while the widget is on.
+
+Each theme draws these widgets its own way, not only their cards:
+
+| Theme | Gauges | Spectrum bars | Progress | Lyric being sung |
+|---|---|---|---|---|
+| No theme | rings | rounded | a line | in the accent colour |
+| Red Sun | thin lit rings with their glow, labels in capitals | needles with lit tips | a lit line | lit like the ring |
+| Shattered / Fractured Glass | rings of facets | sharp shards with a bright edge | facets | on a pane of frost |
+| HyperNeo | three activity rings inside each other, with a legend | pills | a thick pill | heavy and large |
+| Star Rail | gold rails with star ticks | bars topped with a diamond | a fine rail with a diamond on it | between two stars |
+| After ICEY, Manga Ink | keycaps that fill from the bottom | stacked keys, like a console's equaliser | a row of keys | on a keycap |
+
+The clock's hands and the weather card take the same colours.
+
+Settings > Background > Wallpaper: an animated wallpaper (mpvpaper) rests while the screen is locked or a fullscreen
+window covers every monitor, and carries on from the same frame. cava stops while the screen is locked.
 
 **Shattered Glass at `full`** runs a screen shader
 (`themes/shaders/shattered-glass.frag`) that treats the screen as a
@@ -608,6 +646,17 @@ wallpaper too, cut to the size of your largest screen so it isn't stretched.
 Firefox reads its theme only when it starts, so restart it after the first one. `halcyon browsers` says when a
 running Firefox still shows the old colours.
 
+**Other sites.** How far the Firefox theme reaches into web pages is a setting (Settings > Halcyon > Browsers, or
+`halcyon browsers sites off|accents|override`):
+
+| Level | What every site gets |
+|---|---|
+| `off` | nothing: the new tab and Firefox's own pages only |
+| `accents` (default) | the theme's accent on scrollbars, selected text, checkboxes, sliders and progress bars, the caret and the focus ring. Sites that have a dark mode use it when the theme is dark. A site that styles the same thing itself still wins. |
+| `override` | the theme's background, text and link colours, as Firefox's "override the colours specified by the page" set to Always. Every site looks like the desktop, and loses the colours of its own design (a coloured note or banner goes plain). |
+
+Leaving `override` gives sites their own colours back at the next Firefox start.
+
 ```sh
 halcyon browsers                  # what is themed, and where
 halcyon usb                       # why a browser can't find a USB device, and the fix
@@ -627,6 +676,37 @@ halcyon games status
 ```
 
 Settings > Halcyon > Games has the same switch.
+
+## Volume popup and drawing on the screen
+
+Two small tools, both optional, both in the theme's colours.
+
+**Avizo** draws the popup you get from the volume, microphone and brightness keys, in the theme's colours and with
+its rounding. Settings > Halcyon > On the screen picks it over the shell's own popup, which then stays hidden.
+
+```sh
+yay -S avizo                      # once
+halcyon osd avizo                 # use it (halcyon osd shell goes back)
+halcyon osd test                  # show a popup now
+```
+
+The keys still change the level themselves; they then call `halcyon-osd`, which shows the new level through Avizo
+and does nothing at all while the shell's popup is selected.
+
+**Wayscriber** (called Hyprmarker before it was renamed) draws on top of anything, like ZoomIt: a pen, shapes, text, a
+whiteboard, zoom. Its daemon starts at login and **Super + Shift + D** shows and hides it.
+
+```sh
+yay -S wayscriber-bin             # once
+halcyon annotate                  # status
+halcyon annotate off              # not at login (on turns it back on)
+halcyon annotate toggle           # show or hide it, as the key does
+```
+
+Its pen palette is the theme's accent and tertiary colour and the usual pen colours leaning toward the accent, and
+its status bar and help panel use the theme's surfaces. Applying a theme or a wallpaper rewrites
+`~/.config/avizo/config.ini` and `~/.config/wayscriber/config.toml`, but only files that start with a
+`halcyon-managed` line: a config you edited yourself is never touched. `halcyon overlays sync` does it on demand.
 
 ## Wi-Fi at login
 

@@ -61,6 +61,16 @@ Singleton {
         return fullscreenWindowOnMonitor(monitorName) !== null;
     }
 
+    // Whether the compositor really has a window fullscreen on this monitor's workspace: what hides the wallpaper
+    // and the screen corners. A window only *told* it is fullscreen (fullscreenstate with internal 0) stays
+    // windowed, so the wallpaper still shows around it, and a window fullscreen on another monitor doesn't count.
+    function compositorFullscreenOnMonitor(monitorName) {
+        const workspaceId = root.monitors.find(monitor => monitor.name === monitorName)?.activeWorkspace?.id;
+        if (workspaceId === undefined)
+            return false;
+        return root.windowList.some(win => win.workspace?.id === workspaceId && isFullscreenState(win.fullscreen));
+    }
+
     function hyprlandClientsForWorkspace(workspace) {
         return root.windowList.filter(win => win.workspace.id === workspace);
     }

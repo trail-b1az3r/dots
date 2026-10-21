@@ -194,6 +194,10 @@ Tips:
 - `libqalculate`
   - Used in Quickshell config, providing math ability in searchbar.
   - Note that `qalc` is the needed executable. In Arch Linux [libqalculate](https://archlinux.org/packages/extra/x86_64/libqalculate) provides it, but in Fedora [qalculate](https://packages.fedoraproject.org/pkgs/libqalculate/qalculate/fedora-43.html#files) does and [libqalculate](https://packages.fedoraproject.org/pkgs/libqalculate/libqalculate/fedora-43.html#files) does not.
+- `avizo`
+  - AUR. The volume, microphone and brightness popup, when Settings > Halcyon > On the screen has Avizo selected (`halcyon osd avizo`). Its config follows the theme.
+- `wayscriber-bin`
+  - AUR. Draws on the screen (pen, shapes, text, whiteboard), toggled with Super + Shift + D (`halcyon annotate`). It was called Hyprmarker before it was renamed. Its pen colours follow the theme.
 
 
 # Actual packages

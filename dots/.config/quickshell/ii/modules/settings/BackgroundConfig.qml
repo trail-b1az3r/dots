@@ -53,6 +53,34 @@ ContentPage {
     }
 
     ContentSection {
+        icon: "movie"
+        title: Translation.tr("Wallpaper")
+
+        ConfigSwitch {
+            buttonIcon: "fullscreen"
+            text: Translation.tr("Hide behind fullscreen windows")
+            checked: Config.options.background.hideWhenFullscreen
+            onCheckedChanged: {
+                Config.options.background.hideWhenFullscreen = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("The wallpaper and its widgets stop drawing on a monitor that has a fullscreen window")
+            }
+        }
+        ConfigSwitch {
+            buttonIcon: "pause_circle"
+            text: Translation.tr("Pause the animated wallpaper when it is hidden")
+            checked: Config.options.background.pauseVideoWhenHidden
+            onCheckedChanged: {
+                Config.options.background.pauseVideoWhenHidden = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("A video wallpaper rests while the screen is locked or a fullscreen window covers every monitor, and carries on from the same frame")
+            }
+        }
+    }
+
+    ContentSection {
         id: settingsClock
         icon: "clock_loader_40"
         title: Translation.tr("Widget: Clock")
@@ -611,6 +639,284 @@ ContentPage {
                         value: "mostBusy"
                     },
                 ]
+            }
+        }
+    }
+
+    ContentSection {
+        icon: "graphic_eq"
+        title: Translation.tr("Widget: Audio visualizer")
+
+        ConfigRow {
+            Layout.fillWidth: true
+
+            ConfigSwitch {
+                Layout.fillWidth: false
+                buttonIcon: "check"
+                text: Translation.tr("Enable")
+                checked: Config.options.background.widgets.visualizer.enable
+                onCheckedChanged: {
+                    Config.options.background.widgets.visualizer.enable = checked;
+                }
+            }
+            Item {
+                Layout.fillWidth: true
+            }
+            ConfigSelectionArray {
+                Layout.fillWidth: false
+                currentValue: Config.options.background.widgets.visualizer.placementStrategy
+                onSelected: newValue => {
+                    Config.options.background.widgets.visualizer.placementStrategy = newValue;
+                }
+                options: [
+                    { displayName: Translation.tr("Draggable"), icon: "drag_pan", value: "free" },
+                    { displayName: Translation.tr("Least busy"), icon: "category", value: "leastBusy" },
+                    { displayName: Translation.tr("Most busy"), icon: "shapes", value: "mostBusy" },
+                ]
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("Style")
+            tooltip: ""
+
+            ConfigSelectionArray {
+                currentValue: Config.options.background.widgets.visualizer.style
+                onSelected: newValue => {
+                    Config.options.background.widgets.visualizer.style = newValue;
+                }
+                options: [
+                    { displayName: Translation.tr("Bars"), icon: "equalizer", value: "bars" },
+                    { displayName: Translation.tr("Mirror"), icon: "swap_vert", value: "mirror" },
+                    { displayName: Translation.tr("Wave"), icon: "waves", value: "wave" },
+                    { displayName: Translation.tr("Ring"), icon: "radio_button_unchecked", value: "ring" }
+                ]
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "web_asset"
+            text: Translation.tr("As a window (superposition)")
+            checked: Config.options.background.widgets.visualizer.asWindow
+            onCheckedChanged: {
+                Config.options.background.widgets.visualizer.asWindow = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("Shows it as a window instead of on the desktop. With hyprland-plus it stays on the thin strip at the screen edge and is drawn above fullscreen windows, so the music shows over a game or a video. On stock Hyprland it is an ordinary window. Close the window to turn the widget off.")
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "branding_watermark"
+            text: Translation.tr("Card behind it")
+            enabled: !Config.options.background.widgets.visualizer.asWindow
+            checked: Config.options.background.widgets.visualizer.panel
+            onCheckedChanged: {
+                Config.options.background.widgets.visualizer.panel = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("A card in the theme's shape under the bars")
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "visibility_off"
+            text: Translation.tr("Fade out while nothing plays")
+            enabled: !Config.options.background.widgets.visualizer.asWindow
+            checked: Config.options.background.widgets.visualizer.hideWhenSilent
+            onCheckedChanged: {
+                Config.options.background.widgets.visualizer.hideWhenSilent = checked;
+            }
+        }
+
+        ConfigSpinBox {
+            icon: "bar_chart"
+            text: Translation.tr("Bars")
+            value: Config.options.background.widgets.visualizer.bars
+            from: 8
+            to: 128
+            stepSize: 4
+            onValueChanged: {
+                Config.options.background.widgets.visualizer.bars = value;
+            }
+        }
+        ConfigSpinBox {
+            icon: "speed"
+            text: Translation.tr("Frames per second")
+            value: Config.options.background.widgets.visualizer.fps
+            from: 10
+            to: 60
+            stepSize: 5
+            onValueChanged: {
+                Config.options.background.widgets.visualizer.fps = value;
+            }
+        }
+        ConfigSpinBox {
+            icon: "width"
+            text: Translation.tr("Width")
+            value: Config.options.background.widgets.visualizer.width
+            from: 120
+            to: 1600
+            stepSize: 20
+            enabled: !Config.options.background.widgets.visualizer.asWindow
+            onValueChanged: {
+                Config.options.background.widgets.visualizer.width = value;
+            }
+        }
+        ConfigSpinBox {
+            icon: "height"
+            text: Translation.tr("Height")
+            value: Config.options.background.widgets.visualizer.height
+            from: 60
+            to: 800
+            stepSize: 10
+            enabled: !Config.options.background.widgets.visualizer.asWindow
+            onValueChanged: {
+                Config.options.background.widgets.visualizer.height = value;
+            }
+        }
+    }
+
+    ContentSection {
+        icon: "memory"
+        title: Translation.tr("Widget: System")
+
+        ConfigRow {
+            Layout.fillWidth: true
+
+            ConfigSwitch {
+                Layout.fillWidth: false
+                buttonIcon: "check"
+                text: Translation.tr("Enable")
+                checked: Config.options.background.widgets.system.enable
+                onCheckedChanged: {
+                    Config.options.background.widgets.system.enable = checked;
+                }
+            }
+            Item {
+                Layout.fillWidth: true
+            }
+            ConfigSelectionArray {
+                Layout.fillWidth: false
+                currentValue: Config.options.background.widgets.system.placementStrategy
+                onSelected: newValue => {
+                    Config.options.background.widgets.system.placementStrategy = newValue;
+                }
+                options: [
+                    { displayName: Translation.tr("Draggable"), icon: "drag_pan", value: "free" },
+                    { displayName: Translation.tr("Least busy"), icon: "category", value: "leastBusy" },
+                    { displayName: Translation.tr("Most busy"), icon: "shapes", value: "mostBusy" },
+                ]
+            }
+        }
+    }
+
+    ContentSection {
+        icon: "music_note"
+        title: Translation.tr("Widget: Now playing")
+
+        ConfigRow {
+            Layout.fillWidth: true
+
+            ConfigSwitch {
+                Layout.fillWidth: false
+                buttonIcon: "check"
+                text: Translation.tr("Enable")
+                checked: Config.options.background.widgets.nowPlaying.enable
+                onCheckedChanged: {
+                    Config.options.background.widgets.nowPlaying.enable = checked;
+                }
+            }
+            Item {
+                Layout.fillWidth: true
+            }
+            ConfigSelectionArray {
+                Layout.fillWidth: false
+                currentValue: Config.options.background.widgets.nowPlaying.placementStrategy
+                onSelected: newValue => {
+                    Config.options.background.widgets.nowPlaying.placementStrategy = newValue;
+                }
+                options: [
+                    { displayName: Translation.tr("Draggable"), icon: "drag_pan", value: "free" },
+                    { displayName: Translation.tr("Least busy"), icon: "category", value: "leastBusy" },
+                    { displayName: Translation.tr("Most busy"), icon: "shapes", value: "mostBusy" },
+                ]
+            }
+        }
+    }
+
+
+    ContentSection {
+        icon: "lyrics"
+        title: Translation.tr("Widget: Lyrics")
+
+        ConfigRow {
+            Layout.fillWidth: true
+
+            ConfigSwitch {
+                Layout.fillWidth: false
+                buttonIcon: "check"
+                text: Translation.tr("Enable")
+                checked: Config.options.background.widgets.lyrics.enable
+                onCheckedChanged: {
+                    Config.options.background.widgets.lyrics.enable = checked;
+                }
+                StyledToolTip {
+                    text: Translation.tr("Asks lrclib.net for the song's lyrics: it is sent the artist, the title and the length, once per song")
+                }
+            }
+            Item {
+                Layout.fillWidth: true
+            }
+            ConfigSelectionArray {
+                Layout.fillWidth: false
+                currentValue: Config.options.background.widgets.lyrics.placementStrategy
+                onSelected: newValue => {
+                    Config.options.background.widgets.lyrics.placementStrategy = newValue;
+                }
+                options: [
+                    { displayName: Translation.tr("Draggable"), icon: "drag_pan", value: "free" },
+                    { displayName: Translation.tr("Least busy"), icon: "category", value: "leastBusy" },
+                    { displayName: Translation.tr("Most busy"), icon: "shapes", value: "mostBusy" },
+                ]
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "web_asset"
+            text: Translation.tr("Card behind the words")
+            checked: Config.options.background.widgets.lyrics.panel
+            onCheckedChanged: {
+                Config.options.background.widgets.lyrics.panel = checked;
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("Alignment")
+            tooltip: ""
+
+            ConfigSelectionArray {
+                currentValue: Config.options.background.widgets.lyrics.align
+                onSelected: newValue => {
+                    Config.options.background.widgets.lyrics.align = newValue;
+                }
+                options: [
+                    { displayName: Translation.tr("Left"), icon: "format_align_left", value: "left" },
+                    { displayName: Translation.tr("Centre"), icon: "format_align_center", value: "center" },
+                    { displayName: Translation.tr("Right"), icon: "format_align_right", value: "right" }
+                ]
+            }
+        }
+
+        ConfigSpinBox {
+            icon: "width"
+            text: Translation.tr("Width")
+            value: Config.options.background.widgets.lyrics.width
+            from: 240
+            to: 1400
+            stepSize: 20
+            onValueChanged: {
+                Config.options.background.widgets.lyrics.width = value;
             }
         }
     }

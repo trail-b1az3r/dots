@@ -150,7 +150,9 @@ ContentPage {
         { id: "hsr", name: "Star Rail", icon: "train" },
         { id: "shattered-glass", name: "Shattered Glass", icon: "broken_image" },
         { id: "fractured-glass", name: "Fractured Glass", icon: "lens_blur" },
-        { id: "red-sun", name: "Red Sun", icon: "wb_twilight" }
+        { id: "red-sun", name: "Red Sun", icon: "wb_twilight" },
+        { id: "after-icey", name: "After ICEY", icon: "ac_unit" },
+        { id: "manga-ink", name: "Manga Ink", icon: "draw" }
     ]
     property bool showHidden: false
     property string openThemeMenu: "" // Id of the row whose menu is dropped down
@@ -800,6 +802,63 @@ ContentPage {
     }
 
     ContentSection {
+        icon: "brush"
+        title: Translation.tr("On the screen")
+
+        ContentSubsection {
+            title: Translation.tr("Volume and brightness popup")
+            tooltip: Translation.tr("The popup that shows when you change the volume, the microphone or the brightness with the keys. Avizo draws its own, in the theme's colours and shape. It has to be installed (yay -S avizo).")
+
+            ConfigSelectionArray {
+                currentValue: Config.options.osd.provider ?? "shell"
+                onSelected: newValue => {
+                    if ((Config.options.osd.provider ?? "shell") === newValue)
+                        return;
+                    Config.options.osd.provider = newValue;
+                    Quickshell.execDetached([page.tool, "osd", newValue]);
+                }
+                options: [
+                    { displayName: Translation.tr("The shell's"), icon: "dashboard", value: "shell" },
+                    { displayName: Translation.tr("Avizo"), icon: "volume_up", value: "avizo" }
+                ]
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "draw"
+            text: Translation.tr("Drawing overlay (Wayscriber) at login")
+            checked: Config.options.halcyon.annotate.enable
+            onCheckedChanged: {
+                if (Config.options.halcyon.annotate.enable === checked)
+                    return;
+                Config.options.halcyon.annotate.enable = checked;
+                Quickshell.execDetached([page.tool, "annotate", checked ? "on" : "off"]);
+            }
+            StyledToolTip {
+                text: Translation.tr("Draw on top of anything with a pen, shapes, text and a whiteboard, like ZoomIt. Super + Shift + D shows and hides it. Wayscriber (called Hyprmarker before it was renamed) has to be installed (yay -S wayscriber-bin). Its pen colours follow the theme.")
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            spacing: 8
+
+            RippleButtonWithIcon {
+                materialIcon: "draw"
+                mainText: Translation.tr("Draw now")
+                onClicked: Quickshell.execDetached([page.tool, "annotate", "toggle"])
+            }
+            RippleButtonWithIcon {
+                materialIcon: "notifications"
+                mainText: Translation.tr("Test the popup")
+                visible: (Config.options.osd.provider ?? "shell") === "avizo"
+                onClicked: Quickshell.execDetached([page.tool, "osd", "test"])
+            }
+        }
+    }
+
+    ContentSection {
         icon: "web"
         title: Translation.tr("Browsers")
 
@@ -841,6 +900,27 @@ ContentPage {
                 StyledToolTip {
                     text: Translation.tr("Chromium and Brave load the theme by themselves; Chrome needs it loaded once")
                 }
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("Firefox: other sites")
+            tooltip: Translation.tr("How far the theme reaches into web pages. Accents colour what a page leaves to the browser: scrollbars, selected text, checkboxes and sliders, the caret and the focus ring, and sites with a dark mode use it when the theme is dark. A site's own design still wins. Theme colours is Firefox's \"override the colours specified by the page\" set to Always: every site gets the theme's background, text and link colours, but loses the colours of its own design. Restart Firefox to see a change.")
+
+            ConfigSelectionArray {
+                currentValue: Config.options.halcyon.browsers.sites ?? "accents"
+                onSelected: newValue => {
+                    if ((Config.options.halcyon.browsers.sites ?? "accents") === newValue)
+                        return;
+                    Config.options.halcyon.browsers.sites = newValue;
+                    if (page.ready)
+                        Quickshell.execDetached([`${FileUtils.trimFileProtocol(Directories.config)}/hypr/hyprland/halcyon/halcyon_browsers.py`, "sites", newValue, "--quiet"]);
+                }
+                options: [
+                    { displayName: Translation.tr("Leave alone"), icon: "block", value: "off" },
+                    { displayName: Translation.tr("Accents"), icon: "palette", value: "accents" },
+                    { displayName: Translation.tr("Theme colours"), icon: "format_color_fill", value: "override" }
+                ]
             }
         }
     }
@@ -1420,6 +1500,39 @@ ContentPage {
                 onValueChanged: {
                     Config.options.halcyon.plus.feedbackDuration = value;
                     page.applyPlus();
+                }
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("Fullscreen")
+            tooltip: Translation.tr("Needs a recent hyprland-plus; older builds ignore these")
+
+            ConfigSpinBox {
+                icon: "vertical_align_top"
+                text: Translation.tr("Drop at the top to fullscreen (px, 0 = off)")
+                value: Config.options.halcyon.plus.dragFullscreenEdge
+                from: 0
+                to: 512
+                stepSize: 2
+                onValueChanged: {
+                    Config.options.halcyon.plus.dragFullscreenEdge = value;
+                    page.applyPlus();
+                }
+                StyledToolTip {
+                    text: Translation.tr("Hold Super, drag a window by its middle and let go at the very top of the screen. A click is not a drag, and a window already at the top is left alone")
+                }
+            }
+            ConfigSwitch {
+                buttonIcon: "queue_music"
+                text: Translation.tr("Music strip over fullscreen")
+                checked: Config.options.halcyon.plus.stripOverFullscreen
+                onCheckedChanged: {
+                    Config.options.halcyon.plus.stripOverFullscreen = checked;
+                    page.applyPlus();
+                }
+                StyledToolTip {
+                    text: Translation.tr("Off: a fullscreen window has the whole screen and the strip (Spotify, the visualizer window) waits behind it. On: the strip stays on top and covers the edge of the fullscreen window")
                 }
             }
         }

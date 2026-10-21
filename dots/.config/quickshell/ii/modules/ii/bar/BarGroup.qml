@@ -28,6 +28,8 @@ Item {
         readonly property color edgeColour: {
             switch (theme) {
             case "red-sun": return Qt.rgba(1.0, 0.29, 0.25, 0.42);
+            case "after-icey":
+            case "manga-ink":
             case "hsr": return Qt.rgba(Appearance.colors.colPrimary.r, Appearance.colors.colPrimary.g, Appearance.colors.colPrimary.b, 0.38);
             case "shattered-glass":
             case "fractured-glass": return Qt.rgba(1, 1, 1, 0.16);

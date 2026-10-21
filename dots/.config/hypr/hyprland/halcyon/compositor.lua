@@ -16,6 +16,18 @@ C.tiles = dsp.plus ~= nil
 C.strips = C.tiles or window.fit_plustile ~= nil
 C.plus = C.strips or window.mini ~= nil
 
+-- Options added after Plus Tiles. hl.get_config answers nil for a key this build does not have, and setting one it
+-- does not have would be a config error, so each is asked for first.
+local function hasOption(key)
+    if not (hl and hl.get_config) then
+        return false
+    end
+    local ok, value = pcall(hl.get_config, key)
+    return ok and value ~= nil
+end
+C.dragEdge = hasOption("binds:drag_fullscreen_edge")           -- drop a dragged window at the top edge: fullscreen
+C.stripFullscreen = hasOption("superposition:over_fullscreen") -- the strip can be kept out of fullscreen windows
+
 -- Why a feature is missing, in words, or nil when it is there.
 function C.missing(feature)
     if C[feature] then

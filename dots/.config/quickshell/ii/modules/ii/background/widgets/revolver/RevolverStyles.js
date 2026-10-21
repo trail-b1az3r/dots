@@ -18,6 +18,9 @@ var STYLES = {
                  hub: "prism", hammer: "shard", glow: 0.5, waves: 0, statusLabel: true },
     "hyperneo": { id: "hyperneo", drum: "squircle", chamber: "squircle", chamberSize: 48, orbit: 79, names: true,
                   hub: "squircle", hammer: "pill", glow: 0.45, waves: 0, statusLabel: true },
+    // The anime themes: squircles, drawn as keycaps (outline, a cream ring, a flat fill, a hard shadow straight down).
+    "keycap":  { id: "keycap", drum: "squircle", plate: "keycap", chamber: "squircle", chamberSize: 48, orbit: 79, names: true,
+                 hub: "squircle", hammer: "pill", glow: 0.45, waves: 0, statusLabel: true },
     "hsr":     { id: "hsr", drum: "rail", chamber: "star", chamberSize: 52, orbit: 80, names: true,
                  hub: "sparkle", hammer: "sparkle", glow: 0.6, waves: 0, statusLabel: true }
 };
@@ -32,11 +35,43 @@ function styleFor(themeId) {
         return STYLES["glass"];
     case "hyperneo":
         return STYLES["hyperneo"];
+    case "after-icey":
+    case "manga-ink":
+        return STYLES["keycap"];
     case "hsr":
         return STYLES["hsr"];
     default:
         return STYLES["default"];
     }
+}
+
+// How the wallpaper widgets draw their insides in each theme: the gauges, the spectrum's bars, progress lines,
+// the current line of the lyrics and the labels. Colours left empty come from the theme's palette.
+//
+//   gauge     ring (a plain ring), glow (a thin lit ring with its light round it), segments (a ring of lit facets),
+//             activity (three rings inside each other, one card), rail (a gold ring with star ticks),
+//             key (a keycap that fills from the bottom)
+//   bars      round, needle (thin lines with a lit tip), shard (sharp bars with a bright edge), pill,
+//             star (bars topped with a four-point star), blocks (stacked squares, like a console's equaliser)
+//   progress  line, glow, segments, pill, rail (a thin line with a diamond on it), blocks
+//   lyric     plain, glow, frost, bold, rail (the line between two stars), key (the line on a keycap)
+var LOOKS = {
+    "default":  { id: "default", gauge: "ring", bars: "round", progress: "line", lyric: "plain",
+                  caps: false, spacing: 0, colorA: "", colorB: "", text: "", glow: "" },
+    "red-sun":  { id: "red-sun", gauge: "glow", bars: "needle", progress: "glow", lyric: "glow",
+                  caps: true, spacing: 1.5, colorA: "#ff4940", colorB: "#ff9a6a", text: "#ffe2d6", glow: "#ff4940" },
+    "glass":    { id: "glass", gauge: "segments", bars: "shard", progress: "segments", lyric: "frost",
+                  caps: false, spacing: 0.5, colorA: "#e8f4ff", colorB: "#9fc4ff", text: "#ffffff", glow: "#bfe0ff" },
+    "hyperneo": { id: "hyperneo", gauge: "activity", bars: "pill", progress: "pill", lyric: "bold",
+                  caps: false, spacing: -0.2, colorA: "", colorB: "", text: "", glow: "" },
+    "hsr":      { id: "hsr", gauge: "rail", bars: "star", progress: "rail", lyric: "rail",
+                  caps: true, spacing: 2.2, colorA: "", colorB: "", text: "", glow: "" },
+    "keycap":   { id: "keycap", gauge: "key", bars: "blocks", progress: "blocks", lyric: "key",
+                  caps: true, spacing: 0.8, colorA: "", colorB: "", text: "", glow: "" }
+};
+
+function lookFor(themeId) {
+    return LOOKS[styleFor(themeId).id] || LOOKS["default"];
 }
 
 function f(n) {

@@ -3,6 +3,7 @@ import Quickshell
 
 import qs.modules.common
 import qs.modules.ii.background
+import qs.modules.ii.background.widgets.visualizer
 import qs.modules.ii.bar
 import qs.modules.ii.cheatsheet
 import qs.modules.ii.dock
@@ -27,8 +28,14 @@ import qs.modules.ii.verticalBar
 import qs.modules.ii.wallpaperSelector
 
 Scope {
+    WallpaperSleep {}
     PanelLoader { extraCondition: !Config.options.bar.vertical; component: Bar {} }
     PanelLoader { component: Background {} }
+    // The audio visualizer as a window, which hyprland-plus keeps on the screen-edge strip (app_rules.lua).
+    PanelLoader {
+        extraCondition: Config.options.background.widgets.visualizer.enable && Config.options.background.widgets.visualizer.asWindow
+        component: VisualizerWindow {}
+    }
     PanelLoader { component: Cheatsheet {} }
     PanelLoader { extraCondition: Config.options.dock.enable; component: Dock {} }
     PanelLoader { extraCondition: Config.options.floatingTitleBars.enable; component: FloatingTitleBars {} }
@@ -37,7 +44,8 @@ Scope {
     PanelLoader { component: Lock {} }
     PanelLoader { component: MediaControls {} }
     PanelLoader { component: NotificationPopup {} }
-    PanelLoader { component: OnScreenDisplay {} }
+    // Avizo draws the volume and brightness popup instead when it is chosen (halcyon osd avizo).
+    PanelLoader { extraCondition: (Config.options.osd.provider ?? "shell") === "shell"; component: OnScreenDisplay {} }
     PanelLoader { component: OnScreenKeyboard {} }
     PanelLoader { component: Overlay {} }
     PanelLoader { component: Overview {} }

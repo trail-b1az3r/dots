@@ -33,6 +33,9 @@ return {
     -- The music player stays on the screen-edge strip, visible over fullscreen windows.
     { class = "^([Ss]potify)$", superposition = true },
 
+    -- The audio visualizer, when Settings > Background > Widget: Audio visualizer has it as a window.
+    { title = "^Halcyon Visualizer$", superposition = true },
+
     -- Small utilities float, centred, with a sensible minimum size.
     { class = "^(org.gnome.Calculator|gnome-calculator|qalculate-gtk)$", role = "float", min_size = { 320, 460 } },
     { class = "^(pavucontrol|org.pulseaudio.pavucontrol|blueman-manager|nm-connection-editor)$", role = "float", min_size = { 560, 420 } },

@@ -1,0 +1,52 @@
+#!/bin/sh
+# Shows the current volume, microphone or brightness level with Avizo, when Settings > Halcyon > On-screen display
+# has Avizo on (`halcyon osd avizo`). It changes nothing: the key binds change the level, then call this.
+#
+#   halcyon-osd volume | mic | brightness
+#
+# With the shell's own on-screen display selected it exits at once, so the binds cost nothing there.
+state="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon"
+[ -f "$state/osd-avizo" ] || exit 0
+command -v avizo-client >/dev/null 2>&1 || exit 0
+
+# pick <percent> <muted yes|no> <prefix>: the avizo image for a level.
+image() {
+    if [ "$2" = yes ]; then
+        printf '%s_muted' "$3"
+    elif [ "$1" -le 33 ]; then
+        printf '%s_low' "$3"
+    elif [ "$1" -le 66 ]; then
+        printf '%s_medium' "$3"
+    else
+        printf '%s_high' "$3"
+    fi
+}
+
+show() { # percent, muted, prefix
+    progress=$(awk -v p="$1" 'BEGIN { if (p > 100) p = 100; if (p < 0) p = 0; printf "%.3f", p / 100 }')
+    exec avizo-client --image-resource="$(image "$1" "$2" "$3")" --progress="$progress"
+}
+
+audio() { # wpctl target, image prefix
+    out=$(wpctl get-volume "$1" 2>/dev/null) || exit 0
+    muted=no
+    case "$out" in *MUTED*) muted=yes ;; esac
+    percent=$(printf '%s\n' "$out" | awk '{ printf "%d", $2 * 100 + 0.5 }')
+    show "$percent" "$muted" "$2"
+}
+
+case "$1" in
+    volume) audio @DEFAULT_AUDIO_SINK@ volume ;;
+    mic) audio @DEFAULT_AUDIO_SOURCE@ mic ;;
+    brightness)
+        command -v brightnessctl >/dev/null 2>&1 || exit 0
+        # "device,class,current,percent%,max"
+        percent=$(brightnessctl -m 2>/dev/null | head -n 1 | cut -d, -f4 | tr -d '%')
+        case "$percent" in '' | *[!0-9]*) exit 0 ;; esac
+        show "$percent" no brightness
+        ;;
+    *)
+        echo "usage: halcyon-osd volume | mic | brightness" >&2
+        exit 2
+        ;;
+esac

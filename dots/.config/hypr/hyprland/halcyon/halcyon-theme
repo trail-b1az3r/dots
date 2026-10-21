@@ -134,7 +134,7 @@ HYPR_OPTIONAL = {
 ANIMATION_LEAVES = {
     "windowsIn", "windowsOut", "windowsMove", "fadeIn", "fadeOut", "border",
     "layersIn", "layersOut", "fadeLayersIn", "fadeLayersOut", "workspaces",
-    "specialWorkspaceIn", "specialWorkspaceOut", "zoomFactor",
+    "specialWorkspaceIn", "specialWorkspaceOut", "zoomFactor", "borderangle",
 }
 # Text/background pairs that must stay readable (WCAG AA for body text).
 CONTRAST_PAIRS = [
@@ -230,8 +230,10 @@ def check_optional(key, value, problems):
                 continue
             if anim.get("leaf") not in ANIMATION_LEAVES:
                 problems.append(f"{at}.leaf must be one of {', '.join(sorted(ANIMATION_LEAVES))}")
-            if not (is_number(anim.get("speed")) and 0.1 <= anim["speed"] <= 20):
-                problems.append(f"{at}.speed must be a number in 0.1..20")
+            # A border angle loops once per `speed` tenths of a second, so it runs slow (a few seconds a turn)
+            top = 300 if anim.get("leaf") == "borderangle" else 20
+            if not (is_number(anim.get("speed")) and 0.1 <= anim["speed"] <= top):
+                problems.append(f"{at}.speed must be a number in 0.1..{top}")
             if not NAME.match(str(anim.get("curve", ""))):
                 problems.append(f"{at}.curve must name a curve")
             if "style" in anim and not ANIMATION_STYLE.match(str(anim["style"])):
@@ -1233,6 +1235,20 @@ def ensure_starrail_banner():
               file=sys.stderr)
 
 
+def wallpaper_hint(wallpaper):
+    """How to get a theme's video wallpaper when it is not on the machine (they are not shipped)."""
+    try:
+        import halcyon_wallpapers
+    except ImportError:
+        return ""
+    for entry_id, entry in halcyon_wallpapers.CATALOG.items():
+        if halcyon_wallpapers.target(entry_id) == wallpaper:
+            how = "get" if entry.get("url") else "import"
+            tail = "" if entry.get("url") else " FILE"
+            return f"      `halcyon wallpapers {how} {entry_id}{tail}` brings it ({entry['page']}), then apply the theme again"
+    return ""
+
+
 def cmd_apply(args):
     if len(args) != 1:
         raise ThemeError("usage: halcyon-theme apply NAME")
@@ -1254,6 +1270,7 @@ def cmd_apply(args):
         run([str(SWITCHWALL), "--mode", "dark", "--image", str(wallpaper)])
     else:
         print(f"note: wallpaper {wallpaper} not found, keeping the current one", file=sys.stderr)
+        print(wallpaper_hint(wallpaper), file=sys.stderr)
     run([str(SWITCHWALL), "--mode", "dark", "--noswitch",
          "--type", theme["scheme"], "--color", theme["seed"]])
 
@@ -1286,13 +1303,15 @@ def cmd_apply(args):
 
 
 def update_browsers():
-    """Firefox and Chromium follow the new colours (halcyon_browsers.py). Never fatal: a theme is not a browser."""
-    try:
-        subprocess.run([sys.executable, str(HERE / "halcyon_browsers.py"), "update", "--quiet"],
-                       stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                       timeout=60, check=False)
-    except (OSError, subprocess.SubprocessError):
-        pass
+    """Firefox and Chromium follow the new colours (halcyon_browsers.py), and so do Avizo and Wayscriber
+    (halcyon_overlays.py). Never fatal: a theme is not a browser."""
+    for tool, args in (("halcyon_browsers.py", ["update", "--quiet"]), ("halcyon_overlays.py", ["overlays", "sync", "--quiet"])):
+        try:
+            subprocess.run([sys.executable, str(HERE / tool), *args],
+                           stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           timeout=60, check=False)
+        except (OSError, subprocess.SubprocessError):
+            pass
 
 
 def cmd_effects(args):
@@ -2008,6 +2027,12 @@ def main(argv):
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and argv[0] == "wifi":
         tool = HERE / "halcyon_wifi.py"
+        os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
+    if argv and (argv[0] == "osd" or argv[0] == "annotate" or argv[0] == "overlays"):
+        tool = HERE / "halcyon_overlays.py"
+        os.execv(sys.executable, [sys.executable, str(tool), *argv])
+    if argv and argv[0] == "wallpapers":
+        tool = HERE / "halcyon_wallpapers.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and argv[0] == "usb":
         tool = HERE / "halcyon_usb.py"

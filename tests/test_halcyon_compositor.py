@@ -67,11 +67,18 @@ class LuaCapabilityTests(unittest.TestCase):
             local window = {{}}
             local dsp = {{ window = window }}
             if build ~= "stock" then window.mini = function() end end
-            if build == "old" or build == "new" then window.fit_plustile = function() end end
-            if build == "new" then dsp.plus = {{}} end
+            if build == "old" or build == "new" or build == "newest" then window.fit_plustile = function() end end
+            if build == "new" or build == "newest" then dsp.plus = {{}} end
             local rules_made, notified = {{}}, {{}}
             hl = {{ dsp = dsp, window_rule = function(r) rules_made[#rules_made + 1] = r end,
                    exec_cmd = function(c) notified[#notified + 1] = c end }}
+            -- A build with the later options answers for them; one without answers nil, as the real one does.
+            if build == "newest" then
+                local known = {{ ["binds:drag_fullscreen_edge"] = 0, ["superposition:over_fullscreen"] = true }}
+                hl.get_config = function(key) return known[key] end
+            elseif build == "new" then
+                hl.get_config = function(key) return nil end
+            end
             local caps = dofile("{HALCYON}/compositor.lua")
             local rules = dofile("{HALCYON}/rules.lua")
             local report = rules.apply({{
@@ -85,6 +92,7 @@ class LuaCapabilityTests(unittest.TestCase):
             print("notified=" .. #notified .. " skipped=" .. #rules.skipped)
             for _, r in ipairs(rules_made) do if r.match.class == "^(kitty)$" then print("kitty_plustile=" .. tostring(r.plustile)) end end
             print("missing_tiles=" .. tostring(caps.missing("tiles")))
+            print("dragEdge=" .. tostring(caps.dragEdge) .. " stripFullscreen=" .. tostring(caps.stripFullscreen))
         """)
         with tempfile.NamedTemporaryFile("w", suffix=".lua", delete=False) as f:
             f.write(script)
@@ -116,6 +124,15 @@ class LuaCapabilityTests(unittest.TestCase):
         self.assertIn("plus=true strips=true tiles=true", out)
         self.assertIn("skipped=0", out)
         self.assertIn("missing_tiles=nil", out)
+        self.assertIn("dragEdge=false stripFullscreen=false", out)   # a build from before those options
+
+    def test_newest_plus_has_the_fullscreen_options(self):
+        out = self.run_lua("newest")
+        self.assertIn("dragEdge=true stripFullscreen=true", out)
+
+    def test_no_build_without_get_config_fails(self):
+        for build in ("stock", "old"):
+            self.assertIn("dragEdge=false stripFullscreen=false", self.run_lua(build))
 
 
 class CrashTests(unittest.TestCase):
