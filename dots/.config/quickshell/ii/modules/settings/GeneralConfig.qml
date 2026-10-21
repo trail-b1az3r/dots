@@ -287,6 +287,121 @@ ContentPage {
     }
 
     ContentSection {
+        id: alarmSection
+        icon: "alarm"
+        title: Translation.tr("Calendar alarm")
+
+        readonly property var builtIn: ["smoke", "tornado", "beep", "chime", "silent"]
+        function choice(value) {
+            return alarmSection.builtIn.includes(value) || value === "" || value === "none" ? value : "file";
+        }
+        readonly property var soundOptions: [
+            { displayName: Translation.tr("Smoke alarm"), icon: "detector_smoke", value: "smoke" },
+            { displayName: Translation.tr("Tornado siren"), icon: "tornado", value: "tornado" },
+            { displayName: Translation.tr("Alarm clock"), icon: "alarm", value: "beep" },
+            { displayName: Translation.tr("Chime"), icon: "notifications", value: "chime" },
+            { displayName: Translation.tr("Silent"), icon: "notifications_off", value: "silent" },
+            { displayName: Translation.tr("A file"), icon: "audio_file", value: "file" }
+        ]
+
+        StyledText {
+            Layout.fillWidth: true
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colSubtext
+            font.pixelSize: Appearance.font.pixelSize.smallie
+            text: Translation.tr("Turn an alarm on for an event in the calendar (the alarm button when you add it, or the one beside it). At its time the first sound plays at your current volume; if nobody stops it, the second takes over. Enter or Escape stops it, S snoozes it.")
+        }
+
+        ContentSubsection {
+            title: Translation.tr("First sound")
+            ConfigSelectionArray {
+                currentValue: alarmSection.choice(Config.options.calendar.alarm.firstSound)
+                onSelected: newValue => {
+                    Config.options.calendar.alarm.firstSound = newValue === "file" ? "~/Music/alarm.ogg" : newValue;
+                }
+                options: alarmSection.soundOptions
+            }
+            MaterialTextArea {
+                visible: alarmSection.choice(Config.options.calendar.alarm.firstSound) === "file"
+                Layout.fillWidth: true
+                placeholderText: Translation.tr("Sound file, e.g. ~/Music/alarm.ogg")
+                text: Config.options.calendar.alarm.firstSound
+                onTextChanged: {
+                    if (text.trim() !== "" && text.trim() !== Config.options.calendar.alarm.firstSound)
+                        Config.options.calendar.alarm.firstSound = text.trim();
+                }
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("Then, if it isn't stopped")
+            ConfigSelectionArray {
+                currentValue: alarmSection.choice(Config.options.calendar.alarm.secondSound)
+                onSelected: newValue => {
+                    Config.options.calendar.alarm.secondSound = newValue === "file" ? "~/Music/alarm.ogg" : newValue;
+                }
+                options: alarmSection.soundOptions.concat([{ displayName: Translation.tr("Keep the first"), icon: "block", value: "none" }])
+            }
+            MaterialTextArea {
+                visible: alarmSection.choice(Config.options.calendar.alarm.secondSound) === "file"
+                Layout.fillWidth: true
+                placeholderText: Translation.tr("Sound file, e.g. ~/Music/siren.ogg")
+                text: Config.options.calendar.alarm.secondSound
+                onTextChanged: {
+                    if (text.trim() !== "" && text.trim() !== Config.options.calendar.alarm.secondSound)
+                        Config.options.calendar.alarm.secondSound = text.trim();
+                }
+            }
+        }
+
+        ConfigSpinBox {
+            icon: "timer"
+            text: Translation.tr("Seconds before the second sound")
+            value: Config.options.calendar.alarm.escalateAfter
+            from: 5
+            to: 600
+            stepSize: 5
+            onValueChanged: Config.options.calendar.alarm.escalateAfter = value
+        }
+        ConfigSpinBox {
+            icon: "snooze"
+            text: Translation.tr("Snooze (minutes)")
+            value: Config.options.calendar.alarm.snoozeMinutes
+            from: 1
+            to: 60
+            stepSize: 1
+            onValueChanged: Config.options.calendar.alarm.snoozeMinutes = value
+        }
+        ConfigSpinBox {
+            icon: "timer_off"
+            text: Translation.tr("Stop ringing after (minutes)")
+            value: Config.options.calendar.alarm.stopAfter
+            from: 1
+            to: 120
+            stepSize: 1
+            onValueChanged: Config.options.calendar.alarm.stopAfter = value
+        }
+        ConfigRow {
+            uniform: true
+            ConfigSwitch {
+                buttonIcon: "alarm_add"
+                text: Translation.tr("New timed events have an alarm")
+                checked: Config.options.calendar.alarm.alarmByDefault
+                onCheckedChanged: Config.options.calendar.alarm.alarmByDefault = checked
+            }
+            RippleButtonWithIcon {
+                buttonRadius: Appearance.rounding.full
+                materialIcon: "play_arrow"
+                mainText: Translation.tr("Test the alarm")
+                onClicked: Quickshell.execDetached(["qs", "-c", "ii", "ipc", "call", "alarm", "test"])
+                StyledToolTip {
+                    text: "qs -c ii ipc call alarm test"
+                }
+            }
+        }
+    }
+
+    ContentSection {
         icon: "nest_clock_farsight_analog"
         title: Translation.tr("Time")
 

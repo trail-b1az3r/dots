@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 """Turn the glass refraction off while a game is using the GPU hard.
 
-Watches the GPU every couple of seconds. When the GPU is above HOT_UTIL, or
-less than LOW_FREE_MIB of video memory is free, for a few samples in a row,
-the glass effects are switched off with `halcyon-theme effects off`. They are
-switched back to the level the user chose once the GPU has been quiet for a
-while. The two thresholds are separated, so the effects do not flicker on and
-off around one value.
+Watches the GPU every couple of seconds. When a game is running (a fullscreen
+window, or a Steam, gamescope, Minecraft or Windows game) and the GPU is above
+HOT_UTIL, or less than LOW_FREE_MIB of video memory is free, for a few samples
+in a row, the effects are held off with `halcyon-theme effects hold on`. That
+leaves the level you chose alone and says nothing. They come back
+(`hold off`) once the GPU has been quiet for a while.
+
+The two thresholds are separated, so the effects do not flicker on and off
+around one value. The effects themselves load the GPU, so without a game they
+never count, and when the GPU is busy again soon after they came back, the
+next wait before they return doubles (up to CALM_MAX_SAMPLES): no more
+"Now off", "Now full" every half minute.
 
 Reads NVIDIA through nvidia-smi, and AMD through sysfs. With neither, it does
 nothing and says so. Runs as the halcyon-gpu-guard user service.
@@ -17,6 +23,7 @@ from __future__ import annotations
 import glob
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -30,7 +37,12 @@ CALM_UTIL = 70         # percent: below this (and enough memory) counts as calm
 CALM_FREE_MIB = 3072
 HOT_SAMPLES = 2        # consecutive hot samples before the effects go off
 CALM_SAMPLES = 15      # consecutive calm samples before they come back
+CALM_MAX_SAMPLES = 300 # the longest that wait grows to (10 minutes)
+REBOUND_SECONDS = 180  # busy again this soon after coming back: wait twice as long next time
 INTERVAL = 2.0         # seconds between samples
+
+# Window classes that are games (Hyprland's clients). A fullscreen window counts too.
+GAME_CLASS = re.compile(r"^(steam_app_\d+|gamescope|Minecraft.*|.*\.exe)$", re.I)
 
 HALCYON = Path(__file__).resolve().parent / "halcyon-theme"
 STATE_FILE = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local/state") / "halcyon/gpu-guard.json"
@@ -80,25 +92,46 @@ def sample() -> Optional[tuple[float, float]]:
     return sample_nvidia() or sample_amd()
 
 
+def is_game(client: dict) -> bool:
+    return bool(client.get("fullscreen")) or bool(GAME_CLASS.match(str(client.get("class", ""))))
+
+
+def game_running() -> bool:
+    """Whether a game's window is open, from `hyprctl clients -j`. False when Hyprland does not answer."""
+    try:
+        result = subprocess.run(["hyprctl", "clients", "-j"], capture_output=True, text=True, timeout=5, check=False)
+        clients = json.loads(result.stdout or "[]")
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return False
+    return isinstance(clients, list) and any(isinstance(c, dict) and is_game(c) for c in clients)
+
+
 # ── Deciding ───────────────────────────────────────────────────────────
 
-def decide(state: dict, util: float, free_mib: float) -> tuple[dict, Optional[str]]:
+def decide(state: dict, util: float, free_mib: float, game: bool = True,
+           now: float = 0.0) -> tuple[dict, Optional[str]]:
     """The next state, and the action to take ("off", "restore" or None).
 
-    `state` holds the counters and whether the effects are currently
-    suppressed. The thresholds apply to a single sample; the counters stop
-    one noisy sample from changing anything.
+    `state` holds the counters, whether the effects are currently held off,
+    and how many calm samples bring them back. The thresholds apply to a
+    single sample; the counters stop one noisy sample from changing anything.
+    Without a game running nothing counts as busy: the effects themselves
+    keep the GPU busy, and taking them off for that only brings them back.
     """
-    hot = util > HOT_UTIL or free_mib < LOW_FREE_MIB
+    hot = game and (util > HOT_UTIL or free_mib < LOW_FREE_MIB)
     calm = util < CALM_UTIL and free_mib >= CALM_FREE_MIB
     hot_run = state.get("hot", 0) + 1 if hot else 0
     calm_run = state.get("calm", 0) + 1 if calm else 0
     new = dict(state, hot=hot_run, calm=calm_run)
     if not state.get("suppressed") and hot_run >= HOT_SAMPLES:
         new["suppressed"] = True
+        rebound = "restored_at" in state and now - state["restored_at"] < REBOUND_SECONDS
+        needed = state.get("calm_needed", CALM_SAMPLES)
+        new["calm_needed"] = min(CALM_MAX_SAMPLES, needed * 2) if rebound else CALM_SAMPLES
         return new, "off"
-    if state.get("suppressed") and calm_run >= CALM_SAMPLES:
+    if state.get("suppressed") and calm_run >= state.get("calm_needed", CALM_SAMPLES):
         new["suppressed"] = False
+        new["restored_at"] = now
         return new, "restore"
     return new, None
 
@@ -117,19 +150,23 @@ def save_state(state: dict) -> None:
     STATE_FILE.write_text(json.dumps(state), encoding="utf-8")
 
 
-def read_level() -> str:
-    """The effects level the user chose, from the shell settings."""
-    config = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "illogical-impulse/config.json"
-    try:
-        data = json.loads(config.read_text(encoding="utf-8"))
-        return str(data.get("halcyon", {}).get("effects", "default"))
-    except (OSError, ValueError):
-        return "default"
-
-
-def set_effects(level: str) -> None:
-    subprocess.run([str(HALCYON), "effects", level], check=False,
+def hold(on: bool) -> None:
+    """Hold the effects off, or let them go back to your level. Quiet: no notification, your setting untouched."""
+    subprocess.run([str(HALCYON), "effects", "hold", "on" if on else "off"], check=False,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def migrate(state: dict) -> dict:
+    """Earlier versions turned the effects off by changing your level, and kept the level to put back in "level".
+    If one stopped while they were off, put that level back, quietly, and hold them off instead."""
+    if "level" not in state:
+        return state
+    level = state.pop("level")
+    if state.get("suppressed"):
+        subprocess.run([str(HALCYON), "effects", str(level), "--quiet"], check=False,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        hold(True)
+    return state
 
 
 def main() -> int:
@@ -137,12 +174,13 @@ def main() -> int:
         print("gpu-guard: no GPU statistics here (no nvidia-smi, no AMD sysfs); nothing to do",
               file=sys.stderr)
         return 0
-    state = load_state()
+    state = migrate(load_state())
+    save_state(state)
 
     def stop(_signum, _frame):
         # Leaving the effects off after a stop would be a surprise, so put them back.
         if state.get("suppressed"):
-            set_effects(state.get("level", "default"))
+            hold(False)
             state["suppressed"] = False
             save_state(state)
         sys.exit(0)
@@ -153,12 +191,13 @@ def main() -> int:
         reading = sample()
         if reading is not None:
             util, free = reading
-            state, action = decide(state, util, free)
+            # Asking Hyprland only matters while the GPU is busy and the effects are on.
+            game = (not state.get("suppressed") and (util > HOT_UTIL or free < LOW_FREE_MIB)) and game_running()
+            state, action = decide(state, util, free, game, time.time())
             if action == "off":
-                state["level"] = read_level()
-                set_effects("off")
+                hold(True)
             elif action == "restore":
-                set_effects(state.get("level", "default"))
+                hold(False)
             save_state(state)
         time.sleep(INTERVAL)
 

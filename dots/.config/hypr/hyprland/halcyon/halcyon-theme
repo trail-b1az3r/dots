@@ -69,6 +69,9 @@ THEME_LUA = HALCYON_STATE / "theme.lua"
 ACTIVE_FILE = HALCYON_STATE / "active"
 APPLY_LOG = HALCYON_STATE / "apply.log"
 FLIP_FILE = HALCYON_STATE / "flip-pointer-y"
+# While this exists the effects are off whatever the setting says: gpu-guard holds them off while a game works the
+# GPU, without touching the level you chose (`halcyon-theme effects hold on|off`).
+EFFECTS_HOLD = HALCYON_STATE / "effects-hold"
 SCREEN_SHADER = HALCYON_STATE / "screen-shader.frag"
 SHELL_RESTORE = HALCYON_STATE / "shell-restore.json"
 BANNERS = DATA / "halcyon/banners"
@@ -731,6 +734,8 @@ def effects_setting(config=None):
 
 
 def effects_for(theme):
+    if EFFECTS_HOLD.exists():
+        return "off"
     override = effects_setting()
     if override in EFFECT_LEVELS:
         return override
@@ -1321,9 +1326,23 @@ def cmd_effects(args):
             print(f"no theme active (effects setting: {effects_setting()})")
         else:
             print(effects_for(load(current)))
+        if EFFECTS_HOLD.exists():
+            print("held off by gpu-guard while a game works the GPU; they come back on their own")
         return 0
+    quiet = "--quiet" in args
+    args = [a for a in args if a != "--quiet"]
     level = args[0]
-    if level == "flip":
+    before = effects_for(load(current)) if current is not None else None
+    if level == "hold":
+        # gpu-guard's switch: no setting is changed and nothing is announced
+        if args[1:] == ["on"]:
+            write_atomic(EFFECTS_HOLD, "1\n")
+        elif args[1:] == ["off"]:
+            remove(EFFECTS_HOLD)
+        else:
+            raise ThemeError("usage: halcyon-theme effects hold on|off")
+        quiet = True
+    elif level == "flip":
         if read_state(FLIP_FILE):
             remove(FLIP_FILE)
             print("pointer effects: normal")
@@ -1333,11 +1352,15 @@ def cmd_effects(args):
     elif level == "default" or level in EFFECT_LEVELS:
         set_shell_value("halcyon.effects", level)
     else:
-        raise ThemeError("usage: halcyon-theme effects [full|light|off|default|flip]")
+        raise ThemeError("usage: halcyon-theme effects [full|light|off|default|flip] [--quiet]")
     if current is not None:
-        effects, _native = write_window_style(current, load(current))
-        reload_hyprland()
-        notify("Effects", f"Now {effects}.")
+        effects = effects_for(load(current))
+        if effects != before or level == "flip":
+            write_window_style(current, load(current))
+            reload_hyprland()
+            # Only a change you asked for is announced, and only when it changed something.
+            if not quiet and level != "flip":
+                notify("Effects", f"Now {effects}.")
         print(f"effects: {effects}")
     return 0
 

@@ -3,10 +3,13 @@
 // Calendar events: plain functions on the saved list, so they run (and are tested) outside the shell.
 //
 // An event is { id, title, date: "YYYY-MM-DD", time: "HH:MM" or "" for all day, remind: minutes before, or -1,
-// reminded, notified }. Dates are local: an event at 09:00 is at 09:00 wherever the clock is.
+// reminded, notified, alarm: rings at its time, alarmed, snoozeUntil: ms or 0 }. Dates are local: an event at
+// 09:00 is at 09:00 wherever the clock is.
 
 // How late a missed notification may still be sent (the shell was off when it was due).
 var LATE_LIMIT_MS = 12 * 60 * 60 * 1000;
+// An alarm rings only this late: one missed by more (the computer was off, asleep) is not worth waking anyone for.
+var ALARM_LATE_MS = 10 * 60 * 1000;
 
 function pad(n) {
     return (n < 10 ? "0" : "") + n;
@@ -126,9 +129,20 @@ function daysAway(event, now) {
     return Math.round((day.getTime() - today.getTime()) / 86400000);
 }
 
-// The notifications due at `now`: [{ id, kind: "reminder" | "start" }]. A reminder is due `remind` minutes before
-// the start, and the start notification at the start (all-day events: at midnight). Ones more than LATE_LIMIT_MS
-// late are not sent, but are marked done as well, so they are never sent later.
+// When an event's alarm rings: at its time, or when a snooze runs out. null without an alarm (all-day events have none).
+function alarmAt(event) {
+    if (!event.alarm || !event.time)
+        return null;
+    var start = startOf(event);
+    if (!start)
+        return null;
+    return Math.max(start.getTime(), event.snoozeUntil || 0);
+}
+
+// The notifications due at `now`: [{ id, kind: "reminder" | "start" | "alarm" }]. A reminder is due `remind`
+// minutes before the start, and the start notification at the start (all-day events: at midnight). Ones more than
+// LATE_LIMIT_MS late are not sent, but are marked done as well, so they are never sent later. An alarm is due at
+// alarmAt, and counts as late after ALARM_LATE_MS.
 function due(list, now) {
     var out = [];
     (list || []).forEach(function (e) {
@@ -142,11 +156,22 @@ function due(list, now) {
         }
         if (!e.notified && start.getTime() <= now.getTime())
             out.push({ id: e.id, kind: "start", late: now.getTime() - start.getTime() > LATE_LIMIT_MS });
+        var ring = alarmAt(e);
+        if (ring !== null && !e.alarmed && ring <= now.getTime())
+            out.push({ id: e.id, kind: "alarm", late: now.getTime() - ring > ALARM_LATE_MS });
     });
     return out;
 }
 
-function makeEvent(title, key, time, remind, now) {
+// The event with its alarm put off for `minutes` from now: it rings again then.
+function snooze(event, minutes, now) {
+    var copy = Object.assign({}, event);
+    copy.alarmed = false;
+    copy.snoozeUntil = now.getTime() + minutes * 60000;
+    return copy;
+}
+
+function makeEvent(title, key, time, remind, now, alarm) {
     var t = String(title || "").trim();
     var parsed = parseTime(time);
     if (t === "" || !parseKey(key) || parsed === null)
@@ -159,7 +184,11 @@ function makeEvent(title, key, time, remind, now) {
         time: parsed,
         remind: isNaN(minutes) ? -1 : minutes,
         reminded: false,
-        notified: false
+        notified: false,
+        // An alarm needs a time to ring at.
+        alarm: !!alarm && parsed !== "",
+        alarmed: false,
+        snoozeUntil: 0
     };
     // Adding one already under way (or a reminder already passed) does not notify about it straight away.
     var start = startOf(event);
@@ -168,6 +197,8 @@ function makeEvent(title, key, time, remind, now) {
         event.notified = true;
     if (event.remind < 0 || start.getTime() - event.remind * 60000 <= at.getTime())
         event.reminded = true;
+    if (start.getTime() <= at.getTime())
+        event.alarmed = true;
     return event;
 }
 

@@ -9,6 +9,7 @@
 import "modules/common"
 import "services"
 import "panelFamilies"
+import "modules/ii/alarm"
 
 import QtQuick
 import QtQuick.Window
@@ -21,6 +22,7 @@ ShellRoot {
 
     // Stuff for every panel family
     ReloadPopup {}
+    AlarmOverlay {} // a ringing calendar alarm, on every screen
 
     Component.onCompleted: {
         MaterialThemeLoader.reapplyTheme()
@@ -32,6 +34,7 @@ ShellRoot {
         Updates.load()
         HalcyonUpdates.load() // the bar's and sidebar's Halcyon update buttons, and a check soon after start
         CalendarEvents.load() // reminders whichever panels are shown
+        Alarm.load() // the calendar alarm's sounds, made the first time
         HalcyonLocation.load() // the device's location, for the sun dial and sunset themes
         MiniWindows.load() // its IPC (Super+Ctrl+N on stock Hyprland)
     }

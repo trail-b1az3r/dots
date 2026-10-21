@@ -12,8 +12,9 @@ import Quickshell.Io
  * Calendar events, added from the calendar in the right sidebar (the + button, or a click on a day).
  *
  * Saved in ~/.local/state/quickshell/user/events.json. Each event can have a reminder some minutes before it, and
- * there is a notification when it starts (all-day events: in the morning of the day, at midnight). The bar shows the
- * next one.
+ * there is a notification when it starts (all-day events: in the morning of the day, at midnight). An event at a
+ * time can also have an alarm, which rings then (services/Alarm.qml) until it is stopped or snoozed. The bar shows
+ * the next one.
  */
 Singleton {
     id: root
@@ -57,9 +58,9 @@ Singleton {
         return Events.daysAway(event, root.now);
     }
 
-    // Adds an event; false if the title is empty or the time isn't one.
-    function add(title, key, time, remind) {
-        const event = Events.makeEvent(title, key, time, remind, new Date());
+    // Adds an event; false if the title is empty or the time isn't one. An alarm needs a time.
+    function add(title, key, time, remind, alarm) {
+        const event = Events.makeEvent(title, key, time, remind, new Date(), alarm ?? false);
         if (!event)
             return false;
         root.list = root.list.concat([event]);
@@ -67,7 +68,24 @@ Singleton {
         return true;
     }
 
+    // Turns an event's alarm on or off. Off also stops it if it is ringing.
+    function setAlarm(id, on) {
+        root.list = root.list.map(e => {
+            if (e.id !== id || !e.time)
+                return e;
+            const copy = Object.assign({}, e, { alarm: on, snoozeUntil: 0 });
+            // Turned on for an event already under way: it does not ring at once.
+            copy.alarmed = on ? Events.startOf(copy).getTime() <= Date.now() : false;
+            return copy;
+        });
+        root.save();
+        if (!on && Alarm.event?.id === id)
+            Alarm.stop();
+    }
+
     function remove(id) {
+        if (Alarm.event?.id === id)
+            Alarm.stop();
         root.list = root.list.filter(e => e.id !== id);
         root.save();
     }
@@ -96,6 +114,12 @@ Singleton {
         root.list.forEach(e => byId[e.id] = Object.assign({}, e));
         due.forEach(item => {
             const e = byId[item.id];
+            if (item.kind === "alarm") {
+                e.alarmed = true;
+                if (!item.late)
+                    Alarm.ring({ id: e.id, title: e.title, time: e.time });
+                return;
+            }
             if (item.kind === "reminder")
                 e.reminded = true;
             else
@@ -111,8 +135,18 @@ Singleton {
         root.save();
     }
 
+    // A snoozed alarm rings again after the snooze.
+    Connections {
+        target: Alarm
+        function onSnoozed(id, minutes) {
+            root.list = root.list.map(e => e.id === id ? Events.snooze(e, minutes, new Date()) : e);
+            root.save();
+        }
+    }
+
+    // Every five seconds, so an alarm rings on time.
     Timer {
-        interval: 20000
+        interval: 5000
         repeat: true
         running: true
         triggeredOnStart: true
@@ -141,6 +175,12 @@ Singleton {
 
         function add(title: string, date: string, time: string): string {
             return root.add(title, date === "" ? root.dateKey(new Date()) : date, time, -1) ? "added" : "not added: check the date (YYYY-MM-DD) and time";
+        }
+        // An event with the alarm on: it rings at its time (today when the date is empty).
+        function addAlarm(title: string, date: string, time: string): string {
+            if (time.trim() === "")
+                return "not added: an alarm needs a time";
+            return root.add(title, date === "" ? root.dateKey(new Date()) : date, time, -1, true) ? "added" : "not added: check the date (YYYY-MM-DD) and time";
         }
         // Opens the right sidebar's calendar on a day (YYYY-MM-DD), or today.
         function open(date: string): void {

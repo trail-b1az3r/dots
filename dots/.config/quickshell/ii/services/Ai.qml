@@ -387,6 +387,18 @@ Singleton {
         }
     }
 
+    // A finished reply is read aloud by the voice assistant, with the voice it uses (Settings > Halcyon >
+    // Assistant > Voice). It drops code, links and markdown; Super+Shift+Space stops it.
+    function speakReply(message) {
+        const assistant = Config.options?.halcyon?.assistant;
+        if (!assistant?.speak || !assistant?.sidebarSpeak || !message || message.functionCall)
+            return;
+        const text = (message.content ?? "").trim();
+        if (text.length === 0)
+            return;
+        Quickshell.execDetached([root.halcyonAssistantTool, "say", "--", text]);
+    }
+
     // LM Studio, HyperNix and T1 models, listed by the voice assistant's tool (the same code it uses itself).
     readonly property string halcyonAssistantTool: `${CF.FileUtils.trimFileProtocol(Directories.config)}/hypr/hyprland/halcyon/assistant/halcyon-assistant`
     property list<string> halcyonModelIds: []
@@ -628,7 +640,10 @@ Singleton {
         property ApiStrategy currentStrategy
 
         function markDone() {
+            const finished = !requester.message.done;
             requester.message.done = true;
+            if (finished)
+                root.speakReply(requester.message);
             if (root.postResponseHook) {
                 root.postResponseHook();
                 root.postResponseHook = null; // Reset hook after use

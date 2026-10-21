@@ -121,7 +121,7 @@ class SpeechFallbackTest(unittest.TestCase):
         from halcyon_assistant import speech
         tried = []
 
-        def speak_once(name, text, should_stop=None):
+        def speak_once(name, text, should_stop=None, settings=None):
             tried.append(name)
             return "broken" if name == "piper" else None
 

@@ -4,6 +4,7 @@ Commands (one line each, over $XDG_RUNTIME_DIR/halcyon-assistant.sock):
     listen   start listening; while busy, cancels instead (push-to-talk toggle)
     cancel   stop listening, thinking or speaking
     ask TEXT answer typed text as if it were spoken
+    say TEXT read text aloud (the AI sidebar's replies)
     reload   re-read settings (the Settings page sends this)
     status   one line of JSON
 """
@@ -46,6 +47,11 @@ class Assistant:
                 return "busy"
             self._start(self.answer, rest)
             return "thinking"
+        if command == "say" and rest:
+            if self.busy.is_set():
+                return "busy"
+            self._start(self.speak, rest)
+            return "speaking"
         if command == "cancel":
             self.cancel.set()
             return "cancelled"
@@ -57,7 +63,7 @@ class Assistant:
         if command == "status":
             return json.dumps({"state": self.state, "provider": self.settings["provider"],
                                "wakeWord": self.settings["wakeWord"] and wake.available(),
-                               "speech": stt.available(), "voice": speech.engine()})
+                               "speech": stt.available(), "voice": speech.engine(self.settings)})
         return "unknown command"
 
     def _start(self, target, *args):
@@ -126,7 +132,12 @@ class Assistant:
             return
         self.state = "speaking"
         notify.show(f"“{text}”", reply, icon="audio-input-microphone", timeout_ms=max(6000, 90 * len(reply)))
-        if self.settings["speak"] and not speech.say(reply, should_stop=self.cancel.is_set):
+        if self.settings["speak"]:
+            self.speak(reply)
+
+    def speak(self, text):
+        self.state = "speaking"
+        if not speech.say(speech.plain(text), should_stop=self.cancel.is_set, settings=self.settings):
             # Without this the reply just goes silent. The reason is in the log.
             notify.show("The reply couldn't be spoken",
                         f"`halcyon assistant test-voice` says why; the reason is also in {config.LOG}",
