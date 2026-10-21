@@ -269,7 +269,8 @@ style, animations, wallpaper and, for some, shell layout and effects:
 
 ![After ICEY and Manga Ink: the system, music and clock cards as keycaps, and each theme's revolver](docs/assets/preview-anime-themes.jpg)
 
-<sub>After ICEY (its own HUD revolver) and Manga Ink, with the clock, system and now-playing cards as solid keycaps.
+<sub>After ICEY (its HUD revolver) and Manga Ink (its ink revolver), with every desktop widget on: visualizer,
+lyrics, weather, clock, system and now playing, as solid keycaps.
 Wallpapers: *After ICEY* fan art via [MotionBGs](https://motionbgs.com/after-icey); *Anime Girl x Cat* by fw_storm
 via [DesktopHut](https://www.desktophut.com/anime-girl-x-cat-pl2s). Neither is included: the commands in the table
 above fetch or import them.</sub>
@@ -427,6 +428,13 @@ lens with a fine tick ring, a broken outer ring, targeting brackets and two gold
 that brightens as the drum turns; hexagonal ice-cell chambers with a frosted inner edge; a snowflake hub and a
 chevron hammer. (Its other widgets keep the anime themes' keycaps.)
 
+**Manga Ink** has one too, drawn like a page of its wallpaper: a paper disc inside a brush-stroke ensō that thins
+away where the brush lifted, screentone shading, speech-bubble chambers whose tails point at a blush-pink heart (the
+live one inked solid), an ink-drop hammer, and manga speed lines round it while it spins. It stays black ink on
+paper whatever the palette; the pink is the theme's accent.
+
+![The Manga Ink revolver at rest, and spinning with its speed lines](docs/assets/revolver-manga-ink.jpg)
+
 The drum is drawn at the size it is shown, on any screen scale, so a large revolver is as sharp as a small one. It
 used to be drawn at 230 px and stretched, which blurred it.
 
@@ -451,6 +459,10 @@ turns any of them on or off in one place, and so does a terminal:
 halcyon widgets                 # which are on
 halcyon widgets lyrics on       # clock, weather, revolver, visualizer, system, nowPlaying, lyrics: on, off or toggle
 ```
+
+The weather (on the desktop and in the bar) comes from wttr.in and no longer needs `jq`: without it, it used to
+stay at `--°`. If location services never give a place, it uses the city in Settings after 20 seconds, or finds
+you by your IP address without one.
 
 - **Audio visualizer**: the spectrum of what is playing, from cava (already a dependency), in the theme's two accent
   colours. Four styles: bars, mirror, wave and ring. It can sit on a card in the theme's shape, fade out while
