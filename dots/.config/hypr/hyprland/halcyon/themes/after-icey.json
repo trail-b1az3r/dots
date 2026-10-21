@@ -70,7 +70,91 @@
     "inactive_border": "rgba(3A466644)",
     "blur_size": 12,
     "blur_passes": 4,
-    "shadow_color": "rgba(00101C55)"
+    "shadow_color": "rgba(00101C55)",
+    "curves": {
+      "pop": [
+        0.34,
+        1.56,
+        0.64,
+        1.0
+      ],
+      "snap": [
+        0.2,
+        0.9,
+        0.2,
+        1.0
+      ],
+      "linear": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ]
+    },
+    "animations": [
+      {
+        "leaf": "windowsIn",
+        "speed": 3.6,
+        "curve": "pop",
+        "style": "popin 80%"
+      },
+      {
+        "leaf": "windowsOut",
+        "speed": 2.4,
+        "curve": "snap",
+        "style": "popin 90%"
+      },
+      {
+        "leaf": "windowsMove",
+        "speed": 3.4,
+        "curve": "pop"
+      },
+      {
+        "leaf": "fadeIn",
+        "speed": 2.6,
+        "curve": "snap"
+      },
+      {
+        "leaf": "fadeOut",
+        "speed": 2.0,
+        "curve": "snap"
+      },
+      {
+        "leaf": "workspaces",
+        "speed": 4.4,
+        "curve": "snap",
+        "style": "slide"
+      },
+      {
+        "leaf": "layersIn",
+        "speed": 3.2,
+        "curve": "pop",
+        "style": "popin 80%"
+      },
+      {
+        "leaf": "layersOut",
+        "speed": 2.2,
+        "curve": "snap",
+        "style": "popin 92%"
+      },
+      {
+        "leaf": "specialWorkspaceIn",
+        "speed": 3.0,
+        "curve": "snap",
+        "style": "slidevert"
+      },
+      {
+        "leaf": "border",
+        "speed": 6.0,
+        "curve": "snap"
+      },
+      {
+        "leaf": "borderangle",
+        "speed": 70,
+        "curve": "linear",
+        "style": "loop"
+      }
+    ]
   },
   "banner": {
     "frame": "#5CD6F2",

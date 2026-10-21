@@ -1505,6 +1505,39 @@ ContentPage {
         }
 
         ContentSubsection {
+            title: Translation.tr("Fullscreen")
+            tooltip: Translation.tr("Needs a recent hyprland-plus; older builds ignore these")
+
+            ConfigSpinBox {
+                icon: "vertical_align_top"
+                text: Translation.tr("Drop at the top to fullscreen (px, 0 = off)")
+                value: Config.options.halcyon.plus.dragFullscreenEdge
+                from: 0
+                to: 512
+                stepSize: 2
+                onValueChanged: {
+                    Config.options.halcyon.plus.dragFullscreenEdge = value;
+                    page.applyPlus();
+                }
+                StyledToolTip {
+                    text: Translation.tr("Hold Super, drag a window by its middle and let go at the very top of the screen. A click is not a drag, and a window already at the top is left alone")
+                }
+            }
+            ConfigSwitch {
+                buttonIcon: "queue_music"
+                text: Translation.tr("Music strip over fullscreen")
+                checked: Config.options.halcyon.plus.stripOverFullscreen
+                onCheckedChanged: {
+                    Config.options.halcyon.plus.stripOverFullscreen = checked;
+                    page.applyPlus();
+                }
+                StyledToolTip {
+                    text: Translation.tr("Off: a fullscreen window has the whole screen and the strip (Spotify, the visualizer window) waits behind it. On: the strip stays on top and covers the edge of the fullscreen window")
+                }
+            }
+        }
+
+        ContentSubsection {
             title: Translation.tr("App rules and keys")
             tooltip: Translation.tr("Opens your copy in ~/.config/hypr/custom, made from Halcyon's the first time. Hyprland reloads when you save it")
 

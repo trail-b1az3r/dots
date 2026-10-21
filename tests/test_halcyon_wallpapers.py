@@ -145,11 +145,30 @@ class ThemeTests(unittest.TestCase):
                                         env=env, capture_output=True, text=True)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_applying_without_the_video_says_how_to_get_it(self):
+    def load_tool(self):
         loader = importlib.machinery.SourceFileLoader("halcyon_theme_wp", str(HALCYON / "halcyon-theme"))
         spec = importlib.util.spec_from_loader("halcyon_theme_wp", loader)
         module = importlib.util.module_from_spec(spec)
         loader.exec_module(module)
+        return module
+
+    def test_the_border_spins_slowly_and_only_that_animation_may(self):
+        module = self.load_tool()
+        theme = json.loads((HALCYON / "themes/after-icey.json").read_text())
+        spin = [a for a in theme["hyprland"]["animations"] if a["leaf"] == "borderangle"]
+        self.assertEqual([a["style"] for a in spin], ["loop"])
+        self.assertEqual(module.validate("after-icey", theme), [])
+        # a window animation that long is a mistake; a border angle that long is a slow turn
+        slow = json.loads(json.dumps(theme))
+        for a in slow["hyprland"]["animations"]:
+            if a["leaf"] == "windowsIn":
+                a["speed"] = 70
+        problems = module.validate("after-icey", slow)
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("0.1..20", problems[0])
+
+    def test_applying_without_the_video_says_how_to_get_it(self):
+        module = self.load_tool()
         icey = module.wallpaper_hint(wp.target("after-icey"))
         self.assertIn("halcyon wallpapers get after-icey", icey)
         manual = module.wallpaper_hint(wp.target("anime-girl-cat"))

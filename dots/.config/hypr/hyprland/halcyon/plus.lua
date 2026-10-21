@@ -13,6 +13,26 @@ if caps.strips then
     hl.config({ superposition = { edge = 1, size = 0.12, reserve = false } })
 end
 
+-- A fullscreen window has the whole screen: the superposition strip (the music player) is hidden until it is not
+-- fullscreen. Without this it covers its share of the window's edge. Settings > Halcyon > Plus Tiles turns it back on.
+if caps.stripFullscreen then
+    hl.config({
+        superposition = {
+            over_fullscreen = false,
+        },
+    })
+end
+
+-- Drop a window dragged with SUPER + left button within this many pixels of the top of the screen and it becomes
+-- fullscreen. 0 turns it off.
+if caps.dragEdge then
+    hl.config({
+        binds = {
+            drag_fullscreen_edge = 8,
+        },
+    })
+end
+
 if caps.tiles then
     -- Plus Tiles. These are the defaults, written out so they are easy to find and change in
     -- ~/.config/hypr/custom (anything set there wins).

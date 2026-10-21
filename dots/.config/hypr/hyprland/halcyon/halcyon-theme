@@ -134,7 +134,7 @@ HYPR_OPTIONAL = {
 ANIMATION_LEAVES = {
     "windowsIn", "windowsOut", "windowsMove", "fadeIn", "fadeOut", "border",
     "layersIn", "layersOut", "fadeLayersIn", "fadeLayersOut", "workspaces",
-    "specialWorkspaceIn", "specialWorkspaceOut", "zoomFactor",
+    "specialWorkspaceIn", "specialWorkspaceOut", "zoomFactor", "borderangle",
 }
 # Text/background pairs that must stay readable (WCAG AA for body text).
 CONTRAST_PAIRS = [
@@ -230,8 +230,10 @@ def check_optional(key, value, problems):
                 continue
             if anim.get("leaf") not in ANIMATION_LEAVES:
                 problems.append(f"{at}.leaf must be one of {', '.join(sorted(ANIMATION_LEAVES))}")
-            if not (is_number(anim.get("speed")) and 0.1 <= anim["speed"] <= 20):
-                problems.append(f"{at}.speed must be a number in 0.1..20")
+            # A border angle loops once per `speed` tenths of a second, so it runs slow (a few seconds a turn)
+            top = 300 if anim.get("leaf") == "borderangle" else 20
+            if not (is_number(anim.get("speed")) and 0.1 <= anim["speed"] <= top):
+                problems.append(f"{at}.speed must be a number in 0.1..{top}")
             if not NAME.match(str(anim.get("curve", ""))):
                 problems.append(f"{at}.curve must name a curve")
             if "style" in anim and not ANIMATION_STYLE.match(str(anim["style"])):

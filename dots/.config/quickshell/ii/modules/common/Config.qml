@@ -149,6 +149,8 @@ Singleton {
                     property int minHeight: 90
                     property bool feedback: true // Outlines and flashes for edits, the drag guide and the inspector
                     property int feedbackDuration: 450 // How long a flash lasts, in ms
+                    property int dragFullscreenEdge: 8 // Drop a dragged window within this many px of the top: fullscreen. 0 = off
+                    property bool stripOverFullscreen: false // The music player's strip stays over a fullscreen window (covering its edge)
                 }
             }
 

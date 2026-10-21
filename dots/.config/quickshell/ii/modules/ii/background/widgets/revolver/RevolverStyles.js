@@ -18,6 +18,9 @@ var STYLES = {
                  hub: "prism", hammer: "shard", glow: 0.5, waves: 0, statusLabel: true },
     "hyperneo": { id: "hyperneo", drum: "squircle", chamber: "squircle", chamberSize: 48, orbit: 79, names: true,
                   hub: "squircle", hammer: "pill", glow: 0.45, waves: 0, statusLabel: true },
+    // The anime themes: squircles, drawn as keycaps (outline, a cream ring, a flat fill, a hard shadow straight down).
+    "keycap":  { id: "keycap", drum: "squircle", plate: "keycap", chamber: "squircle", chamberSize: 48, orbit: 79, names: true,
+                 hub: "squircle", hammer: "pill", glow: 0.45, waves: 0, statusLabel: true },
     "hsr":     { id: "hsr", drum: "rail", chamber: "star", chamberSize: 52, orbit: 80, names: true,
                  hub: "sparkle", hammer: "sparkle", glow: 0.6, waves: 0, statusLabel: true }
 };
@@ -32,6 +35,9 @@ function styleFor(themeId) {
         return STYLES["glass"];
     case "hyperneo":
         return STYLES["hyperneo"];
+    case "after-icey":
+    case "manga-ink":
+        return STYLES["keycap"];
     case "hsr":
         return STYLES["hsr"];
     default:

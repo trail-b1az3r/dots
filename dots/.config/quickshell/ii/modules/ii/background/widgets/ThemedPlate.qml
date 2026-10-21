@@ -8,8 +8,8 @@ import "revolver/RevolverStyles.js" as Styles
  * The plate behind a wallpaper widget, in the active Halcyon theme's shapes: the same look as the revolver's drum.
  *
  *   kind "disc"   a clock face: a glowing ring (Red Sun), a cut glass octagon (glass themes), a squircle (HyperNeo),
- *                 a gold rail (Star Rail)
- *   kind "card"   a card: a dusk capsule with an ember edge, a cut stone, a squircle card, a gold-framed card
+ *                 a gold rail (Star Rail), a keycap (the anime themes)
+ *   kind "card"   a card: a dusk capsule with an ember edge, a cut stone, a squircle card, a gold-framed card, a keycap
  *
  * Drawn with QtQuick.Shapes only, in one multisampled layer, so it is smooth on any Qt 6.
  */
@@ -28,6 +28,7 @@ Item {
 
     readonly property var style: Styles.styleFor(themeId)
     readonly property bool redSun: style.id === "red-sun"
+    readonly property bool keycap: style.plate === "keycap"
     readonly property real pad: 26
 
     function withAlpha(colour, alpha) {
@@ -50,10 +51,26 @@ Item {
             width: plate.width
             height: plate.height
 
+            // Keycap: a hard shadow straight down, the key's side showing under it.
+            Shape {
+                x: 0
+                y: 6
+                width: plate.width
+                height: plate.height
+                visible: plate.keycap
+                ShapePath {
+                    strokeWidth: 2.5
+                    strokeColor: Qt.darker(plate.colBase, 2.6)
+                    fillColor: Qt.darker(plate.colBase, 2.6)
+                    PathSvg { path: Styles.plateOutline(plate.style, plate.kind, plate.width, plate.height, 2) }
+                }
+            }
+
             // Shadow under solid plates.
             Shape {
                 anchors.fill: parent
                 y: 5
+                visible: !plate.keycap
                 opacity: plate.redSun ? 0 : 0.3
                 ShapePath {
                     strokeWidth: -1
@@ -83,8 +100,9 @@ Item {
             Shape {
                 anchors.fill: parent
                 ShapePath {
-                    strokeWidth: plate.redSun ? 2.4 : (plate.style.drum === "rail" ? 2 : 1.2)
-                    strokeColor: plate.redSun ? plate.colGlow
+                    strokeWidth: plate.keycap ? 2.5 : plate.redSun ? 2.4 : (plate.style.drum === "rail" ? 2 : 1.2)
+                    strokeColor: plate.keycap ? Qt.darker(plate.colBase, 2.6)
+                               : plate.redSun ? plate.colGlow
                                : plate.style.drum === "rail" ? plate.colAccent
                                : plate.style.drum === "facets" ? plate.withAlpha("#ffffff", 0.55)
                                : plate.withAlpha(plate.colOn, 0.14)
@@ -92,13 +110,15 @@ Item {
                         x1: 0; y1: 0; x2: plate.width * 0.35; y2: plate.height
                         GradientStop {
                             position: 0.0
-                            color: plate.redSun ? plate.withAlpha("#1c1018", 0.78)
+                            color: plate.keycap ? Qt.lighter(plate.colBase, 1.08)
+                                 : plate.redSun ? plate.withAlpha("#1c1018", 0.78)
                                  : plate.style.drum === "facets" ? plate.withAlpha("#ffffff", 0.16)
                                  : Qt.lighter(plate.colBase, 1.16)
                         }
                         GradientStop {
                             position: 1.0
-                            color: plate.redSun ? plate.withAlpha("#09060c", 0.86)
+                            color: plate.keycap ? Qt.lighter(plate.colBase, 1.08)
+                                 : plate.redSun ? plate.withAlpha("#09060c", 0.86)
                                  : plate.style.drum === "facets" ? plate.withAlpha(plate.colAccent, 0.07)
                                  : Qt.darker(plate.colBase, 1.22)
                         }
@@ -108,7 +128,8 @@ Item {
                 // A thin hot line on Red Sun's edge, and a lit top edge on the others.
                 ShapePath {
                     strokeWidth: plate.redSun ? 1 : 1.6
-                    strokeColor: plate.redSun ? plate.withAlpha(plate.colHot, 0.85) : plate.withAlpha("#ffffff", plate.style.drum === "facets" ? 0.3 : 0.12)
+                    strokeColor: plate.keycap ? plate.withAlpha(plate.colOn, 0.78)
+                               : plate.redSun ? plate.withAlpha(plate.colHot, 0.85) : plate.withAlpha("#ffffff", plate.style.drum === "facets" ? 0.3 : 0.12)
                     fillColor: "transparent"
                     PathSvg { path: Styles.plateOutline(plate.style, plate.kind, plate.width, plate.height, plate.redSun ? 2 : 5) }
                 }

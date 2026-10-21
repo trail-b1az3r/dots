@@ -26,7 +26,7 @@ class ResolveTests(unittest.TestCase):
 
     def test_defaults_match_plus_lua(self):
         text = (HALCYON / "plus.lua").read_text(encoding="utf-8")
-        for key, (path, _kind, default, _low, _high) in ps.SETTINGS.items():
+        for key, (path, _kind, default, _low, _high, *_option) in ps.SETTINGS.items():
             name = path.split(".")[-1]
             if path == "plus.feedback.enabled":
                 continue  # not written in plus.lua; the compositor's default is true
@@ -61,6 +61,15 @@ class RenderTests(unittest.TestCase):
         self.assertIn("if hl.dsp and hl.dsp.plus then", text)
         self.assertIn("all_tiled = true,", text)
         self.assertRegex(text, r"feedback = \{\n\s+enabled = false,\n\s+duration = 200,\n\s+\},")
+        self.assertEqual(text.count("{"), text.count("}"))
+
+    def test_later_options_are_each_behind_a_check_for_them(self):
+        values, _ = ps.resolve({"dragFullscreenEdge": 20, "stripOverFullscreen": True})
+        text = ps.render(values)
+        self.assertRegex(text, r'if hl\.get_config and hl\.get_config\("binds:drag_fullscreen_edge"\) ~= nil then\n\s+hl\.config\(\{\n\s+binds = \{\n\s+drag_fullscreen_edge = 20,')
+        self.assertRegex(text, r'hl\.get_config\("superposition:over_fullscreen"\) ~= nil then\n\s+hl\.config\(\{\n\s+superposition = \{\n\s+over_fullscreen = true,')
+        # not in the block that only needs Plus Tiles
+        self.assertNotIn("drag_fullscreen_edge", text.split("\nend\n")[0])
         self.assertEqual(text.count("{"), text.count("}"))
 
     @unittest.skipUnless(shutil.which("luac") or shutil.which("luac5.4") or shutil.which("luajit"), "no Lua compiler")
