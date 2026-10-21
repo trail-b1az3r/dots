@@ -4,6 +4,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs
 
 /**
  * The live spectrum of what the speakers play, from cava, for anything that draws it (the desktop visualizer, its
@@ -15,7 +16,7 @@ Singleton {
 
     /** How many things want the spectrum now. */
     property int users: 0
-    readonly property bool active: users > 0
+    readonly property bool active: users > 0 && !GlobalStates.screenLocked
 
     /** How many values per frame, and how many frames a second. */
     property int bars: 48

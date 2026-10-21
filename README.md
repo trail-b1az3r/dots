@@ -394,11 +394,31 @@ or placed in the least or most busy part of the wallpaper.
   nothing plays, and takes the number of bars and the frame rate (30 by default; cava only runs while the widget is
   shown, and one cava serves everything that draws a spectrum).
   **As a window (superposition)** shows it as a window instead: with hyprland-plus the rule on its title
-  (`app_rules.lua`) keeps it tiled on the thin screen-edge strip, drawn above fullscreen windows, so the music shows
-  over a game or a video. On stock Hyprland it is an ordinary window. Close the window to turn the widget off.
-- **System**: processor, memory and swap as three rings on a card in the theme's shape.
+  (`app_rules.lua`) keeps it tiled on the thin screen-edge strip. The strip waits behind a fullscreen window unless
+  Settings > Halcyon > Plus Tiles > **Music strip over fullscreen** is on. On stock Hyprland it is an ordinary
+  window. Close the window to turn the widget off.
+- **System**: processor, memory and swap on a card in the theme's shape.
 - **Now playing**: the cover, title and artist of the active player, how far along it is, and previous, play/pause
   and next. It fades away when no player is running.
+- **Lyrics**: the words of the song that is playing, a few lines at a time, the one being sung large. They come from
+  [LRCLIB](https://lrclib.net) (free, no account): the artist, title and length are sent once per song, and only
+  while the widget is on.
+
+Each theme draws these widgets its own way, not only their cards:
+
+| Theme | Gauges | Spectrum bars | Progress | Lyric being sung |
+|---|---|---|---|---|
+| No theme | rings | rounded | a line | in the accent colour |
+| Red Sun | thin lit rings with their glow, labels in capitals | needles with lit tips | a lit line | lit like the ring |
+| Shattered / Fractured Glass | rings of facets | sharp shards with a bright edge | facets | on a pane of frost |
+| HyperNeo | three activity rings inside each other, with a legend | pills | a thick pill | heavy and large |
+| Star Rail | gold rails with star ticks | bars topped with a diamond | a fine rail with a diamond on it | between two stars |
+| After ICEY, Manga Ink | keycaps that fill from the bottom | stacked keys, like a console's equaliser | a row of keys | on a keycap |
+
+The clock's hands and the weather card take the same colours.
+
+Settings > Background > Wallpaper: an animated wallpaper (mpvpaper) rests while the screen is locked or a fullscreen
+window covers every monitor, and carries on from the same frame. cava stops while the screen is locked.
 
 **Shattered Glass at `full`** runs a screen shader
 (`themes/shaders/shattered-glass.frag`) that treats the screen as a

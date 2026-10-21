@@ -20,6 +20,7 @@ import qs.modules.ii.background.widgets.weather
 import qs.modules.ii.background.widgets.visualizer
 import qs.modules.ii.background.widgets.system
 import qs.modules.ii.background.widgets.nowplaying
+import qs.modules.ii.background.widgets.lyrics
 import qs.modules.ii.background.widgets.revolver
 
 Variants {
@@ -312,6 +313,17 @@ Variants {
                 FadeLoader {
                     shown: Config.options.background.widgets.system.enable
                     sourceComponent: SystemWidget {
+                        screenWidth: bgRoot.screen.width
+                        screenHeight: bgRoot.screen.height
+                        scaledScreenWidth: bgRoot.screen.width
+                        scaledScreenHeight: bgRoot.screen.height
+                        wallpaperScale: 1
+                    }
+                }
+
+                FadeLoader {
+                    shown: Config.options.background.widgets.lyrics.enable
+                    sourceComponent: LyricsWidget {
                         screenWidth: bgRoot.screen.width
                         screenHeight: bgRoot.screen.height
                         scaledScreenWidth: bgRoot.screen.width

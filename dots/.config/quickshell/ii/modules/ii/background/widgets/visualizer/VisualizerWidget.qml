@@ -16,6 +16,7 @@ AbstractBackgroundWidget {
     configEntryName: "visualizer"
 
     readonly property var settings: Config.options.background.widgets.visualizer
+    readonly property ThemeLook look: ThemeLook {}
 
     implicitWidth: Math.max(120, settings.width)
     implicitHeight: Math.max(60, settings.height)
@@ -56,5 +57,9 @@ AbstractBackgroundWidget {
         style: root.settings.style
         barCount: Math.max(8, Math.min(128, root.settings.bars))
         live: !AudioSpectrum.silent
+        barStyle: root.look.spec.bars
+        colorA: root.look.accentA
+        colorB: root.look.accentB
+        glowColor: root.look.glow
     }
 }

@@ -61,3 +61,33 @@ class FullscreenTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FullscreenWindowsTest(unittest.TestCase):
+    HALCYON = ROOT / "dots/.config/hypr/hyprland/halcyon"
+
+    def test_the_music_strip_stays_behind_a_fullscreen_window_by_default(self):
+        # It is 12% of the screen, drawn over the window: the slice that "gets cut off" in a fullscreen app.
+        text = read(self.HALCYON / "plus.lua")
+        self.assertRegex(text, r"if caps\.stripFullscreen then\s+hl\.config\(\{\s+superposition = \{\s+over_fullscreen = false,")
+
+    def test_dropping_a_window_at_the_top_is_on_by_default_and_asks_the_build_first(self):
+        text = read(self.HALCYON / "plus.lua")
+        self.assertRegex(text, r"if caps\.dragEdge then\s+hl\.config\(\{\s+binds = \{\s+drag_fullscreen_edge = 8,")
+        compositor = read(self.HALCYON / "compositor.lua")
+        self.assertIn('hasOption("binds:drag_fullscreen_edge")', compositor)
+        self.assertIn('hasOption("superposition:over_fullscreen")', compositor)
+
+    def test_the_animated_wallpaper_rests_while_hidden_and_wakes_when_it_is_not(self):
+        sleep = read(II / "modules/ii/background/WallpaperSleep.qml")
+        self.assertIn('"pkill", "-STOP", "-x", "mpvpaper"', sleep)
+        self.assertIn('"pkill", "-CONT", "-x", "mpvpaper"', sleep)
+        self.assertIn("GlobalStates.screenLocked", sleep)
+        self.assertIn("screens.every(", sleep, "covered on every monitor, not just one")
+        self.assertIn("onEnabledChanged: if (!enabled) wake()", sleep, "turning it off must not leave it stopped")
+        self.assertIn("WallpaperSleep {}", read(II / "panelFamilies/IllogicalImpulseFamily.qml"))
+        self.assertIn("pauseVideoWhenHidden", read(II / "modules/common/Config.qml"))
+        self.assertIn("pauseVideoWhenHidden", read(II / "modules/settings/BackgroundConfig.qml"))
+
+    def test_the_spectrum_stops_while_the_screen_is_locked(self):
+        self.assertIn("users > 0 && !GlobalStates.screenLocked", read(II / "services/AudioSpectrum.qml"))

@@ -53,6 +53,34 @@ ContentPage {
     }
 
     ContentSection {
+        icon: "movie"
+        title: Translation.tr("Wallpaper")
+
+        ConfigSwitch {
+            buttonIcon: "fullscreen"
+            text: Translation.tr("Hide behind fullscreen windows")
+            checked: Config.options.background.hideWhenFullscreen
+            onCheckedChanged: {
+                Config.options.background.hideWhenFullscreen = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("The wallpaper and its widgets stop drawing on a monitor that has a fullscreen window")
+            }
+        }
+        ConfigSwitch {
+            buttonIcon: "pause_circle"
+            text: Translation.tr("Pause the animated wallpaper when it is hidden")
+            checked: Config.options.background.pauseVideoWhenHidden
+            onCheckedChanged: {
+                Config.options.background.pauseVideoWhenHidden = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("A video wallpaper rests while the screen is locked or a fullscreen window covers every monitor, and carries on from the same frame")
+            }
+        }
+    }
+
+    ContentSection {
         id: settingsClock
         icon: "clock_loader_40"
         title: Translation.tr("Widget: Clock")
@@ -813,6 +841,82 @@ ContentPage {
                     { displayName: Translation.tr("Least busy"), icon: "category", value: "leastBusy" },
                     { displayName: Translation.tr("Most busy"), icon: "shapes", value: "mostBusy" },
                 ]
+            }
+        }
+    }
+
+
+    ContentSection {
+        icon: "lyrics"
+        title: Translation.tr("Widget: Lyrics")
+
+        ConfigRow {
+            Layout.fillWidth: true
+
+            ConfigSwitch {
+                Layout.fillWidth: false
+                buttonIcon: "check"
+                text: Translation.tr("Enable")
+                checked: Config.options.background.widgets.lyrics.enable
+                onCheckedChanged: {
+                    Config.options.background.widgets.lyrics.enable = checked;
+                }
+                StyledToolTip {
+                    text: Translation.tr("Asks lrclib.net for the song's lyrics: it is sent the artist, the title and the length, once per song")
+                }
+            }
+            Item {
+                Layout.fillWidth: true
+            }
+            ConfigSelectionArray {
+                Layout.fillWidth: false
+                currentValue: Config.options.background.widgets.lyrics.placementStrategy
+                onSelected: newValue => {
+                    Config.options.background.widgets.lyrics.placementStrategy = newValue;
+                }
+                options: [
+                    { displayName: Translation.tr("Draggable"), icon: "drag_pan", value: "free" },
+                    { displayName: Translation.tr("Least busy"), icon: "category", value: "leastBusy" },
+                    { displayName: Translation.tr("Most busy"), icon: "shapes", value: "mostBusy" },
+                ]
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "web_asset"
+            text: Translation.tr("Card behind the words")
+            checked: Config.options.background.widgets.lyrics.panel
+            onCheckedChanged: {
+                Config.options.background.widgets.lyrics.panel = checked;
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("Alignment")
+            tooltip: ""
+
+            ConfigSelectionArray {
+                currentValue: Config.options.background.widgets.lyrics.align
+                onSelected: newValue => {
+                    Config.options.background.widgets.lyrics.align = newValue;
+                }
+                options: [
+                    { displayName: Translation.tr("Left"), icon: "format_align_left", value: "left" },
+                    { displayName: Translation.tr("Centre"), icon: "format_align_center", value: "center" },
+                    { displayName: Translation.tr("Right"), icon: "format_align_right", value: "right" }
+                ]
+            }
+        }
+
+        ConfigSpinBox {
+            icon: "width"
+            text: Translation.tr("Width")
+            value: Config.options.background.widgets.lyrics.width
+            from: 240
+            to: 1400
+            stepSize: 20
+            onValueChanged: {
+                Config.options.background.widgets.lyrics.width = value;
             }
         }
     }

@@ -313,6 +313,16 @@ Singleton {
                         property real x: 120
                         property real y: 300
                     }
+                    // The words of the song that is playing, from LRCLIB, with the line being sung in the accent colour.
+                    property JsonObject lyrics: JsonObject {
+                        property bool enable: false
+                        property string placementStrategy: "free"
+                        property real x: 120
+                        property real y: 460
+                        property int width: 480
+                        property bool panel: false // a card behind it, in the theme's shape
+                        property string align: "center" // "left", "center" or "right"
+                    }
                     // The revolver: a drum of installed games, on every theme (Red Sun's ring is one).
                     // Games are read from local files only, by halcyon-theme.
                     property JsonObject revolver: JsonObject {
@@ -335,6 +345,7 @@ Singleton {
                 property string wallpaperPath: ""
                 property string thumbnailPath: ""
                 property bool hideWhenFullscreen: true
+                property bool pauseVideoWhenHidden: true // Rest the animated wallpaper (mpvpaper) while locked or fully covered
                 property JsonObject parallax: JsonObject {
                     property bool vertical: false
                     property bool autoVertical: false

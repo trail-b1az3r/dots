@@ -23,11 +23,15 @@ Item {
 
     property color colShadow: Appearance.colors.colShadow
     property color colBackground: Appearance.colors.colPrimaryContainer
-    property color colOnBackground: ColorUtils.mix(Appearance.colors.colSecondary, Appearance.colors.colPrimaryContainer, 0.15)
-    property color colBackgroundInfo: ColorUtils.mix(Appearance.colors.colPrimary, Appearance.colors.colPrimaryContainer, 0.55)
-    property color colHourHand: Appearance.colors.colPrimary
-    property color colMinuteHand: Appearance.colors.colTertiary
-    property color colSecondHand: Appearance.colors.colPrimary
+    // On a themed face the marks and hands take the theme's look: ember and dawn on Red Sun, white on glass, the
+    // palette's accents elsewhere. Upstream's cookie keeps upstream's colours.
+    readonly property ThemeLook look: ThemeLook {}
+    readonly property bool lookColours: look.id !== "default"
+    property color colOnBackground: lookColours ? look.text : ColorUtils.mix(Appearance.colors.colSecondary, Appearance.colors.colPrimaryContainer, 0.15)
+    property color colBackgroundInfo: lookColours ? look.subtext : ColorUtils.mix(Appearance.colors.colPrimary, Appearance.colors.colPrimaryContainer, 0.55)
+    property color colHourHand: lookColours ? (look.id === "red-sun" || look.id === "glass" ? look.text : look.accentA) : Appearance.colors.colPrimary
+    property color colMinuteHand: lookColours ? (look.id === "red-sun" || look.id === "glass" ? look.accentA : look.accentB) : Appearance.colors.colTertiary
+    property color colSecondHand: lookColours ? look.glow : Appearance.colors.colPrimary
 
     readonly property list<string> clockNumbers: DateTime.time.split(/[: ]/)
     readonly property int clockHour: parseInt(clockNumbers[0]) % 12

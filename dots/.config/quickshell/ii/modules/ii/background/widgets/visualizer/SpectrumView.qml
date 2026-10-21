@@ -13,6 +13,10 @@ import qs.modules.common.functions
  *   wave     a filled, smooth curve
  *   ring     bars round a circle, growing outward
  *
+ * The bars themselves are drawn the theme's way (barStyle, from ThemeLook): round, pill, needle (a thin line with a
+ * lit tip, Red Sun), shard (sharp, with a bright edge, glass), star (topped with a diamond, Star Rail) or blocks
+ * (stacked keys, like a console's equaliser, the anime themes).
+ *
  * Made of plain items and one Shape, so the scene graph draws it on the GPU: no canvas repainting every frame.
  */
 Item {
@@ -21,6 +25,8 @@ Item {
     /** One value per bar, 0 to 1. */
     property var points: []
     property string style: "bars"
+    property string barStyle: "round"
+    property color glowColor: colorA
     property int barCount: 48
     property color colorA: Appearance.colors.colPrimary
     property color colorB: Appearance.colors.colTertiary
@@ -50,15 +56,91 @@ Item {
     Repeater {
         model: (root.style === "bars" || root.style === "mirror") ? root.barCount : 0
 
-        delegate: Rectangle {
+        delegate: Item {
+            id: slot
             required property int index
             readonly property real fill: Math.max(root.restingHeight, root.value(index) * root.height)
+            readonly property color tint: root.blend(index)
+            readonly property bool mirror: root.style === "mirror"
             x: index * (root.barWidth + root.gap)
             width: root.barWidth
-            height: root.style === "mirror" ? Math.min(root.height, fill) : fill
-            y: root.style === "mirror" ? (root.height - height) / 2 : root.height - height
-            radius: Math.min(width / 2, 6)
-            color: root.blend(index)
+            height: mirror ? Math.min(root.height, fill) : fill
+            y: mirror ? (root.height - height) / 2 : root.height - height
+
+            // round, pill, shard and star: one bar
+            Rectangle {
+                visible: root.barStyle !== "needle" && root.barStyle !== "blocks"
+                anchors.fill: parent
+                radius: root.barStyle === "pill" ? width / 2 : (root.barStyle === "shard" ? 0 : (root.barStyle === "star" ? 1 : Math.min(width / 2, 6)))
+                color: slot.tint
+                // shard: a bright cut along the top
+                Rectangle {
+                    visible: root.barStyle === "shard"
+                    width: parent.width
+                    height: Math.min(2, parent.height)
+                    color: Qt.rgba(1, 1, 1, 0.75)
+                }
+            }
+            // star: a diamond riding on the bar
+            Rectangle {
+                visible: root.barStyle === "star" && slot.fill > root.restingHeight + 2
+                width: Math.max(4, Math.min(9, root.barWidth))
+                height: width
+                rotation: 45
+                x: (parent.width - width) / 2
+                y: -width - 2
+                color: Qt.lighter(slot.tint, 1.3)
+            }
+
+            // needle: a thin line with a lit tip
+            Rectangle {
+                visible: root.barStyle === "needle"
+                width: Math.max(1.5, Math.min(root.barWidth * 0.35, 3))
+                height: parent.height
+                x: (parent.width - width) / 2
+                color: Qt.rgba(slot.tint.r, slot.tint.g, slot.tint.b, 0.75)
+            }
+            Rectangle {
+                visible: root.barStyle === "needle"
+                width: Math.max(4, Math.min(root.barWidth, 7))
+                height: width
+                radius: width / 2
+                x: (parent.width - width) / 2
+                y: -width / 2
+                color: root.glowColor
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width * 2.4
+                    height: width
+                    radius: width / 2
+                    color: Qt.rgba(root.glowColor.r, root.glowColor.g, root.glowColor.b, 0.22)
+                }
+            }
+
+            // blocks: stacked keys, lit from the bottom (from the middle out for the mirror). The cells are made once
+            // for the full height and shown as the level rises, so nothing is created or destroyed per frame.
+            Column {
+                id: keys
+                visible: root.barStyle === "blocks"
+                anchors.bottom: parent.bottom
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 2
+                readonly property real cell: Math.max(3, Math.min(root.barWidth, 9))
+                readonly property int lit: Math.max(1, Math.floor((slot.height + spacing) / (cell + spacing)))
+                Repeater {
+                    model: root.barStyle === "blocks" ? Math.max(1, Math.floor((root.height + 2) / (Math.max(3, Math.min(root.barWidth, 9)) + 2))) : 0
+                    delegate: Rectangle {
+                        required property int index
+                        visible: index < keys.lit
+                        width: root.barWidth
+                        height: keys.cell
+                        radius: 2
+                        color: slot.tint
+                        border.width: root.barWidth > 6 ? 1 : 0
+                        border.color: Qt.darker(slot.tint, 1.8)
+                    }
+                }
+            }
         }
     }
 

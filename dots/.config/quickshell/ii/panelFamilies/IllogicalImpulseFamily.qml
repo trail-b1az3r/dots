@@ -28,6 +28,7 @@ import qs.modules.ii.verticalBar
 import qs.modules.ii.wallpaperSelector
 
 Scope {
+    WallpaperSleep {}
     PanelLoader { extraCondition: !Config.options.bar.vertical; component: Bar {} }
     PanelLoader { component: Background {} }
     // The audio visualizer as a window, which hyprland-plus keeps on the screen-edge strip (app_rules.lua).

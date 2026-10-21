@@ -4,6 +4,7 @@ import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.functions
+import qs.modules.ii.background.widgets
 
 /**
  * The audio visualizer as a window (Settings > Background > Widget: Audio visualizer > "As a window"). With
@@ -23,6 +24,7 @@ FloatingWindow {
     visible: true
 
     readonly property var settings: Config.options.background.widgets.visualizer
+    readonly property ThemeLook look: ThemeLook {}
 
     onVisibleChanged: {
         if (!visible)
@@ -57,6 +59,10 @@ FloatingWindow {
             style: win.settings.style
             barCount: Math.max(8, Math.min(64, win.settings.bars))
             live: !AudioSpectrum.silent
+            barStyle: win.look.spec.bars
+            colorA: win.look.accentA
+            colorB: win.look.accentB
+            glowColor: win.look.glow
         }
     }
 }

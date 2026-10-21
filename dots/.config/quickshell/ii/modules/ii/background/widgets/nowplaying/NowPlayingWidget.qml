@@ -11,7 +11,9 @@ import qs.modules.ii.background.widgets
 
 /**
  * What is playing: the cover, the title and artist, how far along it is, and the three transport buttons, on a card
- * in the theme's shape. It is there while a player is, and fades away when none is.
+ * in the theme's shape. The cover's frame, the progress line and the labels follow the theme (ThemeLook): an ember
+ * edge and a lit line on Red Sun, facets on glass, a gold rail on Star Rail, keys on the anime themes. It is there
+ * while a player is, and fades away when none is.
  */
 AbstractBackgroundWidget {
     id: root
@@ -20,6 +22,7 @@ AbstractBackgroundWidget {
 
     readonly property var player: MprisController.activePlayer
     readonly property var track: MprisController.activeTrack
+    readonly property ThemeLook look: ThemeLook {}
 
     implicitWidth: 380
     implicitHeight: 132
@@ -54,8 +57,10 @@ AbstractBackgroundWidget {
             Layout.alignment: Qt.AlignVCenter
             implicitWidth: 92
             implicitHeight: 92
-            radius: Appearance.rounding.normal
+            radius: root.look.id === "glass" ? 4 : root.look.id === "keycap" ? 14 : Appearance.rounding.normal
             color: Appearance.colors.colLayer2
+            border.width: root.look.id === "default" || root.look.id === "hyperneo" ? 0 : (root.look.id === "keycap" ? 2.5 : 1.5)
+            border.color: root.look.id === "keycap" ? Qt.darker(Appearance.colors.colLayer1, 2.6) : root.look.glow
 
             StyledImage {
                 id: art
@@ -90,31 +95,26 @@ AbstractBackgroundWidget {
                 text: StringUtils.cleanMusicTitle(root.track?.title ?? "")
                 elide: Text.ElideRight
                 font.pixelSize: Appearance.font.pixelSize.larger
-                font.weight: Font.Medium
-                color: Appearance.colors.colOnLayer1
+                font.weight: root.look.id === "keycap" ? Font.Bold : Font.Medium
+                color: root.look.text
+                style: root.look.id === "red-sun" ? Text.Raised : Text.Normal
+                styleColor: root.look.glow
             }
             StyledText {
                 Layout.fillWidth: true
-                text: root.track?.artist ?? ""
+                text: root.look.label(root.track?.artist ?? "")
                 elide: Text.ElideRight
                 font.pixelSize: Appearance.font.pixelSize.small
-                color: Appearance.colors.colSubtext
+                font.letterSpacing: root.look.spacing
+                color: root.look.subtext
             }
 
             // How far along it is.
-            Rectangle {
+            ThemedProgress {
                 Layout.fillWidth: true
                 Layout.topMargin: 8
-                implicitHeight: 5
-                radius: height / 2
-                color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.82)
-
-                Rectangle {
-                    width: parent.width * (root.player && root.player.length > 0 ? Math.max(0, Math.min(1, root.player.position / root.player.length)) : 0)
-                    height: parent.height
-                    radius: parent.radius
-                    color: Appearance.colors.colPrimary
-                }
+                look: root.look
+                value: root.player && root.player.length > 0 ? root.player.position / root.player.length : 0
             }
 
             RowLayout {
@@ -148,7 +148,7 @@ AbstractBackgroundWidget {
                             text: control.modelData.icon
                             iconSize: 24
                             fill: 1
-                            color: control.enabled ? Appearance.colors.colOnLayer1 : Appearance.colors.colSubtext
+                            color: control.enabled ? root.look.text : root.look.subtext
                         }
                     }
                 }
