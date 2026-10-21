@@ -36,13 +36,14 @@ Item {
             verify(arc.daytime);
             arc.progress = 1.0001;
             verify(arc.night);
-            fuzzyCompare(arc.moonX, arc.cx - arc.r, 0.05, "the moon starts its night on the left");
+            fuzzyCompare(arc.moonX, arc.cx + arc.r, 0.05, "the moon starts its night on the right, where the sun set");
             arc.progress = 1.5;                           // half a day of daylight after sunset: midnight
             fuzzyCompare(arc.nightT, 0.5, 0.001);
             fuzzyCompare(arc.moonX, arc.cx, 0.01, "midnight is the middle");
             fuzzyCompare(arc.moonY, arc.height - arc.baseY + arc.r, 0.01, "hanging under the turned-over horizon");
             arc.progress = -0.25;                         // three hours before sunrise
             fuzzyCompare(arc.nightT, 0.75, 0.001);
+            verify(arc.moonX < arc.cx, "and heads left, to where the sun will rise");
             tryCompare(arc, "flip", -1, 2000, "the dial turns upside down at night");
             arc.progress = 0.3;
             tryCompare(arc, "flip", 1, 2000, "and back by day");
