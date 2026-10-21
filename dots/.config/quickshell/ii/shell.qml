@@ -9,7 +9,6 @@
 import "modules/common"
 import "services"
 import "panelFamilies"
-import "modules/ii/alarm"
 
 import QtQuick
 import QtQuick.Window
@@ -22,7 +21,9 @@ ShellRoot {
 
     // Stuff for every panel family
     ReloadPopup {}
-    AlarmOverlay {} // a ringing calendar alarm, on every screen
+    // A ringing calendar alarm, on every screen. It lives beside this file: a live reload doesn't see a folder that
+    // is new since the shell started, so a new folder imported here would break the shell until a restart.
+    AlarmOverlay {}
 
     Component.onCompleted: {
         MaterialThemeLoader.reapplyTheme()
