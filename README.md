@@ -34,10 +34,11 @@ On top of that, Halcyon adds:
 | **Glass panels** | Shell transparency is on by default. It can still be turned off in Settings. |
 | **Softer layout** | Wider gaps, rounder corners, deeper blur (popups too), a softer shadow. |
 | **Wallpapers** | The hyperNeo fire wallpaper is the default. It and the three Halcyon wallpapers are copied into `~/Pictures/Wallpapers`, where the wallpaper picker looks. |
-| **Themes** | Five hand-made themes: HyperNeo, Star Rail, Shattered Glass, Fractured Glass and Red Sun. [More below.](#themes) |
+| **Themes** | Seven hand-made themes: HyperNeo, Star Rail, Shattered Glass, Fractured Glass, Red Sun, After ICEY and Manga Ink, and rules for what changes when the theme switches. [More below.](#themes) |
 | **Voice assistant** | Press `Super + Shift + Space` and speak. It answers aloud and can run the desktop. [More below.](#voice-assistant) |
 | **Browser themes** | Firefox and Chromium take the desktop's colours, from a theme or the wallpaper. [More below.](#browsers) |
 | **Server mode** | One button in **Settings > Halcyon**: no suspend, no automatic lock or screen blanking, until you stop it. [More below.](#server-mode) |
+| **Settings** | One Settings window at a time: opening it again brings it to the monitor you are on. Every section folds shut with a click on its title, and stays that way. |
 | **Keybinds** | Extra shortcuts, listed below. They only use key combinations upstream leaves free. |
 | **hyprland-plus** | The compositor is [hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus): Hyprland 0.56.2 with mini windows, superposition windows, plustile windows and a drag fix. [More below.](#hyprland-plus) |
 
@@ -325,7 +326,12 @@ halcyon auto location 51.51,-0.13   # set the location (clear: back to the weath
 The **sun dial** in the bar, beside the clock, shows where the sun is in today's sky. Hover it for sunrise,
 sunset, the length of the day and the next theme change your schedules will make ("Red Sun, today at 19:12 (30 min
 before sunset), in 2 h 10 min"); click it to open Settings. After sunset it turns upside down and shows the moon in tonight's phase (the popup
-names it). `bar.sunDial: false` in the shell config hides it, and `halcyon auto day` prints the same in a terminal. In the Halcyon themes the bar's groups are also edged in the
+names it). `bar.sunDial: false` in the shell config hides it, and `halcyon auto day` prints the same in a terminal.
+
+![The sun dial by day and by night, and the moon in each of its phases](docs/assets/sun-dial.png)
+
+<sub>Top: the dial through a day; after sunset it turns over and the moon crosses back from where the sun set.
+Bottom: the moon as the dial draws it through the month.</sub> In the Halcyon themes the bar's groups are also edged in the
 theme's own light: ember in Red Sun, gold in Star Rail, frost in the glass themes.
 
 ### When the theme switches
@@ -340,6 +346,8 @@ halcyon rules                         # the rules, in the order they run
 halcyon rules icons                   # the icon themes installed
 halcyon rules run to after-icey       # run a theme's rules now, without switching
 ```
+
+![Settings > Halcyon > When the theme switches: two rules, and the form that makes them](docs/assets/switch-rules.png)
 
 ### Effects
 
@@ -407,6 +415,16 @@ the red ring in Red Sun, a cut-glass disc with gem chambers in the glass themes,
 HyperNeo, and a gold rail with star chambers in Star Rail. The analogue clock's face and the weather card follow the
 same shapes. Drag the drum to spin it: a flick fires the game under the hammer, a nudge only settles it.
 
+**After ICEY** has a revolver of its own, made for its wallpaper: the game's cyan HUD over dark navy. A see-through
+lens with a fine tick ring, a broken outer ring, targeting brackets and two gold markers; a scanning arc on the rim
+that brightens as the drum turns; hexagonal ice-cell chambers with a frosted inner edge; a snowflake hub and a
+chevron hammer. (Its other widgets keep the anime themes' keycaps.)
+
+The drum is drawn at the size it is shown, on any screen scale, so a large revolver is as sharp as a small one. It
+used to be drawn at 230 px and stretched, which blurred it.
+
+![The After ICEY revolver, and the same drum close up before and after the sharpness fix](docs/assets/revolver-after-icey.png)
+
 When a spin starts a game, a shot leaves the drum, a shockwave hits the middle of the screen, and the game's Steam
 art spins in like a chamber turning into place, with its name typed out under LOADING. It goes when the game's window
 opens (at most nine seconds), takes no clicks or keys, and Settings > Revolver > Launch animation turns it off.
@@ -418,8 +436,14 @@ opens (at most nine seconds), takes no clicks or keys, and Settings > Revolver >
 
 ### More desktop widgets
 
-Settings > Background has a section for each. They are all off until you turn them on, and each one can be dragged
-or placed in the least or most busy part of the wallpaper.
+Settings > Background has a section for each, and each one can be dragged or placed in the least or most busy part of
+the wallpaper. The clock and the revolver are on to start with, the rest off. **Settings > Quick > Desktop widgets**
+turns any of them on or off in one place, and so does a terminal:
+
+```sh
+halcyon widgets                 # which are on
+halcyon widgets lyrics on       # clock, weather, revolver, visualizer, system, nowPlaying, lyrics: on, off or toggle
+```
 
 - **Audio visualizer**: the spectrum of what is playing, from cava (already a dependency), in the theme's two accent
   colours. Four styles: bars, mirror, wave and ring. It can sit on a card in the theme's shape, fade out while
@@ -663,6 +687,8 @@ no key.
 Voices are looked for in the assistant's models folder (the built-in `en_US-lessac-medium` and downloads),
 `~/.local/share/piper-voices`, and `/usr/share/piper-voices` (where the AUR's `piper-voices-*` packages put theirs).
 
+![Settings > Halcyon > Assistant > Voice: the voice engines, Kokoro and your own command, and the Piper voice picker browsing Hugging Face](docs/assets/voice-settings.png)
+
 **What it can do.** Only these actions, each checked against a strict
 schema before anything runs:
 
@@ -803,6 +829,8 @@ and power saving, which make those cards fail to connect. It writes
 | `stacked` | Two windows at a time, one above the other. A third opens on the next empty workspace, and you go with it. |
 | `side-by-side` | Two windows at a time, next to each other. A third opens on the next empty workspace. |
 | `mondrian` | Each new window splits the biggest tile, on uneven ratios, each cut running the other way from the one before, into interlocking blocks like a Mondrian painting. |
+
+![Golden ratio before and after the fix, and golden ratio plus with three to fourteen windows](docs/assets/golden-plus.png)
 
 ![The stacked, side-by-side and Mondrian layouts with one to eight windows](docs/assets/placement-modes.png)
 

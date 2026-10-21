@@ -5,8 +5,8 @@ import QtQuick.Shapes
 
 /**
  * The sun dial's drawing: today's arc from sunrise (left) to sunset (right) over a horizon line, with the sun on it.
- * At night the dial turns upside down, the arc hanging under the horizon from sunset to the next sunrise, and the
- * moon travels along it, drawn as tonight's phase (a crescent, a half, a full disc...). Without a location
+ * At night the dial turns upside down, the arc hanging under the horizon, and the moon travels along it from where
+ * the sun set (right) back to where it will rise (left), drawn as tonight's phase (a crescent, a half, a full disc...). Without a location
  * (progress undefined) only a faint arc is drawn.
  *
  * Needs only QtQuick, so it can be drawn and tested on its own.
@@ -42,7 +42,7 @@ Item {
     readonly property real r: Math.min(width / 2 - 3, height - 7)
     // Where the sun (by day) or the moon (by night) is, in the dial's own upright drawing. At night that drawing is
     // turned upside down, so the moon is shown at (sunX, height - sunY).
-    readonly property real pos: daytime ? t : nightT
+    readonly property real pos: daytime ? t : 1 - nightT
     readonly property real sunX: cx - r * Math.cos(Math.PI * pos)
     readonly property real sunY: baseY - r * Math.sin(Math.PI * pos)
     readonly property real moonX: sunX
@@ -109,8 +109,12 @@ Item {
                 : Qt.rgba(arc.colMoon.r, arc.colMoon.g, arc.colMoon.b, 0.7)
             fillColor: "transparent"
             capStyle: ShapePath.RoundCap
-            startX: arc.cx - arc.r; startY: arc.baseY
-            PathArc { x: arc.sunX; y: arc.sunY; radiusX: arc.r; radiusY: arc.r }
+            // By day from sunrise (left); by night from sunset (right), the other way round.
+            startX: arc.night ? arc.cx + arc.r : arc.cx - arc.r; startY: arc.baseY
+            PathArc {
+                x: arc.sunX; y: arc.sunY; radiusX: arc.r; radiusY: arc.r
+                direction: arc.night ? PathArc.Counterclockwise : PathArc.Clockwise
+            }
         }
     }
 
