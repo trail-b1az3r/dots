@@ -17,7 +17,7 @@ import tempfile
 
 from pathlib import Path
 
-from . import config, pcm, piper_voices, tts_ai
+from . import config, local_tts, pcm, piper_voices, tts_ai
 
 log = logging.getLogger("halcyon.speech")
 
@@ -53,13 +53,18 @@ def piper_binary():
 
 
 # Settings > Voice names a family; these are the engines in it.
-FAMILY = {"piper": "piper", "ai": "ai", "espeak-ng": "espeak", "espeak": "espeak", "spd-say": "system"}
+FAMILY = {"piper": "piper", "kokoro": "kokoro", "command": "command", "ai": "ai", "espeak-ng": "espeak",
+          "espeak": "espeak", "spd-say": "system"}
 
 
 def engines(settings=None):
     """The engines that can run, in the order they are tried: the chosen voice first, then the rest, best first."""
     settings = config.settings() if settings is None else settings
     found = []
+    if local_tts.command_configured(settings):
+        found.append("command")
+    if local_tts.kokoro_installed():
+        found.append("kokoro")
     if piper_binary() and piper_voice(settings):
         found.append("piper")
     if tts_ai.provider(settings):
@@ -206,6 +211,35 @@ def play_pcm(data, rate, should_stop=lambda: False):
     return None
 
 
+def play_wav(path, should_stop=lambda: False):
+    """Play a WAV file with whichever player there is. Returns None when it played, else why not."""
+    for player in (["pw-play"], ["paplay"], ["aplay", "-q"]):
+        if shutil.which(player[0]):
+            return _speak_with(player + [str(path)], should_stop)
+    return "no audio player (install pipewire, pulseaudio-utils or alsa-utils)"
+
+
+def _speak_with_kokoro(text, should_stop, settings):
+    try:
+        data, rate = local_tts.kokoro_pcm(text, settings)
+    except local_tts.LocalVoiceError as error:
+        return str(error)
+    if should_stop():
+        return None
+    return play_pcm(data, rate, should_stop)
+
+
+def _speak_with_command(text, should_stop, settings):
+    wav, problem = local_tts.run_command(text, settings)
+    if problem or wav is None or should_stop():
+        return problem
+    path = local_tts.wav_file(wav)
+    try:
+        return play_wav(path, should_stop)
+    finally:
+        path.unlink(missing_ok=True)
+
+
 def _speak_with_ai(text, should_stop, settings):
     try:
         data, rate = tts_ai.synthesize(text, settings)
@@ -220,8 +254,13 @@ def speak_once(name, text, should_stop=lambda: False, settings=None):
     """Speak with one engine. Returns None when it worked, else why not."""
     if name == "piper":
         return _speak_with_piper(text, should_stop, settings)
+    settings = config.settings() if settings is None else settings
+    if name == "kokoro":
+        return _speak_with_kokoro(text, should_stop, settings)
+    if name == "command":
+        return _speak_with_command(text, should_stop, settings)
     if name == "ai":
-        return _speak_with_ai(text, should_stop, config.settings() if settings is None else settings)
+        return _speak_with_ai(text, should_stop, settings)
     if name in ("espeak-ng", "espeak"):
         return _speak_with([name, "-s", "165", text], should_stop)
     if name == "spd-say":

@@ -634,6 +634,13 @@ halcyon assistant voice use en_GB-vctk-medium --speaker p226   # one here; voice
 halcyon assistant voice use ~/voices/mine.onnx  # a voice of your own (its .onnx.json beside it)
 ```
 
+**Other local voice models.** *Kokoro* (Kokoro-82M, 54 voices in nine languages, offline): `halcyon assistant
+setup --kokoro` (~340 MB), then pick a voice like `af_heart`, `bf_emma` or `am_adam`. *Your command*: any voice
+program (Coqui TTS, sherpa-onnx, a script of your own) gets the reply on stdin and either plays it or writes a WAV
+to stdout, which is played at your volume; it is split like a shell would, but never run through one. A local
+server with OpenAI's `/audio/speech` (Kokoro-FastAPI, LocalAI) works as the AI voice with its address set, and needs
+no key.
+
 Voices are looked for in the assistant's models folder (the built-in `en_US-lessac-medium` and downloads),
 `~/.local/share/piper-voices`, and `/usr/share/piper-voices` (where the AUR's `piper-voices-*` packages put theirs).
 

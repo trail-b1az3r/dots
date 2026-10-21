@@ -10,7 +10,7 @@ import time
 import urllib.request
 import zipfile
 
-from . import audio, config, daemon, localai, pcm, piper_voices, providers, speech, stt, wake
+from . import audio, config, daemon, local_tts, localai, pcm, piper_voices, providers, speech, stt, wake
 
 USAGE = """Halcyon's voice assistant.
 
@@ -35,6 +35,7 @@ USAGE = """Halcyon's voice assistant.
     halcyon assistant setup         install speech recognition (one time, ~300 MB)
           --wake                    ...and the offline "hey halcyon" wake word model
           --piper                   ...and a natural Piper voice instead of espeak-ng
+          --kokoro                  ...and Kokoro, a local voice model with 54 voices (~340 MB)
     halcyon assistant login         use your Claude Pro/Max plan instead of an API key
     halcyon assistant key ID [KEY]  store an API key: anthropic, gemini, openai, mistral, t1...
     halcyon assistant set NAME VALUE  change a setting (provider, model, t1Server, wakeWord, speak...)
@@ -90,6 +91,8 @@ def setup(args):
         packages.append("vosk")
     if "--piper" in args:
         packages.append("piper-tts")
+    if "--kokoro" in args:
+        packages.append("kokoro-onnx")
     print("installing " + ", ".join(packages))
     subprocess.run([str(venv_python), "-m", "pip", "install", "--upgrade", "--quiet", *packages], check=True)
 
@@ -113,6 +116,8 @@ def setup(args):
             local_bin.parent.mkdir(parents=True, exist_ok=True)
             local_bin.symlink_to(piper_bin)
 
+    if "--kokoro" in args:
+        local_tts.kokoro_download()
     print(f"fetching the Whisper '{config.settings()['speechModel']}' model…")
     subprocess.run([str(venv_python), "-c",
                     "import sys; sys.path.insert(0, sys.argv[1]); from halcyon_assistant import stt; stt.load(sys.argv[2])",

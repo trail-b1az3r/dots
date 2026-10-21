@@ -1058,7 +1058,7 @@ ContentPage {
         ContentSubsection {
             visible: Config.options.halcyon.assistant.speak
             title: Translation.tr("Voice")
-            tooltip: Translation.tr("Auto: Piper if it is set up (halcyon assistant setup --piper), else an AI voice if a Gemini or OpenAI key is stored, else espeak-ng. If the chosen voice fails, the next one speaks instead")
+            tooltip: Translation.tr("Auto: your own command if one is set, else Kokoro if it is set up, else Piper, else an AI voice if a Gemini or OpenAI key is stored, else espeak-ng. If the chosen voice fails, the next one speaks instead")
 
             ConfigSelectionArray {
                 currentValue: Config.options.halcyon.assistant.voice
@@ -1069,6 +1069,8 @@ ContentPage {
                 options: [
                     { displayName: Translation.tr("Auto"), icon: "auto_mode", value: "auto" },
                     { displayName: Translation.tr("Piper"), icon: "record_voice_over", value: "piper" },
+                    { displayName: Translation.tr("Kokoro"), icon: "graphic_eq", value: "kokoro" },
+                    { displayName: Translation.tr("Your command"), icon: "terminal", value: "command" },
                     { displayName: Translation.tr("AI voice"), icon: "neurology", value: "ai" },
                     { displayName: Translation.tr("eSpeak"), icon: "robot_2", value: "espeak" },
                     { displayName: Translation.tr("System"), icon: "settings_voice", value: "system" }
@@ -1111,6 +1113,49 @@ ContentPage {
                     if (text.trim() === Config.options.halcyon.assistant.aiVoiceEndpoint)
                         return;
                     Config.options.halcyon.assistant.aiVoiceEndpoint = text.trim();
+                    page.reloadAssistant();
+                }
+            }
+
+            // Kokoro: a local voice model, set up once in a terminal (it downloads ~340 MB).
+            ColumnLayout {
+                visible: Config.options.halcyon.assistant.voice === "kokoro" || Config.options.halcyon.assistant.voice === "auto"
+                Layout.fillWidth: true
+                spacing: 6
+                MaterialTextArea {
+                    Layout.fillWidth: true
+                    placeholderText: Translation.tr("Kokoro voice (empty: af_heart). af_ and am_ American, bf_ and bm_ British, ef_ Spanish, ff_ French, jf_ Japanese, zf_ Chinese...")
+                    text: Config.options.halcyon.assistant.kokoroVoice
+                    onTextChanged: {
+                        if (text.trim() === Config.options.halcyon.assistant.kokoroVoice)
+                            return;
+                        Config.options.halcyon.assistant.kokoroVoice = text.trim();
+                        page.reloadAssistant();
+                    }
+                }
+                RowLayout {
+                    RippleButtonWithIcon {
+                        buttonRadius: Appearance.rounding.full
+                        materialIcon: "download"
+                        mainText: Translation.tr("Set up Kokoro")
+                        onClicked: Quickshell.execDetached(["bash", "-c", `${Config.options.apps.terminal} bash -c "'${page.assistantTool}' setup --kokoro; read -rp 'Press Enter to close. '"`])
+                        StyledToolTip {
+                            text: "halcyon assistant setup --kokoro"
+                        }
+                    }
+                }
+            }
+
+            // A voice program of your own.
+            MaterialTextArea {
+                visible: Config.options.halcyon.assistant.voice === "command" || Config.options.halcyon.assistant.voice === "auto"
+                Layout.fillWidth: true
+                placeholderText: Translation.tr("Your voice command: gets the text on stdin, plays it or writes a WAV to stdout. E.g. tts --text-stdin --out_path /dev/stdout")
+                text: Config.options.halcyon.assistant.ttsCommand
+                onTextChanged: {
+                    if (text.trim() === Config.options.halcyon.assistant.ttsCommand)
+                        return;
+                    Config.options.halcyon.assistant.ttsCommand = text.trim();
                     page.reloadAssistant();
                 }
             }
@@ -1352,7 +1397,7 @@ ContentPage {
                 wrapMode: Text.Wrap
                 color: Appearance.colors.colSubtext
                 font.pixelSize: Appearance.font.pixelSize.smallie
-                text: Translation.tr("An AI voice sends the reply's text to Google or OpenAI (or the server you set) to be spoken. Piper and eSpeak speak on this computer.")
+                text: Translation.tr("An AI voice sends the reply's text to Google or OpenAI (or the server you set) to be spoken. Kokoro, Piper, eSpeak and your own command speak on this computer.")
             }
         }
 

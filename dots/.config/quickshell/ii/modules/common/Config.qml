@@ -127,6 +127,8 @@ Singleton {
                     property bool sidebarSpeak: true // Read the AI sidebar's replies aloud too
                     property string piperVoice: "" // A Piper voice's key (en_GB-alba-medium) or path; "" = the built-in one (halcyon assistant voices)
                     property string piperSpeaker: "" // For a voice with several speakers: a name or number
+                    property string kokoroVoice: "" // A Kokoro voice (af_heart, bf_emma, am_adam...); "" = af_heart
+                    property string ttsCommand: "" // A voice program of your own: text on stdin, plays it or writes a WAV to stdout
                     property bool allowActions: true // Let it control the desktop
                 }
                 property bool serverMode: false // No suspend, no automatic lock, no screen blanking (halcyon server)
