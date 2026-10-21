@@ -23,6 +23,10 @@ Singleton {
     // Other dirs used by the shell, without "file://"
     property string assetsPath: Quickshell.shellPath("assets")
     property string scriptPath: Quickshell.shellPath("scripts")
+    // Opens Settings, or brings the one already open to you (one Settings window at a time); plain qs if the
+    // Halcyon tool is missing.
+    readonly property var openSettingsCommand: ["bash", "-c", '"$1" settings 2>/dev/null || qs -p "$2"', "_",
+        FileUtils.trimFileProtocol(`${config}/hypr/hyprland/halcyon/halcyon-theme`), Quickshell.shellPath("settings.qml")]
     property string favicons: FileUtils.trimFileProtocol(`${Directories.cache}/media/favicons`)
     property string coverArt: FileUtils.trimFileProtocol(`${Directories.cache}/media/coverart`)
     property string tempImages: "/tmp/quickshell/media/images"
