@@ -52,6 +52,11 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("text --window|--screen|--clipboard", "the focused window, the whole monitor, or the image in the clipboard"),
         ("text FILE [--print] [--join] [--lang eng+deu]", "read an image or a PDF (scanned or not); print it, rejoin lines, pick languages"),
     ]),
+    ("Animated wallpapers", [
+        ("wallpapers [--json]", "the anime themes' video wallpapers and which are on this machine"),
+        ("wallpapers get ID [--4k]", "download one (After ICEY) into ~/.local/share/halcyon/wallpapers"),
+        ("wallpapers import ID FILE", "put one you downloaded yourself in its place (Anime Girl x Cat comes from its page)"),
+    ]),
     ("Browsers and devices", [
         ("browsers [--json]", "the Firefox and Chromium themes that follow Halcyon's colours, and where they are"),
         ("browsers update", "write them now (applying a theme or a wallpaper does this)"),

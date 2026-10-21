@@ -1233,6 +1233,20 @@ def ensure_starrail_banner():
               file=sys.stderr)
 
 
+def wallpaper_hint(wallpaper):
+    """How to get a theme's video wallpaper when it is not on the machine (they are not shipped)."""
+    try:
+        import halcyon_wallpapers
+    except ImportError:
+        return ""
+    for entry_id, entry in halcyon_wallpapers.CATALOG.items():
+        if halcyon_wallpapers.target(entry_id) == wallpaper:
+            how = "get" if entry.get("url") else "import"
+            tail = "" if entry.get("url") else " FILE"
+            return f"      `halcyon wallpapers {how} {entry_id}{tail}` brings it ({entry['page']}), then apply the theme again"
+    return ""
+
+
 def cmd_apply(args):
     if len(args) != 1:
         raise ThemeError("usage: halcyon-theme apply NAME")
@@ -1254,6 +1268,7 @@ def cmd_apply(args):
         run([str(SWITCHWALL), "--mode", "dark", "--image", str(wallpaper)])
     else:
         print(f"note: wallpaper {wallpaper} not found, keeping the current one", file=sys.stderr)
+        print(wallpaper_hint(wallpaper), file=sys.stderr)
     run([str(SWITCHWALL), "--mode", "dark", "--noswitch",
          "--type", theme["scheme"], "--color", theme["seed"]])
 
@@ -2014,6 +2029,9 @@ def main(argv):
     if argv and (argv[0] == "osd" or argv[0] == "annotate" or argv[0] == "overlays"):
         tool = HERE / "halcyon_overlays.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv])
+    if argv and argv[0] == "wallpapers":
+        tool = HERE / "halcyon_wallpapers.py"
+        os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and argv[0] == "usb":
         tool = HERE / "halcyon_usb.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])

@@ -150,7 +150,9 @@ ContentPage {
         { id: "hsr", name: "Star Rail", icon: "train" },
         { id: "shattered-glass", name: "Shattered Glass", icon: "broken_image" },
         { id: "fractured-glass", name: "Fractured Glass", icon: "lens_blur" },
-        { id: "red-sun", name: "Red Sun", icon: "wb_twilight" }
+        { id: "red-sun", name: "Red Sun", icon: "wb_twilight" },
+        { id: "after-icey", name: "After ICEY", icon: "ac_unit" },
+        { id: "manga-ink", name: "Manga Ink", icon: "draw" }
     ]
     property bool showHidden: false
     property string openThemeMenu: "" // Id of the row whose menu is dropped down
