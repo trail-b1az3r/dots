@@ -98,8 +98,12 @@ class WiringTest(unittest.TestCase):
     def test_it_is_shown_on_every_screen_whatever_the_panels(self):
         shell = self.read("shell.qml")
         self.assertIn("AlarmOverlay {}", shell)
+        # Beside shell.qml, not in a folder of its own: a live reload does not see a folder that is new since the
+        # shell started, and "AlarmOverlay is not a type" broke the whole shell after the update that added it.
+        self.assertTrue((II / "AlarmOverlay.qml").is_file())
+        self.assertNotIn('import "modules/ii/alarm"', shell)
         self.assertIn("Alarm.load()", shell)
-        overlay = self.read("modules/ii/alarm/AlarmOverlay.qml")
+        overlay = self.read("AlarmOverlay.qml")
         self.assertIn("WlrLayer.Overlay", overlay)
         self.assertIn("Alarm.stop()", overlay)
         self.assertIn("Alarm.snooze()", overlay)

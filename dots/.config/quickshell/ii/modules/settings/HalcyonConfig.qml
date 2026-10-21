@@ -1115,20 +1115,20 @@ ContentPage {
                 }
             }
 
-            ConfigRow {
-                uniform: true
-                ConfigSwitch {
-                    buttonIcon: "forum"
-                    text: Translation.tr("Read the AI sidebar's replies")
-                    checked: Config.options.halcyon.assistant.sidebarSpeak
-                    onCheckedChanged: {
-                        Config.options.halcyon.assistant.sidebarSpeak = checked;
-                        page.reloadAssistant();
-                    }
-                    StyledToolTip {
-                        text: Translation.tr("Replies typed in the left sidebar are read aloud too, without code or links. Super+Shift+Space stops it")
-                    }
+            ConfigSwitch {
+                buttonIcon: "forum"
+                text: Translation.tr("Read the AI sidebar's replies")
+                checked: Config.options.halcyon.assistant.sidebarSpeak
+                onCheckedChanged: {
+                    Config.options.halcyon.assistant.sidebarSpeak = checked;
+                    page.reloadAssistant();
                 }
+                StyledToolTip {
+                    text: Translation.tr("Replies typed in the left sidebar are read aloud too, without code or links. Super+Shift+Space stops it")
+                }
+            }
+            // A button of its own, not in a row with the switch: in a uniform row it was drawn over the switch.
+            RowLayout {
                 RippleButtonWithIcon {
                     buttonRadius: Appearance.rounding.full
                     materialIcon: "campaign"
@@ -1604,7 +1604,7 @@ ContentPage {
 
             ConfigSpinBox {
                 icon: "vertical_align_top"
-                text: Translation.tr("Drop at the top to fullscreen (px, 0 = off)")
+                text: Translation.tr("Drop at the top: fullscreen (px)")
                 value: Config.options.halcyon.plus.dragFullscreenEdge
                 from: 0
                 to: 512
@@ -1613,9 +1613,15 @@ ContentPage {
                     Config.options.halcyon.plus.dragFullscreenEdge = value;
                     page.applyPlus();
                 }
-                StyledToolTip {
-                    text: Translation.tr("Hold Super, drag a window by its middle and let go at the very top of the screen. A click is not a drag, and a window already at the top is left alone")
-                }
+            }
+            // A note, not a tooltip: a spin box row has no hover of its own, so a tooltip on it was always showing.
+            StyledText {
+                Layout.fillWidth: true
+                Layout.leftMargin: 8
+                wrapMode: Text.Wrap
+                color: Appearance.colors.colSubtext
+                font.pixelSize: Appearance.font.pixelSize.smallie
+                text: Translation.tr("Hold Super, drag a window by its middle and let go at the very top of the screen. A click is not a drag, and a window already at the top is left alone. 0 turns it off.")
             }
             ConfigSwitch {
                 buttonIcon: "queue_music"
