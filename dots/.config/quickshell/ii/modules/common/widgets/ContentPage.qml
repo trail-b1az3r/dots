@@ -17,7 +17,9 @@ StyledFlickable {
     
     ColumnLayout {
         id: contentColumn
-        width: root.forceWidth ? root.baseWidth : Math.max(root.baseWidth, implicitWidth)
+        // Never wider than the window: a narrow Settings window wraps the text and the option rows instead of
+        // cutting off their right side.
+        width: Math.min(root.forceWidth ? root.baseWidth : Math.max(root.baseWidth, implicitWidth), Math.max(280, root.width - 40))
         anchors {
             top: parent.top
             horizontalCenter: parent.horizontalCenter

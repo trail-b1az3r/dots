@@ -381,14 +381,13 @@ ContentPage {
             stepSize: 1
             onValueChanged: Config.options.calendar.alarm.stopAfter = value
         }
-        ConfigRow {
-            uniform: true
-            ConfigSwitch {
-                buttonIcon: "alarm_add"
-                text: Translation.tr("New timed events have an alarm")
-                checked: Config.options.calendar.alarm.alarmByDefault
-                onCheckedChanged: Config.options.calendar.alarm.alarmByDefault = checked
-            }
+        ConfigSwitch {
+            buttonIcon: "alarm_add"
+            text: Translation.tr("New timed events have an alarm")
+            checked: Config.options.calendar.alarm.alarmByDefault
+            onCheckedChanged: Config.options.calendar.alarm.alarmByDefault = checked
+        }
+        RowLayout {
             RippleButtonWithIcon {
                 buttonRadius: Appearance.rounding.full
                 materialIcon: "play_arrow"
