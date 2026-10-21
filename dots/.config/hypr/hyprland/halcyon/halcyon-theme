@@ -2151,6 +2151,10 @@ def main(argv):
     if argv and argv[0] == "browsers":
         tool = HERE / "halcyon_browsers.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
+    if argv and argv[0] == "update":
+        # The updater the bar's button and the hourly timer run; bare `halcyon update` says where things stand.
+        updater = HERE / "update"
+        os.execv("/bin/bash", ["bash", str(updater), *(argv[1:] or ["status"])])
     if argv and argv[0] == "wifi":
         tool = HERE / "halcyon_wifi.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])

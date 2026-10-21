@@ -78,9 +78,15 @@ It follows `main`, whatever your clone is on: another branch, a detached checkou
 becomes a git clone on its first update). Edits you made inside the clone are put aside and back. If an update
 fails, the notification and the bar say why.
 
+Updating also updates **hyprland-plus** when its branch has moved on: `hyprctl-lite` rebuilds it, which needs your
+password, so from the bar's button it opens a terminal window to ask in. One installed from the AUR is updated with
+your AUR helper instead. Log out and back in afterwards to run the new build.
+
 ```sh
-~/.config/hypr/hyprland/halcyon/update status   # what is installed, what is waiting, the last problem
-~/.config/hypr/hyprland/halcyon/update apply    # update now
+halcyon update                       # what is installed and waiting (Halcyon and hyprland-plus), the last problem
+halcyon update apply                 # update both now
+halcyon update apply halcyon         # only Halcyon
+halcyon update apply hyprland-plus   # only hyprland-plus
 halcyon doctor                                  # updates, the revolver, the browser themes and the Wi-Fi, in one report
 halcyon doctor --fix                            # and fix what can be fixed from there
 ```

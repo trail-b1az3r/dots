@@ -6,8 +6,15 @@
 #
 #   update check    look for new commits on main; one notification for them, at most one an hour (the default).
 #                   The notification's "Update now" runs apply.
-#   update apply    bring the repository to main, copy the changed dots/ files into $HOME, reload what they change
+#   update apply    bring the repository to main, copy the changed dots/ files into $HOME, reload what they change,
+#                   then update hyprland-plus (the Hyprland fork) when its branch has moved on
+#   update apply halcyon          only Halcyon
+#   update apply hyprland-plus    only hyprland-plus
 #   update status   what is installed, what is waiting, and the last problem
+#
+# hyprland-plus is built by hyprctl-lite (tools/hyprctl-lite in the repository, so the newest copy), which needs sudo:
+# in a terminal it asks there; from the shell's button (no terminal) it opens one to ask in. One installed from the
+# AUR is updated with your AUR helper the same way.
 #
 # It follows main whatever the repository is on: another branch, a detached checkout, a clone with no upstream, or
 # a release archive with no git at all (that one becomes a clone of the repository on its first update).
@@ -24,6 +31,8 @@ NOTIFIED_FILE="$STATE/update-notified"  # when the last notification went out (e
 ERROR_FILE="$STATE/update-error"        # the last failure, for the shell and `update status`
 CHECKED_FILE="$STATE/update-checked"    # when the last check reached the repository
 BACKUPS="$STATE/backups"
+PLUS_FILE="$STATE/hyprland-plus-update"  # hyprland-plus's update, when one is waiting (hyprctl-lite's words)
+PLUS_SEEN_FILE="$STATE/hyprland-plus-seen"  # the last hyprland-plus update already announced
 REMOTE_URL="${HALCYON_REMOTE:-https://github.com/trail-b1az3r/dots.git}"
 BRANCH="main"
 TARGET_REF="refs/remotes/origin/$BRANCH"
@@ -89,6 +98,91 @@ behind() {
     g rev-list --count "HEAD..$TARGET"
 }
 
+# --- hyprland-plus ---------------------------------------------------------------------------------------------------
+
+# hyprctl-lite: the repository's copy (just updated, so it knows the current branch), else an installed one.
+plus_lite() {
+    local lite candidates=("${REPO:-}/tools/hyprctl-lite/hyprctl-lite" /usr/local/bin/hyprctl-lite)
+    [[ -n "${HALCYON_HYPRCTL_LITE+set}" ]] && candidates=("$HALCYON_HYPRCTL_LITE")   # the tests' stand-in, alone
+    for lite in "${candidates[@]}"; do
+        [[ -n "$lite" && -f "$lite" ]] && { echo "$lite"; return 0; }
+    done
+    return 1
+}
+
+# Sets PLUS_STATE (waiting, current, aur, none or unknown) and PLUS_LINE (what hyprctl-lite said).
+plus_check() {
+    PLUS_STATE=none PLUS_LINE=""
+    local lite rc=0
+    lite="$(plus_lite)" || return 0
+    PLUS_LINE="$(timeout 60 bash "$lite" install update --check 2>&1)" || rc=$?
+    PLUS_LINE="${PLUS_LINE%%$'\n'*}"
+    case "$rc" in
+        0) PLUS_STATE=current ;;
+        10) PLUS_STATE=waiting ;;
+        *) case "$PLUS_LINE" in
+               *AUR*) PLUS_STATE=aur ;;
+               *"not installed"*) PLUS_STATE=none ;;
+               *) PLUS_STATE=unknown ;;
+           esac ;;
+    esac
+    if [[ "$PLUS_STATE" == waiting ]]; then
+        printf '%s\n' "$PLUS_LINE" > "$PLUS_FILE"
+    else
+        rm -f "$PLUS_FILE"
+    fi
+}
+
+aur_helper() {
+    local helper
+    for helper in paru yay pikaur trizen; do
+        command -v "$helper" >/dev/null 2>&1 && { echo "$helper"; return 0; }
+    done
+    return 1
+}
+
+# Runs a command that asks for a password: here when there is a terminal, else in a new terminal window (the shell's
+# button and the notification's "Update now" have none), which stays open at the end so its output can be read.
+in_terminal() {
+    local title="$1"
+    shift
+    if [[ -t 0 && -t 1 ]]; then
+        "$@"
+        return
+    fi
+    local script term
+    script="$(printf '%q ' "$@"); echo; read -rp 'Done. Press Enter to close this window. ' _"
+    for term in "${TERMINAL:-}" xdg-terminal-exec kitty foot ghostty alacritty wezterm konsole gnome-terminal xterm; do
+        [[ -n "$term" ]] && command -v "$term" >/dev/null 2>&1 && break
+        term=""
+    done
+    [[ -n "$term" ]] || { notify "$title" "No terminal to ask for your password in. Run in one: $*" -u critical; return 1; }
+    case "$term" in
+        xdg-terminal-exec|kitty|foot) setsid -f "$term" bash -c "$script" >/dev/null 2>&1 ;;
+        wezterm) setsid -f wezterm start -- bash -c "$script" >/dev/null 2>&1 ;;
+        gnome-terminal) setsid -f gnome-terminal -- bash -c "$script" >/dev/null 2>&1 ;;
+        *) setsid -f "$term" -e bash -c "$script" >/dev/null 2>&1 ;;
+    esac
+    notify "$title" "Building in a terminal window: it asks for your password. Log out and back in when it is done." -u normal
+}
+
+plus_apply() {
+    plus_check
+    case "$PLUS_STATE" in
+        waiting)
+            echo "hyprland-plus: $PLUS_LINE"
+            in_terminal "Updating hyprland-plus" sudo bash "$(plus_lite)" install update ;;
+        aur)
+            local helper
+            helper="$(aur_helper)" || { echo "hyprland-plus is from the AUR, and no AUR helper is installed"; return 0; }
+            in_terminal "Updating hyprland-plus" "$helper" -S --needed hyprland-plus ;;
+        current) echo "hyprland-plus: $PLUS_LINE" ;;
+        none) echo "hyprland-plus: not installed (sudo hyprctl-lite install full installs it)" ;;
+        *) echo "hyprland-plus: couldn't tell whether an update is waiting: $PLUS_LINE" ;;
+    esac
+    return 0
+}
+
 check() {
     MODE=check
     repo
@@ -100,7 +194,21 @@ check() {
     local count
     count="$(behind)"
     rm -f "$ERROR_FILE"
+    plus_check
     if [[ "$count" == 0 ]]; then
+        if [[ "$PLUS_STATE" == waiting ]]; then
+            # Halcyon is current, hyprland-plus isn't: the bar's button lights for it, announced once per new commit.
+            echo 1 > "$AVAILABLE_FILE"
+            echo "hyprland-plus: $PLUS_LINE"
+            [[ "$(cat "$PLUS_SEEN_FILE" 2>/dev/null)" == "$PLUS_LINE" ]] && return 0
+            echo "$PLUS_LINE" > "$PLUS_SEEN_FILE"
+            flock -u 9
+            local answer
+            answer="$(timeout 3600 notify-send -a Halcyon -i software-update-available -A "apply=Update now" --wait \
+                "hyprland-plus update available" "$PLUS_LINE" 2>/dev/null)"
+            [[ "$answer" == apply ]] && bash "$0" apply hyprland-plus
+            return 0
+        fi
         rm -f "$AVAILABLE_FILE"
         echo "up to date"
         return 0
@@ -124,6 +232,7 @@ check() {
     if has_commits && [[ -n "$(g diff --name-only HEAD "$TARGET" -- sdata setup)" ]]; then
         body+=" (afterwards run ./setup install, since install steps or packages changed)"
     fi
+    [[ "$PLUS_STATE" == waiting ]] && body+=" hyprland-plus has an update too."
     echo "$TARGET" > "$SEEN_FILE"
     echo "$now" > "$NOTIFIED_FILE"
     flock -u 9
@@ -140,7 +249,17 @@ check() {
 
 apply() {
     MODE=apply
+    local what="${1:-all}"
+    case "$what" in
+        all|halcyon|hyprland-plus) ;;
+        *) echo "usage: update apply [halcyon|hyprland-plus]" >&2; exit 2 ;;
+    esac
     repo
+    if [[ "$what" == hyprland-plus ]]; then
+        plus_apply
+        rm -f "$AVAILABLE_FILE"
+        return 0
+    fi
     exec 9>"$STATE/update.lock"
     flock -w 300 9 || fail "Another update has been running for 5 minutes. Try again when it has finished."
     fetch || fail "Couldn't reach the Halcyon repository. Check the network and try again."
@@ -192,6 +311,7 @@ apply() {
         echo "$after" > "$INSTALLED_FILE"
         echo "Already up to date."
         notify "Halcyon is up to date" "Nothing new on main." -u low
+        [[ "$what" == all ]] && plus_apply
         return 0
     fi
 
@@ -252,6 +372,7 @@ apply() {
     (( from_archive )) && body+=" The Halcyon folder is a git clone from now on."
     (( needs_install )) && body+=" Install steps or packages changed: run ./setup install in $REPO to finish."
     notify "Halcyon updated" "$body"
+    [[ "$what" == all ]] && plus_apply
     # Last, since restarting the shell ends a run that the shell itself started.
     if (( shell_changed )) && systemctl --user is-active --quiet halcyon-quickshell.service 2>/dev/null; then
         systemctl --user restart halcyon-quickshell.service || true
@@ -280,13 +401,19 @@ status() {
     if command -v systemctl >/dev/null 2>&1; then
         echo "timer:           $(systemctl --user is-enabled halcyon-update.timer 2>/dev/null || echo "not enabled") (checks hourly)"
     fi
+    plus_check
+    case "$PLUS_STATE" in
+        none) echo "hyprland-plus:   not installed" ;;
+        aur) echo "hyprland-plus:   from the AUR (update apply runs your AUR helper)" ;;
+        *) echo "hyprland-plus:   $PLUS_LINE" ;;
+    esac
     [[ -f "$ERROR_FILE" ]] && echo "last problem:    $(cat "$ERROR_FILE")"
     return 0
 }
 
 case "${1:-check}" in
     check) check ;;
-    apply) apply ;;
+    apply) apply "${2:-all}" ;;
     status) status ;;
-    *) echo "usage: update [check|apply|status]" >&2; exit 2 ;;
+    *) echo "usage: update [check|apply [halcyon|hyprland-plus]|status]" >&2; exit 2 ;;
 esac
