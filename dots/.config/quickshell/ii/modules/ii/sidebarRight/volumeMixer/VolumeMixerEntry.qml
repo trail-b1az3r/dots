@@ -45,8 +45,7 @@ Item {
                     icon = AppSearch.guessIcon(root.node?.properties["application.icon-name"] ?? "");
                     if (AppSearch.iconExists(icon))
                         return Quickshell.iconPath(icon, "image-missing");
-                    icon = AppSearch.guessIcon(root.node?.properties["node.name"] ?? "");
-                    return Quickshell.iconPath(icon, "image-missing");
+                    return AppSearch.iconSource(root.node?.properties["node.name"] ?? "");
                 }
             }
 

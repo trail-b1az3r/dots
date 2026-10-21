@@ -78,9 +78,15 @@ It follows `main`, whatever your clone is on: another branch, a detached checkou
 becomes a git clone on its first update). Edits you made inside the clone are put aside and back. If an update
 fails, the notification and the bar say why.
 
+Updating also updates **hyprland-plus** when its branch has moved on: `hyprctl-lite` rebuilds it, which needs your
+password, so from the bar's button it opens a terminal window to ask in. One installed from the AUR is updated with
+your AUR helper instead. Log out and back in afterwards to run the new build.
+
 ```sh
-~/.config/hypr/hyprland/halcyon/update status   # what is installed, what is waiting, the last problem
-~/.config/hypr/hyprland/halcyon/update apply    # update now
+halcyon update                       # what is installed and waiting (Halcyon and hyprland-plus), the last problem
+halcyon update apply                 # update both now
+halcyon update apply halcyon         # only Halcyon
+halcyon update apply hyprland-plus   # only hyprland-plus
 halcyon doctor                                  # updates, the revolver, the browser themes and the Wi-Fi, in one report
 halcyon doctor --fix                            # and fix what can be fixed from there
 ```
@@ -318,9 +324,22 @@ halcyon auto location 51.51,-0.13   # set the location (clear: back to the weath
 
 The **sun dial** in the bar, beside the clock, shows where the sun is in today's sky. Hover it for sunrise,
 sunset, the length of the day and the next theme change your schedules will make ("Red Sun, today at 19:12 (30 min
-before sunset), in 2 h 10 min"); click it to open Settings. `bar.sunDial: false` in the shell config hides it, and
-`halcyon auto day` prints the same in a terminal. In the Halcyon themes the bar's groups are also edged in the
+before sunset), in 2 h 10 min"); click it to open Settings. After sunset it turns upside down and shows the moon in tonight's phase (the popup
+names it). `bar.sunDial: false` in the shell config hides it, and `halcyon auto day` prints the same in a terminal. In the Halcyon themes the bar's groups are also edged in the
 theme's own light: ember in Red Sun, gold in Star Rail, frost in the glass themes.
+
+### When the theme switches
+
+**Settings > Halcyon > When the theme switches** makes rules that run each time the theme switches to, or away
+from, a theme (or any theme, or none): turn a desktop widget on or off (the revolver off for After ICEY), change the
+icon theme (GTK, Qt and KDE apps), set the effects level, change where new windows open, change any shell setting,
+or run a command of your own. A rule for switching *to* a theme can put things back when the theme switches away.
+
+```sh
+halcyon rules                         # the rules, in the order they run
+halcyon rules icons                   # the icon themes installed
+halcyon rules run to after-icey       # run a theme's rules now, without switching
+```
 
 ### Effects
 
@@ -623,6 +642,27 @@ replies** (on by default) speaks the left sidebar's answers as well, without cod
 `Super + Shift + Space` stops it. `halcyon assistant test-voice` speaks with each voice and says why one fails, and
 `halcyon assistant say TEXT` reads anything aloud.
 
+**Piper voices.** Any Piper voice works, picked in Settings > Halcyon > Assistant > Voice > Piper voice (search by
+language, name or quality, *Hear* one before choosing it) or from a terminal:
+
+```sh
+halcyon assistant voices --all en_GB          # the ones here, on Hugging Face, and in the AUR
+halcyon assistant voice get en_GB-alba-medium # download from Hugging Face (rhasspy/piper-voices), checked, and use it
+halcyon assistant voice aur piper-voices-en-gb  # every en_GB voice, with your AUR helper (paru or yay)
+halcyon assistant voice use en_GB-vctk-medium --speaker p226   # one here; voices with several speakers take a name
+halcyon assistant voice use ~/voices/mine.onnx  # a voice of your own (its .onnx.json beside it)
+```
+
+**Other local voice models.** *Kokoro* (Kokoro-82M, 54 voices in nine languages, offline): `halcyon assistant
+setup --kokoro` (~340 MB), then pick a voice like `af_heart`, `bf_emma` or `am_adam`. *Your command*: any voice
+program (Coqui TTS, sherpa-onnx, a script of your own) gets the reply on stdin and either plays it or writes a WAV
+to stdout, which is played at your volume; it is split like a shell would, but never run through one. A local
+server with OpenAI's `/audio/speech` (Kokoro-FastAPI, LocalAI) works as the AI voice with its address set, and needs
+no key.
+
+Voices are looked for in the assistant's models folder (the built-in `en_US-lessac-medium` and downloads),
+`~/.local/share/piper-voices`, and `/usr/share/piper-voices` (where the AUR's `piper-voices-*` packages put theirs).
+
 **What it can do.** Only these actions, each checked against a strict
 schema before anything runs:
 
@@ -738,11 +778,15 @@ a notification says why. Its log is `~/.local/state/halcyon/wifi.log`.
 ```sh
 halcyon wifi          # what NetworkManager sees, and what stands in the way
 halcyon wifi fix      # the lasting fixes, as root (asks for sudo)
+halcyon wifi report   # everything above and NetworkManager's log in ~/halcyon-wifi-report.txt, to send
 ```
 
-`halcyon wifi fix` does three things, and only what your machine needs. It keeps Wi-Fi cards managed by
-NetworkManager, whatever marked them unmanaged. It turns `iwd` off when it runs beside NetworkManager, unless
-NetworkManager is set to use it. And on Surface (`mwifiex`) cards it turns off random MAC addresses while scanning,
+`halcyon wifi fix` does only what your machine needs. It installs NetworkManager if it is missing (the shell's
+network menu uses it) and starts it at every boot. It keeps Wi-Fi cards managed by NetworkManager, whatever marked
+them unmanaged. When `iwd` runs beside NetworkManager, it makes NetworkManager use iwd (`wifi.backend=iwd`) so the two
+stop fighting over the card and the networks iwd knows stay known; it no longer turns iwd off, which left computers
+set up with iwd alone without Wi-Fi. On a computer with iwd and no NetworkManager, login just waits for iwd to
+connect. And on Surface (`mwifiex`) cards it turns off random MAC addresses while scanning,
 and power saving, which make those cards fail to connect. It writes
 `/etc/NetworkManager/conf.d/90-halcyon-wifi.conf`; delete that file and restart NetworkManager to undo it.
 
@@ -752,7 +796,9 @@ and power saving, which make those cards fail to connect. It writes
 
 | Mode | What it does |
 | --- | --- |
-| `golden` (default) | Splits the space on the golden ratio, on the side the pointer is on. |
+| `golden` (default) | Splits the space 61.8 / 38.2, on the side the pointer is on; the window that was there keeps the bigger part. (It used to split 81 / 19, which left all but one window very thin.) |
+| `golden-plus` | Golden ratio plus: every window on a golden spiral (61.8 % of the screen, then 61.8 % of the rest, turning left, top, right, bottom), holding many more windows. It turns only as often as keeps every window at least 320 px on its short side; the windows after the last turn share the end of the spiral as a grid. Halcyon's own layout, not dwindle. |
+| `golden-plus-dwindle` | Golden ratio plus with Hyprland's dwindle (the *uses dwindle* switch in Settings): golden splits, each new window right of or below the one it splits. |
 | `cursor` | Splits in halves, on the side the pointer is on. |
 | `stacked` | Two windows at a time, one above the other. A third opens on the next empty workspace, and you go with it. |
 | `side-by-side` | Two windows at a time, next to each other. A third opens on the next empty workspace. |

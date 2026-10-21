@@ -87,6 +87,8 @@ Singleton {
                 property bool glassTheme: false // Written by halcyon-theme: the active theme has glass windows or a glass shader
                 property list<string> themeOrder: [] // Built-in theme ids in the order Settings lists them; the rest follow in the default order
                 property list<string> hiddenThemes: [] // Built-in theme ids hidden from Settings; "Show hidden themes" brings them back
+                property list<string> collapsedSections: [] // Settings sections folded shut, by title; a click on the title opens them again
+                property list<var> switchRules: [] // When the theme switches (Settings > Halcyon): { theme ("*" any, "off"), when "to"/"from", action "widget"/"icons"/"effects"/"placement"/"setting"/"command", target, value, restore }
                 property list<var> autoApply: [] // Schedules from Settings: { theme, time "HH:MM" or "sunset"/"sunrise" with an optional offset in minutes ("sunset-30"), days (ISO weekdays, empty for every day), weather }
                 property string location: "" // "lat,lon" for sunset and sunrise schedules; "" uses the bar's weather location
                 property bool customThemeHelpDismissed: false // "Do not show again" on the question asked after making a custom theme
@@ -125,6 +127,10 @@ Singleton {
                     property string aiVoiceModel: "" // "" = gemini-2.5-flash-preview-tts or gpt-4o-mini-tts
                     property string aiVoiceEndpoint: "" // An OpenAI-compatible voice server, e.g. http://127.0.0.1:8880/v1
                     property bool sidebarSpeak: true // Read the AI sidebar's replies aloud too
+                    property string piperVoice: "" // A Piper voice's key (en_GB-alba-medium) or path; "" = the built-in one (halcyon assistant voices)
+                    property string piperSpeaker: "" // For a voice with several speakers: a name or number
+                    property string kokoroVoice: "" // A Kokoro voice (af_heart, bf_emma, am_adam...); "" = af_heart
+                    property string ttsCommand: "" // A voice program of your own: text on stdin, plays it or writes a WAV to stdout
                     property bool allowActions: true // Let it control the desktop
                 }
                 property bool serverMode: false // No suspend, no automatic lock, no screen blanking (halcyon server)
@@ -765,7 +771,7 @@ Singleton {
             }
 
             // How a new window is split from the others: "golden" or "cursor". Applied by halcyon-theme placement.
-            property string windowPlacement: "golden" // "golden", "cursor", "stacked", "side-by-side", "mondrian"
+            property string windowPlacement: "golden" // "golden", "cursor", "stacked", "side-by-side", "mondrian", "golden-plus", "golden-plus-dwindle"
 
             // Other windows kept as live previews down the left edge; click one to bring it forward.
             property JsonObject stageManager: JsonObject {

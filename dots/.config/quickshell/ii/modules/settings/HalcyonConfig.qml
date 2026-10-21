@@ -24,6 +24,7 @@ ContentPage {
     Component.onCompleted: {
         readyTimer.start();
         customList.running = true;
+        iconThemesProc.running = true;
     }
 
     Timer {
@@ -154,6 +155,107 @@ ContentPage {
         { id: "after-icey", name: "After ICEY", icon: "ac_unit" },
         { id: "manga-ink", name: "Manga Ink", icon: "draw" }
     ]
+    // ── When the theme switches: rules, made below and run by halcyon-theme when a theme is applied or turned off ──
+    property string ruleTheme: "after-icey"
+    property string ruleWhen: "to"
+    property string ruleAction: "widget"
+    property string ruleTarget: "revolver"
+    property string ruleValue: "off"
+    property bool ruleRestore: true
+    property var iconThemes: []
+
+    Process {
+        id: iconThemesProc
+        command: [page.tool, "rules", "icons", "--json"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    page.iconThemes = (JSON.parse(this.text) ?? {}).themes ?? [];
+                } catch (error) {
+                    page.iconThemes = [];
+                }
+            }
+        }
+    }
+
+    readonly property var ruleThemeChoices: [
+        { displayName: Translation.tr("Any theme"), value: "*" },
+        { displayName: Translation.tr("No theme (off)"), value: "off" },
+        ...page.builtinThemes.map(t => ({ displayName: t.name, value: t.id })),
+        ...page.customThemes.map(t => ({ displayName: t.name, value: t.id }))
+    ]
+    readonly property var ruleActionChoices: [
+        { displayName: Translation.tr("Turn a desktop widget on or off"), value: "widget" },
+        { displayName: Translation.tr("Change the icon theme"), value: "icons" },
+        { displayName: Translation.tr("Set the effects level"), value: "effects" },
+        { displayName: Translation.tr("Change where new windows open"), value: "placement" },
+        { displayName: Translation.tr("Change a shell setting"), value: "setting" },
+        { displayName: Translation.tr("Run a command"), value: "command" }
+    ]
+    readonly property var ruleWidgetChoices: [
+        { displayName: Translation.tr("Revolver"), value: "revolver" },
+        { displayName: Translation.tr("Clock"), value: "clock" },
+        { displayName: Translation.tr("Weather"), value: "weather" },
+        { displayName: Translation.tr("Visualizer"), value: "visualizer" },
+        { displayName: Translation.tr("System"), value: "system" },
+        { displayName: Translation.tr("Now playing"), value: "nowPlaying" },
+        { displayName: Translation.tr("Lyrics"), value: "lyrics" }
+    ]
+    readonly property var ruleValueChoices: ({
+        "widget": [{ displayName: Translation.tr("Off"), value: "off" }, { displayName: Translation.tr("On"), value: "on" }],
+        "effects": [{ displayName: Translation.tr("Theme default"), value: "default" }, { displayName: Translation.tr("Full"), value: "full" },
+                    { displayName: Translation.tr("Light"), value: "light" }, { displayName: Translation.tr("Off"), value: "off" }],
+        "placement": [{ displayName: Translation.tr("Golden ratio"), value: "golden" }, { displayName: Translation.tr("Golden ratio plus"), value: "golden-plus" },
+                      { displayName: Translation.tr("Golden ratio plus (dwindle)"), value: "golden-plus-dwindle" },
+                      { displayName: Translation.tr("Halves, by the pointer"), value: "cursor" }, { displayName: Translation.tr("Stacked"), value: "stacked" },
+                      { displayName: Translation.tr("Side by side"), value: "side-by-side" }, { displayName: Translation.tr("Mondrian"), value: "mondrian" }],
+        "icons": page.iconThemes.map(t => ({ displayName: t.name, value: t.id }))
+    })
+
+    function choiceName(list, value) {
+        return (list.find(item => item.value === value) ?? { displayName: value }).displayName;
+    }
+
+    function setRuleAction(action) {
+        page.ruleAction = action;
+        page.ruleTarget = action === "widget" ? "revolver" : "";
+        const values = page.ruleValueChoices[action];
+        page.ruleValue = values && values.length > 0 ? values[0].value : "";
+        if (action === "icons")
+            iconThemesProc.running = true;
+    }
+
+    function ruleText(rule) {
+        const theme = page.choiceName(page.ruleThemeChoices, rule.theme);
+        const head = rule.when === "from" ? Translation.tr("Leaving %1:").arg(theme) : Translation.tr("Switching to %1:").arg(theme);
+        let what = "";
+        switch (rule.action) {
+        case "widget": what = Translation.tr("%1 %2").arg(page.choiceName(page.ruleWidgetChoices, rule.target)).arg(rule.value === "on" ? Translation.tr("on") : Translation.tr("off")); break;
+        case "icons": what = Translation.tr("icons: %1").arg(rule.value); break;
+        case "effects": what = Translation.tr("effects: %1").arg(page.choiceName(page.ruleValueChoices.effects, rule.value)); break;
+        case "placement": what = Translation.tr("new windows: %1").arg(page.choiceName(page.ruleValueChoices.placement, rule.value)); break;
+        case "setting": what = `${rule.target} = ${rule.value}`; break;
+        case "command": what = Translation.tr("run %1").arg(rule.value); break;
+        }
+        return `${head} ${what}` + (rule.restore && rule.when === "to" ? Translation.tr(" (put back after)") : "");
+    }
+
+    readonly property bool ruleCanAdd: page.ruleValue.trim() !== "" && (page.ruleAction !== "setting" || /^[A-Za-z][A-Za-z0-9]*(\.[A-Za-z][A-Za-z0-9]*)*$/.test(page.ruleTarget))
+
+    function addRule() {
+        if (!page.ruleCanAdd)
+            return;
+        const rule = { theme: page.ruleTheme, when: page.ruleWhen, action: page.ruleAction, target: page.ruleTarget,
+                       value: page.ruleValue.trim(), restore: page.ruleWhen === "to" && page.ruleAction !== "command" && page.ruleRestore };
+        Config.options.halcyon.switchRules = Config.options.halcyon.switchRules.concat([rule]);
+    }
+
+    function removeRule(index) {
+        const rules = Config.options.halcyon.switchRules.slice();
+        rules.splice(index, 1);
+        Config.options.halcyon.switchRules = rules;
+    }
+
     property bool showHidden: false
     property string openThemeMenu: "" // Id of the row whose menu is dropped down
     property string pendingDelete: "" // Id of the custom theme waiting for a second click on Delete
@@ -737,6 +839,162 @@ ContentPage {
     }
 
     ContentSection {
+        icon: "swap_horiz"
+        title: Translation.tr("When the theme switches")
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colSubtext
+            font.pixelSize: Appearance.font.pixelSize.smallie
+            text: Translation.tr("Changes made each time the theme switches to, or away from, a theme: the revolver off for After ICEY, other icons for Red Sun... They run in this order, when a theme is applied or turned off.")
+        }
+
+        Repeater {
+            model: Config.options.halcyon.switchRules
+
+            delegate: Rectangle {
+                id: ruleRow
+                required property var modelData
+                required property int index
+                Layout.fillWidth: true
+                implicitHeight: ruleRowLayout.implicitHeight + 12
+                radius: Appearance.rounding.small
+                color: Appearance.colors.colLayer2
+
+                RowLayout {
+                    id: ruleRowLayout
+                    anchors.fill: parent
+                    anchors.margins: 6
+                    anchors.leftMargin: 12
+                    MaterialSymbol {
+                        text: ruleRow.modelData.when === "from" ? "logout" : "login"
+                        iconSize: Appearance.font.pixelSize.larger
+                        color: Appearance.colors.colPrimary
+                    }
+                    StyledText {
+                        Layout.fillWidth: true
+                        wrapMode: Text.Wrap
+                        text: page.ruleText(ruleRow.modelData)
+                    }
+                    RippleButtonWithIcon {
+                        buttonRadius: Appearance.rounding.full
+                        materialIcon: "delete"
+                        mainText: Translation.tr("Remove")
+                        onClicked: page.removeRule(ruleRow.index)
+                    }
+                }
+            }
+        }
+
+        StyledText {
+            visible: Config.options.halcyon.switchRules.length === 0
+            Layout.leftMargin: 10
+            color: Appearance.colors.colSubtext
+            text: Translation.tr("No rules yet.")
+        }
+
+        ContentSubsection {
+            title: Translation.tr("Add a rule")
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 6
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+                    StyledComboBox {
+                        buttonIcon: "palette"
+                        textRole: "displayName"
+                        model: page.ruleThemeChoices
+                        currentIndex: Math.max(0, model.findIndex(item => item.value === page.ruleTheme))
+                        onActivated: index => page.ruleTheme = model[index].value
+                    }
+                    StyledComboBox {
+                        buttonIcon: page.ruleWhen === "from" ? "logout" : "login"
+                        textRole: "displayName"
+                        model: [{ displayName: Translation.tr("Switching to it"), value: "to" },
+                                { displayName: Translation.tr("Switching away from it"), value: "from" }]
+                        currentIndex: page.ruleWhen === "from" ? 1 : 0
+                        onActivated: index => page.ruleWhen = model[index].value
+                    }
+                }
+
+                StyledComboBox {
+                    buttonIcon: "bolt"
+                    textRole: "displayName"
+                    model: page.ruleActionChoices
+                    currentIndex: Math.max(0, model.findIndex(item => item.value === page.ruleAction))
+                    onActivated: index => page.setRuleAction(model[index].value)
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+                    StyledComboBox {
+                        visible: page.ruleAction === "widget"
+                        buttonIcon: "widgets"
+                        textRole: "displayName"
+                        model: page.ruleWidgetChoices
+                        currentIndex: Math.max(0, model.findIndex(item => item.value === page.ruleTarget))
+                        onActivated: index => page.ruleTarget = model[index].value
+                    }
+                    StyledComboBox {
+                        visible: (page.ruleValueChoices[page.ruleAction] ?? []).length > 0
+                        buttonIcon: "tune"
+                        textRole: "displayName"
+                        model: page.ruleValueChoices[page.ruleAction] ?? []
+                        currentIndex: Math.max(0, model.findIndex(item => item.value === page.ruleValue))
+                        onActivated: index => page.ruleValue = model[index].value
+                    }
+                    MaterialTextArea {
+                        visible: page.ruleAction === "setting"
+                        Layout.fillWidth: true
+                        placeholderText: Translation.tr("Setting, e.g. bar.vertical")
+                        text: page.ruleTarget
+                        onTextChanged: page.ruleTarget = text.trim()
+                    }
+                    MaterialTextArea {
+                        visible: page.ruleAction === "setting" || page.ruleAction === "command"
+                        Layout.fillWidth: true
+                        placeholderText: page.ruleAction === "command" ? Translation.tr("Command, e.g. notify-send hello") : Translation.tr("Value, e.g. true")
+                        text: page.ruleValue
+                        onTextChanged: page.ruleValue = text
+                    }
+                }
+
+                StyledText {
+                    visible: page.ruleAction === "icons" && page.iconThemes.length === 0
+                    Layout.leftMargin: 10
+                    color: Appearance.colors.colSubtext
+                    text: Translation.tr("No icon themes found. Install one (papirus-icon-theme, for one), then come back.")
+                }
+
+                ConfigSwitch {
+                    visible: page.ruleWhen === "to" && page.ruleAction !== "command"
+                    buttonIcon: "undo"
+                    text: Translation.tr("Put it back when switching away")
+                    checked: page.ruleRestore
+                    onCheckedChanged: page.ruleRestore = checked
+                }
+
+                RowLayout {
+                    RippleButtonWithIcon {
+                        buttonRadius: Appearance.rounding.full
+                        materialIcon: "add"
+                        mainText: Translation.tr("Add rule")
+                        enabled: page.ruleCanAdd
+                        opacity: enabled ? 1 : 0.5
+                        onClicked: page.addRule()
+                    }
+                }
+            }
+        }
+    }
+
+    ContentSection {
         icon: "dns"
         title: Translation.tr("Server mode")
 
@@ -1058,7 +1316,7 @@ ContentPage {
         ContentSubsection {
             visible: Config.options.halcyon.assistant.speak
             title: Translation.tr("Voice")
-            tooltip: Translation.tr("Auto: Piper if it is set up (halcyon assistant setup --piper), else an AI voice if a Gemini or OpenAI key is stored, else espeak-ng. If the chosen voice fails, the next one speaks instead")
+            tooltip: Translation.tr("Auto: your own command if one is set, else Kokoro if it is set up, else Piper, else an AI voice if a Gemini or OpenAI key is stored, else espeak-ng. If the chosen voice fails, the next one speaks instead")
 
             ConfigSelectionArray {
                 currentValue: Config.options.halcyon.assistant.voice
@@ -1069,6 +1327,8 @@ ContentPage {
                 options: [
                     { displayName: Translation.tr("Auto"), icon: "auto_mode", value: "auto" },
                     { displayName: Translation.tr("Piper"), icon: "record_voice_over", value: "piper" },
+                    { displayName: Translation.tr("Kokoro"), icon: "graphic_eq", value: "kokoro" },
+                    { displayName: Translation.tr("Your command"), icon: "terminal", value: "command" },
                     { displayName: Translation.tr("AI voice"), icon: "neurology", value: "ai" },
                     { displayName: Translation.tr("eSpeak"), icon: "robot_2", value: "espeak" },
                     { displayName: Translation.tr("System"), icon: "settings_voice", value: "system" }
@@ -1115,6 +1375,256 @@ ContentPage {
                 }
             }
 
+            // Kokoro: a local voice model, set up once in a terminal (it downloads ~340 MB).
+            ColumnLayout {
+                visible: Config.options.halcyon.assistant.voice === "kokoro" || Config.options.halcyon.assistant.voice === "auto"
+                Layout.fillWidth: true
+                spacing: 6
+                MaterialTextArea {
+                    Layout.fillWidth: true
+                    placeholderText: Translation.tr("Kokoro voice (empty: af_heart). af_ and am_ American, bf_ and bm_ British, ef_ Spanish, ff_ French, jf_ Japanese, zf_ Chinese...")
+                    text: Config.options.halcyon.assistant.kokoroVoice
+                    onTextChanged: {
+                        if (text.trim() === Config.options.halcyon.assistant.kokoroVoice)
+                            return;
+                        Config.options.halcyon.assistant.kokoroVoice = text.trim();
+                        page.reloadAssistant();
+                    }
+                }
+                RowLayout {
+                    RippleButtonWithIcon {
+                        buttonRadius: Appearance.rounding.full
+                        materialIcon: "download"
+                        mainText: Translation.tr("Set up Kokoro")
+                        onClicked: Quickshell.execDetached(["bash", "-c", `${Config.options.apps.terminal} bash -c "'${page.assistantTool}' setup --kokoro; read -rp 'Press Enter to close. '"`])
+                        StyledToolTip {
+                            text: "halcyon assistant setup --kokoro"
+                        }
+                    }
+                }
+            }
+
+            // A voice program of your own.
+            MaterialTextArea {
+                visible: Config.options.halcyon.assistant.voice === "command" || Config.options.halcyon.assistant.voice === "auto"
+                Layout.fillWidth: true
+                placeholderText: Translation.tr("Your voice command: gets the text on stdin, plays it or writes a WAV to stdout. E.g. tts --text-stdin --out_path /dev/stdout")
+                text: Config.options.halcyon.assistant.ttsCommand
+                onTextChanged: {
+                    if (text.trim() === Config.options.halcyon.assistant.ttsCommand)
+                        return;
+                    Config.options.halcyon.assistant.ttsCommand = text.trim();
+                    page.reloadAssistant();
+                }
+            }
+
+            // Which Piper voice: one here (built-in, downloaded, from the AUR or your own), or one to add from
+            // Hugging Face or the AUR. Everything goes through `halcyon assistant voices` and `voice ...`.
+            ColumnLayout {
+                id: piperPicker
+                visible: Config.options.halcyon.assistant.voice === "auto" || Config.options.halcyon.assistant.voice === "piper"
+                Layout.fillWidth: true
+                spacing: 6
+
+                property var voices: ({ "installed": [], "huggingface": [], "aur": [], "current": "", "errors": [] })
+                property string source: "installed"
+                property string filter: ""
+                property string status: ""
+                property bool loaded: false
+                readonly property int shown: 40
+
+                function refresh() {
+                    voicesProc.running = false;
+                    voicesProc.running = true;
+                }
+                function act(args, message) {
+                    piperPicker.status = message;
+                    voiceAction.running = false;
+                    voiceAction.command = [page.assistantTool, "voice"].concat(args);
+                    voiceAction.running = true;
+                }
+                function matches(entry) {
+                    const words = piperPicker.filter.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+                    const text = [entry.key, entry.name, entry.language, entry.languageName, entry.country, entry.quality, entry.description].join(" ").toLowerCase();
+                    return words.every(w => text.includes(w));
+                }
+                readonly property var list: (piperPicker.voices[piperPicker.source] ?? []).filter(e => piperPicker.matches(e))
+                readonly property var currentVoice: (piperPicker.voices.installed ?? []).find(v => v.key === piperPicker.voices.current) ?? null
+
+                onVisibleChanged: if (visible && !loaded) refresh()
+                Component.onCompleted: if (visible) refresh()
+
+                Process {
+                    id: voicesProc
+                    command: [page.assistantTool, "voices", "--json", "--all"]
+                    stdout: StdioCollector {
+                        onStreamFinished: {
+                            try {
+                                piperPicker.voices = JSON.parse(this.text);
+                                // Nothing here yet: show what can be downloaded.
+                                if (!piperPicker.loaded && (piperPicker.voices.installed ?? []).length === 0)
+                                    piperPicker.source = "huggingface";
+                                piperPicker.loaded = true;
+                                if ((piperPicker.voices.errors ?? []).length > 0)
+                                    piperPicker.status = piperPicker.voices.errors.join("\n");
+                            } catch (e) {
+                                piperPicker.status = Translation.tr("Couldn't list the voices: run halcyon assistant voices --all in a terminal");
+                            }
+                        }
+                    }
+                }
+                Process {
+                    id: voiceAction
+                    // Download progress is written as one line rewritten in place (\r)
+                    stdout: SplitParser {
+                        splitMarker: "\r"
+                        onRead: data => {
+                            const line = data.trim().split("\n").pop();
+                            if (line.length > 0)
+                                piperPicker.status = line;
+                        }
+                    }
+                    stderr: SplitParser {
+                        onRead: data => piperPicker.status = data
+                    }
+                    onExited: (code, status) => {
+                        piperPicker.refresh();
+                        page.reloadAssistant();
+                    }
+                }
+
+                StyledText {
+                    Layout.topMargin: 6
+                    text: Translation.tr("Piper voice")
+                    color: Appearance.colors.colSubtext
+                }
+                StyledText {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    color: Appearance.colors.colOnLayer1
+                    text: piperPicker.currentVoice
+                        ? Translation.tr("Speaking with %1 (%2)").arg(piperPicker.currentVoice.key).arg(piperPicker.currentVoice.source)
+                        : (piperPicker.loaded ? Translation.tr("No Piper voice yet: download one below") : Translation.tr("Looking for voices…"))
+                }
+
+                ConfigSelectionArray {
+                    currentValue: piperPicker.source
+                    onSelected: newValue => piperPicker.source = newValue
+                    options: [
+                        { displayName: Translation.tr("Here (%1)").arg((piperPicker.voices.installed ?? []).length), icon: "folder", value: "installed" },
+                        { displayName: Translation.tr("Hugging Face (%1)").arg((piperPicker.voices.huggingface ?? []).length), icon: "cloud_download", value: "huggingface" },
+                        { displayName: Translation.tr("AUR (%1)").arg((piperPicker.voices.aur ?? []).length), icon: "package_2", value: "aur" }
+                    ]
+                }
+
+                MaterialTextArea {
+                    Layout.fillWidth: true
+                    placeholderText: Translation.tr("Search: a language, a name, a quality (en_GB, alba, high)")
+                    onTextChanged: piperPicker.filter = text
+                }
+
+                Repeater {
+                    model: piperPicker.list.slice(0, piperPicker.shown)
+
+                    delegate: RowLayout {
+                        id: voiceRow
+                        required property var modelData
+                        readonly property bool isPackage: piperPicker.source === "aur"
+                        readonly property string label: isPackage ? modelData.name : modelData.key
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 0
+                            StyledText {
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                                text: voiceRow.label
+                                color: voiceRow.label === piperPicker.voices.current ? Appearance.colors.colPrimary : Appearance.colors.colOnLayer1
+                            }
+                            StyledText {
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                                color: Appearance.colors.colSubtext
+                                text: voiceRow.isPackage ? Translation.tr("Every voice of %1").arg(voiceRow.modelData.description.replace(/.*\(|\).*/g, ""))
+                                    : piperPicker.source === "huggingface" ? `${voiceRow.modelData.languageName} (${voiceRow.modelData.country}), ${voiceRow.modelData.quality}, ${Math.round(voiceRow.modelData.size / 1e6)} MB` + (voiceRow.modelData.speakers > 1 ? `, ${voiceRow.modelData.speakers} speakers` : "")
+                                    : `${voiceRow.modelData.languageName || voiceRow.modelData.language}, ${voiceRow.modelData.quality}, ${voiceRow.modelData.source}` + (voiceRow.modelData.speakers.length > 0 ? `, ${voiceRow.modelData.speakers.length} speakers` : "")
+                            }
+                        }
+                        // Here: hear it, use it, and delete a downloaded one.
+                        DialogButton {
+                            visible: piperPicker.source === "installed"
+                            buttonText: Translation.tr("Hear")
+                            onClicked: piperPicker.act(["preview", voiceRow.modelData.key], Translation.tr("Speaking with %1…").arg(voiceRow.modelData.key))
+                        }
+                        DialogButton {
+                            visible: piperPicker.source === "installed"
+                            enabled: voiceRow.modelData.key !== piperPicker.voices.current
+                            buttonText: voiceRow.modelData.key === piperPicker.voices.current ? Translation.tr("In use") : Translation.tr("Use")
+                            onClicked: piperPicker.act(["use", voiceRow.modelData.source === "custom" ? voiceRow.modelData.path : voiceRow.modelData.key], "")
+                        }
+                        DialogButton {
+                            visible: piperPicker.source === "installed" && voiceRow.modelData.source === "hugging face"
+                            buttonText: Translation.tr("Delete")
+                            onClicked: piperPicker.act(["remove", voiceRow.modelData.key], "")
+                        }
+                        // Hugging Face: download (then it is used).
+                        DialogButton {
+                            visible: piperPicker.source === "huggingface"
+                            enabled: !voiceRow.modelData.installed && !voiceAction.running
+                            buttonText: voiceRow.modelData.installed ? Translation.tr("Here") : Translation.tr("Download")
+                            onClicked: piperPicker.act(["get", voiceRow.modelData.key], Translation.tr("Downloading %1…").arg(voiceRow.modelData.key))
+                        }
+                        // AUR: in a terminal, since the AUR helper asks for your password.
+                        DialogButton {
+                            visible: voiceRow.isPackage
+                            enabled: !voiceRow.modelData.installed && (piperPicker.voices.aurHelper ?? "") !== ""
+                            buttonText: voiceRow.modelData.installed ? Translation.tr("Installed") : Translation.tr("Install")
+                            onClicked: Quickshell.execDetached(["bash", "-c", `${Config.options.apps.terminal} bash -c "'${page.assistantTool}' voice aur '${voiceRow.modelData.name}'; read -rp 'Press Enter to close. '"`])
+                        }
+                    }
+                }
+                StyledText {
+                    Layout.fillWidth: true
+                    visible: piperPicker.list.length > piperPicker.shown
+                    color: Appearance.colors.colSubtext
+                    font.pixelSize: Appearance.font.pixelSize.smallie
+                    text: Translation.tr("%1 more: search to narrow the list").arg(piperPicker.list.length - piperPicker.shown)
+                }
+                StyledText {
+                    Layout.fillWidth: true
+                    visible: piperPicker.source === "aur" && (piperPicker.voices.aurHelper ?? "") === ""
+                    wrapMode: Text.Wrap
+                    color: Appearance.colors.colSubtext
+                    font.pixelSize: Appearance.font.pixelSize.smallie
+                    text: Translation.tr("AUR packages need an AUR helper (paru or yay). Each one installs every voice of a language; they then show under Here.")
+                }
+
+                MaterialTextArea {
+                    visible: (piperPicker.currentVoice?.speakers ?? []).length > 0
+                    Layout.fillWidth: true
+                    placeholderText: Translation.tr("Speaker (this voice has %1): a name or a number").arg((piperPicker.currentVoice?.speakers ?? []).length)
+                    text: Config.options.halcyon.assistant.piperSpeaker
+                    onTextChanged: {
+                        if (text.trim() === Config.options.halcyon.assistant.piperSpeaker)
+                            return;
+                        Config.options.halcyon.assistant.piperSpeaker = text.trim();
+                        page.reloadAssistant();
+                    }
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    visible: piperPicker.status !== ""
+                    wrapMode: Text.Wrap
+                    color: Appearance.colors.colSubtext
+                    font.pixelSize: Appearance.font.pixelSize.smallie
+                    text: piperPicker.status
+                }
+            }
+
             ConfigSwitch {
                 buttonIcon: "forum"
                 text: Translation.tr("Read the AI sidebar's replies")
@@ -1145,7 +1655,7 @@ ContentPage {
                 wrapMode: Text.Wrap
                 color: Appearance.colors.colSubtext
                 font.pixelSize: Appearance.font.pixelSize.smallie
-                text: Translation.tr("An AI voice sends the reply's text to Google or OpenAI (or the server you set) to be spoken. Piper and eSpeak speak on this computer.")
+                text: Translation.tr("An AI voice sends the reply's text to Google or OpenAI (or the server you set) to be spoken. Kokoro, Piper, eSpeak and your own command speak on this computer.")
             }
         }
 

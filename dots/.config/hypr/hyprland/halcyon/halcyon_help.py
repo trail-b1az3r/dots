@@ -33,7 +33,7 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("refresh", "re-apply Settings > Halcyon to the active theme"),
         ("cursor [on|off]", "the Halcyon Glass cursor, or upstream's"),
         ("cursor size N", "cursor size in pixels (16-96)"),
-        ("placement [MODE|--list]", "where a new window opens: golden, cursor, stacked, side-by-side or mondrian"),
+        ("placement [MODE|--list]", "where a new window opens: golden, golden-plus, golden-plus-dwindle, cursor, stacked, side-by-side or mondrian"),
         ("settings", "open the Settings app"),
     ]),
     ("Plus Tiles and the config", [
@@ -44,6 +44,9 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("crashes [--since 2d] [--json]", "why apps closed: core dumps, memory kills, and shell restarts that took apps with them"),
         ("games focus on|off", "whether a game keeps the keyboard when the pointer leaves it (on: games don't pause)"),
         ("doctor [--fix]", "why updates, the revolver, the browser themes or the Wi-Fi don't work, in one report; --fix fixes what it can"),
+        ("update [status]", "what is installed and waiting: Halcyon (main) and hyprland-plus"),
+        ("update apply [halcyon|hyprland-plus]", "get the newest Halcyon, then rebuild hyprland-plus if its branch moved on (asks for sudo)"),
+        ("update check", "look for updates now (the hourly timer does this)"),
         ("migrate", "bring a theme applied by an older Halcyon up to date (login and `update apply` do this)"),
         ("hyprland [--json]", "which Hyprland is running: stock, hyprland-plus, or a hyprland-plus too old for Plus Tiles"),
     ]),
@@ -68,7 +71,9 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("usb remove", "take that rule away again"),
         ("wifi [--json]", "why the Wi-Fi isn't up: NetworkManager, iwd, the radio, an unmanaged card (a Surface's)"),
         ("wifi boot", "get the Wi-Fi up now: login runs this (log: ~/.local/state/halcyon/wifi.log)"),
-        ("wifi fix [--dry-run]", "the lasting fixes, as root: keep the card managed, iwd off, Surface card settings"),
+        ("wifi fix [--dry-run]", "the lasting fixes, as root: install and enable NetworkManager, keep the card managed, "
+                                 "NetworkManager on iwd when you use iwd, Surface card settings"),
+        ("wifi report", "everything about the Wi-Fi in ~/halcyon-wifi-report.txt, to send when it still fails"),
     ]),
     ("On the screen", [
         ("osd [avizo|shell|test] [--json]", "which volume and brightness popup is on: Avizo's, or the shell's own"),
@@ -76,6 +81,10 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("overlays sync", "write Avizo's and Wayscriber's colours from the current theme (applying a theme does this)"),
     ]),
     ("Widgets, characters and extras", [
+        ("rules [--json]", "what changes when the theme switches (made in Settings > Halcyon > When the theme switches)"),
+        ("rules icons [--json]", "the icon themes a rule can switch to"),
+        ("rules run to|from THEME", "run the rules for switching to, or away from, a theme now"),
+        ("widgets [NAME on|off|toggle]", "the desktop widgets (clock, weather, revolver, visualizer, system, nowPlaying, lyrics): which are on, or turn one on or off"),
         ("revolver status", "whether the revolver is on and where, its games, and any error the shell logged for it"),
         ("revolver on|off", "show or hide it, on every theme"),
         ("revolver scan [--json]", "the revolver's games and their weights"),

@@ -15,16 +15,21 @@ import shutil
 import subprocess
 import tempfile
 
-from . import config, pcm, tts_ai
+from pathlib import Path
+
+from . import config, local_tts, pcm, piper_voices, tts_ai
 
 log = logging.getLogger("halcyon.speech")
 
 DEFAULT_RATE = 22050
 
 
-def piper_voice():
-    voices = sorted((config.MODELS / "piper").glob("*.onnx"))
-    return voices[0] if voices else None
+def piper_voice(settings=None):
+    """The chosen Piper voice's .onnx (Settings > Assistant > Voice > Piper voice), else the built-in one, else the
+    first found (piper_voices.py says where it looks). None when there is none."""
+    settings = config.settings() if settings is None else settings
+    voice = piper_voices.resolve(settings.get("piperVoice", ""))
+    return Path(voice["path"]) if voice else None
 
 
 def piper_rate(voice) -> int:
@@ -48,14 +53,19 @@ def piper_binary():
 
 
 # Settings > Voice names a family; these are the engines in it.
-FAMILY = {"piper": "piper", "ai": "ai", "espeak-ng": "espeak", "espeak": "espeak", "spd-say": "system"}
+FAMILY = {"piper": "piper", "kokoro": "kokoro", "command": "command", "ai": "ai", "espeak-ng": "espeak",
+          "espeak": "espeak", "spd-say": "system"}
 
 
 def engines(settings=None):
     """The engines that can run, in the order they are tried: the chosen voice first, then the rest, best first."""
     settings = config.settings() if settings is None else settings
     found = []
-    if piper_binary() and piper_voice():
+    if local_tts.command_configured(settings):
+        found.append("command")
+    if local_tts.kokoro_installed():
+        found.append("kokoro")
+    if piper_binary() and piper_voice(settings):
         found.append("piper")
     if tts_ai.provider(settings):
         found.append("ai")
@@ -118,18 +128,28 @@ def _wait(processes, should_stop):
     return stopped
 
 
-def _speak_with_piper(text, should_stop):
-    voice = piper_voice()
+def _speak_with_piper(text, should_stop, settings=None):
+    settings = config.settings() if settings is None else settings
+    voice = piper_voice(settings)
+    if voice is None:
+        chosen = settings.get("piperVoice") or "built-in"
+        return f"the Piper voice {chosen} is not on this computer (halcyon assistant voices lists the ones that are)"
+    command = [piper_binary(), "--model", str(voice), "--output-raw"]
+    speaker = piper_voices.speaker_id(piper_voices.describe(voice) or {}, settings.get("piperSpeaker", ""))
+    if speaker is not None:
+        command += ["--speaker", str(speaker)]
     player = pcm.player(piper_rate(voice))
     if player is None:
         return "no audio player (install pipewire, pulseaudio-utils or alsa-utils)"
     synth_errors = tempfile.TemporaryFile()
     play_errors = tempfile.TemporaryFile()
     try:
-        synth = subprocess.Popen([piper_binary(), "--model", str(voice), "--output-raw"],
+        synth = subprocess.Popen(command,
                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=synth_errors)
         play = subprocess.Popen(player, stdin=synth.stdout, stderr=play_errors)
     except OSError as error:
+        synth_errors.close()
+        play_errors.close()
         return f"could not start piper or {player[0]}: {error}"
     synth.stdout.close()  # piper gets a broken pipe if the player stops early
     # A piper that dies at once (a bad voice, say) breaks the pipe; the write is buffered, so that can surface on
@@ -191,6 +211,35 @@ def play_pcm(data, rate, should_stop=lambda: False):
     return None
 
 
+def play_wav(path, should_stop=lambda: False):
+    """Play a WAV file with whichever player there is. Returns None when it played, else why not."""
+    for player in (["pw-play"], ["paplay"], ["aplay", "-q"]):
+        if shutil.which(player[0]):
+            return _speak_with(player + [str(path)], should_stop)
+    return "no audio player (install pipewire, pulseaudio-utils or alsa-utils)"
+
+
+def _speak_with_kokoro(text, should_stop, settings):
+    try:
+        data, rate = local_tts.kokoro_pcm(text, settings)
+    except local_tts.LocalVoiceError as error:
+        return str(error)
+    if should_stop():
+        return None
+    return play_pcm(data, rate, should_stop)
+
+
+def _speak_with_command(text, should_stop, settings):
+    wav, problem = local_tts.run_command(text, settings)
+    if problem or wav is None or should_stop():
+        return problem
+    path = local_tts.wav_file(wav)
+    try:
+        return play_wav(path, should_stop)
+    finally:
+        path.unlink(missing_ok=True)
+
+
 def _speak_with_ai(text, should_stop, settings):
     try:
         data, rate = tts_ai.synthesize(text, settings)
@@ -204,9 +253,14 @@ def _speak_with_ai(text, should_stop, settings):
 def speak_once(name, text, should_stop=lambda: False, settings=None):
     """Speak with one engine. Returns None when it worked, else why not."""
     if name == "piper":
-        return _speak_with_piper(text, should_stop)
+        return _speak_with_piper(text, should_stop, settings)
+    settings = config.settings() if settings is None else settings
+    if name == "kokoro":
+        return _speak_with_kokoro(text, should_stop, settings)
+    if name == "command":
+        return _speak_with_command(text, should_stop, settings)
     if name == "ai":
-        return _speak_with_ai(text, should_stop, config.settings() if settings is None else settings)
+        return _speak_with_ai(text, should_stop, settings)
     if name in ("espeak-ng", "espeak"):
         return _speak_with([name, "-s", "165", text], should_stop)
     if name == "spd-say":

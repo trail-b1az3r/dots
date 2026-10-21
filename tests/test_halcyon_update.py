@@ -7,12 +7,23 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 UPDATE = ROOT / "dots/.config/hypr/hyprland/halcyon/update"
+THEME = ROOT / "dots/.config/hypr/hyprland/halcyon/halcyon-theme"
+
+# A stand-in hyprctl-lite: `install update --check` answers as PLUS_RC and PLUS_SAYS say; anything else is logged.
+LITE = """#!/bin/bash
+if [[ "$*" == "install update --check" ]]; then
+    echo "$PLUS_SAYS"
+    exit "$PLUS_RC"
+fi
+echo "$*" >> "$PLUS_LOG"
+"""
 
 NOTIFY = """#!/bin/sh
 # Logs each notification as one JSON line; answers "apply" to an "Update now" action when ANSWER_APPLY is set.
@@ -51,6 +62,14 @@ class UpdaterTest(unittest.TestCase):
             (self.bin / name).write_text("#!/bin/sh\nexit 1\n")
             (self.bin / name).chmod(0o755)
         self.notify_log = self.tmp / "notify.log"
+        # sudo, setsid and a terminal that just run what they are given, so the hyprland-plus step can be followed.
+        for name, body in (("sudo", 'exec "$@"'), ("setsid", '[ "$1" = -f ] && shift; exec "$@"'),
+                           ("kitty", 'exec "$@" </dev/null')):
+            (self.bin / name).write_text(f"#!/bin/sh\n{body}\n")
+            (self.bin / name).chmod(0o755)
+        self.lite = self.tmp / "hyprctl-lite"     # not there unless a test writes it: hyprland-plus not installed
+        self.plus_log = self.tmp / "plus.log"
+        self.plus = {"PLUS_RC": "0", "PLUS_SAYS": "hyprland-plus is up to date (abc123456)."}
 
         # The upstream: a work tree we commit to, pushed to a bare repository the installs clone.
         self.upstream = self.tmp / "upstream.git"
@@ -87,9 +106,16 @@ class UpdaterTest(unittest.TestCase):
                "PATH": f"{self.bin}:{os.environ['PATH']}", "NOTIFY_LOG": str(self.notify_log),
                "HALCYON_REMOTE": str(self.upstream), "GIT_CONFIG_GLOBAL": "/dev/null",
                "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+        env.update({"HALCYON_HYPRCTL_LITE": str(self.lite), "PLUS_LOG": str(self.plus_log), "TERMINAL": "kitty",
+                    **self.plus})
         if answer_apply:
             env["ANSWER_APPLY"] = "1"
-        return subprocess.run(["bash", str(UPDATE), *args], capture_output=True, text=True, env=env, timeout=60)
+        return subprocess.run(["bash", str(UPDATE), *args], capture_output=True, text=True, env=env, timeout=60,
+                              stdin=subprocess.DEVNULL)
+
+    def plus_waiting(self):
+        self.lite.write_text(LITE)
+        self.plus = {"PLUS_RC": "10", "PLUS_SAYS": "An update is waiting: installed abc123456, halcyon-0.56.2 is at def456789."}
 
     def notifications(self):
         if not self.notify_log.exists():
@@ -238,6 +264,64 @@ class UpdaterTest(unittest.TestCase):
         out = self.run_update("status").stdout
         self.assertIn("updates waiting: 1", out)
         self.assertIn("branch", out)
+
+
+    # --- hyprland-plus ---------------------------------------------------------------------------------------------
+
+    def test_apply_updates_hyprland_plus_in_a_terminal_when_its_branch_moved_on(self):
+        self.clone()
+        self.plus_waiting()
+        done = self.run_update("apply")
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(self.plus_log.read_text(), "install update\n", "built with hyprctl-lite, through sudo")
+        self.assertIn("Updating hyprland-plus", self.titles())
+
+    def test_apply_halcyon_leaves_hyprland_plus_alone(self):
+        self.clone()
+        self.plus_waiting()
+        self.commit({"dots/.config/halcyon-test/a.txt": "two\n"}, "Two")
+        self.assertEqual(self.run_update("apply", "halcyon").returncode, 0)
+        self.assertEqual(self.home_file(), "two\n")
+        self.assertFalse(self.plus_log.exists())
+
+    def test_apply_hyprland_plus_alone(self):
+        self.clone()
+        self.plus_waiting()
+        self.commit({"dots/.config/halcyon-test/a.txt": "two\n"}, "Two")
+        self.assertEqual(self.run_update("apply", "hyprland-plus").returncode, 0)
+        self.assertEqual(self.home_file(), "one\n", "Halcyon's files are not touched")
+        self.assertEqual(self.plus_log.read_text(), "install update\n")
+
+    def test_an_up_to_date_hyprland_plus_is_not_built(self):
+        self.clone()
+        self.lite.write_text(LITE)
+        out = self.run_update("apply").stdout
+        self.assertIn("hyprland-plus is up to date", out)
+        self.assertFalse(self.plus_log.exists())
+
+    def test_check_lights_the_button_for_a_hyprland_plus_update_once(self):
+        self.clone()
+        self.plus_waiting()
+        self.run_update("check")
+        self.assertEqual(self.waiting(), "1")
+        self.assertIn("hyprland-plus update available", self.titles())
+        self.run_update("check")
+        self.assertEqual(self.titles().count("hyprland-plus update available"), 1)
+
+    def test_status_names_hyprland_plus(self):
+        self.clone()
+        self.plus_waiting()
+        self.assertIn("hyprland-plus:   An update is waiting", self.run_update("status").stdout)
+
+    def test_halcyon_update_is_a_command(self):
+        # `halcyon update apply` used to answer "unknown command 'update'".
+        self.clone()
+        env = {**os.environ, "HOME": str(self.home), "XDG_STATE_HOME": str(self.home / ".local/state"),
+               "PATH": f"{self.bin}:{os.environ['PATH']}", "HALCYON_HYPRCTL_LITE": str(self.lite)}
+        done = subprocess.run([sys.executable, str(THEME), "update"], capture_output=True, text=True, env=env, timeout=60)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertIn("folder:", done.stdout)
+        self.assertIn("hyprland-plus:   not installed", done.stdout)
 
 
 class TimerTest(unittest.TestCase):

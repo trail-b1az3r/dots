@@ -9,7 +9,7 @@ import qs.services
 
 /**
  * The sun dial: where the sun is in today's sky, between sunrise and sunset, and what the theme schedule does
- * next. Hover (or click, with click-to-show tooltips) for sunrise, sunset, day length and the next theme change,
+ * next. At night it turns upside down and shows the moon, in tonight's phase. Hover (or click, with click-to-show tooltips) for sunrise, sunset, day length and the next theme change,
  * such as "Red Sun at sunset, in 2 h 10 min".
  *
  * The times come from `halcyon-theme auto day`, worked out on this computer for the location in Settings >
@@ -36,13 +36,26 @@ Item {
         return h > 0 ? Translation.tr("%1 h %2 min").arg(h).arg(m) : Translation.tr("%1 min").arg(m);
     }
 
-    function dayLength() {
+    function dayMinutes() {
         if (!root.day.sunrise || !root.day.sunset)
-            return "";
+            return 0;
         const [h1, m1] = root.day.sunrise.split(":").map(Number);
         const [h2, m2] = root.day.sunset.split(":").map(Number);
-        return root.minutesText((h2 * 60 + m2) - (h1 * 60 + m1));
+        return (h2 * 60 + m2) - (h1 * 60 + m1);
     }
+
+    function dayLength() {
+        return root.dayMinutes() > 0 ? root.minutesText(root.dayMinutes()) : "";
+    }
+
+    // The moon's phase, worked out again with the sun each minute.
+    property real moonPhase: dial.moonPhaseAt(new Date())
+    readonly property string moonText: ({
+        "new": Translation.tr("New moon"), "waxing-crescent": Translation.tr("Waxing crescent"),
+        "first-quarter": Translation.tr("First quarter"), "waxing-gibbous": Translation.tr("Waxing gibbous"),
+        "full": Translation.tr("Full moon"), "waning-gibbous": Translation.tr("Waning gibbous"),
+        "last-quarter": Translation.tr("Last quarter"), "waning-crescent": Translation.tr("Waning crescent")
+    })[dial.moonName(root.moonPhase)] ?? ""
 
     Process {
         id: dayProc
@@ -64,7 +77,10 @@ Item {
         running: true
         repeat: true
         triggeredOnStart: true
-        onTriggered: root.refresh()
+        onTriggered: {
+            root.refresh();
+            root.moonPhase = dial.moonPhaseAt(new Date());
+        }
     }
     Connections {
         target: Config.options.halcyon
@@ -81,7 +97,11 @@ Item {
         id: dial
         anchors.centerIn: parent
         progress: root.day.progress
+        dayHours: root.dayMinutes() > 0 ? root.dayMinutes() / 60 : 12
+        moonPhase: root.moonPhase
+        southern: !!root.day.location && root.day.location[0] < 0
         ring: root.redSun
+        colMoon: root.redSun ? "#ffe2d6" : Appearance.colors.colOnLayer1
         colLine: ColorUtils.applyAlpha(Appearance.colors.colOnLayer1, 0.45)
         colSun: root.redSun ? "#ffe2d6" : Appearance.colors.colPrimary
         colGlow: root.redSun ? "#ff4940" : Appearance.colors.colPrimary
@@ -122,6 +142,11 @@ Item {
                     icon: "hourglass_top"
                     label: Translation.tr("Daylight:")
                     value: root.dayLength()
+                }
+                StyledPopupValueRow {
+                    icon: "dark_mode"
+                    label: Translation.tr("Moon:")
+                    value: Translation.tr("%1, %2% lit").arg(root.moonText).arg(Math.round(dial.moonLit(root.moonPhase) * 100))
                 }
                 StyledPopupValueRow {
                     visible: !root.day.location

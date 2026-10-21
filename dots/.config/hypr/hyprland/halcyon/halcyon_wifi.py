@@ -4,6 +4,7 @@
     halcyon wifi            what NetworkManager sees, and what stands in the way
     halcyon wifi boot       get the Wi-Fi up (Hyprland runs this at login)
     halcyon wifi fix        the lasting fixes, as root (asks for sudo)
+    halcyon wifi report     everything above plus NetworkManager's log, in one file to send when it still fails
     halcyon wifi --json
 
 The shell's network menu and the login use NetworkManager (nmcli). Why a laptop's Wi-Fi can be left off at login,
@@ -14,9 +15,11 @@ above all a Microsoft Surface, whose Marvell card (the mwifiex_pcie driver) is s
   - NetworkManager lists the device as "unmanaged", so it never connects it. `boot` hands it back to NetworkManager
     (nmcli device set DEV managed yes) for this session; `fix` writes a NetworkManager setting so it stays managed.
     Something else may claim it: a keyfile `unmanaged-devices` line or a udev rule (NM_UNMANAGED); `status` says.
-  - iwd is running next to NetworkManager, which uses wpa_supplicant: both try to drive the card. `fix` turns iwd off
-    unless NetworkManager is set to use it (wifi.backend=iwd).
-  - NetworkManager isn't running at all (not enabled at boot). `fix` enables it.
+  - iwd is running next to NetworkManager, which uses wpa_supplicant: both try to drive the card. `fix` makes
+    NetworkManager use iwd (wifi.backend=iwd), so they stop fighting and the networks iwd knows stay known. (It
+    used to turn iwd off, which left a computer set up with iwd alone with no Wi-Fi at all.)
+  - NetworkManager isn't installed (the shell's network menu needs it) or isn't running (not enabled at boot). `fix`
+    installs it with pacman and enables it.
   - The radio is off (nmcli radio wifi) or blocked (rfkill). `boot` turns it on.
   - On mwifiex cards, NetworkManager's random MAC address while scanning and Wi-Fi power saving make connections
     fail or drop; the linux-surface project's advice is to turn both off for this card. `fix` does that, for this
@@ -87,6 +90,18 @@ def split_terse(line: str) -> list[str]:
 
 
 # --- what is there --------------------------------------------------------------------------------------------------
+
+def nm_installed() -> bool:
+    return bool(shutil.which("NetworkManager") or shutil.which("nmcli"))
+
+
+def iwd_connected() -> bool:
+    """Whether iwd (on its own, without NetworkManager) has a station connected."""
+    if not shutil.which("iwctl"):
+        return False
+    out = run(["iwctl", "station", "list"]).stdout
+    return re.search(r"\bconnected\b", re.sub(r"\x1b\[[0-9;]*m", "", out)) is not None
+
 
 def nm_running() -> bool:
     return run(["nmcli", "-t", "-f", "RUNNING", "general"]).stdout.strip() == "running"
@@ -201,7 +216,8 @@ def status() -> dict:
     config = nm_config_text()
     interfaces = kernel_wifi_interfaces()
     report = {
-        "networkmanager": {"running": running, "enabled": unit_enabled("NetworkManager.service")},
+        "networkmanager": {"installed": nm_installed(), "running": running,
+                           "enabled": unit_enabled("NetworkManager.service")},
         "iwd": {"active": unit_active("iwd.service"), "enabled": unit_enabled("iwd.service"),
                 "networkmanager_uses_it": iwd_backend(config)},
         "radio": radio_on() if running else None,
@@ -224,12 +240,16 @@ def problems(report: dict) -> list[str]:
     """What stands in the way, in plain words, each with what to do."""
     found = []
     nm = report["networkmanager"]
-    if not nm["running"]:
+    if not nm.get("installed", True):
+        found.append("NetworkManager isn't installed: Halcyon's network menu and Wi-Fi at login use it. "
+                     "Run: halcyon wifi fix (it installs it, and keeps iwd's networks if you use iwd)")
+    elif not nm["running"]:
         found.append("NetworkManager isn't running" + ("" if nm["enabled"] else " (and isn't enabled at boot)")
                      + ". Run: halcyon wifi fix")
     iwd = report["iwd"]
-    if iwd["active"] and not iwd["networkmanager_uses_it"]:
-        found.append("iwd is running next to NetworkManager, and both try to drive the Wi-Fi card. Run: halcyon wifi fix")
+    if iwd["active"] and not iwd["networkmanager_uses_it"] and nm.get("installed", True):
+        found.append("iwd is running next to NetworkManager, and both try to drive the Wi-Fi card. Run: halcyon wifi fix "
+                     "(NetworkManager then uses iwd; your saved networks stay)")
     if report["rfkill"]["hard"]:
         found.append("The Wi-Fi is switched off by a hardware switch or a firmware setting (rfkill hard block).")
     elif report["rfkill"]["soft"]:
@@ -277,6 +297,19 @@ def connected(devices: list[dict]) -> bool:
 
 def boot() -> int:
     """Gets the Wi-Fi up for this session, step by step, logging each (~/.local/state/halcyon/wifi.log)."""
+    if iwd_connected() and not (nm_installed() and nm_running() and connected(wifi_devices())):
+        # iwd already has a network: whether or not NetworkManager is about, nothing to fight over.
+        log("Wi-Fi connected by iwd")
+        return 0
+    if not nm_installed() and unit_active("iwd.service"):
+        # A computer set up with iwd alone: iwd connects by itself. Say whether it did.
+        if wait_for(iwd_connected, WAIT_CONNECT):
+            log("Wi-Fi connected by iwd (NetworkManager isn't installed)")
+            return 0
+        log("iwd hasn't connected, and NetworkManager isn't installed")
+        notify("Wi-Fi not connected", "iwd hasn't connected. `iwctl station list` shows it; `halcyon wifi fix` "
+                                      "installs NetworkManager for the shell's network menu, keeping iwd's networks.")
+        return 1
     if not wait_for(nm_running, WAIT_NM):
         log("NetworkManager isn't running")
         notify("No Wi-Fi: NetworkManager isn't running",
@@ -335,6 +368,15 @@ def conf_text(report: dict) -> str:
     lines = [
         "# Written by Halcyon (halcyon wifi fix). Delete this file, then restart NetworkManager, to undo.",
         "",
+    ]
+    if report["iwd"]["active"] and not report["iwd"]["networkmanager_uses_it"]:
+        lines += [
+            "# iwd is running: NetworkManager drives the card through it instead of fighting it with wpa_supplicant.",
+            "[device]",
+            "wifi.backend=iwd",
+            "",
+        ]
+    lines += [
         "# Wi-Fi devices are NetworkManager's, whatever marked them unmanaged.",
         "[device-halcyon-wifi]",
         "match-device=type:wifi",
@@ -369,9 +411,21 @@ def fix(dry_run: bool = False) -> int:
 
     report = status()
     steps: list[list[str]] = []
+    if not report["networkmanager"].get("installed", True):
+        if shutil.which("pacman"):
+            print("NetworkManager isn't installed: installing it")
+            install = ["pacman", "-S", "--needed", "--noconfirm", "networkmanager"]
+            print("+ " + " ".join(install))
+            if not dry_run and run(install, timeout=600).returncode != 0:
+                print("couldn't install NetworkManager; install the networkmanager package, then run this again",
+                      file=sys.stderr)
+                return 1
+        else:
+            print("NetworkManager isn't installed: install it with your package manager, then run this again",
+                  file=sys.stderr)
+            return 1
     if report["iwd"]["active"] and not report["iwd"]["networkmanager_uses_it"]:
-        print("iwd and NetworkManager both drive the card: turning iwd off (NetworkManager uses wpa_supplicant)")
-        steps.append(["systemctl", "disable", "--now", "iwd.service"])
+        print("iwd is running: NetworkManager will use it (wifi.backend=iwd), so they stop fighting and iwd's networks stay")
     print(f"writing {CONF}")
     text = conf_text(report)
     if not dry_run:
@@ -401,12 +455,60 @@ def fix(dry_run: bool = False) -> int:
     return 0
 
 
+# --- report: one file to send ---------------------------------------------------------------------------------------
+
+REPORT = Path(os.environ.get("HALCYON_WIFI_REPORT", Path.home() / "halcyon-wifi-report.txt"))
+REPORT_COMMANDS = [
+    ["nmcli", "general"],
+    ["nmcli", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device"],
+    ["nmcli", "radio"],
+    ["rfkill", "list"],
+    ["ip", "-brief", "link"],
+    ["iwctl", "station", "list"],
+    ["systemctl", "--no-pager", "status", "NetworkManager.service", "iwd.service", "wpa_supplicant.service"],
+    ["journalctl", "-b", "--no-pager", "-n", "80", "-u", "NetworkManager", "-u", "iwd", "-u", "wpa_supplicant"],
+]
+
+
+def report_text() -> str:
+    """Everything `halcyon wifi` looks at, the log of the last logins, and what NetworkManager itself says."""
+    import io
+    from contextlib import redirect_stdout
+    info = status()
+    out = io.StringIO()
+    with redirect_stdout(out):
+        print_status(info)
+    parts = ["# halcyon wifi report, " + time.strftime("%Y-%m-%d %H:%M"), "", out.getvalue().rstrip()]
+    try:
+        parts += ["", "## Halcyon's Wi-Fi log (last 40 lines)", *LOG.read_text(encoding="utf-8").splitlines()[-40:]]
+    except OSError:
+        parts += ["", "## Halcyon's Wi-Fi log", "(none yet: halcyon wifi boot writes it at login)"]
+    if CONF.is_file():
+        parts += ["", f"## {CONF}", CONF.read_text(encoding="utf-8").rstrip()]
+    for cmd in REPORT_COMMANDS:
+        if not shutil.which(cmd[0]):
+            continue
+        done = run(cmd, timeout=20)
+        parts += ["", "## " + " ".join(cmd), (done.stdout + done.stderr).rstrip() or "(nothing)"]
+    parts += ["", "## as JSON", json.dumps({**info, "problems": problems(info)}, indent=2)]
+    return "\n".join(parts) + "\n"
+
+
+def write_report() -> int:
+    REPORT.write_text(report_text(), encoding="utf-8")
+    print(f"wrote {REPORT}: send it along with what you saw. (It has no passwords: nmcli and iwd never print them.)")
+    return 0
+
+
 # --- command line ---------------------------------------------------------------------------------------------------
 
 def print_status(report: dict) -> None:
     nm = report["networkmanager"]
-    print(f"NetworkManager  {'running' if nm['running'] else 'NOT running'}, "
-          f"{'enabled' if nm['enabled'] else 'not enabled'} at boot")
+    if not nm.get("installed", True):
+        print("NetworkManager  NOT installed")
+    else:
+        print(f"NetworkManager  {'running' if nm['running'] else 'NOT running'}, "
+              f"{'enabled' if nm['enabled'] else 'not enabled'} at boot")
     iwd = report["iwd"]
     if iwd["active"] or iwd["enabled"]:
         print(f"iwd             {'running' if iwd['active'] else 'enabled'}"
@@ -434,7 +536,7 @@ def print_status(report: dict) -> None:
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="halcyon wifi", description="Wi-Fi when Hyprland starts.")
-    parser.add_argument("action", nargs="?", default="status", choices=("status", "boot", "fix"))
+    parser.add_argument("action", nargs="?", default="status", choices=("status", "boot", "fix", "report"))
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--dry-run", action="store_true", help="fix: say what it would do")
     args = parser.parse_args(argv)
@@ -442,6 +544,8 @@ def main(argv: list[str]) -> int:
         return boot()
     if args.action == "fix":
         return fix(dry_run=args.dry_run)
+    if args.action == "report":
+        return write_report()
     report = status()
     if args.json:
         print(json.dumps({**report, "problems": problems(report)}, indent=2))

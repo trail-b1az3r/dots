@@ -22,6 +22,8 @@ MaterialShape { // App icon
     // A file (Halcyon's mark) is drawn as it is; a name goes through the icon theme.
     readonly property string appIconSource: (String(root.appIcon).startsWith("/") ? "file://" + root.appIcon
         : String(root.appIcon).startsWith("file:") ? root.appIcon : Quickshell.iconPath(root.appIcon, "image-missing"))
+    // Halcyon's mark is one colour with no fill of its own: it is drawn in the theme's colours.
+    readonly property bool tinted: String(root.appIcon).endsWith("-symbolic.svg")
 
     implicitSize: 38 * scale
     property list<var> urgentShapes: [
@@ -51,13 +53,35 @@ MaterialShape { // App icon
     }
     Loader {
         id: appIconLoader
-        active: root.image == "" && root.appIcon != ""
+        active: root.image == "" && root.appIcon != "" && !root.tinted
         anchors.centerIn: parent
         sourceComponent: IconImage {
             id: appIconImage
             implicitSize: root.appIconSize
             asynchronous: true
             source: root.appIconSource
+        }
+    }
+    Loader {
+        active: root.image == "" && root.tinted
+        anchors.centerIn: parent
+        sourceComponent: Item {
+            implicitWidth: root.materialIconSize * 1.15
+            implicitHeight: implicitWidth
+            Image {
+                id: mark
+                anchors.fill: parent
+                visible: false
+                sourceSize.width: width
+                sourceSize.height: height
+                fillMode: Image.PreserveAspectFit
+                source: root.appIconSource
+            }
+            ColorOverlay {
+                anchors.fill: parent
+                source: mark
+                color: root.isUrgent ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colOnSecondaryContainer
+            }
         }
     }
     Loader {

@@ -20,7 +20,7 @@ SOCKET = RUNTIME / "halcyon-assistant.sock"
 if len(str(SOCKET)) > 100:  # Unix socket paths are limited to ~108 bytes
     SOCKET = Path(f"/tmp/halcyon-assistant-{os.getuid()}.sock")
 
-VOICES = ("auto", "piper", "ai", "espeak", "system")
+VOICES = ("auto", "piper", "kokoro", "command", "ai", "espeak", "system")
 PROVIDERS = ("auto", "claude", "claude-code", "gemini", "ollama", "lmstudio", "hypernix", "t1", "openai")
 DEFAULTS = {
     "enable": True,          # start the assistant with Hyprland
@@ -36,14 +36,19 @@ DEFAULTS = {
     "speechModel": "base",   # Whisper size: tiny, base, small
     "language": "",          # "" = detect
     "speak": True,           # read replies aloud
-    # Which voice reads them. auto: Piper if set up, else an AI voice if a Gemini or OpenAI key is stored, else
-    # espeak-ng, else speech-dispatcher. piper, ai, espeak, system (speech-dispatcher): that one first.
+    # Which voice reads them. auto: your own command if one is set, else Kokoro if set up, else Piper, else an AI
+    # voice if a Gemini or OpenAI key is stored, else espeak-ng, else speech-dispatcher. piper, kokoro, command, ai,
+    # espeak, system (speech-dispatcher): that one first.
     "voice": "auto",
     "aiVoiceProvider": "auto",  # auto (Gemini if its key is stored, else OpenAI), gemini, openai
     "aiVoice": "",              # "" = Kore on Gemini, alloy on OpenAI
     "aiVoiceModel": "",         # "" = gemini-2.5-flash-preview-tts, or gpt-4o-mini-tts
     "aiVoiceEndpoint": "",      # an OpenAI-compatible voice server, e.g. http://127.0.0.1:8880/v1 (Kokoro)
     "sidebarSpeak": True,       # read the AI sidebar's replies aloud too
+    "piperVoice": "",           # a Piper voice's key (en_GB-alba-medium) or path; "" = the built-in one
+    "piperSpeaker": "",         # for a voice with several speakers: a name or number; "" = its first
+    "kokoroVoice": "",          # a Kokoro voice (af_heart, bf_emma, am_adam...); "" = af_heart
+    "ttsCommand": "",           # a voice program of your own: text on stdin, plays it or writes a WAV to stdout
     "allowActions": True,    # let it control the desktop (volume, apps, themes...)
     # Where Claude Code keeps its login, as the terminal saw it at sign-in.
     # Hyprland starts this daemon without that terminal's environment, so the

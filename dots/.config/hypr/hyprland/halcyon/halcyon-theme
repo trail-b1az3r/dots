@@ -1264,8 +1264,11 @@ def cmd_apply(args):
 
     # Fully leave the previous theme first, so a failure part way through
     # leaves no theme half-applied.
+    previous = active()
     leave_theme()
     write_atomic(APPLY_LOG, f"halcyon-theme apply {theme_id}\n")
+    if previous != theme_id:
+        run_switch_rules("from", previous)
 
     wallpaper = resolve_wallpaper(theme)
     if wallpaper.is_file():
@@ -1290,6 +1293,8 @@ def cmd_apply(args):
         run([str(APPLYCOLOR)])
 
     apply_shell_config(theme)
+    if previous != theme_id:
+        run_switch_rules("to", theme_id)
     effects, native = write_window_style(theme_id, theme)
     write_atomic(ACTIVE_FILE, theme_id + "\n")
     set_shell_value("halcyon.theme", theme_id)
@@ -1423,10 +1428,57 @@ def cmd_cursor(args):
     return 0
 
 
+SETTINGS_TITLE = "Halcyon Settings"     # settings.qml's window title
+SETTINGS_LAUNCH = HALCYON_STATE / "settings-launch"
+
+
+def hyprctl_json(what):
+    try:
+        out = subprocess.run(["hyprctl", what, "-j"], capture_output=True, text=True, timeout=5, check=False).stdout
+        return json.loads(out or "null")
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return None
+
+
+def settings_window(clients):
+    """The open Settings window, from `hyprctl clients -j`, or None."""
+    for client in clients or []:
+        if isinstance(client, dict) and (client.get("title") == SETTINGS_TITLE or client.get("initialTitle") == SETTINGS_TITLE):
+            return client
+    return None
+
+
+def bring_settings_here(window, active):
+    """The dispatches that bring the Settings window to the workspace in front of you (on the focused monitor)
+    and focus it."""
+    address = window.get("address", "")
+    here = (active or {}).get("id")
+    commands = []
+    if here is not None and (window.get("workspace") or {}).get("id") != here and not (active or {}).get("name", "").startswith("special"):
+        commands.append(f'hl.dsp.window.move({{ workspace = "{here}", follow = false, window = "address:{address}" }})')
+    commands.append(f'hl.dsp.focus({{ window = "address:{address}" }})')
+    return commands
+
+
 def cmd_settings(_args):
+    """Open Settings, or, when it is open already, bring that one to you: one Settings window, never two."""
     settings_qml = CONFIG / "quickshell/ii/settings.qml"
+    if hyprland_running():
+        window = settings_window(hyprctl_json("clients"))
+        if window:
+            for command in bring_settings_here(window, hyprctl_json("activeworkspace")):
+                subprocess.run(["hyprctl", "dispatch", command], capture_output=True, check=False)
+            return 0
+    # A second press while the first window is still starting would open two: a launch in the last few seconds
+    # stands for the window that is on its way.
+    try:
+        if time.time() - SETTINGS_LAUNCH.stat().st_mtime < 4:
+            return 0
+    except OSError:
+        pass
     if not shutil.which("qs") or not settings_qml.is_file():
         raise ThemeError("the Settings app (qs -p ~/.config/quickshell/ii/settings.qml) is not available")
+    write_atomic(SETTINGS_LAUNCH, f"{os.getpid()}\n")
     subprocess.Popen(["qs", "-p", str(settings_qml)], stdout=subprocess.DEVNULL,
                      stderr=subprocess.DEVNULL, start_new_session=True)
     return 0
@@ -1489,7 +1541,11 @@ def cmd_detach(_args):
 
 
 def cmd_off(_args):
+    previous = active()
     leave_theme()
+    if previous:
+        run_switch_rules("from", previous)
+        run_switch_rules("to", "off")
     if SWITCHWALL.is_file():
         # Clearing the accent makes switchwall.sh derive colours from the
         # current wallpaper again.
@@ -1787,16 +1843,25 @@ def cmd_doctor(args):
     return 0
 
 
-# How a new window is placed. golden and cursor are Hyprland's dwindle layout; the rest are Halcyon's own layouts
-# in layouts.lua (registered as lua:halcyon-<mode>).
+# How a new window is placed. golden, cursor and golden-plus-dwindle are Hyprland's dwindle layout; the rest are
+# Halcyon's own layouts in layouts.lua (registered as lua:halcyon-<mode>).
+#
+# Dwindle's default_split_ratio is the first window's share times two (1.0 is halves), so a golden split is
+# 2 x 0.618 = 1.236. It used to be 1.618, which gave the first window 81 % and squeezed the new one to 19 %:
+# open a few windows and all but one were slivers. split_bias 1 ("current") gives the 61.8 % to the window that
+# was there, whichever side the new one opens on.
+GOLDEN_SPLIT = 1.236
 PLACEMENTS = {
-    "golden": (1.618, 0),   # the split follows the golden ratio, the side chosen by where the cursor is
-    "cursor": (1.0, 0),     # halves, the side chosen by where the cursor is
+    # (default_split_ratio, force_split, split_bias)
+    "golden": (GOLDEN_SPLIT, 0, 1),               # golden split, the new window on the side the cursor is on
+    "cursor": (1.0, 0, 0),                        # halves, the side chosen by where the cursor is
+    "golden-plus-dwindle": (GOLDEN_SPLIT, 2, 0),  # golden split, the new window always right or below
 }
 LUA_PLACEMENTS = {
     "stacked": "two windows at a time, one above the other; a third opens on the next empty workspace",
     "side-by-side": "two windows at a time, next to each other; a third opens on the next empty workspace",
     "mondrian": "each new window splits the biggest tile, on uneven ratios, like a Mondrian painting",
+    "golden-plus": "a golden spiral that holds many windows, turning only as often as keeps every window usable",
 }
 PLACEMENT_LUA = HALCYON_STATE / "placement.lua"
 
@@ -1804,12 +1869,28 @@ PLACEMENT_LUA = HALCYON_STATE / "placement.lua"
 def placement_lua(mode):
     """The placement.lua for a mode. HALCYON_PLACEMENT tells layouts.lua which cap, if any, applies."""
     if mode in PLACEMENTS:
-        ratio, force = PLACEMENTS[mode]
+        ratio, force, bias = PLACEMENTS[mode]
         return (f"-- mode: {mode}\nHALCYON_PLACEMENT = \"{mode}\"\n"
                 f"hl.config({{ general = {{ layout = \"dwindle\" }}, "
-                f"dwindle = {{ default_split_ratio = {ratio}, force_split = {force} }} }})\n")
+                f"dwindle = {{ default_split_ratio = {ratio}, force_split = {force}, split_bias = {bias} }} }})\n")
     return (f"-- mode: {mode}\nHALCYON_PLACEMENT = \"{mode}\"\n"
             f"hl.config({{ general = {{ layout = \"lua:halcyon-{mode}\" }} }})\n")
+
+
+def migrate_placement():
+    """Rewrite placement.lua when its mode is now written differently (golden used to split 81 / 19)."""
+    try:
+        text = PLACEMENT_LUA.read_text(encoding="utf-8")
+        mode = text.splitlines()[0].split("mode:", 1)[1].strip()
+    except (OSError, IndexError):
+        return False
+    if mode not in PLACEMENTS and mode not in LUA_PLACEMENTS:
+        return False
+    wanted = placement_lua(mode)
+    if text == wanted:
+        return False
+    write_atomic(PLACEMENT_LUA, wanted)
+    return True
 
 
 def cmd_placement(args):
@@ -1825,8 +1906,10 @@ def cmd_placement(args):
         print(current)
         return 0
     if args == ["--list"]:
-        descriptions = {"golden": "splits on the golden ratio, on the side the pointer is on (default)",
-                        "cursor": "splits in halves, on the side the pointer is on", **LUA_PLACEMENTS}
+        descriptions = {"golden": "splits on the golden ratio (61.8 / 38.2), on the side the pointer is on (default)",
+                        "cursor": "splits in halves, on the side the pointer is on",
+                        "golden-plus-dwindle": "golden ratio plus, with Hyprland's dwindle: golden splits, new windows right or below",
+                        **LUA_PLACEMENTS}
         for mode in modes:
             print(f"{'*' if mode == current else ' '} {mode:<13} {descriptions[mode]}")
         return 0
@@ -1975,6 +2058,8 @@ def cmd_migrate(args):
     browser themes are written, which is cheap and covers profiles made since.
     """
     migrate_revolver_on()
+    if migrate_placement() and hyprland_running():
+        subprocess.run(["hyprctl", "reload"], capture_output=True, check=False)
     raw = read_state(ACTIVE_FILE)
     current = RENAMED.get(raw, raw) if raw else None
     changed = args[args.index("--changed") + 1:] if "--changed" in args else []
@@ -1987,6 +2072,32 @@ def cmd_migrate(args):
         print(f"applying {current} again" + (f" (it was called {raw})" if raw != current else ""))
         return cmd_apply([current])
     update_browsers()
+    return 0
+
+
+WIDGETS = ("clock", "weather", "revolver", "visualizer", "system", "nowPlaying", "lyrics")
+# The shell's defaults (Config.qml) for a widget the config file does not mention yet.
+WIDGETS_ON_BY_DEFAULT = {"clock", "revolver"}
+
+
+def cmd_widgets(args):
+    """`widgets` lists the desktop widgets and which are on; `widgets NAME on|off|toggle` changes one. The shell
+    picks the change up at once (Settings > Quick > Desktop widgets has the same switches)."""
+    data = read_shell_config()
+    widgets = ((data.get("background") or {}).get("widgets") or {})
+    if not args:
+        for name in WIDGETS:
+            state = (widgets.get(name) or {}).get("enable", name in WIDGETS_ON_BY_DEFAULT)
+            print(f"{name:<12} {'on' if state else 'off'}")
+        return 0
+    lowered = {w.lower(): w for w in WIDGETS}
+    if len(args) != 2 or args[0].lower() not in lowered or args[1] not in ("on", "off", "toggle"):
+        raise ThemeError("usage: halcyon-theme widgets [" + "|".join(WIDGETS) + " on|off|toggle]")
+    name = lowered[args[0].lower()]
+    current = bool((widgets.get(name) or {}).get("enable", name in WIDGETS_ON_BY_DEFAULT))
+    wanted = (not current) if args[1] == "toggle" else args[1] == "on"
+    set_shell_value(f"background.widgets.{name}.enable", wanted)
+    print(f"{name} {'on' if wanted else 'off'}")
     return 0
 
 
@@ -2003,12 +2114,236 @@ def cmd_hyprland(args):
     return 0
 
 
+# ----------------------------------------------------------------------------
+# Theme switch rules: what to change when the theme switches to, or away from, a theme
+# ----------------------------------------------------------------------------
+#
+# Made in Settings > Halcyon > When the theme switches, and kept in the shell config as halcyon.switchRules, a list
+# of {theme, when, action, target, value, restore}:
+#
+#   theme    a theme id, or "*" for any theme ("off" is the theme being turned off)
+#   when     "to" (switching to it) or "from" (switching away from it)
+#   action   widget   target a desktop widget (WIDGETS), value "on" or "off"
+#            icons    value an icon theme (halcyon-theme rules icons lists them)
+#            effects  value "default", "full", "light" or "off"
+#            placement value a window placement mode
+#            setting  target a shell setting ("bar.vertical"), value its new value as JSON ("true", "12", "\"x\"")
+#            command  value a command line, run with sh (your own; nothing checks it)
+#   restore  for a "to" rule: put the old value back when the theme switches away again
+#
+# Rules run in the order they are listed: "from" rules of the theme being left (after its restored values), then
+# "to" rules of the new one, before its window style is written so an effects rule takes effect at once.
+
+RULES_RESTORE = HALCYON_STATE / "switch-rules-restore.json"
+RULE_ACTIONS = ("widget", "icons", "effects", "placement", "setting", "command")
+
+
+def switch_rules():
+    rules = get_nested(read_shell_config(), "halcyon.switchRules")
+    return [r for r in rules if isinstance(r, dict)] if isinstance(rules, list) else []
+
+
+def icon_themes():
+    """Installed icon themes (not cursor themes): [{id, name}], each id once."""
+    found = {}
+    for base in (DATA / "icons", HOME / ".icons", Path("/usr/local/share/icons"), Path("/usr/share/icons")):
+        if not base.is_dir():
+            continue
+        for index in sorted(base.glob("*/index.theme")):
+            theme_id = index.parent.name
+            if theme_id in found or theme_id in ("default", "hicolor", "locolor"):
+                continue
+            try:
+                text = index.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            directories = re.search(r"^Directories\s*=\s*(.+)$", text, re.M)
+            if not directories or not directories.group(1).strip():
+                continue    # a cursor theme
+            name = re.search(r"^Name\s*=\s*(.+)$", text, re.M)
+            found[theme_id] = {"id": theme_id, "name": name.group(1).strip() if name else theme_id}
+    return sorted(found.values(), key=lambda t: t["name"].lower())
+
+
+def current_icon_theme():
+    if shutil.which("gsettings"):
+        out = subprocess.run(["gsettings", "get", "org.gnome.desktop.interface", "icon-theme"],
+                             capture_output=True, text=True, check=False).stdout.strip()
+        if out:
+            return out.strip("'")
+    return ""
+
+
+def set_icon_theme(name):
+    """GTK apps (gsettings), Qt and KDE apps (kdeglobals, qt5ct and qt6ct) and the shell's own icons follow it."""
+    if shutil.which("gsettings"):
+        subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", "icon-theme", name],
+                       capture_output=True, check=False)
+    for path, section in ((CONFIG / "kdeglobals", "Icons"), (CONFIG / "qt6ct/qt6ct.conf", "Appearance"),
+                          (CONFIG / "qt5ct/qt5ct.conf", "Appearance")):
+        if path.name != "kdeglobals" and not path.is_file():
+            continue
+        key = "Theme" if section == "Icons" else "icon_theme"
+        set_ini_value(path, section, key, name)
+
+
+def set_ini_value(path, section, key, value):
+    lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+    out, in_section, done = [], False, False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            if in_section and not done:
+                out.append(f"{key}={value}")
+                done = True
+            in_section = stripped == f"[{section}]"
+        elif in_section and not done and stripped.split("=", 1)[0].strip() == key:
+            out.append(f"{key}={value}")
+            done = True
+            continue
+        out.append(line)
+    if not done:
+        if not in_section:
+            out += ([""] if out else []) + [f"[{section}]"]
+        out.append(f"{key}={value}")
+    write_atomic(path, "\n".join(out) + "\n")
+
+
+def current_placement():
+    try:
+        return PLACEMENT_LUA.read_text(encoding="utf-8").splitlines()[0].split("mode:", 1)[1].strip()
+    except (OSError, IndexError):
+        return "golden"
+
+
+def rule_value(rule):
+    """(what it is now, so it can be put back; or MISSING when it can't be)."""
+    action, target = rule.get("action"), rule.get("target", "")
+    config = read_shell_config()
+    if action == "widget":
+        value = get_nested(config, f"background.widgets.{target}.enable")
+        return (target in WIDGETS_ON_BY_DEFAULT) if not isinstance(value, bool) else value
+    if action == "icons":
+        return current_icon_theme() or MISSING
+    if action == "effects":
+        value = get_nested(config, "halcyon.effects")
+        return value if isinstance(value, str) and value else "default"
+    if action == "placement":
+        return current_placement()
+    if action == "setting":
+        value = get_nested(config, target or "")
+        return MISSING if value is None or value is MISSING else value
+    return MISSING
+
+
+def set_rule_value(action, target, value):
+    if action == "widget":
+        if target not in WIDGETS:
+            raise ThemeError(f"no widget called {target}")
+        set_shell_value(f"background.widgets.{target}.enable", value in (True, "on"))
+    elif action == "icons":
+        set_icon_theme(str(value))
+    elif action == "effects":
+        if value not in ("default",) + EFFECT_LEVELS:
+            raise ThemeError(f"effects can be default, {', '.join(EFFECT_LEVELS)}")
+        set_shell_value("halcyon.effects", value)
+    elif action == "placement":
+        cmd_placement([str(value)])
+    elif action == "setting":
+        if not SHELL_KEY.match(target or ""):
+            raise ThemeError(f"{target!r} is not a setting's name")
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except ValueError:
+                pass    # a plain word is a string
+        set_shell_value(target, value)
+    elif action == "command":
+        subprocess.Popen(["sh", "-c", str(value)], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
+    else:
+        raise ThemeError(f"unknown rule action {action!r}")
+
+
+def rule_matches(rule, theme_id, when):
+    return rule.get("when", "to") == when and rule.get("theme") in (theme_id, "*") and rule.get("action") in RULE_ACTIONS
+
+
+def run_switch_rules(when, theme_id):
+    """Run the rules for switching `when` ("to" or "from") theme_id; returns what each did, for the notification."""
+    theme_id = theme_id or "off"
+    saved = read_json(RULES_RESTORE, {})
+    done = []
+    if when == "from":
+        # First what this theme's "to" rules changed and asked to have put back.
+        for entry in reversed(saved.pop(theme_id, [])):
+            try:
+                set_rule_value(entry["action"], entry.get("target", ""), entry["value"])
+                done.append(f"put back {entry['action']} {entry.get('target', '')}".strip())
+            except (ThemeError, KeyError) as error:
+                print(f"note: couldn't put back a theme switch rule: {error}", file=sys.stderr)
+    for rule in switch_rules():
+        if not rule_matches(rule, theme_id, when):
+            continue
+        action, target, value = rule["action"], rule.get("target", ""), rule.get("value", "")
+        try:
+            if when == "to" and rule.get("restore"):
+                before = rule_value(rule)
+                if before is not MISSING:
+                    saved.setdefault(theme_id, []).append({"action": action, "target": target, "value": before})
+            set_rule_value(action, target, value)
+            done.append(f"{action} {target} {value}".replace("  ", " ").strip())
+        except ThemeError as error:
+            print(f"note: theme switch rule ({action} {target}) failed: {error}", file=sys.stderr)
+    if saved:
+        write_atomic(RULES_RESTORE, json.dumps(saved, indent=2) + "\n")
+    else:
+        remove(RULES_RESTORE)
+    return done
+
+
+def read_json(path, default):
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return default
+
+
+def cmd_rules(args):
+    """`rules` lists the theme switch rules; `rules icons` the icon themes; `rules run to|from THEME` runs them."""
+    if args in ([], ["--json"]):
+        rules = switch_rules()
+        if args:
+            print(json.dumps(rules))
+        elif not rules:
+            print("No theme switch rules: Settings > Halcyon > When the theme switches makes them.")
+        for rule in rules if not args else []:
+            print(f"{rule.get('when', 'to'):>4} {rule.get('theme', '?'):<16} {rule.get('action', '?')} "
+                  f"{rule.get('target', '')} {rule.get('value', '')}{'  (put back after)' if rule.get('restore') else ''}")
+        return 0
+    if args and args[0] == "icons":
+        themes = icon_themes()
+        if "--json" in args:
+            print(json.dumps({"current": current_icon_theme(), "themes": themes}))
+        else:
+            for theme in themes:
+                print(theme["id"])
+        return 0
+    if len(args) == 3 and args[0] == "run" and args[1] in ("to", "from"):
+        for line in run_switch_rules(args[1], args[2]):
+            print(line)
+        return 0
+    raise ThemeError("usage: halcyon-theme rules [--json] | rules icons [--json] | rules run to|from THEME")
+
+
 COMMANDS = {
     "collapse": cmd_collapse,
     "doctor": cmd_doctor,
     "games": cmd_games,
     "migrate": cmd_migrate,
     "hyprland": cmd_hyprland,
+    "widgets": cmd_widgets,
+    "rules": cmd_rules,
     "revolver": cmd_revolver,
     "custom": cmd_custom,
     "show": cmd_show,
@@ -2048,6 +2383,10 @@ def main(argv):
     if argv and argv[0] == "browsers":
         tool = HERE / "halcyon_browsers.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
+    if argv and argv[0] == "update":
+        # The updater the bar's button and the hourly timer run; bare `halcyon update` says where things stand.
+        updater = HERE / "update"
+        os.execv("/bin/bash", ["bash", str(updater), *(argv[1:] or ["status"])])
     if argv and argv[0] == "wifi":
         tool = HERE / "halcyon_wifi.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])

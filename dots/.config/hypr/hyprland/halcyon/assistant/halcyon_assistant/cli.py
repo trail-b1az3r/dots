@@ -10,7 +10,7 @@ import time
 import urllib.request
 import zipfile
 
-from . import audio, config, daemon, localai, pcm, providers, speech, stt, wake
+from . import audio, config, daemon, local_tts, localai, pcm, piper_voices, providers, speech, stt, wake
 
 USAGE = """Halcyon's voice assistant.
 
@@ -23,9 +23,19 @@ USAGE = """Halcyon's voice assistant.
     halcyon assistant test-mic      record 3 seconds and play them back
     halcyon assistant models        the LM Studio, HyperNix and T1 models it can use
 
+    halcyon assistant voices [--all] [--json] [WORDS]
+                                    the Piper voices here; --all adds Hugging Face's and the AUR's
+    halcyon assistant voice         the Piper voice in use
+    halcyon assistant voice use KEY|PATH [--speaker NAME]   speak with that voice (one here, or a .onnx file)
+    halcyon assistant voice get KEY download a voice from Hugging Face (rhasspy/piper-voices) and use it
+    halcyon assistant voice aur PACKAGE  install a piper-voices-* package with your AUR helper
+    halcyon assistant voice remove KEY   delete a downloaded voice
+    halcyon assistant voice preview KEY  say a sentence with a voice here, without choosing it
+
     halcyon assistant setup         install speech recognition (one time, ~300 MB)
           --wake                    ...and the offline "hey halcyon" wake word model
           --piper                   ...and a natural Piper voice instead of espeak-ng
+          --kokoro                  ...and Kokoro, a local voice model with 54 voices (~340 MB)
     halcyon assistant login         use your Claude Pro/Max plan instead of an API key
     halcyon assistant key ID [KEY]  store an API key: anthropic, gemini, openai, mistral, t1...
     halcyon assistant set NAME VALUE  change a setting (provider, model, t1Server, wakeWord, speak...)
@@ -81,6 +91,8 @@ def setup(args):
         packages.append("vosk")
     if "--piper" in args:
         packages.append("piper-tts")
+    if "--kokoro" in args:
+        packages.append("kokoro-onnx")
     print("installing " + ", ".join(packages))
     subprocess.run([str(venv_python), "-m", "pip", "install", "--upgrade", "--quiet", *packages], check=True)
 
@@ -104,6 +116,8 @@ def setup(args):
             local_bin.parent.mkdir(parents=True, exist_ok=True)
             local_bin.symlink_to(piper_bin)
 
+    if "--kokoro" in args:
+        local_tts.kokoro_download()
     print(f"fetching the Whisper '{config.settings()['speechModel']}' model…")
     subprocess.run([str(venv_python), "-c",
                     "import sys; sys.path.insert(0, sys.argv[1]); from halcyon_assistant import stt; stt.load(sys.argv[2])",
@@ -225,11 +239,132 @@ def say(args):
     return 0 if speech.say(spoken, settings=settings) else 1
 
 
+def _matches(entry, words):
+    text = " ".join(str(entry.get(k, "")) for k in ("key", "name", "language", "languageName", "country",
+                                                       "quality", "description")).lower()
+    return all(word.lower() in text for word in words)
+
+
+def voices(args):
+    """The Piper voices: here, and with --all the ones Hugging Face and the AUR have."""
+    as_json = "--json" in args
+    everything = "--all" in args
+    words = [a for a in args if not a.startswith("--")]
+    settings = config.settings()
+    current = piper_voices.resolve(settings["piperVoice"])
+    result = {"current": current["key"] if current else "", "chosen": settings["piperVoice"],
+              "speaker": settings["piperSpeaker"], "piper": bool(speech.piper_binary()),
+              "aurHelper": piper_voices.aur_helper() or "",
+              "installed": [v for v in piper_voices.installed() if _matches(v, words)], "errors": []}
+    if everything:
+        here = {v["key"] for v in result["installed"]}
+        try:
+            result["huggingface"] = [dict(v, installed=v["key"] in here)
+                                     for v in piper_voices.catalog() if _matches(v, words)]
+        except piper_voices.VoiceError as error:
+            result["huggingface"], result["errors"] = [], result["errors"] + [f"Hugging Face: {error}"]
+        try:
+            result["aur"] = [p for p in piper_voices.aur_packages() if _matches(p, words)]
+        except piper_voices.VoiceError as error:
+            result["aur"], result["errors"] = [], result["errors"] + [f"AUR: {error}"]
+    if as_json:
+        print(json.dumps(result))
+        return 0
+    print("Here:" if result["installed"] else "No Piper voices here yet.")
+    for v in result["installed"]:
+        mark = "*" if v["key"] == result["current"] else " "
+        extra = f", {len(v['speakers'])} speakers" if v["speakers"] else ""
+        print(f" {mark} {v['key']:<34} {v['source']:<12} {v['languageName'] or v['language']}{extra}")
+    if everything:
+        print(f"\nOn Hugging Face ({len(result['huggingface'])}): halcyon assistant voice get KEY")
+        for v in result["huggingface"]:
+            print(f"   {v['key']:<34} {v['size'] // 1_000_000:>4} MB  {v['languageName']} ({v['country']})"
+                  + ("  [here]" if v["installed"] else ""))
+        print(f"\nIn the AUR ({len(result['aur'])}): halcyon assistant voice aur PACKAGE  (every voice of a language)")
+        for p in result["aur"]:
+            print(f"   {p['name']:<34} {p['version']:<10} " + ("[installed]" if p["installed"] else ""))
+    for error in result["errors"]:
+        print(f"note: {error}", file=sys.stderr)
+    if not everything:
+        print("\n--all lists the ones you can add, from Hugging Face and the AUR.")
+    return 0
+
+
+def voice(args):
+    settings = config.settings()
+    if not args:
+        current = piper_voices.resolve(settings["piperVoice"])
+        if current is None:
+            print("no Piper voice: halcyon assistant voices --all, then voice get KEY")
+            return 1
+        print(f"{current['key']}  ({current['source']}, {current['path']})"
+              + (f", speaker {settings['piperSpeaker']}" if settings["piperSpeaker"] else ""))
+        return 0
+    command, rest = args[0], args[1:]
+    try:
+        if command == "use" and rest:
+            choice = rest[0]
+            speaker = rest[rest.index("--speaker") + 1] if "--speaker" in rest[:-1] else ""
+            found = piper_voices.resolve(choice)
+            if found is None:
+                print(f"{choice} is not here. `halcyon assistant voice get {choice}` downloads it from Hugging Face.",
+                      file=sys.stderr)
+                return 1
+            if speaker and piper_voices.speaker_id(found, speaker) is None:
+                print(f"{found['key']} has no speaker {speaker}: " + (", ".join(found["speakers"]) or "it has one voice"),
+                      file=sys.stderr)
+                return 1
+            # A file outside the usual folders is kept by path, a voice in them by its key.
+            keep = found["path"] if "/" in choice else found["key"]
+            config.write_setting("piperVoice", "" if keep == piper_voices.BUILTIN else keep)
+            config.write_setting("piperSpeaker", speaker)
+            daemon.send("reload")
+            print(f"speaking with {found['key']}" + (f", speaker {speaker}" if speaker else ""))
+            return 0
+        if command == "get" and len(rest) == 1:
+            def progress(done, total):
+                if total:
+                    print(f"\r{rest[0]}: {done * 100 // total}% of {total // 1_000_000} MB", end="", flush=True)
+            path = piper_voices.download(rest[0], progress)
+            print(f"\nsaved {path}")
+            return voice(["use", rest[0]])
+        if command == "aur" and len(rest) == 1:
+            helper_command = piper_voices.aur_install_command(rest[0])
+            print("running: " + " ".join(helper_command))
+            done = subprocess.run(helper_command, check=False)
+            if done.returncode == 0:
+                print("installed. Its voices are listed by: halcyon assistant voices")
+            return done.returncode
+        if command == "remove" and len(rest) == 1:
+            print(f"removed {piper_voices.remove(rest[0])}")
+            if settings["piperVoice"] == rest[0]:
+                config.write_setting("piperVoice", "")
+                daemon.send("reload")
+            return 0
+        if command == "preview" and rest:
+            preview = dict(settings, piperVoice=rest[0], piperSpeaker=rest[1] if len(rest) > 1 else "")
+            text = "Hello. This is how I sound."
+            problem = speech.speak_once("piper", text, settings=preview)
+            if problem:
+                print(f"failed: {problem}", file=sys.stderr)
+                return 1
+            return 0
+    except piper_voices.VoiceError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
+    print("usage: halcyon assistant voice [use KEY|PATH [--speaker NAME] | get KEY | aur PACKAGE | remove KEY | preview KEY]",
+          file=sys.stderr)
+    return 2
+
+
 def test_voice(args):
     """Speak with every installed engine, the way replies are spoken, and say what went wrong."""
     text = " ".join(args) or "Hello. This is Halcyon's voice."
     settings = config.settings()
-    player = pcm.player(speech.piper_rate(speech.piper_voice()) if speech.piper_voice() else speech.DEFAULT_RATE)
+    voice = speech.piper_voice(settings)
+    player = pcm.player(speech.piper_rate(voice) if voice else speech.DEFAULT_RATE)
+    if voice:
+        print(f"Piper voice: {voice.stem} ({voice})")
     print(f"audio player: {' '.join(player) if player else 'none (install pipewire)'}")
     print(f"voice setting: {settings['voice']}" + (f", AI voice from {speech.tts_ai.provider(settings)}"
                                                     if speech.tts_ai.provider(settings) else ", no AI voice (no Gemini or OpenAI key)"))
@@ -364,6 +499,10 @@ def main(argv):
         return doctor(args)
     if command == "say":
         return say(args)
+    if command == "voices":
+        return voices(args)
+    if command == "voice":
+        return voice(args)
     if command == "test-voice":
         return test_voice(args)
     if command == "test-mic":

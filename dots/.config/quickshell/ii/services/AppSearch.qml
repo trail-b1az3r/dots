@@ -83,6 +83,24 @@ Singleton {
             && !iconName.includes("image-missing");
     }
 
+    // Generic app icons most icon themes have, tried when an app's own is missing.
+    readonly property list<string> genericIcons: ["application-x-executable", "application-default-icon",
+        "applications-other", "system-run", "exec"]
+    readonly property string bundledGenericIcon: Quickshell.shellPath("assets/icons/halcyon-app-generic.svg")
+
+    // An image source for a window's or app's icon that always shows something: its own icon, else a generic one
+    // from the icon theme, else Halcyon's own. Never the magenta and black "missing" checkerboard, which is what
+    // Quickshell draws for a name the theme doesn't have (and many themes have no "image-missing" either).
+    function iconSource(str) {
+        const name = root.guessIcon(str);
+        if (name && String(name).startsWith("/"))
+            return "file://" + name;
+        if (root.iconExists(name))
+            return Quickshell.iconPath(name);
+        const generic = root.genericIcons.find(icon => root.iconExists(icon));
+        return generic ? Quickshell.iconPath(generic) : "file://" + root.bundledGenericIcon;
+    }
+
     function getReverseDomainNameAppName(str) {
         return str.split('.').slice(-1)[0]
     }
