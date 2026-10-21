@@ -36,7 +36,7 @@ function C.missing(feature)
     if not C.plus then
         return "needs hyprland-plus"
     end
-    return "needs a newer hyprland-plus (update it with: sudo hyprctl-lite install full)"
+    return "needs a newer hyprland-plus (update it with: sudo hyprctl-lite install update)"
 end
 
 return C
