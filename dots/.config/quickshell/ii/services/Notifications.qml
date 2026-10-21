@@ -45,8 +45,9 @@ Singleton {
     // An icon the icon theme doesn't have would be drawn as Quickshell's magenta and black "missing" checkerboard.
     // `notify-send -i NAME` sends the name both as the app icon and as an image (image://icon/NAME), so both are
     // checked: one that isn't there is dropped, and the usual symbol for the summary is shown instead.
-    // Halcyon's own notifications get its mark.
-    readonly property string halcyonIcon: Quickshell.shellPath("assets/icons/halcyon-mono.svg")
+    // Halcyon's own notifications get its mark: the one-colour silhouette, which the notification tints in the
+    // theme's colours (NotificationAppIcon), not the black and white tile that matched no theme.
+    readonly property string halcyonIcon: Quickshell.shellPath("assets/icons/halcyon-symbolic.svg")
 
     function iconExists(name) {
         if (!name)

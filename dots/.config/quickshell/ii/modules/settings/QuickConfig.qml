@@ -226,6 +226,47 @@ ContentPage {
         }
     }
 
+    // Every desktop widget, on or off, in one place (each has its own section in Background for the rest).
+    ContentSection {
+        icon: "widgets"
+        title: Translation.tr("Desktop widgets")
+
+        Flow {
+            Layout.fillWidth: true
+            spacing: 4
+            Repeater {
+                model: [
+                    { key: "clock", name: Translation.tr("Clock"), icon: "schedule" },
+                    { key: "weather", name: Translation.tr("Weather"), icon: "partly_cloudy_day" },
+                    { key: "revolver", name: Translation.tr("Revolver"), icon: "casino" },
+                    { key: "visualizer", name: Translation.tr("Audio visualizer"), icon: "graphic_eq" },
+                    { key: "system", name: Translation.tr("System"), icon: "memory" },
+                    { key: "nowPlaying", name: Translation.tr("Now playing"), icon: "music_note" },
+                    { key: "lyrics", name: Translation.tr("Lyrics"), icon: "lyrics" }
+                ]
+                delegate: ConfigSwitch {
+                    required property var modelData
+                    width: 270
+                    Layout.fillWidth: false
+                    buttonIcon: modelData.icon
+                    text: modelData.name
+                    checked: Config.options.background.widgets[modelData.key].enable
+                    onCheckedChanged: {
+                        if (Config.options.background.widgets[modelData.key].enable !== checked)
+                            Config.options.background.widgets[modelData.key].enable = checked;
+                    }
+                }
+            }
+        }
+        StyledText {
+            Layout.fillWidth: true
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colSubtext
+            font.pixelSize: Appearance.font.pixelSize.smallie
+            text: Translation.tr("Drag a widget to move it. Background has each one's own settings. From a terminal: halcyon widgets NAME on|off")
+        }
+    }
+
     ContentSection {
         icon: "screenshot_monitor"
         title: Translation.tr("Bar & screen")

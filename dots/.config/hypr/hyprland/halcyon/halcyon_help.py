@@ -76,6 +76,7 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("overlays sync", "write Avizo's and Wayscriber's colours from the current theme (applying a theme does this)"),
     ]),
     ("Widgets, characters and extras", [
+        ("widgets [NAME on|off|toggle]", "the desktop widgets (clock, weather, revolver, visualizer, system, nowPlaying, lyrics): which are on, or turn one on or off"),
         ("revolver status", "whether the revolver is on and where, its games, and any error the shell logged for it"),
         ("revolver on|off", "show or hide it, on every theme"),
         ("revolver scan [--json]", "the revolver's games and their weights"),

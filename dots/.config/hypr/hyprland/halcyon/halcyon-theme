@@ -2066,6 +2066,32 @@ def cmd_migrate(args):
     return 0
 
 
+WIDGETS = ("clock", "weather", "revolver", "visualizer", "system", "nowPlaying", "lyrics")
+# The shell's defaults (Config.qml) for a widget the config file does not mention yet.
+WIDGETS_ON_BY_DEFAULT = {"clock", "revolver"}
+
+
+def cmd_widgets(args):
+    """`widgets` lists the desktop widgets and which are on; `widgets NAME on|off|toggle` changes one. The shell
+    picks the change up at once (Settings > Quick > Desktop widgets has the same switches)."""
+    data = read_shell_config()
+    widgets = ((data.get("background") or {}).get("widgets") or {})
+    if not args:
+        for name in WIDGETS:
+            state = (widgets.get(name) or {}).get("enable", name in WIDGETS_ON_BY_DEFAULT)
+            print(f"{name:<12} {'on' if state else 'off'}")
+        return 0
+    lowered = {w.lower(): w for w in WIDGETS}
+    if len(args) != 2 or args[0].lower() not in lowered or args[1] not in ("on", "off", "toggle"):
+        raise ThemeError("usage: halcyon-theme widgets [" + "|".join(WIDGETS) + " on|off|toggle]")
+    name = lowered[args[0].lower()]
+    current = bool((widgets.get(name) or {}).get("enable", name in WIDGETS_ON_BY_DEFAULT))
+    wanted = (not current) if args[1] == "toggle" else args[1] == "on"
+    set_shell_value(f"background.widgets.{name}.enable", wanted)
+    print(f"{name} {'on' if wanted else 'off'}")
+    return 0
+
+
 def cmd_hyprland(args):
     """Which Hyprland is running (or installed), and whether it is hyprland-plus and new enough for Plus Tiles."""
     import halcyon_compositor
@@ -2085,6 +2111,7 @@ COMMANDS = {
     "games": cmd_games,
     "migrate": cmd_migrate,
     "hyprland": cmd_hyprland,
+    "widgets": cmd_widgets,
     "revolver": cmd_revolver,
     "custom": cmd_custom,
     "show": cmd_show,

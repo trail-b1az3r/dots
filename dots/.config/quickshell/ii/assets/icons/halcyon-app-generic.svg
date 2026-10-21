@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  An app with no icon of its own, or one the icon theme does not have: a window on a rounded tile. Drawn by
+  Halcyon so the bar, dock and overview never fall back to the magenta and black "missing" checkerboard.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="#5c6370"/>
+  <rect x="14" y="17" width="36" height="30" rx="5" fill="#e6e9ef"/>
+  <rect x="14" y="17" width="36" height="8" rx="4" fill="#aab2c0"/>
+  <circle cx="19.5" cy="21" r="1.6" fill="#5c6370"/>
+  <circle cx="24.5" cy="21" r="1.6" fill="#5c6370"/>
+</svg>

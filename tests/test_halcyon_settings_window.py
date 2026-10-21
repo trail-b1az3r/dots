@@ -80,3 +80,49 @@ esac''')
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WidgetSwitchesTest(unittest.TestCase):
+    def run_tool(self, home, *args):
+        env = {"PATH": "/usr/bin:/bin", "HOME": home, "XDG_CONFIG_HOME": home + "/.config", "XDG_STATE_HOME": home + "/s"}
+        return subprocess.run([sys.executable, str(TOOL), "widgets", *args], env=env, capture_output=True, text=True, timeout=30)
+
+    def test_widgets_on_off_and_their_defaults(self):
+        with tempfile.TemporaryDirectory() as home:
+            cfg = Path(home, ".config/illogical-impulse/config.json")
+            cfg.parent.mkdir(parents=True)
+            cfg.write_text(json.dumps({"background": {"widgets": {"system": {"enable": False, "x": 5}}}}))
+            listing = dict(line.split() for line in self.run_tool(home).stdout.splitlines())
+            self.assertEqual(listing["clock"], "on", "on by default, as in Config.qml")
+            self.assertEqual(listing["revolver"], "on")
+            self.assertEqual(listing["lyrics"], "off")
+            self.assertEqual(self.run_tool(home, "system", "toggle").stdout.strip(), "system on")
+            self.assertEqual(self.run_tool(home, "nowplaying", "on").stdout.strip(), "nowPlaying on")
+            self.assertEqual(self.run_tool(home, "clock", "toggle").stdout.strip(), "clock off")
+            widgets = json.loads(cfg.read_text())["background"]["widgets"]
+            self.assertEqual((widgets["system"], widgets["nowPlaying"]["enable"], widgets["clock"]["enable"]),
+                             ({"enable": True, "x": 5}, True, False))
+            self.assertNotEqual(self.run_tool(home, "toaster", "on").returncode, 0)
+
+    def test_quick_settings_list_every_widget(self):
+        quick = (II / "modules/settings/QuickConfig.qml").read_text()
+        for key in ("clock", "weather", "revolver", "visualizer", "system", "nowPlaying", "lyrics"):
+            self.assertIn(f'key: "{key}"', quick)
+
+
+class IconsTest(unittest.TestCase):
+    def test_app_icons_never_fall_back_to_the_missing_checkerboard(self):
+        for path in ("modules/ii/bar/Workspaces.qml", "modules/ii/overview/OverviewWindow.qml",
+                     "modules/ii/dock/DockAppButton.qml", "modules/ii/regionSelector/TargetRegion.qml"):
+            text = (II / path).read_text()
+            self.assertIn("AppSearch.iconSource(", text, path)
+            self.assertNotIn('"image-missing")', text.replace("Prevent the \"image-missing\" icon", ""), path)
+        search = (II / "services/AppSearch.qml").read_text()
+        self.assertIn('"file://" + root.bundledGenericIcon', search)
+        self.assertTrue((II / "assets/icons/halcyon-app-generic.svg").is_file())
+
+    def test_halcyon_notifications_wear_the_theme(self):
+        self.assertIn("halcyon-symbolic.svg", (II / "services/Notifications.qml").read_text())
+        icon = (II / "modules/common/widgets/NotificationAppIcon.qml").read_text()
+        self.assertIn("ColorOverlay", icon)
+        self.assertIn("Appearance.colors.colOnSecondaryContainer", icon)
