@@ -91,7 +91,7 @@ Singleton {
     }
 
     function getData() {
-        let command = "curl -s wttr.in";
+        let command = "curl -fsS -m 20 wttr.in";
 
         if (root.gpsActive && root.location.valid) {
             command += `/${root.location.lat},${root.location.long}`;
@@ -99,11 +99,9 @@ Singleton {
             command += `/${formatCityName(root.city)}`;
         }
 
-        // format as json
+        // format as json; the parts used are picked out below, in QML, so jq isn't needed (without it the
+        // widget and the bar were stuck on "--°")
         command += "?format=j1";
-        command += " | ";
-        // only take the current weather, location, asytronmy data
-        command += "jq '{current: .current_condition[0], location: .nearest_area[0], astronomy: .weather[0].astronomy[0]}'";
         fetcher.command[2] = command;
         fetcher.running = true;
     }
@@ -126,7 +124,15 @@ Singleton {
                 if (text.length === 0)
                     return;
                 try {
-                    const parsedData = JSON.parse(text);
+                    const full = JSON.parse(text);
+                    // only the current weather, location and astronomy data
+                    const parsedData = {
+                        current: full?.current_condition?.[0],
+                        location: full?.nearest_area?.[0],
+                        astronomy: full?.weather?.[0]?.astronomy?.[0]
+                    };
+                    if (!parsedData.current)
+                        throw new Error("wttr.in sent no current weather");
                     root.refineData(parsedData);
                     // console.info(`[ data: ${JSON.stringify(parsedData)}`);
                 } catch (e) {
@@ -164,6 +170,17 @@ Singleton {
                 Quickshell.execDetached(["notify-send", Translation.tr("Weather Service"), Translation.tr("Cannot find a GPS service. Using the fallback method instead."), "-a", "Shell"]);
                 console.error("[WeatherService] Could not aquire a valid backend plugin.");
             }
+        }
+    }
+
+    // Location services that never answer (geoclue on with no source, or a denied request) left the weather
+    // empty for good: after 20 seconds without a place, fetch by city instead (wttr.in finds you by IP without one).
+    Timer {
+        interval: 20000
+        running: root.gpsActive && !root.location.valid
+        onTriggered: {
+            console.warn("[WeatherService] No location from GPS yet; using the city (or the IP address) instead.");
+            root.gpsActive = false;
         }
     }
 

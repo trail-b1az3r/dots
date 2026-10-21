@@ -27,7 +27,12 @@ var STYLES = {
     // (a fine tick ring, a scanning arc that runs as it turns, corner brackets, gold markers), hexagonal ice cells
     // for chambers, a snowflake hub and a chevron for the hammer.
     "icey":    { id: "icey", drum: "hud", chamber: "hex", chamberSize: 48, orbit: 80, names: true,
-                 hub: "crystal", hammer: "chevron", glow: 0.75, waves: 0, statusLabel: true }
+                 hub: "crystal", hammer: "chevron", glow: 0.75, waves: 0, statusLabel: true },
+    // Manga Ink, the revolver only: drawn like a page of its wallpaper. A paper disc in a brush-stroke ensō with
+    // screentone shading, speech-bubble chambers that point at a blush-pink heart, an ink-drop hammer, and speed
+    // lines round it while it spins. Black ink and paper whatever the palette; the pink is the theme's accent.
+    "ink":     { id: "ink", drum: "enso", chamber: "bubble", chamberSize: 56, orbit: 80, names: true,
+                 hub: "heart", hammer: "drop", glow: 0.6, waves: 0, statusLabel: true, ink: "#141414", paper: "#f7f3ea" }
 };
 
 function styleFor(themeId) {
@@ -55,6 +60,8 @@ function revolverStyleFor(themeId) {
     switch (themeId) {
     case "after-icey":
         return STYLES["icey"];
+    case "manga-ink":
+        return STYLES["ink"];
     default:
         return styleFor(themeId);
     }
@@ -88,6 +95,46 @@ function snowflake(cx, cy, r) {
         for (var s = -1; s <= 1; s += 2) {
             var u = t + s * 0.75;
             d += "M " + f(bx) + " " + f(by) + " L " + f(bx + r * 0.3 * Math.cos(u)) + " " + f(by + r * 0.3 * Math.sin(u)) + " ";
+        }
+    }
+    return d;
+}
+
+// A speech bubble of radius r round (cx, cy), its tail pointing along `tail` degrees (0 is right, 90 down).
+function bubble(cx, cy, r, tail) {
+    var t = tail * Math.PI / 180, spread = 0.3;
+    var x1 = cx + r * Math.cos(t + spread), y1 = cy + r * Math.sin(t + spread);
+    var x2 = cx + r * Math.cos(t - spread), y2 = cy + r * Math.sin(t - spread);
+    var tip = r * 1.42;
+    return "M " + f(x1) + " " + f(y1) + " A " + f(r) + " " + f(r) + " 0 1 1 " + f(x2) + " " + f(y2)
+        + " L " + f(cx + tip * Math.cos(t)) + " " + f(cy + tip * Math.sin(t)) + " Z";
+}
+
+// A heart of half-width s round (cx, cy).
+function heart(cx, cy, s) {
+    return "M " + f(cx) + " " + f(cy + s * 0.95)
+        + " C " + f(cx - s * 1.25) + " " + f(cy + s * 0.15) + " " + f(cx - s * 1.05) + " " + f(cy - s * 0.95) + " " + f(cx) + " " + f(cy - s * 0.35)
+        + " C " + f(cx + s * 1.05) + " " + f(cy - s * 0.95) + " " + f(cx + s * 1.25) + " " + f(cy + s * 0.15) + " " + f(cx) + " " + f(cy + s * 0.95) + " Z";
+}
+
+// Screentone: a halftone of dots inside a circle of radius r, growing towards the lower right, as one path.
+function screentone(cx, cy, r, step) {
+    var d = "";
+    for (var y = cy - r; y <= cy + r; y += step) {
+        var row = Math.round((y - cy + r) / step);
+        for (var x = cx - r + (row % 2) * step / 2; x <= cx + r; x += step) {
+            var dx = x - cx, dy = y - cy;
+            if (dx * dx + dy * dy > (r - 3) * (r - 3))
+                continue;
+            // How far into the shaded crescent: nothing towards the upper left, most at the lower-right rim.
+            var shade = (Math.hypot(x - (cx - r * 0.35), y - (cy - r * 0.35)) - r * 0.95) / (r * 0.5);
+            if (shade <= 0)
+                continue;
+            var dot = Math.min(1, shade) * step * 0.34;
+            if (dot < 0.35)
+                continue;
+            d += "M " + f(x - dot) + " " + f(y) + " A " + f(dot) + " " + f(dot) + " 0 1 0 " + f(x + dot) + " " + f(y)
+                + " A " + f(dot) + " " + f(dot) + " 0 1 0 " + f(x - dot) + " " + f(y) + " ";
         }
     }
     return d;

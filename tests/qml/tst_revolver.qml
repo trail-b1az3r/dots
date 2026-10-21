@@ -206,7 +206,9 @@ Item {
             // Only the revolver: the other widgets keep the anime themes' keycaps.
             compare(Styles.styleFor("after-icey").id, "keycap");
             compare(Styles.lookFor("after-icey").id, "keycap");
-            compare(Styles.revolverStyleFor("manga-ink").id, "keycap");
+            compare(Styles.revolverStyleFor("manga-ink").id, "ink", "Manga Ink has one of its own too");
+            compare(Styles.revolverStyleFor("manga-ink").chamber, "bubble");
+            compare(Styles.revolverStyleFor("hsr").id, "hsr", "the rest follow their theme");
         }
 
         function test_drawn_sharp_when_scaled() {

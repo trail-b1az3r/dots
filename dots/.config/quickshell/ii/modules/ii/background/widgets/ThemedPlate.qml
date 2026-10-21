@@ -29,6 +29,9 @@ Item {
     readonly property var style: Styles.styleFor(themeId)
     readonly property bool redSun: style.id === "red-sun"
     readonly property bool keycap: style.plate === "keycap"
+    // A keycap is solid ink, whatever the shell's transparency: the panel colour it is given is see-through when
+    // transparency is on, which washed the cards out on the anime themes' white wallpapers.
+    readonly property color solidBase: Qt.rgba(colBase.r, colBase.g, colBase.b, 1)
     readonly property real pad: 26
 
     function withAlpha(colour, alpha) {
@@ -60,8 +63,8 @@ Item {
                 visible: plate.keycap
                 ShapePath {
                     strokeWidth: 2.5
-                    strokeColor: Qt.darker(plate.colBase, 2.6)
-                    fillColor: Qt.darker(plate.colBase, 2.6)
+                    strokeColor: Qt.darker(plate.solidBase, 2.6)
+                    fillColor: Qt.darker(plate.solidBase, 2.6)
                     PathSvg { path: Styles.plateOutline(plate.style, plate.kind, plate.width, plate.height, 2) }
                 }
             }
@@ -101,7 +104,7 @@ Item {
                 anchors.fill: parent
                 ShapePath {
                     strokeWidth: plate.keycap ? 2.5 : plate.redSun ? 2.4 : (plate.style.drum === "rail" ? 2 : 1.2)
-                    strokeColor: plate.keycap ? Qt.darker(plate.colBase, 2.6)
+                    strokeColor: plate.keycap ? Qt.darker(plate.solidBase, 2.6)
                                : plate.redSun ? plate.colGlow
                                : plate.style.drum === "rail" ? plate.colAccent
                                : plate.style.drum === "facets" ? plate.withAlpha("#ffffff", 0.55)
@@ -110,14 +113,14 @@ Item {
                         x1: 0; y1: 0; x2: plate.width * 0.35; y2: plate.height
                         GradientStop {
                             position: 0.0
-                            color: plate.keycap ? Qt.lighter(plate.colBase, 1.08)
+                            color: plate.keycap ? Qt.lighter(plate.solidBase, 1.08)
                                  : plate.redSun ? plate.withAlpha("#1c1018", 0.78)
                                  : plate.style.drum === "facets" ? plate.withAlpha("#ffffff", 0.16)
                                  : Qt.lighter(plate.colBase, 1.16)
                         }
                         GradientStop {
                             position: 1.0
-                            color: plate.keycap ? Qt.lighter(plate.colBase, 1.08)
+                            color: plate.keycap ? Qt.lighter(plate.solidBase, 1.08)
                                  : plate.redSun ? plate.withAlpha("#09060c", 0.86)
                                  : plate.style.drum === "facets" ? plate.withAlpha(plate.colAccent, 0.07)
                                  : Qt.darker(plate.colBase, 1.22)

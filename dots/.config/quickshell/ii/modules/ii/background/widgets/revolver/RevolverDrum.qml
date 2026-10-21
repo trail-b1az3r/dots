@@ -13,6 +13,7 @@ import "RevolverStyles.js" as Styles
  *   hyperneo  a squircle with squircle chambers, like app icons
  *   hsr       a gold rail with four-pointed star chambers
  *   icey      After ICEY's cyan HUD: a reticle with a scanning arc, hexagonal ice cells, a snowflake hub
+ *   ink       Manga Ink's page: a paper disc in a brush ensō, screentone, speech bubbles round a blush heart
  *
  * Only the look lives here. RevolverWidget turns the rotor, picks the live chamber and fires, and passes the
  * colours in, so this file needs nothing but QtQuick and can be drawn on its own.
@@ -61,6 +62,9 @@ Item {
     readonly property real c: Styles.CENTRE
     readonly property bool redSun: style.id === "red-sun"
     readonly property bool hud: style.drum === "hud"
+    readonly property bool inked: style.drum === "enso"
+    readonly property color inkColour: style.ink ?? "#141414"
+    readonly property color paperColour: style.paper ?? "#f7f3ea"
 
     width: 230
     height: 230
@@ -71,6 +75,7 @@ Item {
         case "squircle": return Styles.squircle(cx, cy, r * 0.96, 4.6);
         case "rail": return Styles.circle(cx, cy, r * 0.97);
         case "facets": return Styles.polygon(cx, cy, r, 8, 22.5);
+        case "enso": return Styles.circle(cx, cy, r * 0.95);
         default: return Styles.circle(cx, cy, r);
         }
     }
@@ -245,6 +250,64 @@ Item {
                     strokeWidth: -1
                     fillColor: drum.colAccent2
                     PathSvg { path: Styles.diamond(drum.c - 114, drum.c, 4) + " " + Styles.diamond(drum.c + 114, drum.c, 4) }
+                }
+            }
+
+            // Manga Ink: a paper disc, screentone shading its lower right, inside a brush-stroke ensō that thins
+            // to nothing where the brush lifted (upper right).
+            Shape {
+                anchors.fill: parent
+                visible: drum.inked
+                ShapePath {
+                    strokeWidth: -1
+                    fillColor: drum.paperColour
+                    PathSvg { path: Styles.circle(drum.c, drum.c, 104) }
+                }
+                ShapePath {
+                    strokeWidth: -1
+                    fillColor: drum.withAlpha(drum.inkColour, 0.78)
+                    PathSvg { path: Styles.screentone(drum.c, drum.c, 102, 6) }
+                }
+                Instantiator {
+                    // The stroke, thick through most of the circle, tapering at both ends.
+                    // Angles clockwise from the right; the brush lifts at the upper right, leaving a gap.
+                    model: [
+                        { w: 11, a0: -12, a1: 246 }, { w: 8.5, a0: 244, a1: 262 }, { w: 6, a0: 260, a1: 276 },
+                        { w: 3.6, a0: 274, a1: 288 }, { w: 1.8, a0: 286, a1: 298 },
+                        { w: 8, a0: -22, a1: -10 }, { w: 4.5, a0: -30, a1: -20 }
+                    ]
+                    delegate: ShapePath {
+                        required property var modelData
+                        strokeWidth: modelData.w
+                        strokeColor: drum.inkColour
+                        fillColor: "transparent"
+                        capStyle: ShapePath.RoundCap
+                        PathSvg { path: Styles.arc(drum.c, drum.c, 106, modelData.a0, modelData.a1) }
+                    }
+                    onObjectAdded: (index, object) => ensoStroke.data.push(object)
+                }
+                id: ensoStroke
+                // A dry-brush hair line beside the stroke.
+                ShapePath {
+                    strokeWidth: 0.9
+                    strokeColor: drum.withAlpha(drum.inkColour, 0.7)
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    PathSvg { path: Styles.arc(drum.c, drum.c, 112.5, 20, 150) }
+                }
+            }
+
+            // Manga Ink: speed lines round the drum while it spins.
+            Shape {
+                anchors.fill: parent
+                visible: drum.inked && drum.spinSpeed > 0.05
+                opacity: Math.min(1, drum.spinSpeed * 1.5)
+                ShapePath {
+                    strokeWidth: 1.2
+                    strokeColor: drum.inkColour
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    PathSvg { path: Styles.ticks(drum.c, drum.c, 116, 134, 40, 4) + " " + Styles.ticks(drum.c, drum.c, 118, 126, 40, 8.5) }
                 }
             }
 
@@ -492,6 +555,8 @@ Item {
                                 visible: !drum.redSun
                                 readonly property real h: slot.size / 2
                                 readonly property color fill: slot.live ? drum.colAccent : drum.colChamber
+                                // A bubble's tail points at the hub, wherever the drum has turned it.
+                                readonly property real tailAngle: Math.atan2(drum.c - slot.point.y, drum.c - slot.point.x) * 180 / Math.PI + rotor.rotation
 
                                 function outline(inset) {
                                     const h = chamberShape.h, r = h - inset;
@@ -499,22 +564,27 @@ Item {
                                     case "gem": return Styles.gem(h, h, r);
                                     case "squircle": return Styles.squircle(h, h, r, 4.6);
                                     case "star": return Styles.sparkle(h, h, r);
-                                    case "hex": return Styles.polygon(h, h, r, 6, 0);
+                                    case "hex": return Styles.polygon(h, h, r * 0.98, 6, 0);
+                                    case "bubble": return Styles.bubble(h, h, r * 0.84, chamberShape.tailAngle);
                                     default: return Styles.circle(h, h, r);
                                     }
                                 }
 
                                 // Body, with a gradient so it reads as a solid with depth.
                                 ShapePath {
-                                    strokeWidth: drum.redSun ? -1 : 1
+                                    strokeWidth: drum.redSun ? -1 : drum.style.chamber === "bubble" ? 2.2 : 1
                                     strokeColor: drum.style.chamber === "gem" ? drum.withAlpha("#ffffff", 0.55)
+                                               : drum.style.chamber === "bubble" ? drum.inkColour
                                                : drum.style.chamber === "hex" ? drum.withAlpha(drum.colAccent, slot.live ? 1 : 0.8)
                                                : drum.withAlpha(Qt.darker(chamberShape.fill, 1.4), 0.9)
                                     fillGradient: LinearGradient {
                                         x1: 0; y1: 0; x2: slot.size * 0.3; y2: slot.size
+                                        // Manga Ink's bubbles are flat: paper, or ink for the live one.
                                         GradientStop { position: 0.0; color: drum.redSun ? drum.colHot
+                                                                    : drum.style.chamber === "bubble" ? (slot.live ? drum.inkColour : drum.paperColour)
                                                                     : drum.withAlpha(Qt.lighter(chamberShape.fill, 1.35), drum.style.chamber === "gem" ? 0.42 : (slot.live ? 0.98 : 0.72)) }
                                         GradientStop { position: 1.0; color: drum.redSun ? (slot.live ? drum.colGlow : Qt.darker(drum.colGlow, 1.6))
+                                                                    : drum.style.chamber === "bubble" ? (slot.live ? drum.inkColour : drum.paperColour)
                                                                     : drum.withAlpha(Qt.darker(chamberShape.fill, 1.15), drum.style.chamber === "gem" ? 0.22 : (slot.live ? 0.98 : 0.62)) }
                                     }
                                     PathSvg { path: chamberShape.outline(drum.redSun ? slot.size * 0.22 : 1) }
@@ -522,7 +592,7 @@ Item {
                                 // The gem's flat top, and a specular line on every body.
                                 ShapePath {
                                     strokeWidth: drum.style.chamber === "gem" ? 1 : 1.4
-                                    strokeColor: drum.withAlpha("#ffffff", drum.style.chamber === "gem" ? 0.6 : (drum.redSun ? 0 : 0.22))
+                                    strokeColor: drum.withAlpha("#ffffff", drum.style.chamber === "gem" ? 0.6 : (drum.redSun || drum.style.chamber === "bubble" ? 0 : 0.22))
                                     fillColor: drum.style.chamber === "gem" ? drum.withAlpha("#ffffff", 0.1) : "transparent"
                                     capStyle: ShapePath.RoundCap
                                     PathSvg {
@@ -542,19 +612,20 @@ Item {
 
                             Text {
                                 anchors.fill: parent
-                                anchors.margins: 6
+                                anchors.margins: drum.style.chamber === "bubble" ? 9 : 6
                                 visible: drum.style.names
                                 text: slot.entry ? slot.entry.name : ""
                                 font.family: drum.fontFamily
                                 font.pixelSize: slot.live && drum.style.chamber !== "star" ? 9 : 8
                                 font.bold: slot.live
-                                color: slot.live ? (drum.colAccent.hslLightness > 0.6 ? "#1a1014" : "#ffffff") : drum.colOn
+                                color: drum.style.chamber === "bubble" ? (slot.live ? drum.paperColour : drum.inkColour)
+                                     : slot.live ? (drum.colAccent.hslLightness > 0.6 ? "#1a1014" : "#ffffff") : drum.colOn
                                 wrapMode: Text.WordWrap
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
                                 elide: Text.ElideRight
                                 maximumLineCount: 3
-                                style: Text.Raised
+                                style: drum.style.chamber === "bubble" ? Text.Normal : Text.Raised
                                 styleColor: drum.withAlpha("#000000", 0.25)
                             }
                         }
@@ -568,15 +639,18 @@ Item {
                 anchors.fill: parent
                 visible: drum.style.hub !== "void"
                 ShapePath {
-                    strokeWidth: 1.2
-                    strokeColor: drum.style.hub === "crystal" ? drum.withAlpha(drum.colAccent, 0.9)
+                    strokeWidth: drum.style.hub === "heart" ? 2.4 : 1.2
+                    strokeColor: drum.style.hub === "heart" ? drum.inkColour
+                               : drum.style.hub === "crystal" ? drum.withAlpha(drum.colAccent, 0.9)
                                : drum.withAlpha(drum.colOn, drum.style.hub === "prism" ? 0.6 : 0.35)
                     fillGradient: RadialGradient {
                         centerX: drum.c - 6; centerY: drum.c - 8
                         centerRadius: 30
                         focalX: drum.c - 6; focalY: drum.c - 8
-                        GradientStop { position: 0.0; color: drum.style.hub === "prism" ? drum.withAlpha("#ffffff", 0.5) : Qt.lighter(drum.colChamber, 1.6) }
-                        GradientStop { position: 1.0; color: drum.style.hub === "prism" ? drum.withAlpha(drum.colAccent, 0.18) : drum.colChamber }
+                        GradientStop { position: 0.0; color: drum.style.hub === "heart" ? Qt.lighter(drum.colAccent, 1.12)
+                                                           : drum.style.hub === "prism" ? drum.withAlpha("#ffffff", 0.5) : Qt.lighter(drum.colChamber, 1.6) }
+                        GradientStop { position: 1.0; color: drum.style.hub === "heart" ? drum.colAccent
+                                                           : drum.style.hub === "prism" ? drum.withAlpha(drum.colAccent, 0.18) : drum.colChamber }
                     }
                     PathSvg {
                         path: {
@@ -585,6 +659,7 @@ Item {
                             case "prism": return Styles.gem(drum.c, drum.c, 22);
                             case "sparkle": return Styles.sparkle(drum.c, drum.c, 30);
                             case "crystal": return Styles.polygon(drum.c, drum.c, 24, 6, 30);
+                            case "heart": return Styles.heart(drum.c, drum.c + 2, 22);
                             default: return Styles.circle(drum.c, drum.c, 23);
                             }
                         }
@@ -592,9 +667,10 @@ Item {
                 }
                 ShapePath {
                     strokeWidth: -1
-                    fillColor: drum.colAccent
+                    fillColor: drum.style.hub === "heart" ? drum.paperColour : drum.colAccent
                     PathSvg {
-                        path: drum.style.hub === "sparkle" ? Styles.sparkle(drum.c, drum.c, 11)
+                        path: drum.style.hub === "heart" ? Styles.circle(drum.c - 8, drum.c - 6, 3.6)
+                            : drum.style.hub === "sparkle" ? Styles.sparkle(drum.c, drum.c, 11)
                             : drum.style.hub === "prism" ? Styles.gemTable(drum.c, drum.c, 22)
                             : drum.style.hub === "crystal" ? Styles.polygon(drum.c, drum.c, 4, 6, 30)
                             : Styles.circle(drum.c, drum.c, 12)
@@ -628,8 +704,8 @@ Item {
                         strokeColor: drum.withAlpha(drum.colOn, 0.5)
                         fillGradient: LinearGradient {
                             x1: 0; y1: 0; x2: 18; y2: 26
-                            GradientStop { position: 0.0; color: drum.redSun ? drum.colHot : Qt.lighter(drum.colAccent, 1.25) }
-                            GradientStop { position: 1.0; color: drum.redSun ? drum.colGlow : Qt.darker(drum.colAccent, 1.2) }
+                            GradientStop { position: 0.0; color: drum.redSun ? drum.colHot : drum.inked ? Qt.lighter(drum.inkColour, 2.2) : Qt.lighter(drum.colAccent, 1.25) }
+                            GradientStop { position: 1.0; color: drum.redSun ? drum.colGlow : drum.inked ? drum.inkColour : Qt.darker(drum.colAccent, 1.2) }
                         }
                         PathSvg {
                             path: {
@@ -639,6 +715,7 @@ Item {
                                 case "pill": return Styles.squircle(9, 13, 8, 4.6);
                                 case "sparkle": return Styles.sparkle(9, 13, 10);
                                 case "chevron": return "M 1 2 L 9 9 L 17 2 L 17 13 L 9 24 L 1 13 Z";
+                                case "drop": return "M 9 26 C 1 16 3 5 9 3 C 15 5 17 16 9 26 Z";
                                 default: return "M 3 26 L 3 4 Q 3 1 6 1 L 12 1 Q 15 1 15 4 L 15 26 Z";
                                 }
                             }
