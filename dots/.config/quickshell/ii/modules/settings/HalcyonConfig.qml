@@ -1348,7 +1348,7 @@ ContentPage {
             Layout.fillWidth: true
             visible: page.plusStatus.plus === true && page.plusStatus.tiles === false
             materialIcon: "update"
-            text: Translation.tr("You are running hyprland-plus, but a build from before Plus Tiles, so these settings have no effect yet. Mini windows and the superposition strip still work. Update it with `sudo hyprctl-lite install full`, then log out and back in.")
+            text: Translation.tr("You are running hyprland-plus, but a build from before Plus Tiles, so these settings have no effect yet. Mini windows and the superposition strip still work. Update it with `sudo hyprctl-lite install update`, then log out and back in.")
         }
 
         ConfigRow {

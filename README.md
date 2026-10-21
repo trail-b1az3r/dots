@@ -117,7 +117,7 @@ The settings are in `~/.config/hypr/hyprland/halcyon/plus.lua`. They only take e
 hyprland-plus is not a command. It is Hyprland itself, built with the Halcyon additions, and it takes the place of
 the `Hyprland` program. After installing it, log out and back in and start Hyprland as you always do. To check, run
 `halcyon hyprland`, which says whether you run stock Hyprland, hyprland-plus, or a hyprland-plus built before Plus
-Tiles (that one still has mini windows and the superposition strip; `sudo hyprctl-lite install full` updates it).
+Tiles (that one still has mini windows and the superposition strip; `sudo hyprctl-lite install update` updates it).
 `hyprctl version` says `hyprland-plus` too. (`hyprctl dots plus` below uses `plus` as the name of a dot set, not a
 command.)
 
@@ -181,8 +181,9 @@ back to. The first switch also stores the Halcyon desktop it replaces. Those aut
 
 ## Install or update hyprland-plus with hyprctl-lite
 
-hyprctl-lite is a single script whose only command is `install full`. It installs or updates hyprland-plus, then removes
-itself. On Arch, get it with this one command:
+hyprctl-lite is a single script with two commands: `install full` installs or updates hyprland-plus, then removes
+itself, and `install update` updates an installed hyprland-plus and stays for next time. On Arch, get it with this one
+command:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/trail-b1az3r/dots/claude/youthful-gates-rt1csq-v2/tools/hyprctl-lite/hyprctl-lite | sudo tee /usr/local/bin/hyprctl-lite >/dev/null && sudo chmod 755 /usr/local/bin/hyprctl-lite
@@ -197,6 +198,18 @@ sudo hyprctl-lite install full
 It clones hyprland-plus into `~/hyprland-plus` (or updates that clone), installs the build dependencies from its
 `packaging/aur/PKGBUILD`, builds it as your user, and installs it to `/usr/local`. It keeps the packaged Hyprland as
 `/usr/bin/hyprland.official`. If a step fails, it stays in `/usr/local/bin` so you can run it again.
+
+To update later:
+
+```sh
+hyprctl-lite install update --check   # is there an update? (no sudo; exit 0 up to date, 10 an update is waiting)
+sudo hyprctl-lite install update      # get it
+```
+
+`install update` checks that hyprland-plus is installed in `/usr/local` (one from the AUR is updated by your AUR
+helper), pulls `~/hyprland-plus`, and stops there when the installed build is already that commit. Otherwise it lists
+the new commits, installs only build dependencies that are missing, builds and installs. hyprctl-lite stays in
+`/usr/local/bin`, so the next update is the same command. `--force` builds again even when nothing changed.
 
 The `curl` command runs a script from GitHub as root, so read it first if you prefer:
 `curl -fsSL <the same URL> | less`. The script is short.

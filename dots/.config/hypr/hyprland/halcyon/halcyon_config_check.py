@@ -221,7 +221,7 @@ def classify_config_errors(errors: list[str], has_plus: bool, tiles: bool | None
         option = re.search(r"(?:option|variable)\s+[\"']?([a-z_]+:[a-z_.:0-9]+)", err)
         if option and option.group(1).startswith(PLUS_ONLY_PREFIXES) and has_plus and not tiles:
             findings.append(Finding("error", "version", f"{option.group(1)} is newer than the running hyprland-plus build: {err}",
-                                    "Update hyprland-plus: sudo hyprctl-lite install full. Then log out and back in."))
+                                    "Update hyprland-plus: sudo hyprctl-lite install update. Then log out and back in."))
         elif option and option.group(1).startswith(PLUS_ONLY_PREFIXES) and not has_plus:
             findings.append(Finding("error", "version", f"{option.group(1)} needs hyprland-plus, which is not the running compositor: {err}",
                                     "Install hyprland-plus (sudo hyprctl-lite install full), or move Plus settings behind the fork check (if hl.dsp.plus then ... end)."))
@@ -286,7 +286,7 @@ def gather(running: bool) -> list[Finding]:
         findings.append(Finding("info", "version", "Running " + halcyon_compositor.describe(info)))
         if has_plus and not tiles:
             findings.append(Finding("warning", "version", "This hyprland-plus build is from before Plus Tiles, so Move Edge, Fit to Neighbors and the plus:* settings are off",
-                                    "Update it: sudo hyprctl-lite install full, then log out and back in."))
+                                    "Update it: sudo hyprctl-lite install update, then log out and back in."))
         errors = _run(["hyprctl", "configerrors"]) or ""
         lines = [l for l in errors.splitlines() if l.strip() and l.strip() != "no errors"]
         findings += classify_config_errors(lines, has_plus, tiles)

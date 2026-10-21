@@ -13,7 +13,7 @@ import os
 import shutil
 import subprocess
 
-UPDATE_HINT = "update it with: sudo hyprctl-lite install full"
+UPDATE_HINT = "update it with: sudo hyprctl-lite install update"
 
 
 def _run(argv: list[str], timeout: float = 5) -> str | None:

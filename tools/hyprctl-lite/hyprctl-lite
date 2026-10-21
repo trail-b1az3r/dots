@@ -1,17 +1,26 @@
 #!/usr/bin/env bash
-# hyprctl-lite: installs or updates hyprland-plus, then removes itself.
+# hyprctl-lite: installs or updates hyprland-plus.
 #
-# It does one thing, and no other command works:
+# It has these commands, and no other works:
 #
-#   sudo hyprctl-lite install full
+#   sudo hyprctl-lite install full              install or update hyprland-plus, then remove hyprctl-lite
+#   sudo hyprctl-lite install update            update an installed hyprland-plus when its branch has moved on, and
+#                                               keep hyprctl-lite for next time. Nothing is built when it is up to date.
+#   sudo hyprctl-lite install update --force    build and install again even when it is up to date
+#        hyprctl-lite install update --check    only say whether an update is waiting (no sudo needed):
+#                                               exit 0 up to date, 10 an update is waiting, 1 not installed or unknown
 #
-# What that does, in order:
+# What install full does, in order:
 #   1. Clones hyprland-plus into ~/hyprland-plus of the account that ran sudo, or updates the clone.
 #   2. Installs the build dependencies listed in that repository's packaging/aur/PKGBUILD.
 #   3. Builds hyprland-plus as that account, not as root.
 #   4. Installs hyprland-plus to /usr/local. The packaged Hyprland stays installed (copied to /usr/bin/hyprland.official):
 #      other packages depend on it, and /usr/local/bin comes first in PATH.
 #   5. Removes this file. If any step fails, the file is kept so the command can be run again.
+#
+# install update first checks that hyprland-plus is installed in /usr/local (one from the AUR is updated by your AUR
+# helper instead), compares the commit it was built from with the clone after step 1, and stops there when they
+# match. Otherwise it lists the new commits and does steps 2 to 4, and keeps this file.
 #
 # Install it with one command (also in the dots README):
 #
@@ -21,11 +30,15 @@ set -euo pipefail
 REPO_URL="https://github.com/trail-b1az3r/hyprland-plus"
 REF="halcyon-0.56.2"
 # Bumped with each change, so an old downloaded copy is easy to spot in its output.
-LITE_VERSION="2026-10-14"
+LITE_VERSION="2026-10-21"
+# Where hyprland-plus is installed (the Makefile's PREFIX/bin). Only the tests change it.
+BIN_DIR="${HYPRCTL_LITE_BIN_DIR:-/usr/local/bin}"
 
 usage() {
     printf 'usage: sudo hyprctl-lite install full\n'
-    printf 'hyprctl-lite installs or updates hyprland-plus, then removes itself. It does nothing else.\n'
+    printf '       sudo hyprctl-lite install update [--force]\n'
+    printf '            hyprctl-lite install update --check\n'
+    printf 'hyprctl-lite installs or updates hyprland-plus. install full removes hyprctl-lite afterwards; install update keeps it.\n'
 }
 
 die() {
@@ -33,12 +46,66 @@ die() {
     exit 1
 }
 
-if [[ $# -ne 2 || "$1" != install || "$2" != full ]]; then
-    usage >&2
-    exit 1
+mode="" force=0 check=0
+case "$*" in
+    "install full") mode=full ;;
+    "install update") mode=update ;;
+    "install update --force") mode=update force=1 ;;
+    "install update --check") mode=update check=1 ;;
+    *)
+        usage >&2
+        exit 1
+        ;;
+esac
+
+# The first line of the installed hyprland-plus's --version, or nothing when it is not hyprland-plus.
+installed_version() {
+    local line
+    [[ -x "$BIN_DIR/Hyprland" ]] || return 0
+    line="$("$BIN_DIR/Hyprland" --version 2>/dev/null || true)"
+    line="${line%%$'\n'*}"
+    if [[ "${line,,}" == *hyprland-plus* ]]; then
+        printf '%s\n' "$line"
+    fi
+}
+
+# The commit the installed build came from: its version line names it, or the note the last install left.
+installed_commit() {
+    local line="$1" note="$2"
+    if [[ "$line" =~ commit\ ([0-9a-f]{7,40}) ]]; then
+        printf '%s\n' "${BASH_REMATCH[1]}"
+    elif [[ -s "$note" ]]; then
+        head -n 1 "$note"
+    fi
+}
+
+# Whether two hashes name the same commit, either one perhaps shortened.
+same_commit() {
+    [[ -n "$1" && -n "$2" ]] && { [[ "$1" == "$2"* ]] || [[ "$2" == "$1"* ]]; }
+}
+
+if (( check )); then
+    if command -v pacman >/dev/null 2>&1 && pacman -Q hyprland-plus >/dev/null 2>&1; then
+        printf 'hyprland-plus is installed from the AUR: your AUR helper updates it.\n'
+        exit 1
+    fi
+    line="$(installed_version)"
+    [[ -n "$line" ]] || { printf 'hyprland-plus is not installed. Install it: sudo hyprctl-lite install full\n'; exit 1; }
+    have="$(installed_commit "$line" "${XDG_STATE_HOME:-$HOME/.local/state}/halcyon/hyprland-plus-commit")"
+    head="$(git ls-remote "$REPO_URL" "refs/heads/$REF" 2>/dev/null | cut -c1-40 || true)"
+    if [[ -z "$have" || -z "$head" ]]; then
+        printf 'Could not tell: the installed commit is "%s", %s is at "%s".\n' "$have" "$REF" "$head"
+        exit 1
+    fi
+    if same_commit "$have" "$head"; then
+        printf 'hyprland-plus is up to date (%s).\n' "${have:0:9}"
+        exit 0
+    fi
+    printf 'An update is waiting: installed %s, %s is at %s. Run: sudo hyprctl-lite install update\n' "${have:0:9}" "$REF" "${head:0:9}"
+    exit 10
 fi
 
-[[ "$(id -u)" -eq 0 ]] || die "run it with sudo: sudo hyprctl-lite install full"
+[[ "$(id -u)" -eq 0 ]] || die "run it with sudo: sudo hyprctl-lite install $mode"
 
 user="${SUDO_USER:-}"
 [[ -n "$user" && "$user" != root ]] || die "run it with sudo from your own account, so hyprland-plus is built as you"
@@ -64,6 +131,17 @@ trap 'printf "\nhyprctl-lite: the install did not finish. hyprctl-lite is kept, 
 
 printf 'hyprctl-lite %s\n' "$LITE_VERSION"
 
+installed=""
+if [[ "$mode" == update ]]; then
+    if pacman -Q hyprland-plus >/dev/null 2>&1; then
+        die "hyprland-plus is installed from the AUR (package hyprland-plus): update it with your AUR helper, for example: paru -S hyprland-plus"
+    fi
+    installed_line="$(installed_version)"
+    [[ -n "$installed_line" ]] || die "hyprland-plus is not installed in $BIN_DIR yet. Install it: sudo hyprctl-lite install full"
+    installed="$(installed_commit "$installed_line" "$state/hyprland-plus-commit")"
+    printf 'Installed: %s%s\n' "$installed_line" "${installed:+ (commit ${installed:0:9})}"
+fi
+
 step "Fetching hyprland-plus ($REF) into $repo"
 if [[ -d "$repo/.git" ]]; then
     as_user git -C "$repo" fetch origin "$REF"
@@ -73,6 +151,19 @@ else
     as_user git clone --branch "$REF" "$REPO_URL" "$repo"
 fi
 as_user git -C "$repo" submodule update --init --recursive
+
+if [[ "$mode" == update ]]; then
+    latest="$(as_user git -C "$repo" rev-parse HEAD)"
+    if same_commit "$installed" "$latest" && (( ! force )); then
+        trap - ERR
+        printf '\nhyprland-plus is already up to date (%s). Nothing to build.\n' "${latest:0:9}"
+        exit 0
+    fi
+    if [[ -n "$installed" ]] && as_user git -C "$repo" cat-file -e "$installed^{commit}" 2>/dev/null; then
+        step "New in $REF since the installed build"
+        as_user git -C "$repo" log --oneline --no-decorate "$installed..$latest" | head -n 30
+    fi
+fi
 
 step "Installing the build dependencies (from packaging/aur/PKGBUILD)"
 mapfile -t deps < <(bash -c 'source "$1" >/dev/null 2>&1; printf "%s\n" "${depends[@]}" "${makedepends[@]}"' _ "$repo/packaging/aur/PKGBUILD")
@@ -96,12 +187,12 @@ if pacman -Q hyprland >/dev/null 2>&1; then
     [[ -e /usr/bin/hyprland.official ]] || cp /usr/bin/hyprland /usr/bin/hyprland.official
 fi
 
-step "Installing hyprland-plus to /usr/local"
+step "Installing hyprland-plus to $(dirname "$BIN_DIR")"
 make -C "$repo" install
-ln -sf /usr/local/bin/Hyprland /usr/local/bin/hyprland
+ln -sf "$BIN_DIR/Hyprland" "$BIN_DIR/hyprland"
 
-if [[ "$(command -v Hyprland)" != /usr/local/bin/Hyprland ]]; then
-    echo "warning: PATH finds $(command -v Hyprland) first, not /usr/local/bin/Hyprland. Put /usr/local/bin before /usr/bin in PATH." >&2
+if [[ "$(command -v Hyprland)" != "$BIN_DIR/Hyprland" ]]; then
+    echo "warning: PATH finds $(command -v Hyprland) first, not $BIN_DIR/Hyprland. Put $BIN_DIR before /usr/bin in PATH." >&2
 fi
 
 # pacman does not know about /usr/local. If nothing in pacman provides hyprland, install a small empty package that
@@ -109,7 +200,7 @@ fi
 # beside the fork. Remove it with: sudo pacman -R hyprland-plus-local
 if ! pacman -T hyprland >/dev/null 2>&1 && ! pacman -Q hyprland-plus-local >/dev/null 2>&1; then
     step "Telling pacman that hyprland-plus provides hyprland"
-    version_line="$(/usr/local/bin/Hyprland --version 2>/dev/null || true)"
+    version_line="$("$BIN_DIR/Hyprland" --version 2>/dev/null || true)"
     version_line="${version_line%%$'\n'*}"
     base="$(sed -nE 's/.*\(Hyprland ([0-9.]+)\).*/\1/p' <<<"$version_line" || true)"
     [[ -n "$base" ]] || base="$(sed -nE 's/^hyprland-plus ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' <<<"$version_line" || true)"
@@ -130,7 +221,11 @@ as_user mkdir -p "$state"
 printf '%s\n' "$commit" | as_user tee "$state/hyprland-plus-commit" >/dev/null
 
 trap - ERR
-step "Cleaning up hyprctl-lite"
-rm -f -- "$self"
-
-printf '\nInstalled hyprland-plus %s.\nhyprland-plus is not a command: it is Hyprland itself. Log out and back in and start Hyprland as usual,\nthen run hyprctl version to check that it says hyprland-plus.\n' "$commit"
+if [[ "$mode" == full ]]; then
+    step "Cleaning up hyprctl-lite"
+    rm -f -- "$self"
+    printf '\nInstalled hyprland-plus %s.\n' "$commit"
+else
+    printf '\nUpdated hyprland-plus to %s. hyprctl-lite stays installed: run sudo hyprctl-lite install update again for the next update.\n' "$commit"
+fi
+printf 'hyprland-plus is not a command: it is Hyprland itself. Log out and back in and start Hyprland as usual,\nthen run hyprctl version to check that it says hyprland-plus.\n'
