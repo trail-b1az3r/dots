@@ -12,6 +12,7 @@ import "RevolverStyles.js" as Styles
  *   glass     a faceted glass disc with cut-gem chambers
  *   hyperneo  a squircle with squircle chambers, like app icons
  *   hsr       a gold rail with four-pointed star chambers
+ *   icey      After ICEY's cyan HUD: a reticle with a scanning arc, hexagonal ice cells, a snowflake hub
  *
  * Only the look lives here. RevolverWidget turns the rotor, picks the live chamber and fires, and passes the
  * colours in, so this file needs nothing but QtQuick and can be drawn on its own.
@@ -26,7 +27,12 @@ Item {
     property color colChamber: "#16111c"
     property color colGlow: "#ff4940"
     property color colHot: "#ffe2d6"
+    /** A second accent, for the few gold marks of the After ICEY reticle. */
+    property color colAccent2: "#ffd86b"
     property string fontFamily: ""
+    /** How many screen pixels one stage pixel covers (the widget's scale times the screen's pixel ratio). The drum is
+     *  drawn into a texture this much larger, so it stays sharp when the widget is scaled up. */
+    property real renderScale: 1
 
     property var chambers: []
     property int chamberCount: 8
@@ -54,6 +60,7 @@ Item {
 
     readonly property real c: Styles.CENTRE
     readonly property bool redSun: style.id === "red-sun"
+    readonly property bool hud: style.drum === "hud"
 
     width: 230
     height: 230
@@ -84,6 +91,7 @@ Item {
         layer.enabled: true
         layer.samples: 4
         layer.smooth: true
+        layer.textureSize: Qt.size(Math.ceil(width * Math.max(1, drum.renderScale)), Math.ceil(height * Math.max(1, drum.renderScale)))
 
         Item {
             id: stage
@@ -184,6 +192,62 @@ Item {
                 }
             }
 
+            // After ICEY: a dark, see-through lens with a cyan rim, a fine tick ring and a targeting frame round it.
+            Shape {
+                anchors.fill: parent
+                visible: drum.hud
+                ShapePath {
+                    strokeWidth: 1.4
+                    strokeColor: drum.withAlpha(drum.colAccent, 0.85)
+                    fillGradient: RadialGradient {
+                        centerX: drum.c; centerY: drum.c
+                        centerRadius: 108
+                        focalX: drum.c; focalY: drum.c - 24
+                        GradientStop { position: 0.0; color: drum.withAlpha(Qt.lighter(drum.colChamber, 1.5), 0.78) }
+                        GradientStop { position: 0.8; color: drum.withAlpha(drum.colChamber, 0.84) }
+                        GradientStop { position: 0.97; color: drum.withAlpha(drum.colAccent, 0.22) }
+                        GradientStop { position: 1.0; color: drum.withAlpha(drum.colAccent, 0.05) }
+                    }
+                    PathSvg { path: Styles.circle(drum.c, drum.c, 108) }
+                }
+                // Minor ticks, and longer ones every 45 degrees.
+                ShapePath {
+                    strokeWidth: 0.8
+                    strokeColor: drum.withAlpha(drum.colAccent, 0.45)
+                    fillColor: "transparent"
+                    PathSvg { path: Styles.ticks(drum.c, drum.c, 101, 104.5, 72, 0) }
+                }
+                ShapePath {
+                    strokeWidth: 1.6
+                    strokeColor: drum.withAlpha(drum.colOn, 0.75)
+                    fillColor: "transparent"
+                    PathSvg { path: Styles.ticks(drum.c, drum.c, 97, 105, 8, 22.5) }
+                }
+                // The outer ring, broken into four arcs, like a HUD's.
+                ShapePath {
+                    strokeWidth: 1
+                    strokeColor: drum.withAlpha(drum.colOn, 0.5)
+                    fillColor: "transparent"
+                    capStyle: ShapePath.FlatCap
+                    PathSvg { path: Styles.arc(drum.c, drum.c, 114, -80, -10) + " " + Styles.arc(drum.c, drum.c, 114, 10, 80) + " " + Styles.arc(drum.c, drum.c, 114, 100, 170) + " " + Styles.arc(drum.c, drum.c, 114, 190, 260) }
+                }
+                // The targeting frame's corners.
+                ShapePath {
+                    strokeWidth: 2
+                    strokeColor: drum.withAlpha(drum.colAccent, 0.95)
+                    fillColor: "transparent"
+                    capStyle: ShapePath.SquareCap
+                    joinStyle: ShapePath.MiterJoin
+                    PathSvg { path: Styles.brackets(drum.c, drum.c, 118, 16) }
+                }
+                // Gold markers left and right, where the outer ring breaks.
+                ShapePath {
+                    strokeWidth: -1
+                    fillColor: drum.colAccent2
+                    PathSvg { path: Styles.diamond(drum.c - 114, drum.c, 4) + " " + Styles.diamond(drum.c + 114, drum.c, 4) }
+                }
+            }
+
             // Red Sun on its own: the sun's disc inside the ring, dark in the middle and glowing towards the rim,
             // like the painted one.
             Shape {
@@ -257,6 +321,34 @@ Item {
                         dashPattern: [1.2, 2.4]
                         fillColor: "transparent"
                         PathSvg { path: Styles.circle(drum.c, drum.c, 101) }
+                    }
+                }
+
+                // After ICEY: a dashed inner ring, and the scanning arc on the rim, bright while the drum turns.
+                Shape {
+                    anchors.fill: parent
+                    visible: drum.hud
+                    ShapePath {
+                        strokeWidth: 1
+                        strokeColor: drum.withAlpha(drum.colAccent, 0.4)
+                        strokeStyle: ShapePath.DashLine
+                        dashPattern: [4, 3]
+                        fillColor: "transparent"
+                        PathSvg { path: Styles.circle(drum.c, drum.c, 46) }
+                    }
+                    ShapePath {
+                        strokeWidth: 8
+                        strokeColor: drum.withAlpha(drum.colAccent, 0.12 + 0.2 * drum.spinSpeed)
+                        fillColor: "transparent"
+                        capStyle: ShapePath.FlatCap
+                        PathSvg { path: Styles.arc(drum.c, drum.c, 108, -130, -50) }
+                    }
+                    ShapePath {
+                        strokeWidth: 2.4
+                        strokeColor: drum.withAlpha(Qt.lighter(drum.colAccent, 1.3), 0.65 + 0.35 * drum.spinSpeed)
+                        fillColor: "transparent"
+                        capStyle: ShapePath.FlatCap
+                        PathSvg { path: Styles.arc(drum.c, drum.c, 108, -130, -50) + " " + Styles.arc(drum.c, drum.c, 108, 50, 70) }
                     }
                 }
 
@@ -407,6 +499,7 @@ Item {
                                     case "gem": return Styles.gem(h, h, r);
                                     case "squircle": return Styles.squircle(h, h, r, 4.6);
                                     case "star": return Styles.sparkle(h, h, r);
+                                    case "hex": return Styles.polygon(h, h, r, 6, 0);
                                     default: return Styles.circle(h, h, r);
                                     }
                                 }
@@ -415,6 +508,7 @@ Item {
                                 ShapePath {
                                     strokeWidth: drum.redSun ? -1 : 1
                                     strokeColor: drum.style.chamber === "gem" ? drum.withAlpha("#ffffff", 0.55)
+                                               : drum.style.chamber === "hex" ? drum.withAlpha(drum.colAccent, slot.live ? 1 : 0.8)
                                                : drum.withAlpha(Qt.darker(chamberShape.fill, 1.4), 0.9)
                                     fillGradient: LinearGradient {
                                         x1: 0; y1: 0; x2: slot.size * 0.3; y2: slot.size
@@ -435,6 +529,14 @@ Item {
                                         path: drum.style.chamber === "gem" ? Styles.gemTable(chamberShape.h, chamberShape.h, chamberShape.h - 1)
                                             : Styles.arc(chamberShape.h, chamberShape.h, chamberShape.h - 4, -150, -40)
                                     }
+                                }
+                                // After ICEY: a second, inner cell edge in cyan, like frost on the glass.
+                                ShapePath {
+                                    strokeWidth: 1
+                                    strokeColor: drum.style.chamber === "hex" ? drum.withAlpha(slot.live ? "#ffffff" : drum.colAccent, slot.live ? 0.8 : 0.55)
+                                                                             : "transparent"
+                                    fillColor: "transparent"
+                                    PathSvg { path: Styles.polygon(chamberShape.h, chamberShape.h, chamberShape.h - 5, 6, 0) }
                                 }
                             }
 
@@ -467,7 +569,8 @@ Item {
                 visible: drum.style.hub !== "void"
                 ShapePath {
                     strokeWidth: 1.2
-                    strokeColor: drum.withAlpha(drum.colOn, drum.style.hub === "prism" ? 0.6 : 0.35)
+                    strokeColor: drum.style.hub === "crystal" ? drum.withAlpha(drum.colAccent, 0.9)
+                               : drum.withAlpha(drum.colOn, drum.style.hub === "prism" ? 0.6 : 0.35)
                     fillGradient: RadialGradient {
                         centerX: drum.c - 6; centerY: drum.c - 8
                         centerRadius: 30
@@ -481,6 +584,7 @@ Item {
                             case "squircle": return Styles.squircle(drum.c, drum.c, 24, 4.6);
                             case "prism": return Styles.gem(drum.c, drum.c, 22);
                             case "sparkle": return Styles.sparkle(drum.c, drum.c, 30);
+                            case "crystal": return Styles.polygon(drum.c, drum.c, 24, 6, 30);
                             default: return Styles.circle(drum.c, drum.c, 23);
                             }
                         }
@@ -492,8 +596,17 @@ Item {
                     PathSvg {
                         path: drum.style.hub === "sparkle" ? Styles.sparkle(drum.c, drum.c, 11)
                             : drum.style.hub === "prism" ? Styles.gemTable(drum.c, drum.c, 22)
+                            : drum.style.hub === "crystal" ? Styles.polygon(drum.c, drum.c, 4, 6, 30)
                             : Styles.circle(drum.c, drum.c, 12)
                     }
+                }
+                // After ICEY: a snowflake on the hub.
+                ShapePath {
+                    strokeWidth: drum.style.hub === "crystal" ? 1.6 : 0
+                    strokeColor: drum.style.hub === "crystal" ? Qt.lighter(drum.colAccent, 1.25) : "transparent"
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    PathSvg { path: Styles.snowflake(drum.c, drum.c, 17) }
                 }
             }
 
@@ -503,7 +616,7 @@ Item {
                 id: hammer
                 objectName: "hammer"
                 x: drum.c - 9
-                y: drum.style.drum === "ring" ? -6 : (drum.style.drum === "rail" ? -18 : -14)
+                y: drum.style.drum === "ring" ? -6 : (drum.style.drum === "rail" ? -18 : drum.hud ? -20 : -14)
                 width: 18
                 height: 26
                 transformOrigin: Item.Bottom
@@ -525,6 +638,7 @@ Item {
                                 case "shard": return "M 9 26 L 2 6 L 11 0 L 16 10 Z";
                                 case "pill": return Styles.squircle(9, 13, 8, 4.6);
                                 case "sparkle": return Styles.sparkle(9, 13, 10);
+                                case "chevron": return "M 1 2 L 9 9 L 17 2 L 17 13 L 9 24 L 1 13 Z";
                                 default: return "M 3 26 L 3 4 Q 3 1 6 1 L 12 1 Q 15 1 15 4 L 15 26 Z";
                                 }
                             }

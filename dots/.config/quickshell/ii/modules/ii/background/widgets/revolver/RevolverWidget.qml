@@ -41,7 +41,7 @@ AbstractBackgroundWidget {
     readonly property real stageHeight: 268
     readonly property string tool: `${FileUtils.trimFileProtocol(Directories.config)}/hypr/hyprland/halcyon/halcyon-theme`
 
-    readonly property var style: Styles.styleFor(Config.options.halcyon.theme)
+    readonly property var style: Styles.revolverStyleFor(Config.options.halcyon.theme)
     readonly property bool redSun: style.id === "red-sun"
 
     /** The ring painted in the Red Sun wallpaper, in this widget's parent's coordinates: {x, y, r}, or null. */
@@ -415,6 +415,8 @@ AbstractBackgroundWidget {
                     colChamber: root.colChamber
                     colGlow: root.colGlow
                     colHot: root.colHot
+                    colAccent2: Appearance.colors.colTertiary ?? "#ffd86b"
+                    renderScale: root.scaleFactor * (root.QsWindow?.window?.devicePixelRatio ?? 1)
                     fontFamily: Appearance.font.family.main
                     chambers: root.chambers
                     chamberCount: root.chamberCount

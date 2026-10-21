@@ -5,6 +5,7 @@ import Quickshell.Io
 import qs.modules.common
 import "../../dots/.config/quickshell/ii/modules/ii/background/widgets/revolver"
 import "../../dots/.config/quickshell/ii/modules/ii/background/widgets"
+import "../../dots/.config/quickshell/ii/modules/ii/background/widgets/revolver/RevolverStyles.js" as Styles
 
 // The revolver, driven with real mouse drags against mocked shell modules (tests/qml/mock).
 Item {
@@ -188,14 +189,31 @@ Item {
         }
 
         function test_every_style_draws() {
-            for (const id of ["", "red-sun", "shattered-glass", "fractured-glass", "hyperneo", "hsr"]) {
-                const drum = createTemporaryObject(drumComponent, root, { spinning: true, spinSpeed: 0.9, heat: 1 });
+            for (const id of ["", "red-sun", "shattered-glass", "fractured-glass", "hyperneo", "hsr", "after-icey", "manga-ink"]) {
+                const drum = createTemporaryObject(drumComponent, root, { style: Styles.revolverStyleFor(id), spinning: true,
+                                                                          spinSpeed: 0.9, heat: 1, liveIndex: 1 });
                 verify(drum !== null, id);
                 for (const kind of ["disc", "card"]) {
                     const plate = createTemporaryObject(plateComponent, root, { themeId: id, kind: kind });
                     verify(plate !== null, id + " " + kind);
                 }
             }
+        }
+
+        function test_after_icey_has_a_revolver_of_its_own() {
+            compare(Styles.revolverStyleFor("after-icey").id, "icey");
+            compare(Styles.revolverStyleFor("after-icey").chamber, "hex");
+            // Only the revolver: the other widgets keep the anime themes' keycaps.
+            compare(Styles.styleFor("after-icey").id, "keycap");
+            compare(Styles.lookFor("after-icey").id, "keycap");
+            compare(Styles.revolverStyleFor("manga-ink").id, "keycap");
+        }
+
+        function test_drawn_sharp_when_scaled() {
+            const drum = createTemporaryObject(drumComponent, root, { renderScale: 2.5 });
+            const surface = drum.hammerItem.parent.parent;
+            compare(surface.layer.textureSize.width, Math.ceil(surface.width * 2.5));
+            compare(surface.layer.textureSize.height, Math.ceil(surface.height * 2.5));
         }
     }
 }

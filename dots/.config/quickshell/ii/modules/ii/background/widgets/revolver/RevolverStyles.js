@@ -22,7 +22,12 @@ var STYLES = {
     "keycap":  { id: "keycap", drum: "squircle", plate: "keycap", chamber: "squircle", chamberSize: 48, orbit: 79, names: true,
                  hub: "squircle", hammer: "pill", glow: 0.45, waves: 0, statusLabel: true },
     "hsr":     { id: "hsr", drum: "rail", chamber: "star", chamberSize: 52, orbit: 80, names: true,
-                 hub: "sparkle", hammer: "sparkle", glow: 0.6, waves: 0, statusLabel: true }
+                 hub: "sparkle", hammer: "sparkle", glow: 0.6, waves: 0, statusLabel: true },
+    // After ICEY, the revolver only: the game's cyan HUD over the dark navy of its wallpaper. A targeting reticle
+    // (a fine tick ring, a scanning arc that runs as it turns, corner brackets, gold markers), hexagonal ice cells
+    // for chambers, a snowflake hub and a chevron for the hammer.
+    "icey":    { id: "icey", drum: "hud", chamber: "hex", chamberSize: 48, orbit: 80, names: true,
+                 hub: "crystal", hammer: "chevron", glow: 0.75, waves: 0, statusLabel: true }
 };
 
 function styleFor(themeId) {
@@ -43,6 +48,49 @@ function styleFor(themeId) {
     default:
         return STYLES["default"];
     }
+}
+
+// The revolver's own look: the theme's (styleFor), except where a theme has a revolver of its own.
+function revolverStyleFor(themeId) {
+    switch (themeId) {
+    case "after-icey":
+        return STYLES["icey"];
+    default:
+        return styleFor(themeId);
+    }
+}
+
+// The four brackets of a targeting frame round a square of half-side h, each arm len long.
+function brackets(cx, cy, h, len) {
+    var d = "";
+    var corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+    for (var i = 0; i < 4; i++) {
+        var sx = corners[i][0], sy = corners[i][1];
+        var x = cx + sx * h, y = cy + sy * h;
+        d += "M " + f(x - sx * len) + " " + f(y) + " L " + f(x) + " " + f(y) + " L " + f(x) + " " + f(y - sy * len) + " ";
+    }
+    return d;
+}
+
+// A small diamond, for the reticle's markers.
+function diamond(cx, cy, r) {
+    return closedPoly([[cx, cy - r], [cx + r * 0.7, cy], [cx, cy + r], [cx - r * 0.7, cy]]);
+}
+
+// A snowflake's six arms, each with two small branches, as one path of strokes.
+function snowflake(cx, cy, r) {
+    var d = "";
+    for (var i = 0; i < 6; i++) {
+        var t = (i * 60 - 90) * Math.PI / 180;
+        var ex = cx + r * Math.cos(t), ey = cy + r * Math.sin(t);
+        d += "M " + f(cx) + " " + f(cy) + " L " + f(ex) + " " + f(ey) + " ";
+        var bx = cx + r * 0.6 * Math.cos(t), by = cy + r * 0.6 * Math.sin(t);
+        for (var s = -1; s <= 1; s += 2) {
+            var u = t + s * 0.75;
+            d += "M " + f(bx) + " " + f(by) + " L " + f(bx + r * 0.3 * Math.cos(u)) + " " + f(by + r * 0.3 * Math.sin(u)) + " ";
+        }
+    }
+    return d;
 }
 
 // How the wallpaper widgets draw their insides in each theme: the gauges, the spectrum's bars, progress lines,
