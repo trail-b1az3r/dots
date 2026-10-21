@@ -382,6 +382,22 @@ opens (at most nine seconds), takes no clicks or keys, and Settings > Revolver >
 
 ![The clock face and weather card in each theme](docs/assets/widget-plates.jpg)
 
+### More desktop widgets
+
+Settings > Background has a section for each. They are all off until you turn them on, and each one can be dragged
+or placed in the least or most busy part of the wallpaper.
+
+- **Audio visualizer**: the spectrum of what is playing, from cava (already a dependency), in the theme's two accent
+  colours. Four styles: bars, mirror, wave and ring. It can sit on a card in the theme's shape, fade out while
+  nothing plays, and takes the number of bars and the frame rate (30 by default; cava only runs while the widget is
+  shown, and one cava serves everything that draws a spectrum).
+  **As a window (superposition)** shows it as a window instead: with hyprland-plus the rule on its title
+  (`app_rules.lua`) keeps it tiled on the thin screen-edge strip, drawn above fullscreen windows, so the music shows
+  over a game or a video. On stock Hyprland it is an ordinary window. Close the window to turn the widget off.
+- **System**: processor, memory and swap as three rings on a card in the theme's shape.
+- **Now playing**: the cover, title and artist of the active player, how far along it is, and previous, play/pause
+  and next. It fades away when no player is running.
+
 **Shattered Glass at `full`** runs a screen shader
 (`themes/shaders/shattered-glass.frag`) that treats the screen as a
 pane of glass:

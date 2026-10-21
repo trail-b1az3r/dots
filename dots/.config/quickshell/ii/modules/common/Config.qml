@@ -281,6 +281,36 @@ Singleton {
                         property real x: 400
                         property real y: 100
                     }
+                    // The audio visualizer: the spectrum of what plays, from cava, as a desktop widget or as a window that
+                    // hyprland-plus keeps on the screen-edge strip (superposition), above fullscreen windows too.
+                    property JsonObject visualizer: JsonObject {
+                        property bool enable: false
+                        property string placementStrategy: "free" // "free", "leastBusy", "mostBusy"
+                        property real x: 120
+                        property real y: 760
+                        property string style: "bars" // "bars", "mirror", "wave", "ring"
+                        property int bars: 48
+                        property int fps: 30 // 10-60; every frame is a cava read and a redraw
+                        property int width: 520
+                        property int height: 150
+                        property bool panel: false // a card behind it, in the theme's shape
+                        property bool hideWhenSilent: false // fades out while nothing plays
+                        property bool asWindow: false // a window (kept on the superposition strip by hyprland-plus) instead of a desktop widget
+                    }
+                    // Processor, memory and swap as three rings.
+                    property JsonObject system: JsonObject {
+                        property bool enable: false
+                        property string placementStrategy: "free"
+                        property real x: 120
+                        property real y: 120
+                    }
+                    // The cover, title, artist and transport buttons of whatever is playing.
+                    property JsonObject nowPlaying: JsonObject {
+                        property bool enable: false
+                        property string placementStrategy: "free"
+                        property real x: 120
+                        property real y: 300
+                    }
                     // The revolver: a drum of installed games, on every theme (Red Sun's ring is one).
                     // Games are read from local files only, by halcyon-theme.
                     property JsonObject revolver: JsonObject {
