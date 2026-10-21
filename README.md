@@ -324,9 +324,22 @@ halcyon auto location 51.51,-0.13   # set the location (clear: back to the weath
 
 The **sun dial** in the bar, beside the clock, shows where the sun is in today's sky. Hover it for sunrise,
 sunset, the length of the day and the next theme change your schedules will make ("Red Sun, today at 19:12 (30 min
-before sunset), in 2 h 10 min"); click it to open Settings. `bar.sunDial: false` in the shell config hides it, and
-`halcyon auto day` prints the same in a terminal. In the Halcyon themes the bar's groups are also edged in the
+before sunset), in 2 h 10 min"); click it to open Settings. After sunset it turns upside down and shows the moon in tonight's phase (the popup
+names it). `bar.sunDial: false` in the shell config hides it, and `halcyon auto day` prints the same in a terminal. In the Halcyon themes the bar's groups are also edged in the
 theme's own light: ember in Red Sun, gold in Star Rail, frost in the glass themes.
+
+### When the theme switches
+
+**Settings > Halcyon > When the theme switches** makes rules that run each time the theme switches to, or away
+from, a theme (or any theme, or none): turn a desktop widget on or off (the revolver off for After ICEY), change the
+icon theme (GTK, Qt and KDE apps), set the effects level, change where new windows open, change any shell setting,
+or run a command of your own. A rule for switching *to* a theme can put things back when the theme switches away.
+
+```sh
+halcyon rules                         # the rules, in the order they run
+halcyon rules icons                   # the icon themes installed
+halcyon rules run to after-icey       # run a theme's rules now, without switching
+```
 
 ### Effects
 

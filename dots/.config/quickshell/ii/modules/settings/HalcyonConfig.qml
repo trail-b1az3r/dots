@@ -24,6 +24,7 @@ ContentPage {
     Component.onCompleted: {
         readyTimer.start();
         customList.running = true;
+        iconThemesProc.running = true;
     }
 
     Timer {
@@ -154,6 +155,107 @@ ContentPage {
         { id: "after-icey", name: "After ICEY", icon: "ac_unit" },
         { id: "manga-ink", name: "Manga Ink", icon: "draw" }
     ]
+    // ── When the theme switches: rules, made below and run by halcyon-theme when a theme is applied or turned off ──
+    property string ruleTheme: "after-icey"
+    property string ruleWhen: "to"
+    property string ruleAction: "widget"
+    property string ruleTarget: "revolver"
+    property string ruleValue: "off"
+    property bool ruleRestore: true
+    property var iconThemes: []
+
+    Process {
+        id: iconThemesProc
+        command: [page.tool, "rules", "icons", "--json"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    page.iconThemes = (JSON.parse(this.text) ?? {}).themes ?? [];
+                } catch (error) {
+                    page.iconThemes = [];
+                }
+            }
+        }
+    }
+
+    readonly property var ruleThemeChoices: [
+        { displayName: Translation.tr("Any theme"), value: "*" },
+        { displayName: Translation.tr("No theme (off)"), value: "off" },
+        ...page.builtinThemes.map(t => ({ displayName: t.name, value: t.id })),
+        ...page.customThemes.map(t => ({ displayName: t.name, value: t.id }))
+    ]
+    readonly property var ruleActionChoices: [
+        { displayName: Translation.tr("Turn a desktop widget on or off"), value: "widget" },
+        { displayName: Translation.tr("Change the icon theme"), value: "icons" },
+        { displayName: Translation.tr("Set the effects level"), value: "effects" },
+        { displayName: Translation.tr("Change where new windows open"), value: "placement" },
+        { displayName: Translation.tr("Change a shell setting"), value: "setting" },
+        { displayName: Translation.tr("Run a command"), value: "command" }
+    ]
+    readonly property var ruleWidgetChoices: [
+        { displayName: Translation.tr("Revolver"), value: "revolver" },
+        { displayName: Translation.tr("Clock"), value: "clock" },
+        { displayName: Translation.tr("Weather"), value: "weather" },
+        { displayName: Translation.tr("Visualizer"), value: "visualizer" },
+        { displayName: Translation.tr("System"), value: "system" },
+        { displayName: Translation.tr("Now playing"), value: "nowPlaying" },
+        { displayName: Translation.tr("Lyrics"), value: "lyrics" }
+    ]
+    readonly property var ruleValueChoices: ({
+        "widget": [{ displayName: Translation.tr("Off"), value: "off" }, { displayName: Translation.tr("On"), value: "on" }],
+        "effects": [{ displayName: Translation.tr("Theme default"), value: "default" }, { displayName: Translation.tr("Full"), value: "full" },
+                    { displayName: Translation.tr("Light"), value: "light" }, { displayName: Translation.tr("Off"), value: "off" }],
+        "placement": [{ displayName: Translation.tr("Golden ratio"), value: "golden" }, { displayName: Translation.tr("Golden ratio plus"), value: "golden-plus" },
+                      { displayName: Translation.tr("Golden ratio plus (dwindle)"), value: "golden-plus-dwindle" },
+                      { displayName: Translation.tr("Halves, by the pointer"), value: "cursor" }, { displayName: Translation.tr("Stacked"), value: "stacked" },
+                      { displayName: Translation.tr("Side by side"), value: "side-by-side" }, { displayName: Translation.tr("Mondrian"), value: "mondrian" }],
+        "icons": page.iconThemes.map(t => ({ displayName: t.name, value: t.id }))
+    })
+
+    function choiceName(list, value) {
+        return (list.find(item => item.value === value) ?? { displayName: value }).displayName;
+    }
+
+    function setRuleAction(action) {
+        page.ruleAction = action;
+        page.ruleTarget = action === "widget" ? "revolver" : "";
+        const values = page.ruleValueChoices[action];
+        page.ruleValue = values && values.length > 0 ? values[0].value : "";
+        if (action === "icons")
+            iconThemesProc.running = true;
+    }
+
+    function ruleText(rule) {
+        const theme = page.choiceName(page.ruleThemeChoices, rule.theme);
+        const head = rule.when === "from" ? Translation.tr("Leaving %1:").arg(theme) : Translation.tr("Switching to %1:").arg(theme);
+        let what = "";
+        switch (rule.action) {
+        case "widget": what = Translation.tr("%1 %2").arg(page.choiceName(page.ruleWidgetChoices, rule.target)).arg(rule.value === "on" ? Translation.tr("on") : Translation.tr("off")); break;
+        case "icons": what = Translation.tr("icons: %1").arg(rule.value); break;
+        case "effects": what = Translation.tr("effects: %1").arg(page.choiceName(page.ruleValueChoices.effects, rule.value)); break;
+        case "placement": what = Translation.tr("new windows: %1").arg(page.choiceName(page.ruleValueChoices.placement, rule.value)); break;
+        case "setting": what = `${rule.target} = ${rule.value}`; break;
+        case "command": what = Translation.tr("run %1").arg(rule.value); break;
+        }
+        return `${head} ${what}` + (rule.restore && rule.when === "to" ? Translation.tr(" (put back after)") : "");
+    }
+
+    readonly property bool ruleCanAdd: page.ruleValue.trim() !== "" && (page.ruleAction !== "setting" || /^[A-Za-z][A-Za-z0-9]*(\.[A-Za-z][A-Za-z0-9]*)*$/.test(page.ruleTarget))
+
+    function addRule() {
+        if (!page.ruleCanAdd)
+            return;
+        const rule = { theme: page.ruleTheme, when: page.ruleWhen, action: page.ruleAction, target: page.ruleTarget,
+                       value: page.ruleValue.trim(), restore: page.ruleWhen === "to" && page.ruleAction !== "command" && page.ruleRestore };
+        Config.options.halcyon.switchRules = Config.options.halcyon.switchRules.concat([rule]);
+    }
+
+    function removeRule(index) {
+        const rules = Config.options.halcyon.switchRules.slice();
+        rules.splice(index, 1);
+        Config.options.halcyon.switchRules = rules;
+    }
+
     property bool showHidden: false
     property string openThemeMenu: "" // Id of the row whose menu is dropped down
     property string pendingDelete: "" // Id of the custom theme waiting for a second click on Delete
@@ -733,6 +835,162 @@ ContentPage {
             color: Appearance.colors.colSubtext
             font.pixelSize: Appearance.font.pixelSize.smallie
             text: Translation.tr("Full adds screen effects that follow the pointer. Hyprland then redraws every frame, which uses noticeably more GPU; Light keeps the glass look without that cost.")
+        }
+    }
+
+    ContentSection {
+        icon: "swap_horiz"
+        title: Translation.tr("When the theme switches")
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colSubtext
+            font.pixelSize: Appearance.font.pixelSize.smallie
+            text: Translation.tr("Changes made each time the theme switches to, or away from, a theme: the revolver off for After ICEY, other icons for Red Sun... They run in this order, when a theme is applied or turned off.")
+        }
+
+        Repeater {
+            model: Config.options.halcyon.switchRules
+
+            delegate: Rectangle {
+                id: ruleRow
+                required property var modelData
+                required property int index
+                Layout.fillWidth: true
+                implicitHeight: ruleRowLayout.implicitHeight + 12
+                radius: Appearance.rounding.small
+                color: Appearance.colors.colLayer2
+
+                RowLayout {
+                    id: ruleRowLayout
+                    anchors.fill: parent
+                    anchors.margins: 6
+                    anchors.leftMargin: 12
+                    MaterialSymbol {
+                        text: ruleRow.modelData.when === "from" ? "logout" : "login"
+                        iconSize: Appearance.font.pixelSize.larger
+                        color: Appearance.colors.colPrimary
+                    }
+                    StyledText {
+                        Layout.fillWidth: true
+                        wrapMode: Text.Wrap
+                        text: page.ruleText(ruleRow.modelData)
+                    }
+                    RippleButtonWithIcon {
+                        buttonRadius: Appearance.rounding.full
+                        materialIcon: "delete"
+                        mainText: Translation.tr("Remove")
+                        onClicked: page.removeRule(ruleRow.index)
+                    }
+                }
+            }
+        }
+
+        StyledText {
+            visible: Config.options.halcyon.switchRules.length === 0
+            Layout.leftMargin: 10
+            color: Appearance.colors.colSubtext
+            text: Translation.tr("No rules yet.")
+        }
+
+        ContentSubsection {
+            title: Translation.tr("Add a rule")
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 6
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+                    StyledComboBox {
+                        buttonIcon: "palette"
+                        textRole: "displayName"
+                        model: page.ruleThemeChoices
+                        currentIndex: Math.max(0, model.findIndex(item => item.value === page.ruleTheme))
+                        onActivated: index => page.ruleTheme = model[index].value
+                    }
+                    StyledComboBox {
+                        buttonIcon: page.ruleWhen === "from" ? "logout" : "login"
+                        textRole: "displayName"
+                        model: [{ displayName: Translation.tr("Switching to it"), value: "to" },
+                                { displayName: Translation.tr("Switching away from it"), value: "from" }]
+                        currentIndex: page.ruleWhen === "from" ? 1 : 0
+                        onActivated: index => page.ruleWhen = model[index].value
+                    }
+                }
+
+                StyledComboBox {
+                    buttonIcon: "bolt"
+                    textRole: "displayName"
+                    model: page.ruleActionChoices
+                    currentIndex: Math.max(0, model.findIndex(item => item.value === page.ruleAction))
+                    onActivated: index => page.setRuleAction(model[index].value)
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+                    StyledComboBox {
+                        visible: page.ruleAction === "widget"
+                        buttonIcon: "widgets"
+                        textRole: "displayName"
+                        model: page.ruleWidgetChoices
+                        currentIndex: Math.max(0, model.findIndex(item => item.value === page.ruleTarget))
+                        onActivated: index => page.ruleTarget = model[index].value
+                    }
+                    StyledComboBox {
+                        visible: (page.ruleValueChoices[page.ruleAction] ?? []).length > 0
+                        buttonIcon: "tune"
+                        textRole: "displayName"
+                        model: page.ruleValueChoices[page.ruleAction] ?? []
+                        currentIndex: Math.max(0, model.findIndex(item => item.value === page.ruleValue))
+                        onActivated: index => page.ruleValue = model[index].value
+                    }
+                    MaterialTextArea {
+                        visible: page.ruleAction === "setting"
+                        Layout.fillWidth: true
+                        placeholderText: Translation.tr("Setting, e.g. bar.vertical")
+                        text: page.ruleTarget
+                        onTextChanged: page.ruleTarget = text.trim()
+                    }
+                    MaterialTextArea {
+                        visible: page.ruleAction === "setting" || page.ruleAction === "command"
+                        Layout.fillWidth: true
+                        placeholderText: page.ruleAction === "command" ? Translation.tr("Command, e.g. notify-send hello") : Translation.tr("Value, e.g. true")
+                        text: page.ruleValue
+                        onTextChanged: page.ruleValue = text
+                    }
+                }
+
+                StyledText {
+                    visible: page.ruleAction === "icons" && page.iconThemes.length === 0
+                    Layout.leftMargin: 10
+                    color: Appearance.colors.colSubtext
+                    text: Translation.tr("No icon themes found. Install one (papirus-icon-theme, for one), then come back.")
+                }
+
+                ConfigSwitch {
+                    visible: page.ruleWhen === "to" && page.ruleAction !== "command"
+                    buttonIcon: "undo"
+                    text: Translation.tr("Put it back when switching away")
+                    checked: page.ruleRestore
+                    onCheckedChanged: page.ruleRestore = checked
+                }
+
+                RowLayout {
+                    RippleButtonWithIcon {
+                        buttonRadius: Appearance.rounding.full
+                        materialIcon: "add"
+                        mainText: Translation.tr("Add rule")
+                        enabled: page.ruleCanAdd
+                        opacity: enabled ? 1 : 0.5
+                        onClicked: page.addRule()
+                    }
+                }
+            }
         }
     }
 

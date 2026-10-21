@@ -88,6 +88,7 @@ Singleton {
                 property list<string> themeOrder: [] // Built-in theme ids in the order Settings lists them; the rest follow in the default order
                 property list<string> hiddenThemes: [] // Built-in theme ids hidden from Settings; "Show hidden themes" brings them back
                 property list<string> collapsedSections: [] // Settings sections folded shut, by title; a click on the title opens them again
+                property list<var> switchRules: [] // When the theme switches (Settings > Halcyon): { theme ("*" any, "off"), when "to"/"from", action "widget"/"icons"/"effects"/"placement"/"setting"/"command", target, value, restore }
                 property list<var> autoApply: [] // Schedules from Settings: { theme, time "HH:MM" or "sunset"/"sunrise" with an optional offset in minutes ("sunset-30"), days (ISO weekdays, empty for every day), weather }
                 property string location: "" // "lat,lon" for sunset and sunrise schedules; "" uses the bar's weather location
                 property bool customThemeHelpDismissed: false // "Do not show again" on the question asked after making a custom theme

@@ -1264,8 +1264,11 @@ def cmd_apply(args):
 
     # Fully leave the previous theme first, so a failure part way through
     # leaves no theme half-applied.
+    previous = active()
     leave_theme()
     write_atomic(APPLY_LOG, f"halcyon-theme apply {theme_id}\n")
+    if previous != theme_id:
+        run_switch_rules("from", previous)
 
     wallpaper = resolve_wallpaper(theme)
     if wallpaper.is_file():
@@ -1290,6 +1293,8 @@ def cmd_apply(args):
         run([str(APPLYCOLOR)])
 
     apply_shell_config(theme)
+    if previous != theme_id:
+        run_switch_rules("to", theme_id)
     effects, native = write_window_style(theme_id, theme)
     write_atomic(ACTIVE_FILE, theme_id + "\n")
     set_shell_value("halcyon.theme", theme_id)
@@ -1536,7 +1541,11 @@ def cmd_detach(_args):
 
 
 def cmd_off(_args):
+    previous = active()
     leave_theme()
+    if previous:
+        run_switch_rules("from", previous)
+        run_switch_rules("to", "off")
     if SWITCHWALL.is_file():
         # Clearing the accent makes switchwall.sh derive colours from the
         # current wallpaper again.
@@ -2105,6 +2114,228 @@ def cmd_hyprland(args):
     return 0
 
 
+# ----------------------------------------------------------------------------
+# Theme switch rules: what to change when the theme switches to, or away from, a theme
+# ----------------------------------------------------------------------------
+#
+# Made in Settings > Halcyon > When the theme switches, and kept in the shell config as halcyon.switchRules, a list
+# of {theme, when, action, target, value, restore}:
+#
+#   theme    a theme id, or "*" for any theme ("off" is the theme being turned off)
+#   when     "to" (switching to it) or "from" (switching away from it)
+#   action   widget   target a desktop widget (WIDGETS), value "on" or "off"
+#            icons    value an icon theme (halcyon-theme rules icons lists them)
+#            effects  value "default", "full", "light" or "off"
+#            placement value a window placement mode
+#            setting  target a shell setting ("bar.vertical"), value its new value as JSON ("true", "12", "\"x\"")
+#            command  value a command line, run with sh (your own; nothing checks it)
+#   restore  for a "to" rule: put the old value back when the theme switches away again
+#
+# Rules run in the order they are listed: "from" rules of the theme being left (after its restored values), then
+# "to" rules of the new one, before its window style is written so an effects rule takes effect at once.
+
+RULES_RESTORE = HALCYON_STATE / "switch-rules-restore.json"
+RULE_ACTIONS = ("widget", "icons", "effects", "placement", "setting", "command")
+
+
+def switch_rules():
+    rules = get_nested(read_shell_config(), "halcyon.switchRules")
+    return [r for r in rules if isinstance(r, dict)] if isinstance(rules, list) else []
+
+
+def icon_themes():
+    """Installed icon themes (not cursor themes): [{id, name}], each id once."""
+    found = {}
+    for base in (DATA / "icons", HOME / ".icons", Path("/usr/local/share/icons"), Path("/usr/share/icons")):
+        if not base.is_dir():
+            continue
+        for index in sorted(base.glob("*/index.theme")):
+            theme_id = index.parent.name
+            if theme_id in found or theme_id in ("default", "hicolor", "locolor"):
+                continue
+            try:
+                text = index.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            directories = re.search(r"^Directories\s*=\s*(.+)$", text, re.M)
+            if not directories or not directories.group(1).strip():
+                continue    # a cursor theme
+            name = re.search(r"^Name\s*=\s*(.+)$", text, re.M)
+            found[theme_id] = {"id": theme_id, "name": name.group(1).strip() if name else theme_id}
+    return sorted(found.values(), key=lambda t: t["name"].lower())
+
+
+def current_icon_theme():
+    if shutil.which("gsettings"):
+        out = subprocess.run(["gsettings", "get", "org.gnome.desktop.interface", "icon-theme"],
+                             capture_output=True, text=True, check=False).stdout.strip()
+        if out:
+            return out.strip("'")
+    return ""
+
+
+def set_icon_theme(name):
+    """GTK apps (gsettings), Qt and KDE apps (kdeglobals, qt5ct and qt6ct) and the shell's own icons follow it."""
+    if shutil.which("gsettings"):
+        subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", "icon-theme", name],
+                       capture_output=True, check=False)
+    for path, section in ((CONFIG / "kdeglobals", "Icons"), (CONFIG / "qt6ct/qt6ct.conf", "Appearance"),
+                          (CONFIG / "qt5ct/qt5ct.conf", "Appearance")):
+        if path.name != "kdeglobals" and not path.is_file():
+            continue
+        key = "Theme" if section == "Icons" else "icon_theme"
+        set_ini_value(path, section, key, name)
+
+
+def set_ini_value(path, section, key, value):
+    lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+    out, in_section, done = [], False, False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            if in_section and not done:
+                out.append(f"{key}={value}")
+                done = True
+            in_section = stripped == f"[{section}]"
+        elif in_section and not done and stripped.split("=", 1)[0].strip() == key:
+            out.append(f"{key}={value}")
+            done = True
+            continue
+        out.append(line)
+    if not done:
+        if not in_section:
+            out += ([""] if out else []) + [f"[{section}]"]
+        out.append(f"{key}={value}")
+    write_atomic(path, "\n".join(out) + "\n")
+
+
+def current_placement():
+    try:
+        return PLACEMENT_LUA.read_text(encoding="utf-8").splitlines()[0].split("mode:", 1)[1].strip()
+    except (OSError, IndexError):
+        return "golden"
+
+
+def rule_value(rule):
+    """(what it is now, so it can be put back; or MISSING when it can't be)."""
+    action, target = rule.get("action"), rule.get("target", "")
+    config = read_shell_config()
+    if action == "widget":
+        value = get_nested(config, f"background.widgets.{target}.enable")
+        return (target in WIDGETS_ON_BY_DEFAULT) if not isinstance(value, bool) else value
+    if action == "icons":
+        return current_icon_theme() or MISSING
+    if action == "effects":
+        value = get_nested(config, "halcyon.effects")
+        return value if isinstance(value, str) and value else "default"
+    if action == "placement":
+        return current_placement()
+    if action == "setting":
+        value = get_nested(config, target or "")
+        return MISSING if value is None or value is MISSING else value
+    return MISSING
+
+
+def set_rule_value(action, target, value):
+    if action == "widget":
+        if target not in WIDGETS:
+            raise ThemeError(f"no widget called {target}")
+        set_shell_value(f"background.widgets.{target}.enable", value in (True, "on"))
+    elif action == "icons":
+        set_icon_theme(str(value))
+    elif action == "effects":
+        if value not in ("default",) + EFFECT_LEVELS:
+            raise ThemeError(f"effects can be default, {', '.join(EFFECT_LEVELS)}")
+        set_shell_value("halcyon.effects", value)
+    elif action == "placement":
+        cmd_placement([str(value)])
+    elif action == "setting":
+        if not SHELL_KEY.match(target or ""):
+            raise ThemeError(f"{target!r} is not a setting's name")
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except ValueError:
+                pass    # a plain word is a string
+        set_shell_value(target, value)
+    elif action == "command":
+        subprocess.Popen(["sh", "-c", str(value)], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
+    else:
+        raise ThemeError(f"unknown rule action {action!r}")
+
+
+def rule_matches(rule, theme_id, when):
+    return rule.get("when", "to") == when and rule.get("theme") in (theme_id, "*") and rule.get("action") in RULE_ACTIONS
+
+
+def run_switch_rules(when, theme_id):
+    """Run the rules for switching `when` ("to" or "from") theme_id; returns what each did, for the notification."""
+    theme_id = theme_id or "off"
+    saved = read_json(RULES_RESTORE, {})
+    done = []
+    if when == "from":
+        # First what this theme's "to" rules changed and asked to have put back.
+        for entry in reversed(saved.pop(theme_id, [])):
+            try:
+                set_rule_value(entry["action"], entry.get("target", ""), entry["value"])
+                done.append(f"put back {entry['action']} {entry.get('target', '')}".strip())
+            except (ThemeError, KeyError) as error:
+                print(f"note: couldn't put back a theme switch rule: {error}", file=sys.stderr)
+    for rule in switch_rules():
+        if not rule_matches(rule, theme_id, when):
+            continue
+        action, target, value = rule["action"], rule.get("target", ""), rule.get("value", "")
+        try:
+            if when == "to" and rule.get("restore"):
+                before = rule_value(rule)
+                if before is not MISSING:
+                    saved.setdefault(theme_id, []).append({"action": action, "target": target, "value": before})
+            set_rule_value(action, target, value)
+            done.append(f"{action} {target} {value}".replace("  ", " ").strip())
+        except ThemeError as error:
+            print(f"note: theme switch rule ({action} {target}) failed: {error}", file=sys.stderr)
+    if saved:
+        write_atomic(RULES_RESTORE, json.dumps(saved, indent=2) + "\n")
+    else:
+        remove(RULES_RESTORE)
+    return done
+
+
+def read_json(path, default):
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return default
+
+
+def cmd_rules(args):
+    """`rules` lists the theme switch rules; `rules icons` the icon themes; `rules run to|from THEME` runs them."""
+    if args in ([], ["--json"]):
+        rules = switch_rules()
+        if args:
+            print(json.dumps(rules))
+        elif not rules:
+            print("No theme switch rules: Settings > Halcyon > When the theme switches makes them.")
+        for rule in rules if not args else []:
+            print(f"{rule.get('when', 'to'):>4} {rule.get('theme', '?'):<16} {rule.get('action', '?')} "
+                  f"{rule.get('target', '')} {rule.get('value', '')}{'  (put back after)' if rule.get('restore') else ''}")
+        return 0
+    if args and args[0] == "icons":
+        themes = icon_themes()
+        if "--json" in args:
+            print(json.dumps({"current": current_icon_theme(), "themes": themes}))
+        else:
+            for theme in themes:
+                print(theme["id"])
+        return 0
+    if len(args) == 3 and args[0] == "run" and args[1] in ("to", "from"):
+        for line in run_switch_rules(args[1], args[2]):
+            print(line)
+        return 0
+    raise ThemeError("usage: halcyon-theme rules [--json] | rules icons [--json] | rules run to|from THEME")
+
+
 COMMANDS = {
     "collapse": cmd_collapse,
     "doctor": cmd_doctor,
@@ -2112,6 +2343,7 @@ COMMANDS = {
     "migrate": cmd_migrate,
     "hyprland": cmd_hyprland,
     "widgets": cmd_widgets,
+    "rules": cmd_rules,
     "revolver": cmd_revolver,
     "custom": cmd_custom,
     "show": cmd_show,

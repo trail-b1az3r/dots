@@ -81,6 +81,9 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("overlays sync", "write Avizo's and Wayscriber's colours from the current theme (applying a theme does this)"),
     ]),
     ("Widgets, characters and extras", [
+        ("rules [--json]", "what changes when the theme switches (made in Settings > Halcyon > When the theme switches)"),
+        ("rules icons [--json]", "the icon themes a rule can switch to"),
+        ("rules run to|from THEME", "run the rules for switching to, or away from, a theme now"),
         ("widgets [NAME on|off|toggle]", "the desktop widgets (clock, weather, revolver, visualizer, system, nowPlaying, lyrics): which are on, or turn one on or off"),
         ("revolver status", "whether the revolver is on and where, its games, and any error the shell logged for it"),
         ("revolver on|off", "show or hide it, on every theme"),
