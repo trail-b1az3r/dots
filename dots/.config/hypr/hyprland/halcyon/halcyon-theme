@@ -1787,16 +1787,25 @@ def cmd_doctor(args):
     return 0
 
 
-# How a new window is placed. golden and cursor are Hyprland's dwindle layout; the rest are Halcyon's own layouts
-# in layouts.lua (registered as lua:halcyon-<mode>).
+# How a new window is placed. golden, cursor and golden-plus-dwindle are Hyprland's dwindle layout; the rest are
+# Halcyon's own layouts in layouts.lua (registered as lua:halcyon-<mode>).
+#
+# Dwindle's default_split_ratio is the first window's share times two (1.0 is halves), so a golden split is
+# 2 x 0.618 = 1.236. It used to be 1.618, which gave the first window 81 % and squeezed the new one to 19 %:
+# open a few windows and all but one were slivers. split_bias 1 ("current") gives the 61.8 % to the window that
+# was there, whichever side the new one opens on.
+GOLDEN_SPLIT = 1.236
 PLACEMENTS = {
-    "golden": (1.618, 0),   # the split follows the golden ratio, the side chosen by where the cursor is
-    "cursor": (1.0, 0),     # halves, the side chosen by where the cursor is
+    # (default_split_ratio, force_split, split_bias)
+    "golden": (GOLDEN_SPLIT, 0, 1),               # golden split, the new window on the side the cursor is on
+    "cursor": (1.0, 0, 0),                        # halves, the side chosen by where the cursor is
+    "golden-plus-dwindle": (GOLDEN_SPLIT, 2, 0),  # golden split, the new window always right or below
 }
 LUA_PLACEMENTS = {
     "stacked": "two windows at a time, one above the other; a third opens on the next empty workspace",
     "side-by-side": "two windows at a time, next to each other; a third opens on the next empty workspace",
     "mondrian": "each new window splits the biggest tile, on uneven ratios, like a Mondrian painting",
+    "golden-plus": "a golden spiral that holds many windows, turning only as often as keeps every window usable",
 }
 PLACEMENT_LUA = HALCYON_STATE / "placement.lua"
 
@@ -1804,12 +1813,28 @@ PLACEMENT_LUA = HALCYON_STATE / "placement.lua"
 def placement_lua(mode):
     """The placement.lua for a mode. HALCYON_PLACEMENT tells layouts.lua which cap, if any, applies."""
     if mode in PLACEMENTS:
-        ratio, force = PLACEMENTS[mode]
+        ratio, force, bias = PLACEMENTS[mode]
         return (f"-- mode: {mode}\nHALCYON_PLACEMENT = \"{mode}\"\n"
                 f"hl.config({{ general = {{ layout = \"dwindle\" }}, "
-                f"dwindle = {{ default_split_ratio = {ratio}, force_split = {force} }} }})\n")
+                f"dwindle = {{ default_split_ratio = {ratio}, force_split = {force}, split_bias = {bias} }} }})\n")
     return (f"-- mode: {mode}\nHALCYON_PLACEMENT = \"{mode}\"\n"
             f"hl.config({{ general = {{ layout = \"lua:halcyon-{mode}\" }} }})\n")
+
+
+def migrate_placement():
+    """Rewrite placement.lua when its mode is now written differently (golden used to split 81 / 19)."""
+    try:
+        text = PLACEMENT_LUA.read_text(encoding="utf-8")
+        mode = text.splitlines()[0].split("mode:", 1)[1].strip()
+    except (OSError, IndexError):
+        return False
+    if mode not in PLACEMENTS and mode not in LUA_PLACEMENTS:
+        return False
+    wanted = placement_lua(mode)
+    if text == wanted:
+        return False
+    write_atomic(PLACEMENT_LUA, wanted)
+    return True
 
 
 def cmd_placement(args):
@@ -1825,8 +1850,10 @@ def cmd_placement(args):
         print(current)
         return 0
     if args == ["--list"]:
-        descriptions = {"golden": "splits on the golden ratio, on the side the pointer is on (default)",
-                        "cursor": "splits in halves, on the side the pointer is on", **LUA_PLACEMENTS}
+        descriptions = {"golden": "splits on the golden ratio (61.8 / 38.2), on the side the pointer is on (default)",
+                        "cursor": "splits in halves, on the side the pointer is on",
+                        "golden-plus-dwindle": "golden ratio plus, with Hyprland's dwindle: golden splits, new windows right or below",
+                        **LUA_PLACEMENTS}
         for mode in modes:
             print(f"{'*' if mode == current else ' '} {mode:<13} {descriptions[mode]}")
         return 0
@@ -1975,6 +2002,8 @@ def cmd_migrate(args):
     browser themes are written, which is cheap and covers profiles made since.
     """
     migrate_revolver_on()
+    if migrate_placement() and hyprland_running():
+        subprocess.run(["hyprctl", "reload"], capture_output=True, check=False)
     raw = read_state(ACTIVE_FILE)
     current = RENAMED.get(raw, raw) if raw else None
     changed = args[args.index("--changed") + 1:] if "--changed" in args else []

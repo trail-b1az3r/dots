@@ -67,7 +67,8 @@ class BoxesTest(unittest.TestCase):
     AREA = {"x": 10, "y": 40, "w": 1900, "h": 1030}
 
     def boxes(self, mode, n):
-        fn = {"stacked": "stacked", "side-by-side": "side_by_side", "mondrian": "mondrian"}[mode]
+        fn = {"stacked": "stacked", "side-by-side": "side_by_side", "mondrian": "mondrian",
+              "golden-plus": "golden_plus"}[mode]
         a = self.AREA
         return run_lua(f"print(enc(L.{fn}({{x={a['x']}, y={a['y']}, w={a['w']}, h={a['h']}}}, {n})))")
 
@@ -112,6 +113,38 @@ class BoxesTest(unittest.TestCase):
         self.assertAlmostEqual(first_two[0]["w"] / self.AREA["w"], 0.62, places=3)
 
 
+    def test_golden_plus_is_a_golden_spiral(self):
+        one, = self.boxes("golden-plus", 1)
+        self.assertEqual(one, self.AREA)
+        first, second, third = self.boxes("golden-plus", 3)
+        self.assertAlmostEqual(first["w"] / self.AREA["w"], 0.618, places=3, msg="the first window: 61.8 % across")
+        self.assertAlmostEqual(second["h"] / self.AREA["h"], 0.618, places=3, msg="the next: 61.8 % of the rest, down")
+        self.assertEqual((second["x"], third["x"]), (first["x"] + first["w"], first["x"] + first["w"]))
+        self.assertGreater(third["y"], second["y"], "the spiral turns")
+
+    def test_golden_plus_holds_many_windows_and_none_is_a_sliver(self):
+        for area in (self.AREA, {"x": 0, "y": 0, "w": 2560, "h": 1440}, {"x": 0, "y": 0, "w": 1366, "h": 768}):
+            for n in range(1, 31):
+                a = area
+                boxes = run_lua(f"print(enc(L.golden_plus({{x={a['x']}, y={a['y']}, w={a['w']}, h={a['h']}}}, {n})))")
+                self.assertEqual(len(boxes), n)
+                total = sum(area_of(b) for b in boxes)
+                self.assertAlmostEqual(total, area_of(a), delta=1e-3, msg=f"{n} windows fill the screen")
+                for i, b in enumerate(boxes):
+                    for c in boxes[i + 1:]:
+                        self.assertAlmostEqual(overlap(b, c), 0.0, delta=1e-3)
+                    if n <= 6:
+                        self.assertGreaterEqual(min(b["w"], b["h"]), 320 if a["h"] >= 1000 else 150, (a, n, b))
+                # Never the old dwindle 81 / 19: the smallest window is at least a fifth of the biggest's short side.
+                sides = [min(b["w"], b["h"]) for b in boxes]
+                self.assertGreater(min(sides) / max(sides), 0.2, (a, n))
+
+    def test_golden_plus_keeps_the_spiral_while_windows_stay_usable(self):
+        boxes = run_lua("print(enc(L.golden_plus({x=0, y=0, w=1920, h=1080}, 5)))")
+        self.assertAlmostEqual(boxes[0]["w"], 1920 * 0.618, delta=1, msg="still a golden first window with five")
+        self.assertEqual(len({(round(b["w"]), round(b["h"])) for b in boxes[1:]}), 1, "the rest an even grid")
+
+
 @unittest.skipUnless(LUA, "no lua interpreter")
 class HyprlandWiringTest(unittest.TestCase):
     """layouts.lua against a stand-in `hl`: what it registers, how it places windows, and the cap."""
@@ -147,7 +180,7 @@ end
 hl.registered["halcyon-mondrian"].recalculate({ area = { x = 0, y = 0, w = 1000, h = 500 }, targets = targets })
 print(enc({ names = names, placed = placed }))
 """)
-        self.assertEqual(out["names"], ["halcyon-mondrian", "halcyon-side-by-side", "halcyon-stacked"])
+        self.assertEqual(out["names"], ["halcyon-golden-plus", "halcyon-mondrian", "halcyon-side-by-side", "halcyon-stacked"])
         self.assertEqual(len(out["placed"]), 3)
         # 62 / 38 across, then the bigger tile cut the other way, in halves: two rows in the 620 column.
         self.assertEqual([b["w"] for b in out["placed"]], [620, 620, 380])
@@ -206,10 +239,24 @@ class PlacementFileTest(unittest.TestCase):
         text = self.write("golden")
         self.assertIn('HALCYON_PLACEMENT = "golden"', text)
         self.assertIn('layout = "dwindle"', text)
-        self.assertIn("default_split_ratio = 1.618", text)
+        # Dwindle's ratio is the first window's share times two: 1.236 is 61.8 / 38.2. 1.618 was 81 / 19.
+        self.assertIn("default_split_ratio = 1.236", text)
+        self.assertIn("split_bias = 1", text, "the window that was there keeps the bigger part")
+        plus = self.write("golden-plus-dwindle")
+        self.assertIn("default_split_ratio = 1.236, force_split = 2", plus)
+
+    def test_an_old_golden_placement_is_rewritten(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp, "placement.lua")
+            target.write_text('-- mode: golden\nHALCYON_PLACEMENT = "golden"\n'
+                              'hl.config({ general = { layout = "dwindle" }, dwindle = { default_split_ratio = 1.618, force_split = 0 } })\n')
+            with unittest.mock.patch.object(theme, "PLACEMENT_LUA", target):
+                self.assertTrue(theme.migrate_placement())
+                self.assertIn("1.236", target.read_text())
+                self.assertFalse(theme.migrate_placement(), "only once")
 
     def test_halcyon_modes_pick_their_lua_layout(self):
-        for mode in ("stacked", "side-by-side", "mondrian"):
+        for mode in ("stacked", "side-by-side", "mondrian", "golden-plus"):
             text = self.write(mode)
             self.assertTrue(text.startswith(f"-- mode: {mode}\n"))
             self.assertIn(f'HALCYON_PLACEMENT = "{mode}"', text)
@@ -232,6 +279,9 @@ class PlacementFileTest(unittest.TestCase):
     def test_settings_offer_every_mode(self):
         qml = (ROOT / "dots/.config/quickshell/ii/modules/settings/InterfaceConfig.qml").read_text()
         for mode in list(theme.PLACEMENTS) + list(theme.LUA_PLACEMENTS):
+            if mode == "golden-plus-dwindle":
+                self.assertIn('"golden-plus-dwindle"', qml)   # the switch under Golden ratio plus
+                continue
             self.assertIn(f'value: "{mode}"', qml)
         self.assertIn('require("hyprland.halcyon.layouts")', (HALCYON / "init.lua").read_text())
 

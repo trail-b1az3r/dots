@@ -773,7 +773,9 @@ and power saving, which make those cards fail to connect. It writes
 
 | Mode | What it does |
 | --- | --- |
-| `golden` (default) | Splits the space on the golden ratio, on the side the pointer is on. |
+| `golden` (default) | Splits the space 61.8 / 38.2, on the side the pointer is on; the window that was there keeps the bigger part. (It used to split 81 / 19, which left all but one window very thin.) |
+| `golden-plus` | Golden ratio plus: every window on a golden spiral (61.8 % of the screen, then 61.8 % of the rest, turning left, top, right, bottom), holding many more windows. It turns only as often as keeps every window at least 320 px on its short side; the windows after the last turn share the end of the spiral as a grid. Halcyon's own layout, not dwindle. |
+| `golden-plus-dwindle` | Golden ratio plus with Hyprland's dwindle (the *uses dwindle* switch in Settings): golden splits, each new window right of or below the one it splits. |
 | `cursor` | Splits in halves, on the side the pointer is on. |
 | `stacked` | Two windows at a time, one above the other. A third opens on the next empty workspace, and you go with it. |
 | `side-by-side` | Two windows at a time, next to each other. A third opens on the next empty workspace. |
