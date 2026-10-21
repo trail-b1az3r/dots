@@ -91,3 +91,12 @@ class FullscreenWindowsTest(unittest.TestCase):
 
     def test_the_spectrum_stops_while_the_screen_is_locked(self):
         self.assertIn("users > 0 && !GlobalStates.screenLocked", read(II / "services/AudioSpectrum.qml"))
+
+
+class SettingsSectionsTest(unittest.TestCase):
+    def test_sections_fold_and_remember_it(self):
+        section = read(II / "modules/common/widgets/ContentSection.qml")
+        self.assertIn("Config.options.halcyon.collapsedSections = shut", section)
+        self.assertIn("visible: !root.collapsed", section)
+        self.assertIn("onClicked: root.toggle()", section)
+        self.assertIn("property list<string> collapsedSections: []", read(II / "modules/common/Config.qml"))
