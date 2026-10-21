@@ -119,6 +119,12 @@ Singleton {
                     property string speechModel: "base" // Whisper: "tiny", "base", "small"
                     property string language: "" // "" = detect
                     property bool speak: true // Read replies aloud
+                    property string voice: "auto" // "auto" (Piper, else an AI voice if a Gemini/OpenAI key is stored, else espeak-ng), "piper", "ai", "espeak", "system"
+                    property string aiVoiceProvider: "auto" // "auto", "gemini", "openai"
+                    property string aiVoice: "" // "" = Kore (Gemini) or alloy (OpenAI)
+                    property string aiVoiceModel: "" // "" = gemini-2.5-flash-preview-tts or gpt-4o-mini-tts
+                    property string aiVoiceEndpoint: "" // An OpenAI-compatible voice server, e.g. http://127.0.0.1:8880/v1
+                    property bool sidebarSpeak: true // Read the AI sidebar's replies aloud too
                     property bool allowActions: true // Let it control the desktop
                 }
                 property bool serverMode: false // No suspend, no automatic lock, no screen blanking (halcyon server)
@@ -431,6 +437,16 @@ Singleton {
 
             property JsonObject calendar: JsonObject {
                 property string locale: "en-GB"
+                // Halcyon: an event with the alarm on rings at its time until it is stopped or snoozed.
+                property JsonObject alarm: JsonObject {
+                    // "smoke", "tornado", "beep", "chime", "silent", or the path of a sound file
+                    property string firstSound: "smoke"
+                    property string secondSound: "tornado" // after escalateAfter seconds; "" or "none": no change
+                    property int escalateAfter: 60 // seconds of the first sound before the second
+                    property int stopAfter: 15 // minutes: an alarm nobody stops goes quiet after this
+                    property int snoozeMinutes: 5
+                    property bool alarmByDefault: false // new timed events start with the alarm on
+                }
             }
 
             property JsonObject cheatsheet: JsonObject {

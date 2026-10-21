@@ -20,6 +20,7 @@ SOCKET = RUNTIME / "halcyon-assistant.sock"
 if len(str(SOCKET)) > 100:  # Unix socket paths are limited to ~108 bytes
     SOCKET = Path(f"/tmp/halcyon-assistant-{os.getuid()}.sock")
 
+VOICES = ("auto", "piper", "ai", "espeak", "system")
 PROVIDERS = ("auto", "claude", "claude-code", "gemini", "ollama", "lmstudio", "hypernix", "t1", "openai")
 DEFAULTS = {
     "enable": True,          # start the assistant with Hyprland
@@ -35,6 +36,14 @@ DEFAULTS = {
     "speechModel": "base",   # Whisper size: tiny, base, small
     "language": "",          # "" = detect
     "speak": True,           # read replies aloud
+    # Which voice reads them. auto: Piper if set up, else an AI voice if a Gemini or OpenAI key is stored, else
+    # espeak-ng, else speech-dispatcher. piper, ai, espeak, system (speech-dispatcher): that one first.
+    "voice": "auto",
+    "aiVoiceProvider": "auto",  # auto (Gemini if its key is stored, else OpenAI), gemini, openai
+    "aiVoice": "",              # "" = Kore on Gemini, alloy on OpenAI
+    "aiVoiceModel": "",         # "" = gemini-2.5-flash-preview-tts, or gpt-4o-mini-tts
+    "aiVoiceEndpoint": "",      # an OpenAI-compatible voice server, e.g. http://127.0.0.1:8880/v1 (Kokoro)
+    "sidebarSpeak": True,       # read the AI sidebar's replies aloud too
     "allowActions": True,    # let it control the desktop (volume, apps, themes...)
     # Where Claude Code keeps its login, as the terminal saw it at sign-in.
     # Hyprland starts this daemon without that terminal's environment, so the
@@ -84,6 +93,10 @@ def settings(config=None):
             result[key] = value
     if result["provider"] not in PROVIDERS:
         result["provider"] = "auto"
+    if result["voice"] not in VOICES:
+        result["voice"] = "auto"
+    if result["aiVoiceProvider"] not in ("auto", "gemini", "openai"):
+        result["aiVoiceProvider"] = "auto"
     if result["speechModel"] not in ("tiny", "base", "small", "tiny.en", "base.en", "small.en"):
         result["speechModel"] = "base"
     return result

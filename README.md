@@ -612,8 +612,16 @@ another.
    server. *Auto* picks an Anthropic API key if set, then your Claude
    plan, then Gemini, then Ollama. Keys are shared with end-4's AI sidebar, so one entered
    there works here too.
-4. The reply appears in a notification and is spoken, with Piper if you
-   set it up, otherwise espeak-ng.
+4. The reply appears in a notification and is spoken.
+
+**Its voice.** Settings > Halcyon > Assistant > Voice. *Auto* uses Piper if you set it up
+(`halcyon assistant setup --piper`), else an **AI voice** if a Gemini or OpenAI key is stored (Gemini's
+text-to-speech, voice Kore, or OpenAI's `gpt-4o-mini-tts`, voice alloy; or any OpenAI-compatible voice server such
+as a local Kokoro, which needs no key), else espeak-ng. Pick one to put it first; if it fails, the next one speaks
+instead, and a notification says so. An AI voice sends the reply's text to that provider. **Read the AI sidebar's
+replies** (on by default) speaks the left sidebar's answers as well, without code, links or markdown;
+`Super + Shift + Space` stops it. `halcyon assistant test-voice` speaks with each voice and says why one fails, and
+`halcyon assistant say TEXT` reads anything aloud.
 
 **What it can do.** Only these actions, each checked against a strict
 schema before anything runs:
@@ -789,12 +797,23 @@ lists its events (delete one with its bin). A new event has a title, a time (`9:
 day) and a reminder: none, 5 or 15 minutes, an hour, or a day before. There is a notification at the reminder and
 again when the event starts. Days with events get a dot: a wider dot for more than one.
 
+**Alarms.** An event at a time can ring an alarm: the alarm button when you add it, or the one beside it in the
+day's list. At its time a card comes up on every screen, above fullscreen games, and a **smoke alarm** sounds at
+your current volume. If nobody stops it within a minute it becomes a **tornado siren**. Enter or Escape stops it, S
+snoozes it (5 minutes), and after 15 minutes it stops by itself and leaves a notification. **Settings > General >
+Calendar alarm** picks each sound (smoke alarm, tornado siren, alarm clock, chime, silent, or a sound file of
+your own), how long before the second, the snooze, and whether new timed events start with an alarm; **Test the
+alarm** rings one now. The sounds are made by Halcyon from sine waves (`scripts/alarm/alarm_sounds.py`), so nothing
+recorded by anyone else is shipped. An alarm missed by more than ten minutes (the computer was off) does not ring.
+
 The bar shows the next event this week ("21:20 Dentist", "Tomorrow 09:30 Standup") and turns it to the accent colour
 15 minutes before. Click it to open the calendar on that day. Events are saved in
 `~/.local/state/quickshell/user/events.json`. From a script:
 
 ```sh
 qs -c ii ipc call calendarEvents add "Dentist" 2026-10-20 14:30
+qs -c ii ipc call calendarEvents addAlarm "Wake up" "" 07:00   # today, with the alarm on
+qs -c ii ipc call alarm stop                    # or snooze, test, status
 qs -c ii ipc call calendarEvents next
 qs -c ii ipc call calendarEvents open ""       # the calendar, on today
 ```

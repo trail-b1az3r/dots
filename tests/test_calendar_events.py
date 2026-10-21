@@ -99,6 +99,53 @@ out({ late: late, already: [already.reminded, already.notified], allDay: [allDay
         self.assertEqual(got["allDay"], [True, True, -1])
         self.assertEqual(got["bad"], [None, None, None])
 
+    def test_an_alarm_rings_once_at_its_time(self):
+        got = run(r"""
+const e = E.makeEvent("Wake up", "2026-10-14", "7:00", -1, at("2026-10-13T22:00:00"), true);
+const steps = [];
+for (const t of ["06:59:55", "07:00:00", "07:00:05"]) {
+  const due = E.due([e], at("2026-10-14T" + t)).filter(d => d.kind === "alarm");
+  due.forEach(() => { e.alarmed = true; });
+  steps.push(due.map(d => d.kind + (d.late ? "-late" : "")));
+}
+out({ alarm: e.alarm, steps: steps });
+""")
+        self.assertTrue(got["alarm"])
+        self.assertEqual(got["steps"], [[], ["alarm"], []])
+
+    def test_a_snoozed_alarm_rings_again_after_the_snooze(self):
+        got = run(r"""
+let e = E.makeEvent("Wake up", "2026-10-14", "7:00", -1, at("2026-10-13T22:00:00"), true);
+e.alarmed = true;                                   // it rang at 07:00
+e = E.snooze(e, 5, at("2026-10-14T07:01:00"));      // snoozed a minute later
+const ring = t => E.due([e], at("2026-10-14T" + t)).filter(d => d.kind === "alarm").length;
+out([ring("07:05:59"), ring("07:06:00"), E.alarmAt(e) === at("2026-10-14T07:06:00").getTime()]);
+""")
+        self.assertEqual(got, [0, 1, True])
+
+    def test_alarms_need_a_time_and_do_not_ring_late_or_for_the_past(self):
+        got = run(r"""
+const allDay = E.makeEvent("Birthday", "2026-10-14", "", -1, at("2026-10-13T12:00:00"), true);
+const past = E.makeEvent("Gone", "2026-10-14", "9:00", -1, at("2026-10-14T10:00:00"), true);
+const missed = { id: "m", title: "Missed", date: "2026-10-14", time: "07:00", alarm: true, alarmed: false,
+                 reminded: true, notified: true, remind: -1 };
+const off = E.makeEvent("Quiet", "2026-10-14", "9:00", -1, at("2026-10-13T12:00:00"), false);
+out({
+  allDay: [allDay.alarm, E.alarmAt(allDay)],
+  past: [past.alarm, past.alarmed],
+  justLate: E.due([missed], at("2026-10-14T07:09:59")).filter(d => d.kind === "alarm")[0].late,
+  tooLate: E.due([missed], at("2026-10-14T07:10:01")).filter(d => d.kind === "alarm")[0].late,
+  off: E.due([off], at("2026-10-14T09:00:00")).map(d => d.kind),
+  oldFile: E.alarmAt({ id: "o", title: "Old", date: "2026-10-14", time: "09:00" }),
+});
+""")
+        self.assertEqual(got["allDay"], [False, None])
+        self.assertEqual(got["past"], [True, True])
+        self.assertFalse(got["justLate"])
+        self.assertTrue(got["tooLate"])
+        self.assertEqual(got["off"], ["start"])
+        self.assertIsNone(got["oldFile"], "events saved before alarms existed have none")
+
     def test_load_survives_a_broken_file(self):
         got = run(r"""out([E.load("not json"), E.load("{}"), E.load('[{"title":"a","date":"2026-01-01"},{"title":1},null]').length])""")
         self.assertEqual(got, [[], [], 1])

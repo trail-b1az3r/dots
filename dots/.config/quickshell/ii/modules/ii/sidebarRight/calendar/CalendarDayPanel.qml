@@ -8,7 +8,8 @@ import QtQuick.Layouts
 /**
  * One day in the calendar: its events, and a new one. Opened by the calendar's + button or a click on a day.
  *
- * A new event has a title, a time (empty for all day; 9, 9:30, 930 and 9:30pm all work) and a reminder. The arrows
+ * A new event has a title, a time (empty for all day; 9, 9:30, 930 and 9:30pm all work), a reminder and, at a
+ * time, an alarm that rings until it is stopped (the bell on a listed event turns its alarm on and off). The arrows
  * go to the day before and after.
  */
 Item {
@@ -47,6 +48,9 @@ Item {
     readonly property var dayEvents: root.day === "" ? [] : CalendarEvents.eventsOn(root.day)
     readonly property string parsedTime: CalendarEvents.parseTime(timeInput.text) ?? "invalid"
     readonly property bool canAdd: titleInput.text.trim().length > 0 && root.parsedTime !== "invalid"
+    // The alarm for the new event; it needs a time, so it is off while the time is empty.
+    property bool alarm: Config.options.calendar.alarm.alarmByDefault
+    readonly property bool alarmPossible: root.parsedTime !== "" && root.parsedTime !== "invalid"
 
     visible: opacity > 0
     opacity: root.day !== "" ? 1 : 0
@@ -63,6 +67,7 @@ Item {
         if (!visible) {
             titleInput.text = "";
             timeInput.text = "";
+            root.alarm = Config.options.calendar.alarm.alarmByDefault;
         }
     }
 
@@ -79,7 +84,7 @@ Item {
     function add() {
         if (!root.canAdd)
             return;
-        if (CalendarEvents.add(titleInput.text, root.day, timeInput.text, root.remind)) {
+        if (CalendarEvents.add(titleInput.text, root.day, timeInput.text, root.remind, root.alarm && root.alarmPossible)) {
             titleInput.text = "";
             timeInput.text = "";
         }
@@ -199,6 +204,24 @@ Item {
                         iconSize: Appearance.font.pixelSize.normal
                         color: Appearance.colors.colSubtext
                     }
+                    // The alarm: lit when on. Only an event at a time can have one.
+                    RippleButton {
+                        visible: (eventRow.modelData.time ?? "") !== ""
+                        implicitWidth: 26
+                        implicitHeight: 26
+                        buttonRadius: Appearance.rounding.full
+                        onClicked: CalendarEvents.setAlarm(eventRow.modelData.id, !eventRow.modelData.alarm)
+                        contentItem: MaterialSymbol {
+                            text: eventRow.modelData.alarm ? "alarm_on" : "alarm_off"
+                            horizontalAlignment: Text.AlignHCenter
+                            iconSize: Appearance.font.pixelSize.normal
+                            fill: eventRow.modelData.alarm ? 1 : 0
+                            color: eventRow.modelData.alarm ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
+                        }
+                        StyledToolTip {
+                            text: eventRow.modelData.alarm ? Translation.tr("Alarm on: click to turn it off") : Translation.tr("Ring an alarm at this time")
+                        }
+                    }
                     RippleButton {
                         implicitWidth: 26
                         implicitHeight: 26
@@ -252,6 +275,26 @@ Item {
                     Layout.fillWidth: true
                     buttonText: root.reminderText(root.remind)
                     onClicked: root.reminderIndex = (root.reminderIndex + 1) % root.reminders.length
+                }
+                RippleButton {
+                    implicitWidth: 34
+                    implicitHeight: 34
+                    buttonRadius: Appearance.rounding.full
+                    enabled: root.alarmPossible
+                    toggled: root.alarm && root.alarmPossible
+                    onClicked: root.alarm = !root.alarm
+                    contentItem: MaterialSymbol {
+                        text: root.alarm && root.alarmPossible ? "alarm_on" : "alarm_add"
+                        horizontalAlignment: Text.AlignHCenter
+                        iconSize: Appearance.font.pixelSize.larger
+                        fill: root.alarm && root.alarmPossible ? 1 : 0
+                        color: root.alarm && root.alarmPossible ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer1
+                        opacity: root.alarmPossible ? 1 : 0.4
+                    }
+                    StyledToolTip {
+                        text: root.alarmPossible ? (root.alarm ? Translation.tr("Alarm on: it rings at this time until you stop it") : Translation.tr("Add an alarm"))
+                                                 : Translation.tr("An alarm needs a time")
+                    }
                 }
                 DialogButton {
                     buttonText: Translation.tr("Add")

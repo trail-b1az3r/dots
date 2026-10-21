@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import importlib.machinery
+import json
+import shutil
+import subprocess
+import sys
 import importlib.util
 import os
 import pathlib
@@ -65,6 +69,111 @@ class TestDeciding(unittest.TestCase):
         self.assertEqual(actions, ["off"])
         _state, actions = _run(state, [(80, 6000), (82, 6000)] * 10)
         self.assertEqual(actions, [], "bouncing around 81 must not restore")
+
+
+class TestGamesAndRebounds(unittest.TestCase):
+    """The effects load the GPU themselves: without a game they are left alone, and if taking them away only brings
+    the GPU straight back, each wait before they return is longer, so they stop flipping every half minute."""
+
+    HOT = [(95, 6000)] * guard.HOT_SAMPLES
+
+    def test_without_a_game_a_busy_gpu_changes_nothing(self) -> None:
+        state = {}
+        for util, free in [(99, 500)] * 50:
+            state, action = guard.decide(state, util, free, game=False)
+            self.assertIsNone(action)
+
+    def flip(self, state, now):
+        """Hot until held off at `now`, then calm until restored. Returns the state and when it was restored."""
+        for util, free in self.HOT:
+            state, action = guard.decide(state, util, free, True, now)
+        self.assertEqual(action, "off")
+        calm = 0
+        while True:
+            calm += 1
+            state, action = guard.decide(state, 20, 8000, False, now + calm * guard.INTERVAL)
+            if action == "restore":
+                return state, now + calm * guard.INTERVAL, calm
+
+    def test_busy_again_soon_after_coming_back_doubles_the_wait(self) -> None:
+        state, restored, first = self.flip({}, 1000.0)
+        self.assertEqual(first, guard.CALM_SAMPLES)
+        state, restored, second = self.flip(state, restored + 10)
+        self.assertEqual(second, guard.CALM_SAMPLES * 2)
+        state, restored, third = self.flip(state, restored + 10)
+        self.assertEqual(third, guard.CALM_SAMPLES * 4)
+
+    def test_the_wait_has_a_ceiling(self) -> None:
+        state, restored, _ = self.flip({}, 0.0)
+        waits = []
+        for _ in range(8):
+            state, restored, wait = self.flip(state, restored + 5)
+            waits.append(wait)
+        self.assertEqual(max(waits), guard.CALM_MAX_SAMPLES)
+
+    def test_a_long_quiet_spell_resets_the_wait(self) -> None:
+        state, restored, _ = self.flip({}, 0.0)
+        state, restored, _ = self.flip(state, restored + 5)
+        state, restored, later = self.flip(state, restored + guard.REBOUND_SECONDS + 1)
+        self.assertEqual(later, guard.CALM_SAMPLES)
+
+    def test_what_counts_as_a_game(self) -> None:
+        self.assertTrue(guard.is_game({"class": "steam_app_1091500", "fullscreen": 0}))
+        self.assertTrue(guard.is_game({"class": "gamescope"}))
+        self.assertTrue(guard.is_game({"class": "Minecraft* 1.21.4"}))
+        self.assertTrue(guard.is_game({"class": "eldenring.exe"}))
+        self.assertTrue(guard.is_game({"class": "mpv", "fullscreen": 2}))
+        self.assertFalse(guard.is_game({"class": "firefox", "fullscreen": 0}))
+        self.assertFalse(guard.is_game({"class": "kitty"}))
+
+
+class TestHolding(unittest.TestCase):
+    """The guard holds the effects off through `effects hold`, which leaves your level and says nothing."""
+
+    def tool(self, home, *args):
+        env = {**os.environ, "HOME": home, "XDG_CONFIG_HOME": home + "/c", "XDG_STATE_HOME": home + "/s",
+               "PATH": home + "/bin:" + os.environ["PATH"]}
+        env.pop("HYPRLAND_INSTANCE_SIGNATURE", None)
+        return subprocess.run([sys.executable, str(HERE / "halcyon-theme"), *args], env=env,
+                              capture_output=True, text=True, timeout=60)
+
+    def setUp(self) -> None:
+        self.home = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.home)
+        os.makedirs(self.home + "/bin")
+        self.sent = pathlib.Path(self.home, "notifications")
+        with open(self.home + "/bin/notify-send", "w", encoding="utf-8") as f:
+            f.write(f'#!/bin/sh\necho "$@" >> {self.sent}\n')
+        os.chmod(self.home + "/bin/notify-send", 0o755)
+        cfg = pathlib.Path(self.home, "c/illogical-impulse/config.json")
+        cfg.parent.mkdir(parents=True)
+        cfg.write_text(json.dumps({"halcyon": {"effects": "full", "theme": "red-sun"}}))
+        self.cfg = cfg
+        state = pathlib.Path(self.home, "s/halcyon")
+        state.mkdir(parents=True)
+        (state / "active").write_text("red-sun\n")
+
+    def notifications(self) -> str:
+        return self.sent.read_text() if self.sent.exists() else ""
+
+    def test_hold_turns_them_off_quietly_and_keeps_your_level(self) -> None:
+        self.assertEqual(self.tool(self.home, "effects").stdout.splitlines()[0], "full")
+        result = self.tool(self.home, "effects", "hold", "on")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.tool(self.home, "effects").stdout.splitlines()[0], "off")
+        self.assertIn("held off by gpu-guard", self.tool(self.home, "effects").stdout)
+        self.assertEqual(json.loads(self.cfg.read_text())["halcyon"]["effects"], "full")
+        self.tool(self.home, "effects", "hold", "off")
+        self.assertEqual(self.tool(self.home, "effects").stdout.splitlines()[0], "full")
+        self.assertEqual(self.notifications(), "")
+
+    def test_choosing_a_level_announces_it_once_and_only_when_it_changes(self) -> None:
+        self.tool(self.home, "effects", "light")
+        self.assertEqual(self.notifications().count("Effects"), 1)
+        self.tool(self.home, "effects", "light")
+        self.assertEqual(self.notifications().count("Effects"), 1, "the same level again says nothing")
+        self.tool(self.home, "effects", "full", "--quiet")
+        self.assertEqual(self.notifications().count("Effects"), 1)
 
 
 class TestParsing(unittest.TestCase):

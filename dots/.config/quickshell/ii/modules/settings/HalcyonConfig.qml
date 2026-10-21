@@ -1055,6 +1055,100 @@ ContentPage {
             }
         }
 
+        ContentSubsection {
+            visible: Config.options.halcyon.assistant.speak
+            title: Translation.tr("Voice")
+            tooltip: Translation.tr("Auto: Piper if it is set up (halcyon assistant setup --piper), else an AI voice if a Gemini or OpenAI key is stored, else espeak-ng. If the chosen voice fails, the next one speaks instead")
+
+            ConfigSelectionArray {
+                currentValue: Config.options.halcyon.assistant.voice
+                onSelected: newValue => {
+                    Config.options.halcyon.assistant.voice = newValue;
+                    page.reloadAssistant();
+                }
+                options: [
+                    { displayName: Translation.tr("Auto"), icon: "auto_mode", value: "auto" },
+                    { displayName: Translation.tr("Piper"), icon: "record_voice_over", value: "piper" },
+                    { displayName: Translation.tr("AI voice"), icon: "neurology", value: "ai" },
+                    { displayName: Translation.tr("eSpeak"), icon: "robot_2", value: "espeak" },
+                    { displayName: Translation.tr("System"), icon: "settings_voice", value: "system" }
+                ]
+            }
+
+            ConfigSelectionArray {
+                visible: Config.options.halcyon.assistant.voice === "ai" || Config.options.halcyon.assistant.voice === "auto"
+                currentValue: Config.options.halcyon.assistant.aiVoiceProvider
+                onSelected: newValue => {
+                    Config.options.halcyon.assistant.aiVoiceProvider = newValue;
+                    page.reloadAssistant();
+                }
+                options: [
+                    { displayName: Translation.tr("Whichever key is stored"), icon: "key", value: "auto" },
+                    { displayName: "Gemini", icon: "neurology", value: "gemini" },
+                    { displayName: Translation.tr("OpenAI-compatible"), icon: "api", value: "openai" }
+                ]
+            }
+
+            MaterialTextArea {
+                visible: Config.options.halcyon.assistant.voice === "ai" || Config.options.halcyon.assistant.voice === "auto"
+                Layout.fillWidth: true
+                placeholderText: Translation.tr("AI voice name (empty: Kore on Gemini, alloy on OpenAI)")
+                text: Config.options.halcyon.assistant.aiVoice
+                onTextChanged: {
+                    if (text.trim() === Config.options.halcyon.assistant.aiVoice)
+                        return;
+                    Config.options.halcyon.assistant.aiVoice = text.trim();
+                    page.reloadAssistant();
+                }
+            }
+
+            MaterialTextArea {
+                visible: Config.options.halcyon.assistant.aiVoiceProvider === "openai"
+                Layout.fillWidth: true
+                placeholderText: Translation.tr("Voice server (empty: OpenAI). A local one needs no key, e.g. Kokoro: http://127.0.0.1:8880/v1")
+                text: Config.options.halcyon.assistant.aiVoiceEndpoint
+                onTextChanged: {
+                    if (text.trim() === Config.options.halcyon.assistant.aiVoiceEndpoint)
+                        return;
+                    Config.options.halcyon.assistant.aiVoiceEndpoint = text.trim();
+                    page.reloadAssistant();
+                }
+            }
+
+            ConfigRow {
+                uniform: true
+                ConfigSwitch {
+                    buttonIcon: "forum"
+                    text: Translation.tr("Read the AI sidebar's replies")
+                    checked: Config.options.halcyon.assistant.sidebarSpeak
+                    onCheckedChanged: {
+                        Config.options.halcyon.assistant.sidebarSpeak = checked;
+                        page.reloadAssistant();
+                    }
+                    StyledToolTip {
+                        text: Translation.tr("Replies typed in the left sidebar are read aloud too, without code or links. Super+Shift+Space stops it")
+                    }
+                }
+                RippleButtonWithIcon {
+                    buttonRadius: Appearance.rounding.full
+                    materialIcon: "campaign"
+                    mainText: Translation.tr("Test the voice")
+                    // A terminal, so you can read why a voice fails.
+                    onClicked: Quickshell.execDetached(["bash", "-c", `${Config.options.apps.terminal} bash -c "'${page.assistantTool}' test-voice; read -rp 'Press Enter to close. '"`])
+                    StyledToolTip {
+                        text: "halcyon assistant test-voice"
+                    }
+                }
+            }
+            StyledText {
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                color: Appearance.colors.colSubtext
+                font.pixelSize: Appearance.font.pixelSize.smallie
+                text: Translation.tr("An AI voice sends the reply's text to Google or OpenAI (or the server you set) to be spoken. Piper and eSpeak speak on this computer.")
+            }
+        }
+
         ConfigSwitch {
             buttonIcon: "touch_app"
             text: Translation.tr("Let it control the desktop")

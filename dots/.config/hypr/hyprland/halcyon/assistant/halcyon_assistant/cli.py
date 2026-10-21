@@ -16,6 +16,7 @@ USAGE = """Halcyon's voice assistant.
 
     halcyon assistant listen        talk to it (Super + Shift + Space); again cancels
     halcyon assistant ask TEXT      ask in writing; prints the reply
+    halcyon assistant say TEXT      read text aloud with the voice replies use (- reads it from stdin)
     halcyon assistant cancel        stop whatever it is doing
     halcyon assistant doctor        what is set up and what isn't
     halcyon assistant test-voice    say a sentence with each voice engine; says why one fails
@@ -152,7 +153,7 @@ def login(_args):
 
 def doctor(_args):
     settings = config.settings()
-    engines = speech.engines()
+    engines = speech.engines(settings)
     rows = [
         ("microphone recorder", " ".join(audio.recorder_command() or ["missing: install pipewire"])[:48]),
         ("audio player", " ".join(pcm.player(22050) or ["missing: install pipewire"])[:48]),
@@ -160,7 +161,9 @@ def doctor(_args):
         ("wake word", ("on, " if settings["wakeWord"] else "off, ") +
          ("model ready" if wake.available() else "not set up (setup --wake)")),
         ("voice", ", ".join(engines) + "  (test-voice tries them)" if engines
-         else "none: install espeak-ng, or setup --piper"),
+         else "none: install espeak-ng, setup --piper, or store a Gemini/OpenAI key"),
+        ("voice setting", settings["voice"] + (f" (AI voice: {speech.tts_ai.provider(settings)})"
+                                               if speech.tts_ai.provider(settings) else "")),
         ("speak replies", "on" if settings["speak"] else "off (Settings > Halcyon > Assistant)"),
         ("daemon", "running" if daemon.send("status") is not None else "not running"),
     ]
@@ -204,21 +207,43 @@ def ask(args):
     return 0
 
 
+def say(args):
+    """Read text aloud: through the daemon when it runs (so `cancel` and the shortcut stop it), else here."""
+    text = sys.stdin.read() if args == ["-"] else " ".join(args)
+    if args[:1] == ["--"]:
+        text = " ".join(args[1:])
+    spoken = speech.plain(text)
+    if not spoken:
+        return 0
+    settings = config.settings()
+    if not settings["speak"]:
+        print("speaking replies is off in Settings > Halcyon > Assistant", file=sys.stderr)
+        return 0
+    reply = daemon.send("say " + spoken)
+    if reply in ("speaking", "busy"):
+        return 0
+    return 0 if speech.say(spoken, settings=settings) else 1
+
+
 def test_voice(args):
     """Speak with every installed engine, the way replies are spoken, and say what went wrong."""
     text = " ".join(args) or "Hello. This is Halcyon's voice."
+    settings = config.settings()
     player = pcm.player(speech.piper_rate(speech.piper_voice()) if speech.piper_voice() else speech.DEFAULT_RATE)
     print(f"audio player: {' '.join(player) if player else 'none (install pipewire)'}")
+    print(f"voice setting: {settings['voice']}" + (f", AI voice from {speech.tts_ai.provider(settings)}"
+                                                    if speech.tts_ai.provider(settings) else ", no AI voice (no Gemini or OpenAI key)"))
     if pcm.pipewire_has_raw():
         print("PipeWire 1.2 or later: raw audio needs --raw, which Halcyon passes")
-    engines = speech.engines()
+    engines = speech.engines(settings)
     if not engines:
-        print("no voice engine: install espeak-ng, or run `halcyon assistant setup --piper`")
+        print("no voice engine: install espeak-ng, run `halcyon assistant setup --piper`, "
+              "or store a key for an AI voice (`halcyon assistant key gemini`)")
         return 1
     worked = []
     for name in engines:
         print(f"{name}: speaking…", flush=True)
-        problem = speech.speak_once(name, text)
+        problem = speech.speak_once(name, text, settings=settings)
         print(f"{name}: " + ("ok" if problem is None else f"failed: {problem}"))
         if problem is None:
             worked.append(name)
@@ -337,6 +362,8 @@ def main(argv):
         return login(args)
     if command == "doctor":
         return doctor(args)
+    if command == "say":
+        return say(args)
     if command == "test-voice":
         return test_voice(args)
     if command == "test-mic":
@@ -353,6 +380,9 @@ def main(argv):
     if command == "set" and len(args) == 2 and args[0] in config.DEFAULTS:
         if args[0] == "provider" and args[1] not in config.PROVIDERS:
             print(f"error: provider is one of {', '.join(config.PROVIDERS)}", file=sys.stderr)
+            return 2
+        if args[0] == "voice" and args[1] not in config.VOICES:
+            print(f"error: voice is one of {', '.join(config.VOICES)}", file=sys.stderr)
             return 2
         try:
             config.write_setting(args[0], parse_value(args[0], args[1]))
