@@ -69,7 +69,7 @@ Item {
                 radius: bar.kind === "blocks" ? 3 : 0
                 color: lit ? bar.accent : bar.tint(0.16)
                 border.width: bar.kind === "blocks" ? 1.5 : 0
-                border.color: Qt.darker(Appearance.colors.colLayer1, 2.4)
+                border.color: Qt.darker(bar.look.card, 2.4)
             }
         }
     }

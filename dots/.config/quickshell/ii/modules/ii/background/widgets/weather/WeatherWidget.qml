@@ -57,7 +57,7 @@ AbstractBackgroundWidget {
         // Red Sun lights the number like its ring; the keycaps ink it with an outline; glass frosts it white.
         color: !root.themedCard ? Appearance.colors.colPrimary : (root.look.id === "glass" || root.redSun ? root.look.text : root.look.accentA)
         style: root.redSun ? Text.Raised : (root.look.id === "keycap" ? Text.Outline : Text.Normal)
-        styleColor: root.redSun ? root.look.glow : Qt.darker(Appearance.colors.colLayer1, 2.6)
+        styleColor: root.redSun ? root.look.glow : Qt.darker(root.look.card, 2.6)
         text: Weather.data?.temp.substring(0,Weather.data?.temp.length - 1) ?? "--°"
         anchors {
             right: parent.right

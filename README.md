@@ -267,6 +267,13 @@ style, animations, wallpaper and, for some, shell layout and effects:
 
 <sub>Top: HyperNeo, Star Rail. Bottom: Shattered Glass, Fractured Glass.</sub>
 
+![After ICEY and Manga Ink: the system, music and clock cards as keycaps, and each theme's revolver](docs/assets/preview-anime-themes.jpg)
+
+<sub>After ICEY (its own HUD revolver) and Manga Ink, with the clock, system and now-playing cards as solid keycaps.
+Wallpapers: *After ICEY* fan art via [MotionBGs](https://motionbgs.com/after-icey); *Anime Girl x Cat* by fw_storm
+via [DesktopHut](https://www.desktophut.com/anime-girl-x-cat-pl2s). Neither is included: the commands in the table
+above fetch or import them.</sub>
+
 Pick one in **Settings > Halcyon**, with **`Ctrl + Super + Shift + T`**,
 or from a terminal:
 

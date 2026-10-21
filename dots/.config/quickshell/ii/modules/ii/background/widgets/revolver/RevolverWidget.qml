@@ -548,20 +548,28 @@ AbstractBackgroundWidget {
             }
         }
 
-        StyledText {
+        // The status ("Drag to spin"), on a small chip of the drum's own dark, so it reads on a white wallpaper too.
+        Rectangle {
             anchors.top: drumArea.bottom
             anchors.horizontalCenter: parent.horizontalCenter
-            anchors.topMargin: root.redSun ? 4 : 12
-            width: parent.width
-            horizontalAlignment: Text.AlignHCenter
-            elide: Text.ElideRight
-            visible: root.style.statusLabel && text !== ""
-            text: root.statusText
-            color: root.redSun ? root.colHot : root.colOn
-            style: Text.Outline
-            styleColor: ColorUtils.applyAlpha("#000000", 0.35)
-            font.pixelSize: 11
-            font.weight: Font.Medium
+            anchors.topMargin: root.redSun ? 4 : 10
+            visible: root.style.statusLabel && statusLabel.text !== ""
+            width: Math.min(parent.width, statusLabel.implicitWidth + 16)
+            height: statusLabel.implicitHeight + 6
+            radius: height / 2
+            color: Qt.rgba(root.colChamber.r, root.colChamber.g, root.colChamber.b, 0.85)
+
+            StyledText {
+                id: statusLabel
+                anchors.centerIn: parent
+                width: parent.width - 12
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
+                text: root.statusText
+                color: root.redSun ? root.colHot : root.colOn
+                font.pixelSize: 11
+                font.weight: Font.Medium
+            }
         }
     }
 }

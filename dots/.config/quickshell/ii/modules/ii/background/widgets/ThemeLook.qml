@@ -22,6 +22,9 @@ QtObject {
     readonly property color glow: spec.glow !== "" ? spec.glow : accentA
     readonly property color track: Qt.rgba(accentA.r, accentA.g, accentA.b, 0.16)
     readonly property real spacing: spec.spacing
+    /** The card's colour, solid: the panel colour is see-through when the shell's transparency is on, which washed
+     *  keycaps and their shadows out over a bright wallpaper. */
+    readonly property color card: Qt.rgba(Appearance.colors.colLayer1.r, Appearance.colors.colLayer1.g, Appearance.colors.colLayer1.b, 1)
 
     /** A label as the theme sets them: Red Sun, Star Rail and the keycaps in capitals. */
     function label(text) {
