@@ -296,6 +296,8 @@ class SpeechTest(unittest.TestCase):
         if voice:
             Path(root, "models/piper").mkdir(parents=True)
             Path(root, "models/piper/voice.onnx").write_text("")
+            # Piper needs the voice's config beside it, so a voice without one is not offered.
+            Path(root, "models/piper/voice.onnx.json").write_text("{}")
         return [unittest.mock.patch.object(config, "VENV", Path(root, "venv")),
                 unittest.mock.patch.object(config, "MODELS", Path(root, "models")),
                 unittest.mock.patch.object(config, "HOME", Path(root, "home")),

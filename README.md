@@ -623,6 +623,20 @@ replies** (on by default) speaks the left sidebar's answers as well, without cod
 `Super + Shift + Space` stops it. `halcyon assistant test-voice` speaks with each voice and says why one fails, and
 `halcyon assistant say TEXT` reads anything aloud.
 
+**Piper voices.** Any Piper voice works, picked in Settings > Halcyon > Assistant > Voice > Piper voice (search by
+language, name or quality, *Hear* one before choosing it) or from a terminal:
+
+```sh
+halcyon assistant voices --all en_GB          # the ones here, on Hugging Face, and in the AUR
+halcyon assistant voice get en_GB-alba-medium # download from Hugging Face (rhasspy/piper-voices), checked, and use it
+halcyon assistant voice aur piper-voices-en-gb  # every en_GB voice, with your AUR helper (paru or yay)
+halcyon assistant voice use en_GB-vctk-medium --speaker p226   # one here; voices with several speakers take a name
+halcyon assistant voice use ~/voices/mine.onnx  # a voice of your own (its .onnx.json beside it)
+```
+
+Voices are looked for in the assistant's models folder (the built-in `en_US-lessac-medium` and downloads),
+`~/.local/share/piper-voices`, and `/usr/share/piper-voices` (where the AUR's `piper-voices-*` packages put theirs).
+
 **What it can do.** Only these actions, each checked against a strict
 schema before anything runs:
 

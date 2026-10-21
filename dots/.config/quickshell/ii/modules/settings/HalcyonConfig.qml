@@ -1115,6 +1115,213 @@ ContentPage {
                 }
             }
 
+            // Which Piper voice: one here (built-in, downloaded, from the AUR or your own), or one to add from
+            // Hugging Face or the AUR. Everything goes through `halcyon assistant voices` and `voice ...`.
+            ColumnLayout {
+                id: piperPicker
+                visible: Config.options.halcyon.assistant.voice === "auto" || Config.options.halcyon.assistant.voice === "piper"
+                Layout.fillWidth: true
+                spacing: 6
+
+                property var voices: ({ "installed": [], "huggingface": [], "aur": [], "current": "", "errors": [] })
+                property string source: "installed"
+                property string filter: ""
+                property string status: ""
+                property bool loaded: false
+                readonly property int shown: 40
+
+                function refresh() {
+                    voicesProc.running = false;
+                    voicesProc.running = true;
+                }
+                function act(args, message) {
+                    piperPicker.status = message;
+                    voiceAction.running = false;
+                    voiceAction.command = [page.assistantTool, "voice"].concat(args);
+                    voiceAction.running = true;
+                }
+                function matches(entry) {
+                    const words = piperPicker.filter.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+                    const text = [entry.key, entry.name, entry.language, entry.languageName, entry.country, entry.quality, entry.description].join(" ").toLowerCase();
+                    return words.every(w => text.includes(w));
+                }
+                readonly property var list: (piperPicker.voices[piperPicker.source] ?? []).filter(e => piperPicker.matches(e))
+                readonly property var currentVoice: (piperPicker.voices.installed ?? []).find(v => v.key === piperPicker.voices.current) ?? null
+
+                onVisibleChanged: if (visible && !loaded) refresh()
+                Component.onCompleted: if (visible) refresh()
+
+                Process {
+                    id: voicesProc
+                    command: [page.assistantTool, "voices", "--json", "--all"]
+                    stdout: StdioCollector {
+                        onStreamFinished: {
+                            try {
+                                piperPicker.voices = JSON.parse(this.text);
+                                // Nothing here yet: show what can be downloaded.
+                                if (!piperPicker.loaded && (piperPicker.voices.installed ?? []).length === 0)
+                                    piperPicker.source = "huggingface";
+                                piperPicker.loaded = true;
+                                if ((piperPicker.voices.errors ?? []).length > 0)
+                                    piperPicker.status = piperPicker.voices.errors.join("\n");
+                            } catch (e) {
+                                piperPicker.status = Translation.tr("Couldn't list the voices: run halcyon assistant voices --all in a terminal");
+                            }
+                        }
+                    }
+                }
+                Process {
+                    id: voiceAction
+                    // Download progress is written as one line rewritten in place (\r)
+                    stdout: SplitParser {
+                        splitMarker: "\r"
+                        onRead: data => {
+                            const line = data.trim().split("\n").pop();
+                            if (line.length > 0)
+                                piperPicker.status = line;
+                        }
+                    }
+                    stderr: SplitParser {
+                        onRead: data => piperPicker.status = data
+                    }
+                    onExited: (code, status) => {
+                        piperPicker.refresh();
+                        page.reloadAssistant();
+                    }
+                }
+
+                StyledText {
+                    Layout.topMargin: 6
+                    text: Translation.tr("Piper voice")
+                    color: Appearance.colors.colSubtext
+                }
+                StyledText {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    color: Appearance.colors.colOnLayer1
+                    text: piperPicker.currentVoice
+                        ? Translation.tr("Speaking with %1 (%2)").arg(piperPicker.currentVoice.key).arg(piperPicker.currentVoice.source)
+                        : (piperPicker.loaded ? Translation.tr("No Piper voice yet: download one below") : Translation.tr("Looking for voices…"))
+                }
+
+                ConfigSelectionArray {
+                    currentValue: piperPicker.source
+                    onSelected: newValue => piperPicker.source = newValue
+                    options: [
+                        { displayName: Translation.tr("Here (%1)").arg((piperPicker.voices.installed ?? []).length), icon: "folder", value: "installed" },
+                        { displayName: Translation.tr("Hugging Face (%1)").arg((piperPicker.voices.huggingface ?? []).length), icon: "cloud_download", value: "huggingface" },
+                        { displayName: Translation.tr("AUR (%1)").arg((piperPicker.voices.aur ?? []).length), icon: "package_2", value: "aur" }
+                    ]
+                }
+
+                MaterialTextArea {
+                    Layout.fillWidth: true
+                    placeholderText: Translation.tr("Search: a language, a name, a quality (en_GB, alba, high)")
+                    onTextChanged: piperPicker.filter = text
+                }
+
+                Repeater {
+                    model: piperPicker.list.slice(0, piperPicker.shown)
+
+                    delegate: RowLayout {
+                        id: voiceRow
+                        required property var modelData
+                        readonly property bool isPackage: piperPicker.source === "aur"
+                        readonly property string label: isPackage ? modelData.name : modelData.key
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 0
+                            StyledText {
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                                text: voiceRow.label
+                                color: voiceRow.label === piperPicker.voices.current ? Appearance.colors.colPrimary : Appearance.colors.colOnLayer1
+                            }
+                            StyledText {
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                                color: Appearance.colors.colSubtext
+                                text: voiceRow.isPackage ? Translation.tr("Every voice of %1").arg(voiceRow.modelData.description.replace(/.*\(|\).*/g, ""))
+                                    : piperPicker.source === "huggingface" ? `${voiceRow.modelData.languageName} (${voiceRow.modelData.country}), ${voiceRow.modelData.quality}, ${Math.round(voiceRow.modelData.size / 1e6)} MB` + (voiceRow.modelData.speakers > 1 ? `, ${voiceRow.modelData.speakers} speakers` : "")
+                                    : `${voiceRow.modelData.languageName || voiceRow.modelData.language}, ${voiceRow.modelData.quality}, ${voiceRow.modelData.source}` + (voiceRow.modelData.speakers.length > 0 ? `, ${voiceRow.modelData.speakers.length} speakers` : "")
+                            }
+                        }
+                        // Here: hear it, use it, and delete a downloaded one.
+                        DialogButton {
+                            visible: piperPicker.source === "installed"
+                            buttonText: Translation.tr("Hear")
+                            onClicked: piperPicker.act(["preview", voiceRow.modelData.key], Translation.tr("Speaking with %1…").arg(voiceRow.modelData.key))
+                        }
+                        DialogButton {
+                            visible: piperPicker.source === "installed"
+                            enabled: voiceRow.modelData.key !== piperPicker.voices.current
+                            buttonText: voiceRow.modelData.key === piperPicker.voices.current ? Translation.tr("In use") : Translation.tr("Use")
+                            onClicked: piperPicker.act(["use", voiceRow.modelData.source === "custom" ? voiceRow.modelData.path : voiceRow.modelData.key], "")
+                        }
+                        DialogButton {
+                            visible: piperPicker.source === "installed" && voiceRow.modelData.source === "hugging face"
+                            buttonText: Translation.tr("Delete")
+                            onClicked: piperPicker.act(["remove", voiceRow.modelData.key], "")
+                        }
+                        // Hugging Face: download (then it is used).
+                        DialogButton {
+                            visible: piperPicker.source === "huggingface"
+                            enabled: !voiceRow.modelData.installed && !voiceAction.running
+                            buttonText: voiceRow.modelData.installed ? Translation.tr("Here") : Translation.tr("Download")
+                            onClicked: piperPicker.act(["get", voiceRow.modelData.key], Translation.tr("Downloading %1…").arg(voiceRow.modelData.key))
+                        }
+                        // AUR: in a terminal, since the AUR helper asks for your password.
+                        DialogButton {
+                            visible: voiceRow.isPackage
+                            enabled: !voiceRow.modelData.installed && (piperPicker.voices.aurHelper ?? "") !== ""
+                            buttonText: voiceRow.modelData.installed ? Translation.tr("Installed") : Translation.tr("Install")
+                            onClicked: Quickshell.execDetached(["bash", "-c", `${Config.options.apps.terminal} bash -c "'${page.assistantTool}' voice aur '${voiceRow.modelData.name}'; read -rp 'Press Enter to close. '"`])
+                        }
+                    }
+                }
+                StyledText {
+                    Layout.fillWidth: true
+                    visible: piperPicker.list.length > piperPicker.shown
+                    color: Appearance.colors.colSubtext
+                    font.pixelSize: Appearance.font.pixelSize.smallie
+                    text: Translation.tr("%1 more: search to narrow the list").arg(piperPicker.list.length - piperPicker.shown)
+                }
+                StyledText {
+                    Layout.fillWidth: true
+                    visible: piperPicker.source === "aur" && (piperPicker.voices.aurHelper ?? "") === ""
+                    wrapMode: Text.Wrap
+                    color: Appearance.colors.colSubtext
+                    font.pixelSize: Appearance.font.pixelSize.smallie
+                    text: Translation.tr("AUR packages need an AUR helper (paru or yay). Each one installs every voice of a language; they then show under Here.")
+                }
+
+                MaterialTextArea {
+                    visible: (piperPicker.currentVoice?.speakers ?? []).length > 0
+                    Layout.fillWidth: true
+                    placeholderText: Translation.tr("Speaker (this voice has %1): a name or a number").arg((piperPicker.currentVoice?.speakers ?? []).length)
+                    text: Config.options.halcyon.assistant.piperSpeaker
+                    onTextChanged: {
+                        if (text.trim() === Config.options.halcyon.assistant.piperSpeaker)
+                            return;
+                        Config.options.halcyon.assistant.piperSpeaker = text.trim();
+                        page.reloadAssistant();
+                    }
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    visible: piperPicker.status !== ""
+                    wrapMode: Text.Wrap
+                    color: Appearance.colors.colSubtext
+                    font.pixelSize: Appearance.font.pixelSize.smallie
+                    text: piperPicker.status
+                }
+            }
+
             ConfigSwitch {
                 buttonIcon: "forum"
                 text: Translation.tr("Read the AI sidebar's replies")

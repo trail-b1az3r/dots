@@ -125,6 +125,8 @@ Singleton {
                     property string aiVoiceModel: "" // "" = gemini-2.5-flash-preview-tts or gpt-4o-mini-tts
                     property string aiVoiceEndpoint: "" // An OpenAI-compatible voice server, e.g. http://127.0.0.1:8880/v1
                     property bool sidebarSpeak: true // Read the AI sidebar's replies aloud too
+                    property string piperVoice: "" // A Piper voice's key (en_GB-alba-medium) or path; "" = the built-in one (halcyon assistant voices)
+                    property string piperSpeaker: "" // For a voice with several speakers: a name or number
                     property bool allowActions: true // Let it control the desktop
                 }
                 property bool serverMode: false // No suspend, no automatic lock, no screen blanking (halcyon server)

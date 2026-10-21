@@ -44,6 +44,8 @@ DEFAULTS = {
     "aiVoiceModel": "",         # "" = gemini-2.5-flash-preview-tts, or gpt-4o-mini-tts
     "aiVoiceEndpoint": "",      # an OpenAI-compatible voice server, e.g. http://127.0.0.1:8880/v1 (Kokoro)
     "sidebarSpeak": True,       # read the AI sidebar's replies aloud too
+    "piperVoice": "",           # a Piper voice's key (en_GB-alba-medium) or path; "" = the built-in one
+    "piperSpeaker": "",         # for a voice with several speakers: a name or number; "" = its first
     "allowActions": True,    # let it control the desktop (volume, apps, themes...)
     # Where Claude Code keeps its login, as the terminal saw it at sign-in.
     # Hyprland starts this daemon without that terminal's environment, so the
