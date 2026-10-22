@@ -970,6 +970,11 @@ full list, including all of upstream's.
 | `Super + Ctrl + I` | Plus Tiles: geometry inspector |
 | `Super + Alt + arrow` | Plus Tiles: move that edge out at once (`Shift`: in) |
 | `Super + F10 + H` or `Super + Ctrl + H` | Hypr mode on and off |
+| `Hyper + Ctrl + Tab` | The next floating window here, brought to the top (`Shift` as well: the previous one) |
+
+A Hyper key (keyd, kanata, or Caps Lock remapped) sends `Super + Ctrl + Alt + Shift` together, and Hyprland has no
+Hyper modifier of its own, so `Hyper + Ctrl + Tab` is bound as `Super + Ctrl + Alt + Shift + Tab`, and as
+`Mod3 + Ctrl + Tab` for a Hyper key mapped to Mod3.
 
 Upstream's bindings are all still there. For example, `Super + Q` closes
 a window, `Super + Enter` opens a terminal, and `Super` on its own opens
@@ -1064,8 +1069,19 @@ same keys turn it off too. A band of light swipes across the screen, then
 the mode's binds appear and stay until the mode ends.
 
 While the mode is on, the normal binds are off, so every chord in the mode
-only has to be unique inside it. In the default set the arrow keys move the
-focused window, where they normally change focus.
+only has to be unique inside it. The default set:
+
+| In hypr mode | |
+|---|---|
+| Arrows | Move the window |
+| `Shift` + arrows | Resize it by 40 px |
+| `H` `J` `K` `L` | Focus left, down, up, right |
+| `F` | Float or tile |
+| `C` | Center a floating window |
+| `P` | Pin it on every workspace |
+| `M` | Maximise |
+| `Tab` | Next floating window on top |
+| `1` to `5` | Send the window to that workspace, and stay here |
 
 Change the keys and binds in `~/.config/hypr/hyprland/halcyon/hypr_mode.lua`.
 It is a plain list: `toggle`, `exit`, and `binds` as

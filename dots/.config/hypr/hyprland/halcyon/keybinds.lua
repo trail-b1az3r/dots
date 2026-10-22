@@ -25,6 +25,21 @@ hl.bind("SUPER + grave", hl.dsp.focus({ workspace = "previous" }), { description
 hl.bind("SUPER + Backspace", hl.dsp.exec_cmd("$HOME/.config/hypr/hyprland/halcyon/minimize-all"),
     { description = "Window: Minimise all, or restore them" })
 
+-- The floating windows here in turn, each brought to the top: Hyper + Ctrl + Tab, back with Shift as well.
+-- A Hyper key (keyd, kanata, or Caps Lock remapped) sends Super + Ctrl + Alt + Shift together, and Hyprland has
+-- no Hyper modifier of its own, so that is the chord; Mod3 is there too, for a Hyper key mapped to it.
+local function raiseNextFloating(forward)
+    return function()
+        hl.dispatch(hl.dsp.window.cycle_next({ floating = true, next = forward }))
+        hl.dispatch(hl.dsp.window.bring_to_top())
+    end
+end
+hl.bind("SUPER + CTRL + ALT + SHIFT + Tab", raiseNextFloating(true),
+    { description = "Window: Next floating window on top (Hyper + Ctrl + Tab)" })
+hl.bind("MOD3 + CTRL + Tab", raiseNextFloating(true))
+hl.bind("MOD3 + CTRL + SHIFT + Tab", raiseNextFloating(false),
+    { description = "Window: Previous floating window on top (Hyper + Ctrl + Shift + Tab)" })
+
 --# Capture, macOS-style
 -- Sets $f to a fresh file in ~/Pictures/Screenshots, quoted for paths with spaces
 local newScreenshotFile = "d=\"$(xdg-user-dir PICTURES)/Screenshots\" && mkdir -p \"$d\" && " ..
