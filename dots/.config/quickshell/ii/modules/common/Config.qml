@@ -131,6 +131,11 @@ Singleton {
                     property string piperSpeaker: "" // For a voice with several speakers: a name or number
                     property string kokoroVoice: "" // A Kokoro voice (af_heart, bf_emma, am_adam...); "" = af_heart
                     property string ttsCommand: "" // A voice program of your own: text on stdin, plays it or writes a WAV to stdout
+                    property string fishEndpoint: "" // Fish Audio S2 Pro's server; "" = the one setup runs (127.0.0.1:8090)
+                    property string fishReference: "" // A voice saved on that server (reference id); "" = its own
+                    property string drama3Endpoint: "" // drama3-small's audio.cpp server; "" = the one setup runs (127.0.0.1:8091)
+                    property string drama3Reference: "" // A 10-30 s WAV recording of the voice drama3-small clones
+                    property string drama3ReferenceText: "" // What that recording says
                     property bool allowActions: true // Let it control the desktop
                 }
                 property bool serverMode: false // No suspend, no automatic lock, no screen blanking (halcyon server)

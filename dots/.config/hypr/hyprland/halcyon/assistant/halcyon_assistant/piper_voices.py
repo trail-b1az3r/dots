@@ -8,6 +8,10 @@ Three places voices come from, all listed together:
     AUR           the piper-voices-* packages (piper-voices-en-us, -de-de, ...), which install every voice of a
                   language into /usr/share/piper-voices; installed with your AUR helper
 
+Any other Hugging Face repo that holds a Piper voice (a .onnx and its .onnx.json or config.json) can be downloaded too,
+by name: `halcyon assistant voice get hf:systemofapwne/piper-en_US-glados-high`. The ones in FEATURED are listed with
+the rest, so they can be picked from Settings.
+
 A voice of your own (a .onnx with its .onnx.json) works too: put it in one of SEARCH_DIRS, or choose it by path.
 The chosen voice is the `piperVoice` setting: a voice's key ("en_GB-alba-medium"), a path, or "" for the built-in
 one (else the first voice found).
@@ -33,6 +37,14 @@ CATALOG_URL = HF_BASE + "voices.json"
 AUR_SEARCH_URL = "https://aur.archlinux.org/rpc/v5/search/piper-voices?by=name"
 CACHE_SECONDS = 7 * 24 * 3600
 AUR_CACHE_SECONDS = 24 * 3600
+HF_API = "https://huggingface.co/api/models/"
+
+# Piper voices from other Hugging Face repos, listed beside rhasspy's. Key: the name it is saved under.
+FEATURED = [
+    {"key": "en_US-glados-high", "repo": "systemofapwne/piper-en_US-glados-high", "language": "en_US",
+     "languageName": "English", "country": "United States", "quality": "high", "speakers": 1, "size": 113800584,
+     "name": "GLaDOS (Portal)"},
+]
 
 
 def voices_dir() -> Path:
@@ -172,14 +184,91 @@ def catalog(refresh: bool = False) -> list[dict]:
             "files": {name: info.get("md5_digest", "") for name, info in files.items()
                       if name.endswith((".onnx", ".onnx.json"))},
         })
+    have = {v["key"] for v in voices}
+    voices += [dict(entry, files={}) for entry in FEATURED if entry["key"] not in have]
     return voices
+
+
+def repo_of(choice: str) -> str | None:
+    """"hf:OWNER/REPO", or a huggingface.co link to a repo, as OWNER/REPO; None for anything else."""
+    choice = choice.strip()
+    if choice.startswith("hf:"):
+        repo = choice[3:]
+    elif "huggingface.co/" in choice:
+        repo = choice.split("huggingface.co/", 1)[1]
+    else:
+        return None
+    parts = [p for p in repo.split("/") if p]
+    return "/".join(parts[:2]) if len(parts) >= 2 else None
+
+
+def repo_key(repo: str) -> str:
+    """The name a repo's voice is saved under: the repo's name without a leading "piper-"."""
+    name = repo.split("/")[-1]
+    return name[len("piper-"):] if name.lower().startswith("piper-") else name
+
+
+def download_repo(repo: str, progress=lambda done, total: None, key: str | None = None) -> Path:
+    """Download the Piper voice in any Hugging Face repo: its .onnx, and the .onnx.json or config.json that describes
+    it (saved as KEY.onnx.json, where Piper looks). Large files are checked against the SHA-256 Hugging Face keeps."""
+    try:
+        tree = json.loads(_fetch(HF_API + repo + "/tree/main?recursive=1"))
+    except ValueError:
+        raise VoiceError(f"Hugging Face's answer about {repo} is not JSON") from None
+    if not isinstance(tree, list):
+        raise VoiceError(f"no repo called {repo} on Hugging Face")
+    files = {entry.get("path", ""): entry for entry in tree if entry.get("type") == "file"}
+    onnx = sorted(path for path in files if path.endswith(".onnx"))
+    if not onnx:
+        raise VoiceError(f"{repo} has no .onnx file: it is not a Piper voice")
+    model = onnx[0]
+    meta = next((path for path in (model + ".json", str(Path(model).with_name("config.json")), "config.json")
+                 if path in files), None)
+    if meta is None:
+        raise VoiceError(f"{repo} has {model} but no .onnx.json or config.json beside it; Piper needs one")
+    key = key or repo_key(repo)
+    target_dir = voices_dir()
+    target_dir.mkdir(parents=True, exist_ok=True)
+    targets = [(meta, target_dir / f"{key}.onnx.json"), (model, target_dir / f"{key}.onnx")]
+    for remote, target in targets:
+        sha = ((files[remote].get("lfs") or {}).get("oid") or "")
+        _download_file(f"https://huggingface.co/{repo}/resolve/main/{remote}", target, "sha256", sha,
+                       progress if remote == model else (lambda done, total: None),
+                       files[remote].get("size", 0))
+    return target_dir / f"{key}.onnx"
+
+
+def _download_file(url: str, target: Path, algorithm: str, expected: str, progress, total: int) -> None:
+    part = target.with_name(target.name + ".part")
+    digest = hashlib.new(algorithm)
+    request = urllib.request.Request(url, headers={"User-Agent": "halcyon-dots"})
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response, open(part, "wb") as out:
+            done = 0
+            while chunk := response.read(1 << 20):
+                out.write(chunk)
+                digest.update(chunk)
+                done += len(chunk)
+                progress(done, total)
+    except (urllib.error.URLError, OSError) as error:
+        part.unlink(missing_ok=True)
+        raise VoiceError(f"downloading {target.name} failed: {getattr(error, 'reason', error)}") from None
+    if expected and digest.hexdigest() != expected:
+        part.unlink(missing_ok=True)
+        raise VoiceError(f"{target.name} did not match its checksum; nothing was kept")
+    part.replace(target)
 
 
 def download(key: str, progress=lambda done, total: None, refresh: bool = False) -> Path:
     """Download a voice from Hugging Face into the assistant's folder, check it, and return its .onnx."""
+    repo = repo_of(key)
+    if repo:
+        return download_repo(repo, progress)
     entry = next((v for v in catalog(refresh) if v["key"] == key), None)
     if entry is None:
         raise VoiceError(f"no voice called {key} on Hugging Face (halcyon assistant voices --all lists them)")
+    if entry.get("repo"):
+        return download_repo(entry["repo"], progress, key=entry["key"])
     target_dir = voices_dir()
     target_dir.mkdir(parents=True, exist_ok=True)
     total = entry["size"]

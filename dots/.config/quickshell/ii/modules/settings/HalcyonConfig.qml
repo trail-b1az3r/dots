@@ -1329,6 +1329,8 @@ ContentPage {
                     { displayName: Translation.tr("Piper"), icon: "record_voice_over", value: "piper" },
                     { displayName: Translation.tr("Kokoro"), icon: "graphic_eq", value: "kokoro" },
                     { displayName: Translation.tr("Your command"), icon: "terminal", value: "command" },
+                    { displayName: Translation.tr("Fish S2 Pro"), icon: "set_meal", value: "fish" },
+                    { displayName: Translation.tr("Drama 3 small"), icon: "theater_comedy", value: "drama3" },
                     { displayName: Translation.tr("AI voice"), icon: "neurology", value: "ai" },
                     { displayName: Translation.tr("eSpeak"), icon: "robot_2", value: "espeak" },
                     { displayName: Translation.tr("System"), icon: "settings_voice", value: "system" }
@@ -1415,6 +1417,93 @@ ContentPage {
                         return;
                     Config.options.halcyon.assistant.ttsCommand = text.trim();
                     page.reloadAssistant();
+                }
+            }
+
+            // Big local voice models on servers of their own: Fish Audio S2 Pro and drama3-small.
+            ColumnLayout {
+                visible: Config.options.halcyon.assistant.voice === "fish"
+                Layout.fillWidth: true
+                spacing: 6
+                StyledText {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    color: Appearance.colors.colSubtext
+                    font.pixelSize: Appearance.font.pixelSize.smallie
+                    text: Translation.tr("Fish Audio S2 Pro: 80+ languages, and [tags] in the text for tone ([whisper], [laughing], [excited]). About 11 GB; wants a GPU with 12 GB. Its server starts the first time it speaks and loads for a minute or two. Non-commercial use only; the weights are gated: accept the terms at huggingface.co/fishaudio/s2-pro and sign in first.")
+                }
+                MaterialTextArea {
+                    Layout.fillWidth: true
+                    placeholderText: Translation.tr("A voice saved on the Fish Speech server (its reference id); empty: its own")
+                    text: Config.options.halcyon.assistant.fishReference
+                    onTextChanged: {
+                        if (text.trim() === Config.options.halcyon.assistant.fishReference)
+                            return;
+                        Config.options.halcyon.assistant.fishReference = text.trim();
+                        page.reloadAssistant();
+                    }
+                }
+                RowLayout {
+                    RippleButtonWithIcon {
+                        buttonRadius: Appearance.rounding.full
+                        materialIcon: "download"
+                        mainText: Translation.tr("Set up S2 Pro")
+                        onClicked: Quickshell.execDetached(["bash", "-c", `${Config.options.apps.terminal} bash -c "'${page.assistantTool}' setup --fish-s2; read -rp 'Press Enter to close. '"`])
+                    }
+                    RippleButtonWithIcon {
+                        buttonRadius: Appearance.rounding.full
+                        materialIcon: "stop_circle"
+                        mainText: Translation.tr("Free the GPU")
+                        onClicked: Quickshell.execDetached([page.assistantTool, "voice-server", "fish", "stop"])
+                    }
+                }
+            }
+            ColumnLayout {
+                visible: Config.options.halcyon.assistant.voice === "drama3"
+                Layout.fillWidth: true
+                spacing: 6
+                StyledText {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    color: Appearance.colors.colSubtext
+                    font.pixelSize: Appearance.font.pixelSize.smallie
+                    text: Translation.tr("drama3-small: a compressed Fish Audio Drama 3, Japanese and English, that speaks in the voice of a 10-30 s recording. About 10 GB; needs an NVIDIA GPU with 12 GB and the CUDA toolkit to build. Only clone a voice with its owner's consent.")
+                }
+                MaterialTextArea {
+                    Layout.fillWidth: true
+                    placeholderText: Translation.tr("The recording to clone (a WAV file), e.g. ~/voice.wav")
+                    text: Config.options.halcyon.assistant.drama3Reference
+                    onTextChanged: {
+                        if (text.trim() === Config.options.halcyon.assistant.drama3Reference)
+                            return;
+                        Config.options.halcyon.assistant.drama3Reference = text.trim();
+                        page.reloadAssistant();
+                    }
+                }
+                MaterialTextArea {
+                    Layout.fillWidth: true
+                    placeholderText: Translation.tr("What the recording says, word for word")
+                    text: Config.options.halcyon.assistant.drama3ReferenceText
+                    onTextChanged: {
+                        if (text.trim() === Config.options.halcyon.assistant.drama3ReferenceText)
+                            return;
+                        Config.options.halcyon.assistant.drama3ReferenceText = text.trim();
+                        page.reloadAssistant();
+                    }
+                }
+                RowLayout {
+                    RippleButtonWithIcon {
+                        buttonRadius: Appearance.rounding.full
+                        materialIcon: "build"
+                        mainText: Translation.tr("Set up Drama 3 small")
+                        onClicked: Quickshell.execDetached(["bash", "-c", `${Config.options.apps.terminal} bash -c "'${page.assistantTool}' setup --drama3; read -rp 'Press Enter to close. '"`])
+                    }
+                    RippleButtonWithIcon {
+                        buttonRadius: Appearance.rounding.full
+                        materialIcon: "stop_circle"
+                        mainText: Translation.tr("Free the GPU")
+                        onClicked: Quickshell.execDetached([page.assistantTool, "voice-server", "drama3", "stop"])
+                    }
                 }
             }
 

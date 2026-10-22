@@ -694,7 +694,24 @@ halcyon assistant voice get en_GB-alba-medium # download from Hugging Face (rhas
 halcyon assistant voice aur piper-voices-en-gb  # every en_GB voice, with your AUR helper (paru or yay)
 halcyon assistant voice use en_GB-vctk-medium --speaker p226   # one here; voices with several speakers take a name
 halcyon assistant voice use ~/voices/mine.onnx  # a voice of your own (its .onnx.json beside it)
+halcyon assistant voice get hf:systemofapwne/piper-en_US-glados-high   # any Hugging Face repo with a Piper voice
 ```
+
+GLaDOS (`en_US-glados-high`, from systemofapwne/piper-en_US-glados-high) is listed in the picker with the rest.
+
+**Big local voice models.** Two run on servers of their own, which start the first time they speak (a minute or
+two to load) and hold about 10 GB of GPU memory until stopped (`halcyon assistant voice-server NAME stop`, or *Free
+the GPU* in Settings):
+
+- **Fish Audio S2 Pro** ([fishaudio/s2-pro](https://huggingface.co/fishaudio/s2-pro)): 80+ languages, and free-form
+  `[tags]` in the text for tone (`[whisper]`, `[laughing]`, `[excited]`). `halcyon assistant setup --fish-s2` installs
+  Fish Speech and the weights (~11 GB). The weights are gated: accept the terms on that page and sign in with
+  `hf auth login` first. Fish Audio Research License: non-commercial use only.
+- **drama3-small** ([pentacoxian-dev/drama3-small-GGUF](https://huggingface.co/pentacoxian-dev/drama3-small-GGUF)), a
+  compressed Fish Audio Drama 3: Japanese and English in the voice of a 10-30 s recording you give it (path and
+  transcript in Settings; clone a voice only with its owner's consent). `halcyon assistant setup --drama3` builds the
+  patched audio.cpp it needs (NVIDIA GPU, CUDA toolkit) and downloads the model (~10 GB). Fish Audio Community
+  License v1.0.
 
 **Other local voice models.** *Kokoro* (Kokoro-82M, 54 voices in nine languages, offline): `halcyon assistant
 setup --kokoro` (~340 MB), then pick a voice like `af_heart`, `bf_emma` or `am_adam`. *Your command*: any voice
