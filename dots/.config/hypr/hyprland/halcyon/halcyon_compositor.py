@@ -20,8 +20,10 @@ def _run(argv: list[str], timeout: float = 5) -> str | None:
     if not shutil.which(argv[0]):
         return None
     try:
+        # Hyprland exits before printing its version when XDG_RUNTIME_DIR is unset (under sudo, say); give it one.
+        env = {**os.environ, "XDG_RUNTIME_DIR": os.environ.get("XDG_RUNTIME_DIR") or "/tmp"}
         out = subprocess.run(argv, capture_output=True, text=True, timeout=timeout, check=False,
-                             stdin=subprocess.DEVNULL)
+                             stdin=subprocess.DEVNULL, env=env)
     except (OSError, subprocess.SubprocessError):
         return None
     return out.stdout if out.returncode == 0 else None

@@ -15,6 +15,12 @@ REF="${HALCYON_HYPRLAND_REF:-halcyon-0.56.2}"
 URL="https://github.com/trail-b1az3r/hyprland-plus"
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon"
 
+LOG="$STATE/hyprland-plus-install.log"
+mkdir -p "$STATE"
+# Everything this console shows also goes to the log, so `halcyon hyprland` can say what happened afterwards.
+exec > >(tee -a "$LOG") 2>&1
+printf '\n# %s: building %s into /usr/local\n' "$(date '+%F %T')" "$REF"
+
 step(){ printf '\n\033[36m==> %s\033[0m\n' "$*"; }
 
 fail(){
@@ -38,6 +44,19 @@ else
 fi
 git -C "$REPO" submodule update --init --recursive || fail "Could not fetch the submodules."
 
+# The libraries hyprland-plus builds against, from its own PKGBUILD. Only the ones not already satisfied (pacman -T
+# counts what other packages provide, so -git variants are left alone). Without them the build stopped at its first
+# step and nothing was installed.
+step "Installing hyprland-plus's build dependencies"
+mapfile -t deps < <(bash -c 'source "$1" >/dev/null 2>&1; printf "%s\n" "${depends[@]}" "${makedepends[@]}"' _ "$REPO/packaging/aur/PKGBUILD")
+mapfile -t missing < <(pacman -T -- "${deps[@]}" 2>/dev/null || true)
+if (( ${#missing[@]} > 0 )); then
+    printf 'Installing: %s\n' "${missing[*]}"
+    sudo pacman -S --needed --noconfirm -- "${missing[@]}" || fail "Could not install the build dependencies: ${missing[*]}"
+else
+    printf 'All build dependencies are already installed.\n'
+fi
+
 step "Building hyprland-plus (this takes a while)"
 make -C "$REPO" all || fail "hyprland-plus did not build. Read the first error above."
 
@@ -49,8 +68,9 @@ if pacman -Q hyprland >/dev/null 2>&1 && [[ -e /usr/bin/hyprland && ! -e /usr/bi
 fi
 
 step "Installing hyprland-plus"
-sudo make -C "$REPO" install || fail "make install failed."
-sudo ln -sf /usr/local/bin/Hyprland /usr/local/bin/hyprland
+source "$(dirname "$(readlink -f "$0")")/hyprland-plus-install.sh"
+sudo bash -c "$(declare -f hyprland_plus_install); hyprland_plus_install \"\$1\" /usr/local/bin" _ "$REPO" \
+    || fail "hyprland-plus did not install into /usr/local/bin (details above, and in $LOG)."
 if [[ "$(command -v Hyprland)" != /usr/local/bin/Hyprland ]]; then
     printf '\033[33mPATH finds %s first, not /usr/local/bin/Hyprland. Put /usr/local/bin before /usr/bin in PATH.\033[0m\n' "$(command -v Hyprland)"
 fi

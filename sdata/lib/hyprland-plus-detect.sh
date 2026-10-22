@@ -16,7 +16,8 @@ hyprland_plus_find(){
     bin="$(readlink -f "$bin")"
     [[ " $seen " == *" $bin "* ]] && continue
     seen="$seen $bin"
-    line="$("$bin" --version 2>/dev/null || true)"
+    # Hyprland exits before printing its version when XDG_RUNTIME_DIR is unset, as it is under sudo; give it one.
+    line="$(XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}" "$bin" --version 2>/dev/null || true)"
     line="${line%%$'\n'*}"
     if [[ "${line,,}" == *hyprland-plus* ]]; then
       printf '%s|%s\n' "$line" "$bin"
