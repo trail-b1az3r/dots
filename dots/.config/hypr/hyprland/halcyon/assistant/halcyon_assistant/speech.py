@@ -17,7 +17,7 @@ import tempfile
 
 from pathlib import Path
 
-from . import config, local_tts, pcm, piper_voices, tts_ai
+from . import config, local_tts, pcm, piper_voices, tts_ai, voice_servers
 
 log = logging.getLogger("halcyon.speech")
 
@@ -53,7 +53,8 @@ def piper_binary():
 
 
 # Settings > Voice names a family; these are the engines in it.
-FAMILY = {"piper": "piper", "kokoro": "kokoro", "command": "command", "ai": "ai", "espeak-ng": "espeak",
+FAMILY = {"piper": "piper", "kokoro": "kokoro", "command": "command", "fish": "fish", "drama3": "drama3", "ai": "ai",
+          "espeak-ng": "espeak",
           "espeak": "espeak", "spd-say": "system"}
 
 
@@ -63,6 +64,11 @@ def engines(settings=None):
     found = []
     if local_tts.command_configured(settings):
         found.append("command")
+    chosen = settings.get("voice", "auto")
+    for name in ("fish", "drama3"):
+        # Set up here, or chosen (a server run some other way): each holds ~10 GB of GPU memory while it runs.
+        if voice_servers.installed(name) or chosen == name:
+            found.append(name)
     if local_tts.kokoro_installed():
         found.append("kokoro")
     if piper_binary() and piper_voice(settings):
@@ -75,7 +81,6 @@ def engines(settings=None):
         found.append("espeak")
     if shutil.which("spd-say"):
         found.append("spd-say")
-    chosen = settings.get("voice", "auto")
     if chosen != "auto":
         found.sort(key=lambda name: FAMILY[name] != chosen)  # stable: the chosen one first, the others in order
     return found
@@ -240,6 +245,20 @@ def _speak_with_command(text, should_stop, settings):
         path.unlink(missing_ok=True)
 
 
+def _speak_with_server(name, text, should_stop, settings):
+    try:
+        wav = voice_servers.synthesize(name, text, settings, should_stop)
+    except voice_servers.ServerError as error:
+        return str(error)
+    if should_stop():
+        return None
+    path = local_tts.wav_file(wav)
+    try:
+        return play_wav(path, should_stop)
+    finally:
+        path.unlink(missing_ok=True)
+
+
 def _speak_with_ai(text, should_stop, settings):
     try:
         data, rate = tts_ai.synthesize(text, settings)
@@ -259,6 +278,8 @@ def speak_once(name, text, should_stop=lambda: False, settings=None):
         return _speak_with_kokoro(text, should_stop, settings)
     if name == "command":
         return _speak_with_command(text, should_stop, settings)
+    if name in ("fish", "drama3"):
+        return _speak_with_server(name, text, should_stop, settings)
     if name == "ai":
         return _speak_with_ai(text, should_stop, settings)
     if name in ("espeak-ng", "espeak"):

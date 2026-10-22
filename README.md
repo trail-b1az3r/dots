@@ -269,7 +269,7 @@ style, animations, wallpaper and, for some, shell layout and effects:
 
 ![After ICEY and Manga Ink: the system, music and clock cards as keycaps, and each theme's revolver](docs/assets/preview-anime-themes.jpg)
 
-<sub>After ICEY (its HUD revolver) and Manga Ink (its ink revolver), with every desktop widget on: visualizer,
+<sub>After ICEY and Manga Ink, each with its own revolver and clock, and every desktop widget on: visualizer,
 lyrics, weather, clock, system and now playing, as solid keycaps.
 Wallpapers: *After ICEY* fan art via [MotionBGs](https://motionbgs.com/after-icey); *Anime Girl x Cat* by fw_storm
 via [DesktopHut](https://www.desktophut.com/anime-girl-x-cat-pl2s). Neither is included: the commands in the table
@@ -341,6 +341,16 @@ names it). `bar.sunDial: false` in the shell config hides it, and `halcyon auto 
 <sub>Top: the dial through a day; after sunset it turns over and the moon crosses back from where the sun set.
 Bottom: the moon as the dial draws it through the month.</sub> In the Halcyon themes the bar's groups are also edged in the
 theme's own light: ember in Red Sun, gold in Star Rail, frost in the glass themes.
+
+### The dock in each theme
+
+The dock (the bar along the bottom: HyperNeo turns it on, and Settings can in any theme) takes the theme's look in
+every theme but the glass ones, which keep the plain see-through panel: a dark shelf with a neon hairline in
+HyperNeo, Star Rail's double gold frame with a star at each end and a dashed rail, a dusk capsule lit like the ring
+in Red Sun, a chamfered HUD with brackets and a scan of light along the top in After ICEY, and a manga panel in
+Manga Ink, paper in a thick ink border with a hard shadow and screentone.
+
+![The dock in HyperNeo, Star Rail, Red Sun, After ICEY, Manga Ink, and Shattered Glass](docs/assets/docks.png)
 
 ### When the theme switches
 
@@ -434,6 +444,14 @@ live one inked solid), an ink-drop hammer, and manga speed lines round it while 
 paper whatever the palette; the pink is the theme's accent.
 
 ![The Manga Ink revolver at rest, and spinning with its speed lines](docs/assets/revolver-manga-ink.jpg)
+
+Their clocks are their own too. **After ICEY**'s is a HUD dial: a near-solid lens with a tick ring, a scanning arc
+that runs round the rim with the seconds (the minutes, without second precision), targeting brackets, a chevron hour
+hand, a minute hand with a hollow diamond tip, the snowflake in the middle, and the date and time as a readout.
+**Manga Ink**'s is a page: paper in the brush ensō with screentone, bold numerals, brush-stroke hands, a blush heart
+in the middle, a pink second hand with a heart on its tip, and the date in a speech bubble.
+
+![The After ICEY and Manga Ink clock faces](docs/assets/clocks-anime.jpg)
 
 The drum is drawn at the size it is shown, on any screen scale, so a large revolver is as sharp as a small one. It
 used to be drawn at 230 px and stretched, which blurred it.
@@ -694,7 +712,24 @@ halcyon assistant voice get en_GB-alba-medium # download from Hugging Face (rhas
 halcyon assistant voice aur piper-voices-en-gb  # every en_GB voice, with your AUR helper (paru or yay)
 halcyon assistant voice use en_GB-vctk-medium --speaker p226   # one here; voices with several speakers take a name
 halcyon assistant voice use ~/voices/mine.onnx  # a voice of your own (its .onnx.json beside it)
+halcyon assistant voice get hf:systemofapwne/piper-en_US-glados-high   # any Hugging Face repo with a Piper voice
 ```
+
+GLaDOS (`en_US-glados-high`, from systemofapwne/piper-en_US-glados-high) is listed in the picker with the rest.
+
+**Big local voice models.** Two run on servers of their own, which start the first time they speak (a minute or
+two to load) and hold about 10 GB of GPU memory until stopped (`halcyon assistant voice-server NAME stop`, or *Free
+the GPU* in Settings):
+
+- **Fish Audio S2 Pro** ([fishaudio/s2-pro](https://huggingface.co/fishaudio/s2-pro)): 80+ languages, and free-form
+  `[tags]` in the text for tone (`[whisper]`, `[laughing]`, `[excited]`). `halcyon assistant setup --fish-s2` installs
+  Fish Speech and the weights (~11 GB). The weights are gated: accept the terms on that page and sign in with
+  `hf auth login` first. Fish Audio Research License: non-commercial use only.
+- **drama3-small** ([pentacoxian-dev/drama3-small-GGUF](https://huggingface.co/pentacoxian-dev/drama3-small-GGUF)), a
+  compressed Fish Audio Drama 3: Japanese and English in the voice of a 10-30 s recording you give it (path and
+  transcript in Settings; clone a voice only with its owner's consent). `halcyon assistant setup --drama3` builds the
+  patched audio.cpp it needs (NVIDIA GPU, CUDA toolkit) and downloads the model (~10 GB). Fish Audio Community
+  License v1.0.
 
 **Other local voice models.** *Kokoro* (Kokoro-82M, 54 voices in nine languages, offline): `halcyon assistant
 setup --kokoro` (~340 MB), then pick a voice like `af_heart`, `bf_emma` or `am_adam`. *Your command*: any voice
@@ -945,6 +980,11 @@ full list, including all of upstream's.
 | `Super + Ctrl + I` | Plus Tiles: geometry inspector |
 | `Super + Alt + arrow` | Plus Tiles: move that edge out at once (`Shift`: in) |
 | `Super + F10 + H` or `Super + Ctrl + H` | Hypr mode on and off |
+| `Hyper + Ctrl + Tab` | The next floating window here, brought to the top (`Shift` as well: the previous one) |
+
+A Hyper key (keyd, kanata, or Caps Lock remapped) sends `Super + Ctrl + Alt + Shift` together, and Hyprland has no
+Hyper modifier of its own, so `Hyper + Ctrl + Tab` is bound as `Super + Ctrl + Alt + Shift + Tab`, and as
+`Mod3 + Ctrl + Tab` for a Hyper key mapped to Mod3.
 
 Upstream's bindings are all still there. For example, `Super + Q` closes
 a window, `Super + Enter` opens a terminal, and `Super` on its own opens
@@ -1039,8 +1079,19 @@ same keys turn it off too. A band of light swipes across the screen, then
 the mode's binds appear and stay until the mode ends.
 
 While the mode is on, the normal binds are off, so every chord in the mode
-only has to be unique inside it. In the default set the arrow keys move the
-focused window, where they normally change focus.
+only has to be unique inside it. The default set:
+
+| In hypr mode | |
+|---|---|
+| Arrows | Move the window |
+| `Shift` + arrows | Resize it by 40 px |
+| `H` `J` `K` `L` | Focus left, down, up, right |
+| `F` | Float or tile |
+| `C` | Center a floating window |
+| `P` | Pin it on every workspace |
+| `M` | Maximise |
+| `Tab` | Next floating window on top |
+| `1` to `5` | Send the window to that workspace, and stay here |
 
 Change the keys and binds in `~/.config/hypr/hyprland/halcyon/hypr_mode.lua`.
 It is a plain list: `toggle`, `exit`, and `binds` as

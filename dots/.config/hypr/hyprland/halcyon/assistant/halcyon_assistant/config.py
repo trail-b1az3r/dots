@@ -20,7 +20,7 @@ SOCKET = RUNTIME / "halcyon-assistant.sock"
 if len(str(SOCKET)) > 100:  # Unix socket paths are limited to ~108 bytes
     SOCKET = Path(f"/tmp/halcyon-assistant-{os.getuid()}.sock")
 
-VOICES = ("auto", "piper", "kokoro", "command", "ai", "espeak", "system")
+VOICES = ("auto", "piper", "kokoro", "command", "fish", "drama3", "ai", "espeak", "system")
 PROVIDERS = ("auto", "claude", "claude-code", "gemini", "ollama", "lmstudio", "hypernix", "t1", "openai")
 DEFAULTS = {
     "enable": True,          # start the assistant with Hyprland
@@ -49,6 +49,12 @@ DEFAULTS = {
     "piperSpeaker": "",         # for a voice with several speakers: a name or number; "" = its first
     "kokoroVoice": "",          # a Kokoro voice (af_heart, bf_emma, am_adam...); "" = af_heart
     "ttsCommand": "",           # a voice program of your own: text on stdin, plays it or writes a WAV to stdout
+    # Big local voice models, each on a server of its own (voice_servers.py): Fish Audio S2 Pro and drama3-small.
+    "fishEndpoint": "",         # "" = the one setup runs, http://127.0.0.1:8090
+    "fishReference": "",        # a voice saved on the Fish Speech server (reference id); "" = its own
+    "drama3Endpoint": "",       # "" = the one setup runs, http://127.0.0.1:8091
+    "drama3Reference": "",      # a 10-30 s recording of the voice drama3-small clones (WAV)
+    "drama3ReferenceText": "",  # what that recording says
     "allowActions": True,    # let it control the desktop (volume, apps, themes...)
     # Where Claude Code keeps its login, as the terminal saw it at sign-in.
     # Hyprland starts this daemon without that terminal's environment, so the

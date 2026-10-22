@@ -30,7 +30,7 @@ set -euo pipefail
 REPO_URL="https://github.com/trail-b1az3r/hyprland-plus"
 REF="halcyon-0.56.2"
 # Bumped with each change, so an old downloaded copy is easy to spot in its output.
-LITE_VERSION="2026-10-21"
+LITE_VERSION="2026-10-22"
 # Where hyprland-plus is installed (the Makefile's PREFIX/bin). Only the tests change it.
 BIN_DIR="${HYPRCTL_LITE_BIN_DIR:-/usr/local/bin}"
 
@@ -62,7 +62,8 @@ esac
 installed_version() {
     local line
     [[ -x "$BIN_DIR/Hyprland" ]] || return 0
-    line="$("$BIN_DIR/Hyprland" --version 2>/dev/null || true)"
+    # Hyprland exits before printing its version when XDG_RUNTIME_DIR is unset, as it is under sudo; give it one.
+    line="$(XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}" "$BIN_DIR/Hyprland" --version 2>/dev/null || true)"
     line="${line%%$'\n'*}"
     if [[ "${line,,}" == *hyprland-plus* ]]; then
         printf '%s\n' "$line"
@@ -127,6 +128,37 @@ step() {
     printf '\n==> %s\n' "$*"
 }
 
+# make install stops at the first file it can't copy, and Hyprland itself is among the last, so a failure part way
+# left the bin folder empty or holding only hyprctl. The built binaries are then copied in directly, and the result
+# is checked. (The same function as dots' sdata/lib/hyprland-plus-install.sh; this file stands alone.)
+hyprland_plus_install(){
+  local repo="$1" bin_dir="$2" build rc=0 line tool
+  build="$repo/build"
+  if [[ ! -x "$build/Hyprland" ]]; then
+    printf 'hyprland-plus is not built: %s is missing. The build step failed; its first error is above.\n' "$build/Hyprland" >&2
+    return 1
+  fi
+  make -C "$repo" install || rc=$?
+  if (( rc != 0 )); then
+    printf 'make install stopped (status %s); copying the built programs into %s directly.\n' "$rc" "$bin_dir" >&2
+  fi
+  mkdir -p "$bin_dir"
+  # Always, so a make install that stopped early (or installed somewhere else) still leaves these in place.
+  install -m755 "$build/Hyprland" "$bin_dir/Hyprland" || return 1
+  for tool in hyprctl/hyprctl hyprpm/hyprpm start/start-hyprland; do
+    [[ -x "$build/$tool" ]] && install -m755 "$build/$tool" "$bin_dir/${tool##*/}"
+  done
+  ln -sf Hyprland "$bin_dir/hyprland"
+  # Hyprland exits before printing its version when XDG_RUNTIME_DIR is unset, as it is under sudo; give it one.
+  line="$(XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}" "$bin_dir/Hyprland" --version 2>/dev/null | head -n 1)"
+  if [[ "${line,,}" != *hyprland-plus* ]]; then
+    printf '%s/Hyprland does not say it is hyprland-plus (it says: %s).\n' "$bin_dir" "${line:-nothing}" >&2
+    return 1
+  fi
+  printf 'Installed in %s: %s\n' "$bin_dir" "$(cd "$bin_dir" && ls -1 Hyprland hyprland hyprctl hyprpm start-hyprland 2>/dev/null | tr '\n' ' ')"
+  printf '%s\n' "$line"
+}
+
 trap 'printf "\nhyprctl-lite: the install did not finish. hyprctl-lite is kept, so you can run it again.\n" >&2' ERR
 
 printf 'hyprctl-lite %s\n' "$LITE_VERSION"
@@ -188,8 +220,7 @@ if pacman -Q hyprland >/dev/null 2>&1; then
 fi
 
 step "Installing hyprland-plus to $(dirname "$BIN_DIR")"
-make -C "$repo" install
-ln -sf "$BIN_DIR/Hyprland" "$BIN_DIR/hyprland"
+hyprland_plus_install "$repo" "$BIN_DIR" || die "hyprland-plus did not install into $BIN_DIR (details above)"
 
 if [[ "$(command -v Hyprland)" != "$BIN_DIR/Hyprland" ]]; then
     echo "warning: PATH finds $(command -v Hyprland) first, not $BIN_DIR/Hyprland. Put $BIN_DIR before /usr/bin in PATH." >&2
@@ -200,7 +231,7 @@ fi
 # beside the fork. Remove it with: sudo pacman -R hyprland-plus-local
 if ! pacman -T hyprland >/dev/null 2>&1 && ! pacman -Q hyprland-plus-local >/dev/null 2>&1; then
     step "Telling pacman that hyprland-plus provides hyprland"
-    version_line="$("$BIN_DIR/Hyprland" --version 2>/dev/null || true)"
+    version_line="$(XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}" "$BIN_DIR/Hyprland" --version 2>/dev/null || true)"
     version_line="${version_line%%$'\n'*}"
     base="$(sed -nE 's/.*\(Hyprland ([0-9.]+)\).*/\1/p' <<<"$version_line" || true)"
     [[ -n "$base" ]] || base="$(sed -nE 's/^hyprland-plus ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' <<<"$version_line" || true)"

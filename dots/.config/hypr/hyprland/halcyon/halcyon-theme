@@ -2111,6 +2111,17 @@ def cmd_hyprland(args):
         raise ThemeError("usage: halcyon-theme hyprland [--json]")
     else:
         print(halcyon_compositor.describe(info))
+        if not info.get("plus"):
+            local = Path("/usr/local/bin/Hyprland")
+            print(f"/usr/local/bin/Hyprland: {'there' if local.exists() else 'not there'}"
+                  + ("" if local.exists() else " (hyprland-plus was never installed, or its install failed)"))
+            log = HALCYON_STATE / "hyprland-plus-install.log"
+            if log.is_file():
+                tail = log.read_text(encoding="utf-8", errors="replace").strip().splitlines()[-6:]
+                print(f"the last install ({log}) ended with:")
+                for line in tail:
+                    print("  " + re.sub(r"\x1b\[[0-9;]*m", "", line))
+            print("install or repair it: sudo hyprctl-lite install full  (or ./setup install)")
     return 0
 
 

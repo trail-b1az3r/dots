@@ -181,7 +181,8 @@ class HuggingFaceTest(Scratch):
         with self.catalog_patch():
             piper_voices.catalog()
         with unittest.mock.patch.object(piper_voices, "_fetch", side_effect=piper_voices.VoiceError("offline")):
-            self.assertEqual(len(piper_voices.catalog(refresh=True)), 2)
+            # rhasspy's two, and the voices from other repos (GLaDOS)
+            self.assertEqual(len(piper_voices.catalog(refresh=True)), 2 + len(piper_voices.FEATURED))
 
     def test_download_checks_and_keeps_the_voice(self):
         with HubServer() as hub, self.catalog_patch(), unittest.mock.patch.object(piper_voices, "HF_BASE", hub.url):

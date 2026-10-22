@@ -28,7 +28,16 @@ case "$1 $2" in
   "-T hyprland") exit 0 ;;
 esac
 exit 0''',
-    "make": 'echo "make $*" >> "$LOG"',
+    # make -C REPO all leaves a stand-in build; make install can be made to stop part way (FAKE_INSTALL_FAIL).
+    "make": r'''echo "make $*" >> "$LOG"
+if [ "$3" = all ]; then
+  mkdir -p "$2/build/hyprctl"
+  printf '#!/bin/sh\necho "%s"\n' "${FAKE_BUILT:-hyprland-plus 0.56.2.p3 (Hyprland 0.56.2)}" > "$2/build/Hyprland"
+  printf '#!/bin/sh\necho hyprctl\n' > "$2/build/hyprctl/hyprctl"
+  chmod +x "$2/build/Hyprland" "$2/build/hyprctl/hyprctl"
+fi
+[ "$3" = install ] && [ "${FAKE_INSTALL_FAIL:-0}" = 1 ] && exit 2
+exit 0''',
     "git": r'''echo "git $*" >> "$LOG"
 args="$*"
 case "$args" in
@@ -74,6 +83,25 @@ class HyprctlLiteTest(unittest.TestCase):
                "FAKE_HEAD": head, "SUDO_USER": "me", "HOME": str(self.home), "HYPRCTL_LITE_BIN_DIR": str(self.bin)}
         env.update(extra)
         return subprocess.run(["bash", str(self.script), *args], capture_output=True, text=True, env=env, timeout=60)
+
+    # --- the install itself ---
+
+    def test_a_make_install_that_stops_part_way_still_installs_hyprland(self):
+        # make install stops at the first file it can't copy, and Hyprland is among the last: /usr/local/bin was
+        # left empty. The built binaries are copied in directly, and checked.
+        result = self.run_lite("install", "full", FAKE_INSTALL_FAIL="1")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("make install stopped", result.stderr)
+        self.assertTrue((self.bin / "Hyprland").is_file())
+        self.assertTrue((self.bin / "hyprctl").is_file())
+        self.assertEqual(os.readlink(self.bin / "hyprland"), "Hyprland")
+        self.assertIn("hyprland-plus 0.56.2.p3", result.stdout)
+
+    def test_an_install_that_is_not_hyprland_plus_fails_loudly(self):
+        result = self.run_lite("install", "full", FAKE_BUILT="Hyprland 0.56.2")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("does not say it is hyprland-plus", result.stderr)
+        self.assertTrue(self.script.exists(), "kept, so it can be run again")
 
     # --- update ---
 

@@ -10,7 +10,7 @@ import time
 import urllib.request
 import zipfile
 
-from . import audio, config, daemon, local_tts, localai, pcm, piper_voices, providers, speech, stt, wake
+from . import audio, config, daemon, local_tts, localai, pcm, piper_voices, providers, speech, stt, voice_servers, wake
 
 USAGE = """Halcyon's voice assistant.
 
@@ -28,6 +28,7 @@ USAGE = """Halcyon's voice assistant.
     halcyon assistant voice         the Piper voice in use
     halcyon assistant voice use KEY|PATH [--speaker NAME]   speak with that voice (one here, or a .onnx file)
     halcyon assistant voice get KEY download a voice from Hugging Face (rhasspy/piper-voices) and use it
+    halcyon assistant voice get hf:OWNER/REPO   ...or any repo with a Piper voice (hf:systemofapwne/piper-en_US-glados-high)
     halcyon assistant voice aur PACKAGE  install a piper-voices-* package with your AUR helper
     halcyon assistant voice remove KEY   delete a downloaded voice
     halcyon assistant voice preview KEY  say a sentence with a voice here, without choosing it
@@ -36,6 +37,9 @@ USAGE = """Halcyon's voice assistant.
           --wake                    ...and the offline "hey halcyon" wake word model
           --piper                   ...and a natural Piper voice instead of espeak-ng
           --kokoro                  ...and Kokoro, a local voice model with 54 voices (~340 MB)
+    halcyon assistant setup --fish-s2 [--cpu]   Fish Audio S2 Pro on Fish Speech (~11 GB; GPU; gated, non-commercial)
+    halcyon assistant setup --drama3            drama3-small on a patched audio.cpp (~10 GB; NVIDIA GPU, CUDA toolkit)
+    halcyon assistant voice-server fish|drama3 [start|stop|status]   their servers (started when first needed)
     halcyon assistant login         use your Claude Pro/Max plan instead of an API key
     halcyon assistant key ID [KEY]  store an API key: anthropic, gemini, openai, mistral, t1...
     halcyon assistant set NAME VALUE  change a setting (provider, model, t1Server, wakeWord, speak...)
@@ -82,6 +86,17 @@ def _download(url, dest):
 
 
 def setup(args):
+    if "--fish-s2" in args or "--drama3" in args:
+        try:
+            if "--fish-s2" in args:
+                voice_servers.setup_fish(cpu="--cpu" in args)
+            if "--drama3" in args:
+                voice_servers.setup_drama3()
+        except (voice_servers.ServerError, piper_voices.VoiceError) as error:
+            print(f"error: {error}", file=sys.stderr)
+            return 1
+        daemon.send("reload")
+        return 0
     venv_python = config.VENV / "bin/python"
     if not venv_python.exists():
         print(f"creating {config.VENV}")
@@ -327,7 +342,8 @@ def voice(args):
                     print(f"\r{rest[0]}: {done * 100 // total}% of {total // 1_000_000} MB", end="", flush=True)
             path = piper_voices.download(rest[0], progress)
             print(f"\nsaved {path}")
-            return voice(["use", rest[0]])
+            # By the name it was saved under: a repo ("hf:owner/piper-en_US-glados-high") is saved by its voice's name.
+            return voice(["use", path.stem])
         if command == "aur" and len(rest) == 1:
             helper_command = piper_voices.aur_install_command(rest[0])
             print("running: " + " ".join(helper_command))
@@ -352,9 +368,31 @@ def voice(args):
     except piper_voices.VoiceError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
-    print("usage: halcyon assistant voice [use KEY|PATH [--speaker NAME] | get KEY | aur PACKAGE | remove KEY | preview KEY]",
+    print("usage: halcyon assistant voice [use KEY|PATH [--speaker NAME] | get KEY|hf:OWNER/REPO | aur PACKAGE | remove KEY | preview KEY]",
           file=sys.stderr)
     return 2
+
+
+def voice_server(args):
+    if not args or args[0] not in voice_servers.SERVERS or (len(args) > 1 and args[1] not in ("start", "stop", "status")):
+        print("usage: halcyon assistant voice-server fish|drama3 [start|stop|status]", file=sys.stderr)
+        return 2
+    name, action = args[0], (args[1] if len(args) > 1 else "status")
+    info, settings = voice_servers.SERVERS[name], config.settings()
+    if action == "stop":
+        voice_servers.systemctl("stop", info["unit"])
+        print(f"stopped {info['unit']}")
+        return 0
+    if action == "start":
+        try:
+            voice_servers.ensure_running(name, settings)
+        except voice_servers.ServerError as error:
+            print(f"error: {error}", file=sys.stderr)
+            return 1
+    up = voice_servers.healthy(name, settings)
+    print(f"{info['name']}: {'answering' if up else 'not answering'} at {voice_servers.endpoint(name, settings)}"
+          + ("" if voice_servers.installed(name) else f" (not set up here: halcyon assistant setup --{'fish-s2' if name == 'fish' else name})"))
+    return 0 if up or action == "status" else 1
 
 
 def test_voice(args):
@@ -503,6 +541,8 @@ def main(argv):
         return voices(args)
     if command == "voice":
         return voice(args)
+    if command == "voice-server":
+        return voice_server(args)
     if command == "test-voice":
         return test_voice(args)
     if command == "test-mic":
