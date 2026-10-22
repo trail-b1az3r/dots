@@ -7,5 +7,5 @@ Rectangle {
     Layout.bottomMargin: Appearance.sizes.hyprlandGapsOut + dockRow.padding + Appearance.rounding.normal
     Layout.fillHeight: true
     implicitWidth: 1
-    color: Appearance.colors.colOutlineVariant
+    color: Config.options.halcyon.theme === "manga-ink" ? "#141414" : Appearance.colors.colOutlineVariant
 }

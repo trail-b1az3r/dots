@@ -342,6 +342,16 @@ names it). `bar.sunDial: false` in the shell config hides it, and `halcyon auto 
 Bottom: the moon as the dial draws it through the month.</sub> In the Halcyon themes the bar's groups are also edged in the
 theme's own light: ember in Red Sun, gold in Star Rail, frost in the glass themes.
 
+### The dock in each theme
+
+The dock (the bar along the bottom: HyperNeo turns it on, and Settings can in any theme) takes the theme's look in
+every theme but the glass ones, which keep the plain see-through panel: a dark shelf with a neon hairline in
+HyperNeo, Star Rail's double gold frame with a star at each end and a dashed rail, a dusk capsule lit like the ring
+in Red Sun, a chamfered HUD with brackets and a scan of light along the top in After ICEY, and a manga panel in
+Manga Ink, paper in a thick ink border with a hard shadow and screentone.
+
+![The dock in HyperNeo, Star Rail, Red Sun, After ICEY, Manga Ink, and Shattered Glass](docs/assets/docks.png)
+
 ### When the theme switches
 
 **Settings > Halcyon > When the theme switches** makes rules that run each time the theme switches to, or away

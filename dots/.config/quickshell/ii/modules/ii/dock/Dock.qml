@@ -28,6 +28,12 @@ Scope { // Scope
             visible: !GlobalStates.screenLocked
 
             // Shown when it isn't set to auto-hide, pinned, hovered, requested, or no window is focused.
+            // Each Halcyon theme that isn't a glass one draws the dock its own way (DockFrame.qml).
+            readonly property string frameKind: ({ "hyperneo": "hyperneo", "hsr": "hsr", "red-sun": "red-sun",
+                "wallpaper-heaven-kenami": "red-sun", "after-icey": "icey", "manga-ink": "ink" })[Config.options.halcyon.theme] ?? ""
+            // Manga Ink's dock is paper: its symbols are inked.
+            readonly property color fg: frameKind === "ink" ? "#141414" : Appearance.colors.colOnLayer0
+
             property bool reveal: root.pinned || !(Config.options?.dock.autoHide ?? true) || (Config.options?.dock.hoverToReveal && dockMouseArea.containsMouse) || dockApps.requestDockShow || (!ToplevelManager.activeToplevel?.activated)
 
             anchors {
@@ -83,9 +89,22 @@ Scope { // Scope
 
                         StyledRectangularShadow {
                             target: dockVisualBackground
+                            visible: dockRoot.frameKind === "" || dockRoot.frameKind === "hyperneo"
+                        }
+                        Loader {
+                            anchors.fill: dockVisualBackground
+                            active: dockRoot.frameKind !== ""
+                            source: "DockFrame.qml"   // by file, so a live reload finds it
+                            onLoaded: {
+                                item.kind = Qt.binding(() => dockRoot.frameKind);
+                                item.colBase = Qt.binding(() => Qt.rgba(Appearance.colors.colLayer0.r, Appearance.colors.colLayer0.g, Appearance.colors.colLayer0.b, 1));
+                                item.colAccent = Qt.binding(() => Appearance.colors.colPrimary);
+                                item.colAccent2 = Qt.binding(() => Appearance.colors.colTertiary);
+                            }
                         }
                         Rectangle { // The real rectangle that is visible
                             id: dockVisualBackground
+                            visible: dockRoot.frameKind === ""
                             property real margin: Appearance.sizes.elevationMargin
                             anchors.fill: parent
                             anchors.topMargin: Appearance.sizes.elevationMargin
@@ -119,7 +138,7 @@ Scope { // Scope
                                         text: "minimize"
                                         horizontalAlignment: Text.AlignHCenter
                                         iconSize: Appearance.font.pixelSize.larger
-                                        color: Appearance.colors.colOnLayer0
+                                        color: dockRoot.fg
                                     }
                                     StyledToolTip {
                                         text: Translation.tr("Minimise all windows, or restore them")
@@ -138,7 +157,7 @@ Scope { // Scope
                                         text: "keep"
                                         horizontalAlignment: Text.AlignHCenter
                                         iconSize: Appearance.font.pixelSize.larger
-                                        color: root.pinned ? Appearance.m3colors.m3onPrimary : Appearance.colors.colOnLayer0
+                                        color: root.pinned ? Appearance.m3colors.m3onPrimary : dockRoot.fg
                                     }
                                 }
                             }
@@ -158,7 +177,7 @@ Scope { // Scope
                                     horizontalAlignment: Text.AlignHCenter
                                     font.pixelSize: parent.width / 2
                                     text: "apps"
-                                    color: Appearance.colors.colOnLayer0
+                                    color: dockRoot.fg
                                 }
                             }
                         }
