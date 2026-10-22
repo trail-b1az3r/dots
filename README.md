@@ -269,7 +269,7 @@ style, animations, wallpaper and, for some, shell layout and effects:
 
 ![After ICEY and Manga Ink: the system, music and clock cards as keycaps, and each theme's revolver](docs/assets/preview-anime-themes.jpg)
 
-<sub>After ICEY (its HUD revolver) and Manga Ink (its ink revolver), with every desktop widget on: visualizer,
+<sub>After ICEY and Manga Ink, each with its own revolver and clock, and every desktop widget on: visualizer,
 lyrics, weather, clock, system and now playing, as solid keycaps.
 Wallpapers: *After ICEY* fan art via [MotionBGs](https://motionbgs.com/after-icey); *Anime Girl x Cat* by fw_storm
 via [DesktopHut](https://www.desktophut.com/anime-girl-x-cat-pl2s). Neither is included: the commands in the table
@@ -434,6 +434,14 @@ live one inked solid), an ink-drop hammer, and manga speed lines round it while 
 paper whatever the palette; the pink is the theme's accent.
 
 ![The Manga Ink revolver at rest, and spinning with its speed lines](docs/assets/revolver-manga-ink.jpg)
+
+Their clocks are their own too. **After ICEY**'s is a HUD dial: a near-solid lens with a tick ring, a scanning arc
+that runs round the rim with the seconds (the minutes, without second precision), targeting brackets, a chevron hour
+hand, a minute hand with a hollow diamond tip, the snowflake in the middle, and the date and time as a readout.
+**Manga Ink**'s is a page: paper in the brush ensō with screentone, bold numerals, brush-stroke hands, a blush heart
+in the middle, a pink second hand with a heart on its tip, and the date in a speech bubble.
+
+![The After ICEY and Manga Ink clock faces](docs/assets/clocks-anime.jpg)
 
 The drum is drawn at the size it is shown, on any screen scale, so a large revolver is as sharp as a small one. It
 used to be drawn at 230 px and stretched, which blurred it.

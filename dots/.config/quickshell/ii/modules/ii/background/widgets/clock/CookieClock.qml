@@ -7,6 +7,7 @@ import qs.modules.common.functions
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
+import Quickshell
 import Quickshell.Io
 
 import qs.modules.ii.background.widgets
@@ -86,9 +87,29 @@ Item {
     // upstream's cookie.
     readonly property string themeId: Config.options.halcyon.theme
     readonly property bool themedFace: Styles.styleFor(themeId).id !== "default"
+    // After ICEY and Manga Ink have a face of their own, drawn like their revolvers (ThemeClock.qml): the rest of
+    // this file is the usual face, hidden under them.
+    readonly property string customFace: ({ "icey": "icey", "ink": "ink" })[Styles.revolverStyleFor(themeId).id] ?? ""
+    Loader {
+        anchors.fill: parent
+        z: 10
+        active: root.customFace !== ""
+        source: "ThemeClock.qml"   // by file, so a live reload finds it however the folder was imported
+        onLoaded: {
+            item.kind = Qt.binding(() => root.customFace);
+            item.now = Qt.binding(() => DateTime.clock.date);
+            item.showSeconds = Qt.binding(() => Config.options.time.secondPrecision);
+            item.colAccent = Qt.binding(() => Appearance.colors.colPrimary);
+            item.colAccent2 = Qt.binding(() => Appearance.colors.colTertiary);
+            item.colOn = Qt.binding(() => Appearance.colors.colOnLayer1);
+            item.colBase = Qt.binding(() => Qt.rgba(Appearance.colors.colLayer0.r, Appearance.colors.colLayer0.g, Appearance.colors.colLayer0.b, 1));
+            item.fontFamily = Qt.binding(() => Appearance.font.family.main);
+            item.renderScale = Qt.binding(() => root.width / 230 * (root.QsWindow?.window?.devicePixelRatio ?? 1));
+        }
+    }
     ThemedPlate {
         anchors.fill: parent
-        visible: root.themedFace
+        visible: root.themedFace && root.customFace === ""
         themeId: root.themeId
         kind: "disc"
         colBase: Appearance.colors.colLayer1
@@ -136,6 +157,7 @@ Item {
     // Hour/minutes numbers/dots/lines
     MinuteMarks {
         anchors.fill: parent
+        visible: root.customFace === ""
         color: root.colOnBackground
     }
 
@@ -143,7 +165,7 @@ Item {
     FadeLoader {
         id: hourMarksLoader
         anchors.centerIn: parent
-        shown: Config.options.background.widgets.clock.cookie.hourMarks
+        shown: root.customFace === "" && (Config.options.background.widgets.clock.cookie.hourMarks)
         sourceComponent: HourMarks {
             implicitSize: 135 * (1.75 - 0.75 * hourMarksLoader.opacity)
             color: root.colOnBackground
@@ -155,7 +177,7 @@ Item {
     FadeLoader {
         id: timeColumnLoader
         anchors.centerIn: parent
-        shown: Config.options.background.widgets.clock.cookie.timeIndicators
+        shown: root.customFace === "" && (Config.options.background.widgets.clock.cookie.timeIndicators)
         scale: 1.4 - 0.4 * timeColumnLoader.shown
         Behavior on scale {
             animation: Appearance.animation.elementResize.numberAnimation.createObject(this)
@@ -170,7 +192,7 @@ Item {
     FadeLoader {
         anchors.fill: parent
         z: 1
-        shown: Config.options.background.widgets.clock.cookie.minuteHandStyle !== "hide"
+        shown: root.customFace === "" && (Config.options.background.widgets.clock.cookie.minuteHandStyle !== "hide")
         sourceComponent: MinuteHand {
             anchors.fill: parent
             clockMinute: root.clockMinute
@@ -183,7 +205,7 @@ Item {
     FadeLoader {
         anchors.fill: parent
         z: item?.style === "hollow" ? 0 : 2
-        shown: Config.options.background.widgets.clock.cookie.hourHandStyle !== "hide"
+        shown: root.customFace === "" && (Config.options.background.widgets.clock.cookie.hourHandStyle !== "hide")
         sourceComponent: HourHand {
             clockHour: root.clockHour
             clockMinute: root.clockMinute
@@ -196,7 +218,7 @@ Item {
     FadeLoader {
         id: secondHandLoader
         z: (Config.options.background.widgets.clock.cookie.secondHandStyle === "line") ? 2 : 3
-        shown: Config.options.time.secondPrecision && Config.options.background.widgets.clock.cookie.secondHandStyle !== "hide"
+        shown: root.customFace === "" && (Config.options.time.secondPrecision && Config.options.background.widgets.clock.cookie.secondHandStyle !== "hide")
         anchors.fill: parent
         sourceComponent: SecondHand {
             id: secondHand
@@ -210,7 +232,7 @@ Item {
     FadeLoader {
         z: 4
         anchors.centerIn: parent
-        shown: Config.options.background.widgets.clock.cookie.minuteHandStyle !== "bold"
+        shown: root.customFace === "" && (Config.options.background.widgets.clock.cookie.minuteHandStyle !== "bold")
         sourceComponent: Rectangle {
             color: Config.options.background.widgets.clock.cookie.minuteHandStyle === "medium" ? root.colBackground : root.colMinuteHand
             implicitWidth: 6
@@ -222,7 +244,7 @@ Item {
     // Date
     FadeLoader {
         anchors.fill: parent
-        shown: Config.options.background.widgets.clock.cookie.dateStyle !== "hide"
+        shown: root.customFace === "" && (Config.options.background.widgets.clock.cookie.dateStyle !== "hide")
 
         sourceComponent: DateIndicator {
             color: root.colBackgroundInfo
