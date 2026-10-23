@@ -45,3 +45,9 @@ end
 
 -- Shell overrides --
 require("hyprland.shellOverrides.main")
+
+-- network --
+hl.on("hyprland.start", function ()
+	hl.exec_cmd("/usr/lib/pol-kit-kde-authentication-agent-1")
+	hl.exec_cmd("openrazer-daemon")
+end)
