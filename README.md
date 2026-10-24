@@ -881,19 +881,19 @@ and power saving, which make those cards fail to connect. It writes
 
 | Mode | What it does |
 | --- | --- |
-| `golden` (default) | Splits the space 61.8 / 38.2, on the side the pointer is on; the window that was there keeps the bigger part. (It used to split 81 / 19, which left all but one window very thin.) |
-| `golden-plus` | Golden ratio plus: every window on a golden spiral (61.8 % of the screen, then 61.8 % of the rest, turning left, top, right, bottom), holding many more windows. It turns only as often as keeps every window at least 320 px on its short side; the windows after the last turn share the end of the spiral as a grid. Halcyon's own layout, not dwindle. |
-| `golden-plus-dwindle` | Golden ratio plus with Hyprland's dwindle (the *uses dwindle* switch in Settings): golden splits, each new window right of or below the one it splits. |
+| `golden` (default) | The golden spiral: the first window takes 61.8 % of the screen on the left, the next 61.8 % of what is left at the top, then right, then bottom, turning round like the golden rectangle. After six windows the rest share the last cell as a grid. Halcyon's own layout. |
+| `golden-plus` | Golden ratio for many windows: one window takes 61.8 % of the screen and the others share the rest in equal tiles (a column, then a grid), so none shrinks away; with many windows the first gives up some room, down to half. Halcyon's own layout. |
+| `golden-dwindle`, `golden-plus-dwindle` | The two golden modes on Hyprland's dwindle (the *Use Hyprland's dwindle* switch in Settings): 61.8 / 38.2 splits of the window you are in, which dwindle lets you resize and move. |
 | `cursor` | Splits in halves, on the side the pointer is on. |
 | `stacked` | Two windows at a time, one above the other. A third opens on the next empty workspace, and you go with it. |
 | `side-by-side` | Two windows at a time, next to each other. A third opens on the next empty workspace. |
 | `mondrian` | Each new window splits the biggest tile, on uneven ratios, each cut running the other way from the one before, into interlocking blocks like a Mondrian painting. |
 
-![Golden ratio before and after the fix, and golden ratio plus with three to fourteen windows](docs/assets/golden-plus.png)
+![The golden spiral with three and six windows, golden ratio plus with four and twelve, and the old dwindle split](docs/assets/golden-plus.png)
 
 ![The stacked, side-by-side and Mondrian layouts with one to eight windows](docs/assets/placement-modes.png)
 
-Golden and cursor are Hyprland's own dwindle layout. The other three are layouts written in Lua
+Cursor position and the two `-dwindle` modes are Hyprland's own dwindle layout. The others are layouts written in Lua
 (`halcyon/layouts.lua`, registered with Hyprland 0.56's `hl.layout.register`), so they work on stock Hyprland
 too. Floating windows and special workspaces are left alone. In those three, tiles keep their places: dragging
 a tile's edge doesn't resize it.

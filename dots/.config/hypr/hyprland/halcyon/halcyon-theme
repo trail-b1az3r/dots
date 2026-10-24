@@ -1853,15 +1853,16 @@ def cmd_doctor(args):
 GOLDEN_SPLIT = 1.236
 PLACEMENTS = {
     # (default_split_ratio, force_split, split_bias)
-    "golden": (GOLDEN_SPLIT, 0, 1),               # golden split, the new window on the side the cursor is on
+    "golden-dwindle": (GOLDEN_SPLIT, 0, 1),       # golden split, the new window on the side the cursor is on
     "cursor": (1.0, 0, 0),                        # halves, the side chosen by where the cursor is
     "golden-plus-dwindle": (GOLDEN_SPLIT, 2, 0),  # golden split, the new window always right or below
 }
 LUA_PLACEMENTS = {
+    "golden": "the golden spiral: each window 61.8 % of what is left, turning left, top, right, bottom (default)",
     "stacked": "two windows at a time, one above the other; a third opens on the next empty workspace",
     "side-by-side": "two windows at a time, next to each other; a third opens on the next empty workspace",
     "mondrian": "each new window splits the biggest tile, on uneven ratios, like a Mondrian painting",
-    "golden-plus": "a golden spiral that holds many windows, turning only as often as keeps every window usable",
+    "golden-plus": "golden ratio for many windows: one window 61.8 % wide, the others sharing the rest in equal tiles",
 }
 PLACEMENT_LUA = HALCYON_STATE / "placement.lua"
 
@@ -1906,7 +1907,7 @@ def cmd_placement(args):
         print(current)
         return 0
     if args == ["--list"]:
-        descriptions = {"golden": "splits on the golden ratio (61.8 / 38.2), on the side the pointer is on (default)",
+        descriptions = {"golden-dwindle": "golden ratio on Hyprland's dwindle: 61.8 / 38.2 splits, on the side the pointer is on",
                         "cursor": "splits in halves, on the side the pointer is on",
                         "golden-plus-dwindle": "golden ratio plus, with Hyprland's dwindle: golden splits, new windows right or below",
                         **LUA_PLACEMENTS}
