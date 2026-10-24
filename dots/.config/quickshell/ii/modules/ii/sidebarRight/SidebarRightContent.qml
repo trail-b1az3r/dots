@@ -1,6 +1,7 @@
 import qs
 import qs.services
 import qs.modules.common
+import "../background/widgets/revolver/RevolverStyles.js" as Styles
 import qs.modules.common.widgets
 import QtQuick
 import QtQuick.Controls
@@ -49,12 +50,28 @@ Item {
     }
     Rectangle {
         id: sidebarRightBackground
+        readonly property string frameKind: Styles.frameKindFor(Config.options.halcyon.theme)
 
         anchors.fill: parent
         implicitHeight: parent.height - Appearance.sizes.hyprlandGapsOut * 2
         implicitWidth: sidebarWidth - Appearance.sizes.hyprlandGapsOut * 2
-        color: Appearance.colors.colLayer0
-        border.width: 1
+        color: frameKind !== "" ? "transparent" : Appearance.colors.colLayer0
+        border.width: frameKind !== "" ? 0 : 1
+
+        // The theme's frame under the panel (dock/DockFrame.qml, as the dock and the top bar have it).
+        Loader {
+            anchors.fill: parent
+            z: -1
+            active: sidebarRightBackground.frameKind !== ""
+            source: "../dock/DockFrame.qml"
+            onLoaded: {
+                item.kind = Qt.binding(() => sidebarRightBackground.frameKind);
+                item.inverted = true;
+                item.colBase = Qt.binding(() => Qt.rgba(Appearance.colors.colLayer0.r, Appearance.colors.colLayer0.g, Appearance.colors.colLayer0.b, 1));
+                item.colAccent = Qt.binding(() => Appearance.colors.colPrimary);
+                item.colAccent2 = Qt.binding(() => Appearance.colors.colTertiary);
+            }
+        }
         border.color: Appearance.colors.colLayer0Border
         radius: Appearance.rounding.screenRounding - Appearance.sizes.hyprlandGapsOut + 1
 

@@ -1,6 +1,7 @@
 import qs
 import qs.services
 import qs.modules.common
+import "../background/widgets/revolver/RevolverStyles.js" as Styles
 import qs.modules.common.widgets
 import QtQuick
 import Quickshell.Io
@@ -133,16 +134,31 @@ Scope { // Scope
                 target: sidebarLeftBackground
                 radius: sidebarLeftBackground.radius
             }
+            // The theme's frame under the panel (dock/DockFrame.qml, as the dock and the top bar have it). Beside the
+            // background, not in it: the panel's content replaces the background's children.
+            Loader {
+                anchors.fill: sidebarLeftBackground
+                active: sidebarLeftBackground.frameKind !== ""
+                source: "../dock/DockFrame.qml"
+                onLoaded: {
+                    item.kind = Qt.binding(() => sidebarLeftBackground.frameKind);
+                    item.inverted = true;
+                    item.colBase = Qt.binding(() => Qt.rgba(Appearance.colors.colLayer0.r, Appearance.colors.colLayer0.g, Appearance.colors.colLayer0.b, 1));
+                    item.colAccent = Qt.binding(() => Appearance.colors.colPrimary);
+                    item.colAccent2 = Qt.binding(() => Appearance.colors.colTertiary);
+                }
+            }
             Rectangle {
                 id: sidebarLeftBackground
+                readonly property string frameKind: Styles.frameKindFor(Config.options.halcyon.theme)
                 anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.topMargin: Appearance.sizes.hyprlandGapsOut
                 anchors.leftMargin: Appearance.sizes.hyprlandGapsOut
                 width: panelWindow.sidebarWidth - Appearance.sizes.hyprlandGapsOut - Appearance.sizes.elevationMargin
                 height: parent.height - Appearance.sizes.hyprlandGapsOut * 2
-                color: Appearance.colors.colLayer0
-                border.width: 1
+                color: frameKind !== "" ? "transparent" : Appearance.colors.colLayer0
+                border.width: frameKind !== "" ? 0 : 1
                 border.color: Appearance.colors.colLayer0Border
                 radius: Appearance.rounding.screenRounding - Appearance.sizes.hyprlandGapsOut + 1
 

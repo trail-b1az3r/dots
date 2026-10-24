@@ -17,6 +17,10 @@ hl.bind("SUPER + Escape", hl.dsp.global("quickshell:sessionToggle"), { descripti
 hl.bind("SUPER + Escape", hl.dsp.exec_cmd(qsIsAlive .. " || pkill wlogout || wlogout -p layer-shell"))
 hl.bind("SUPER + Comma", hl.dsp.exec_cmd(settingsApp), { description = "App: Settings app" })
 
+--# Power: the power button opens the power menu (shut down, restart, sleep, log out, and the power levels). The
+-- shell holds logind's power-key lock while it runs; without the shell, the button powers off as usual.
+hl.bind("XF86PowerOff", hl.dsp.global("quickshell:sessionToggle"), { description = "Shell: Power menu (power button)" })
+
 --# Workspaces
 hl.bind("SUPER + grave", hl.dsp.focus({ workspace = "previous" }), { description = "Workspace: Back and forth" })
 

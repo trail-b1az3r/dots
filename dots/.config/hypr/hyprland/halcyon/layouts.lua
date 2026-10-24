@@ -4,12 +4,16 @@
 --   side-by-side   two windows at a time, next to each other. A third opens on the next empty workspace.
 --   mondrian       a Mondrian grid: each new window splits the biggest tile, at a ratio from a fixed sequence,
 --                  the other way from the cut before, so the tiles come out as interlocking, uneven blocks.
---   golden-plus    a golden spiral that holds many windows: the first window takes 61.8 % of the screen, the next
---                  61.8 % of what is left, turning round the spiral (left, top, right, bottom). It turns only as
---                  often as keeps every window usable; the windows after the last turn share the rest as a grid.
+--   golden         the golden spiral: the first window takes 61.8 % of the screen, the next 61.8 % of what is left,
+--                  and so on, turning round the spiral (left, top, right, bottom) like the classic golden rectangle.
+--                  After GOLDEN_TURNS windows the rest share the last cell as a grid.
+--   golden-plus    golden ratio for many windows, none shrinking away: the first window takes 61.8 % of the
+--                  screen and the others share the remaining 38.2 % in equal tiles. With many windows the first
+--                  gives up some room (down to half), so the tiles stay usable.
 --
--- Golden ratio and cursor position are Hyprland's own dwindle layout (placement.lua sets those), and so is golden
--- ratio plus when it is set to use dwindle (golden-plus-dwindle). These four
+-- Cursor position is Hyprland's own dwindle layout (placement.lua sets it), and so are golden-dwindle and
+-- golden-plus-dwindle, the two golden modes on dwindle (golden splits, each new window beside the focused one).
+-- These five
 -- are layouts written in Lua (hl.layout.register): Hyprland hands recalculate() the work area and the tiled
 -- windows, and each window is placed with target.place(box). Gaps and borders are added by Hyprland itself.
 -- Floating windows are not part of any of them.
@@ -19,12 +23,10 @@
 local M = {}
 
 M.NAMES = { stacked = "halcyon-stacked", ["side-by-side"] = "halcyon-side-by-side", mondrian = "halcyon-mondrian",
-            ["golden-plus"] = "halcyon-golden-plus" }
+            golden = "halcyon-golden", ["golden-plus"] = "halcyon-golden-plus" }
 
 M.PHI = 0.6180339887
--- The spiral stops before a window would be narrower than this (in pixels), or after this many turns: from there
--- the windows still to come share the rest as a grid, so no window ends up a sliver.
-M.GOLDEN_MIN = 320
+-- The golden spiral turns this many times; the windows after that share its last cell as a grid.
 M.GOLDEN_TURNS = 6
 
 -- The ratios Mondrian splits at, in turn: never a plain half twice in a row, never thinner than about a third.
@@ -170,32 +172,54 @@ local function spiral(area, n, turns)
     return boxes
 end
 
-local function smallest_side(boxes)
-    local least = math.huge
-    for _, b in ipairs(boxes) do
-        least = math.min(least, b.w, b.h)
+-- The golden spiral: each window 61.8 % of what the ones before left, turning left, top, right, bottom. Past
+-- GOLDEN_TURNS windows the rest share the last cell as a grid, so it never goes on into slivers.
+function M.golden(area, n)
+    if n < 1 then
+        return {}
     end
-    return least
+    return spiral(area, n, math.min(n - 1, M.GOLDEN_TURNS))
 end
 
--- The golden spiral, for any number of windows: as many turns as keep every window at least GOLDEN_MIN pixels
--- on its short side, the windows past the last turn sharing what is left as a grid. With many windows the spiral
--- has fewer turns, so they all stay usable; with none possible it is a plain grid.
+-- Golden ratio for many windows: the first takes 61.8 % across (down the screen on a tall one), the others
+-- share the rest in equal tiles, a column of up to three and then a grid. From five others on, the first gives
+-- up a little room each time, down to half, so the tiles never get small.
 function M.golden_plus(area, n)
     if n < 1 then
         return {}
     end
-    for turns = math.min(n - 1, M.GOLDEN_TURNS), 1, -1 do
-        local boxes = spiral(area, n, turns)
-        if smallest_side(boxes) >= M.GOLDEN_MIN then
-            return boxes
-        end
+    if n == 1 then
+        return { { x = area.x, y = area.y, w = area.w, h = area.h } }
     end
-    return spiral(area, n, 0)
+    local others = n - 1
+    local share = M.PHI
+    if others > 4 then
+        share = math.max(0.5, M.PHI - 0.03 * (others - 4))
+    end
+    local across = area.w >= area.h
+    local main, rest
+    if across then
+        main = { x = area.x, y = area.y, w = area.w * share, h = area.h }
+        rest = { x = area.x + area.w * share, y = area.y, w = area.w * (1 - share), h = area.h }
+    else
+        main = { x = area.x, y = area.y, w = area.w, h = area.h * share }
+        rest = { x = area.x, y = area.y + area.h * share, w = area.w, h = area.h * (1 - share) }
+    end
+    local boxes = { main }
+    local tiles
+    if others <= 3 then
+        tiles = across and M.even(rest, others, false) or M.even(rest, others, true)
+    else
+        tiles = M.grid(rest, others)
+    end
+    for i, b in ipairs(tiles) do
+        boxes[i + 1] = b
+    end
+    return boxes
 end
 
 M.ARRANGE = { stacked = M.stacked, ["side-by-side"] = M.side_by_side, mondrian = M.mondrian,
-              ["golden-plus"] = M.golden_plus }
+              golden = M.golden, ["golden-plus"] = M.golden_plus }
 
 -- How many windows the capped layouts hold on one workspace.
 M.CAP = { stacked = 2, ["side-by-side"] = 2 }

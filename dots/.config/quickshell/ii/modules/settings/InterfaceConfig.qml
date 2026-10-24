@@ -114,13 +114,16 @@ ContentPage {
 
         ConfigSelectionArray {
             id: placementChoice
-            // Golden ratio plus is one choice whether or not it uses dwindle; the switch below picks which.
-            currentValue: Config.options.windowPlacement === "golden-plus-dwindle" ? "golden-plus" : Config.options.windowPlacement
+            // Each golden mode is one choice whether or not it uses dwindle; the switch below picks which.
+            currentValue: ({ "golden-plus-dwindle": "golden-plus", "golden-dwindle": "golden" })[Config.options.windowPlacement] ?? Config.options.windowPlacement
+            function withDwindle(mode, dwindle) {
+                return (mode === "golden" || mode === "golden-plus") && dwindle ? mode + "-dwindle" : mode;
+            }
             function apply(mode) {
                 Config.options.windowPlacement = mode;
                 Quickshell.execDetached([`${FileUtils.trimFileProtocol(Directories.config)}/hypr/hyprland/halcyon/halcyon-theme`, "placement", mode]);
             }
-            onSelected: newValue => placementChoice.apply(newValue === "golden-plus" && plusDwindle.checked ? "golden-plus-dwindle" : newValue)
+            onSelected: newValue => placementChoice.apply(placementChoice.withDwindle(newValue, plusDwindle.checked))
             options: [
                 {
                     displayName: Translation.tr("Golden ratio"),
@@ -161,22 +164,22 @@ ContentPage {
             wrapMode: Text.Wrap
             color: Appearance.colors.colSubtext
             font.pixelSize: Appearance.font.pixelSize.smallie
-            text: Translation.tr("Where a new window opens. Golden ratio splits the space 61.8 / 38.2, and cursor position in halves, on the side the pointer is on; the window that was there keeps the bigger part. Golden ratio plus lays every window on a golden spiral and holds many more: it turns only as often as keeps every window usable, and the rest share the end of the spiral as a grid. Two, stacked or side by side, keeps two windows on a workspace and opens a third on the next empty one. Mondrian grid splits the biggest tile each time, on uneven ratios, into blocks like a Mondrian painting.")
+            text: Translation.tr("Where a new window opens. Golden ratio lays windows on the golden spiral, each 61.8 % of what is left, turning left, top, right, bottom. Golden ratio plus gives one window 61.8 % of the screen and the others equal tiles in the rest, so it holds many windows and none shrinks away. Cursor position splits in halves, on the side the pointer is on. Two, stacked or side by side, keeps two windows on a workspace and opens a third on the next empty one. Mondrian grid splits the biggest tile each time, on uneven ratios, into blocks like a Mondrian painting.")
         }
 
         ConfigSwitch {
             id: plusDwindle
-            visible: placementChoice.currentValue === "golden-plus"
+            visible: placementChoice.currentValue === "golden" || placementChoice.currentValue === "golden-plus"
             buttonIcon: "account_tree"
-            text: Translation.tr("Golden ratio plus uses dwindle")
-            checked: Config.options.windowPlacement === "golden-plus-dwindle"
+            text: Translation.tr("Use Hyprland's dwindle for it")
+            checked: Config.options.windowPlacement === "golden-plus-dwindle" || Config.options.windowPlacement === "golden-dwindle"
             onCheckedChanged: {
-                const mode = checked ? "golden-plus-dwindle" : "golden-plus";
+                const mode = placementChoice.withDwindle(placementChoice.currentValue, checked);
                 if (visible && Config.options.windowPlacement !== mode)
                     placementChoice.apply(mode);
             }
             StyledToolTip {
-                text: Translation.tr("Off: Halcyon's golden spiral. On: Hyprland's dwindle with golden splits, each new window right of or below the one it splits, which you can resize and move as dwindle allows")
+                text: Translation.tr("Off: Halcyon's golden layout. On: Hyprland's dwindle with golden 61.8 / 38.2 splits, each new window beside the one it splits, which you can resize and move as dwindle allows")
             }
         }
     }

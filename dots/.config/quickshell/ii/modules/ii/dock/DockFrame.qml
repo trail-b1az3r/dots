@@ -13,7 +13,9 @@ import "../background/widgets/revolver/RevolverStyles.js" as Styles
  *   icey      After ICEY's HUD: chamfered corners, a cyan edge, corner brackets, gold diamonds at the ends, and a
  *             scan of light that runs along the top
  *   ink       a manga panel: paper in a thick ink border with a hard offset shadow, and screentone at the right
+ *             (inverted: an ink panel with paper lines, for the top bar, whose text is light)
  *
+ * The dock and the top bar both use it, so they match.
  * Needs only QtQuick and RevolverStyles.js.
  */
 Item {
@@ -24,10 +26,14 @@ Item {
     property color colAccent: "#ffd86b"
     property color colAccent2: "#b9a4ff"
     property color colGlow: "#ff4940"
+    /** Manga Ink in negative: an ink panel with paper lines, for places whose text is light (the top bar). */
+    property bool inverted: false
 
-    readonly property color ink: "#141414"
-    readonly property color paper: "#f7f3ea"
+    readonly property color ink: inverted ? "#f7f3ea" : "#141414"
+    readonly property color paper: inverted ? "#141414" : "#f7f3ea"
     readonly property real r: Math.min(height / 2, 18)
+    // Red Sun's capsule: round ends on a bar, rounded corners on a tall panel.
+    readonly property real capsule: Math.min(height / 2, 30)
 
     function withAlpha(colour, alpha) {
         return Qt.rgba(colour.r, colour.g, colour.b, alpha);
@@ -125,7 +131,7 @@ Item {
                 required property var modelData
                 anchors.fill: parent
                 anchors.margins: modelData.m
-                radius: frame.height / 2 - modelData.m
+                radius: frame.capsule - modelData.m
                 color: "transparent"
                 border.width: 2
                 border.color: frame.withAlpha(frame.colGlow, modelData.a)
@@ -133,7 +139,7 @@ Item {
         }
         Rectangle {
             anchors.fill: parent
-            radius: frame.height / 2
+            radius: frame.capsule
             gradient: Gradient {
                 GradientStop { position: 0.0; color: "#3a1a33" }
                 GradientStop { position: 1.0; color: "#0d0710" }

@@ -10,10 +10,12 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import Quickshell.Services.UPower
 
 Scope {
     id: root
-    property var focusedScreen: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name)
+    // The first screen until Hyprland names the focused one, so the power button always opens the menu.
+    property var focusedScreen: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? Quickshell.screens[0]
 
     Loader {
         id: sessionLoader
@@ -246,6 +248,29 @@ Scope {
                 }
                 spacing: 10
 
+                // Power performance levels (power-profiles-daemon): the power button opens this screen, so they are
+                // here with shut down, restart and sleep.
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    visible: PowerProfiles.profile !== undefined
+                    spacing: 6
+                    Repeater {
+                        model: [
+                            { profile: PowerProfile.PowerSaver, icon: "energy_savings_leaf", name: Translation.tr("Power saver") },
+                            { profile: PowerProfile.Balanced, icon: "airwave", name: Translation.tr("Balanced") },
+                            { profile: PowerProfile.Performance, icon: "local_fire_department", name: Translation.tr("Performance") }
+                        ].filter(level => level.profile !== PowerProfile.Performance || PowerProfiles.hasPerformanceProfile)
+                        delegate: RippleButtonWithIcon {
+                            required property var modelData
+                            buttonRadius: Appearance.rounding.full
+                            materialIcon: modelData.icon
+                            mainText: modelData.name
+                            toggled: PowerProfiles.profile === modelData.profile
+                            onClicked: PowerProfiles.profile = modelData.profile
+                        }
+                    }
+                }
+
                 Loader {
                     Layout.alignment: Qt.AlignHCenter
                     active: SessionWarnings.downloadRunning
@@ -291,6 +316,15 @@ Scope {
             color: descriptionLabel.textColor
             text: descriptionLabel.text
         }
+    }
+
+    // The power button opens this menu instead of switching the computer off: while the shell runs it holds
+    // logind's power-key lock (systemd-inhibit), and Hyprland binds the key to the menu (halcyon/keybinds.lua).
+    // Without the shell the lock goes with it, and the button powers off as usual.
+    Process {
+        running: Config.options.halcyon.powerButtonMenu
+        command: ["systemd-inhibit", "--what=handle-power-key", "--who=Halcyon", "--mode=block",
+            "--why=The power button opens Halcyon's power menu", "sleep", "infinity"]
     }
 
     IpcHandler {

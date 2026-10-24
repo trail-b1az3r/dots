@@ -86,6 +86,7 @@ Singleton {
                 property string theme: "" // Active theme id, "" for none
                 property bool glassTheme: false // Written by halcyon-theme: the active theme has glass windows or a glass shader
                 property list<string> themeOrder: [] // Built-in theme ids in the order Settings lists them; the rest follow in the default order
+                property bool powerButtonMenu: true // The power button opens the power menu (shut down, restart, sleep, log out) instead of powering off
                 property list<string> hiddenThemes: [] // Built-in theme ids hidden from Settings; "Show hidden themes" brings them back
                 property list<string> collapsedSections: [] // Settings sections folded shut, by title; a click on the title opens them again
                 property list<var> switchRules: [] // When the theme switches (Settings > Halcyon): { theme ("*" any, "off"), when "to"/"from", action "widget"/"icons"/"effects"/"placement"/"setting"/"command", target, value, restore }
@@ -776,7 +777,7 @@ Singleton {
             }
 
             // How a new window is split from the others: "golden" or "cursor". Applied by halcyon-theme placement.
-            property string windowPlacement: "golden" // "golden", "cursor", "stacked", "side-by-side", "mondrian", "golden-plus", "golden-plus-dwindle"
+            property string windowPlacement: "golden" // "golden", "golden-dwindle", "cursor", "stacked", "side-by-side", "mondrian", "golden-plus", "golden-plus-dwindle"
 
             // Other windows kept as live previews down the left edge; click one to bring it forward.
             property JsonObject stageManager: JsonObject {

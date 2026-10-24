@@ -100,6 +100,15 @@ function snowflake(cx, cy, r) {
     return d;
 }
 
+// The frame the dock, the top bar and the side panels take in a theme (dock/DockFrame.qml); "" keeps the plain
+// panel (no theme, and the glass themes).
+var FRAMES = { "hyperneo": "hyperneo", "hsr": "hsr", "red-sun": "red-sun", "wallpaper-heaven-kenami": "red-sun",
+               "after-icey": "icey", "manga-ink": "ink" };
+
+function frameKindFor(themeId) {
+    return FRAMES[themeId] || "";
+}
+
 // A speech bubble of radius r round (cx, cy), its tail pointing along `tail` degrees (0 is right, 90 down).
 function bubble(cx, cy, r, tail) {
     var t = tail * Math.PI / 180, spread = 0.3;

@@ -61,6 +61,13 @@ if [[ ! -z $(systemctl --version) ]]; then
     fi
   fi
   v sudo systemctl enable bluetooth --now
+  # Power levels (power saver, balanced, performance) in the power menu and the quick toggles come from
+  # power-profiles-daemon. It would fight TLP, auto-cpufreq or tuned over the same settings, so it is only added
+  # where none of them is.
+  if command -v pacman >/dev/null 2>&1 && ! pacman -Qq 2>/dev/null | grep -qxE 'tlp|auto-cpufreq|tuned'; then
+    v sudo pacman -S --needed --noconfirm power-profiles-daemon
+    v sudo systemctl enable --now power-profiles-daemon.service
+  fi
 elif [[ ! -z $(openrc --version) ]]; then
   v bash -c "echo 'modules=i2c-dev' | sudo tee -a /etc/conf.d/modules"
   v sudo rc-update add modules boot
