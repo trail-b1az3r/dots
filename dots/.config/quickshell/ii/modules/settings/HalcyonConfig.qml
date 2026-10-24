@@ -1063,6 +1063,16 @@ ContentPage {
         icon: "brush"
         title: Translation.tr("On the screen")
 
+        ConfigSwitch {
+            buttonIcon: "power_settings_new"
+            text: Translation.tr("The power button opens the power menu")
+            checked: Config.options.halcyon.powerButtonMenu
+            onCheckedChanged: Config.options.halcyon.powerButtonMenu = checked
+            StyledToolTip {
+                text: Translation.tr("Shut down, restart, sleep, log out and the power levels, instead of switching off at once. Without the shell running, the button switches off as usual.")
+            }
+        }
+
         ContentSubsection {
             title: Translation.tr("Volume and brightness popup")
             tooltip: Translation.tr("The popup that shows when you change the volume, the microphone or the brightness with the keys. Avizo draws its own, in the theme's colours and shape. It has to be installed (yay -S avizo).")

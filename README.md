@@ -985,6 +985,7 @@ full list, including all of upstream's.
 | `Super + Ctrl + I` | Plus Tiles: geometry inspector |
 | `Super + Alt + arrow` | Plus Tiles: move that edge out at once (`Shift`: in) |
 | `Super + F10 + H` or `Super + Ctrl + H` | Hypr mode on and off |
+| Power button | The power menu: lock, sleep, log out, hibernate, shut down, restart, and the power levels (power saver, balanced, performance). Without the shell running it powers off as usual; Settings > Halcyon > On the screen turns it off |
 | `Hyper + Ctrl + Tab` | The next floating window here, brought to the top (`Shift` as well: the previous one) |
 
 A Hyper key (keyd, kanata, or Caps Lock remapped) sends `Super + Ctrl + Alt + Shift` together, and Hyprland has no
