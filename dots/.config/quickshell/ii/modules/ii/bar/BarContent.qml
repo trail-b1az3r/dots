@@ -8,6 +8,7 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
+import "../background/widgets/revolver/RevolverStyles.js" as Styles
 
 Item { // Bar content region
     id: root
@@ -34,6 +35,21 @@ Item { // Bar content region
             target: barBackground
         }
     }
+    // Each Halcyon theme that isn't a glass one draws the bar the way it draws the dock (dock/DockFrame.qml).
+    readonly property string frameKind: Config.options.bar.showBackground ? Styles.frameKindFor(Config.options.halcyon.theme) : ""
+    Loader {
+        anchors.fill: barBackground
+        z: -1
+        active: root.frameKind !== ""
+        source: "../dock/DockFrame.qml"   // by file, so a live reload finds it
+        onLoaded: {
+            item.kind = Qt.binding(() => root.frameKind);
+            item.inverted = true;   // the bar's text is light: Manga Ink's panel is ink with paper lines
+            item.colBase = Qt.binding(() => Qt.rgba(Appearance.colors.colLayer0.r, Appearance.colors.colLayer0.g, Appearance.colors.colLayer0.b, 1));
+            item.colAccent = Qt.binding(() => Appearance.colors.colPrimary);
+            item.colAccent2 = Qt.binding(() => Appearance.colors.colTertiary);
+        }
+    }
     // Background
     Rectangle {
         id: barBackground
@@ -41,6 +57,7 @@ Item { // Bar content region
             fill: parent
             margins: Config.options.bar.cornerStyle === 1 ? (Appearance.sizes.hyprlandGapsOut) : 0 // idk why but +1 is needed
         }
+        opacity: root.frameKind !== "" ? 0 : 1
         color: Config.options.bar.showBackground ? Appearance.colors.colLayer0 : "transparent"
         radius: Config.options.bar.cornerStyle === 1 ? Appearance.rounding.windowRounding : 0
         border.width: Config.options.bar.cornerStyle === 1 ? 1 : 0

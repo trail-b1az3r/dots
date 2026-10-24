@@ -11,6 +11,7 @@ import Quickshell
 import Quickshell.Widgets
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import "../background/widgets/revolver/RevolverStyles.js" as Styles
 
 Scope { // Scope
     id: root
@@ -29,8 +30,7 @@ Scope { // Scope
 
             // Shown when it isn't set to auto-hide, pinned, hovered, requested, or no window is focused.
             // Each Halcyon theme that isn't a glass one draws the dock its own way (DockFrame.qml).
-            readonly property string frameKind: ({ "hyperneo": "hyperneo", "hsr": "hsr", "red-sun": "red-sun",
-                "wallpaper-heaven-kenami": "red-sun", "after-icey": "icey", "manga-ink": "ink" })[Config.options.halcyon.theme] ?? ""
+            readonly property string frameKind: Styles.frameKindFor(Config.options.halcyon.theme)
             // Manga Ink's dock is paper: its symbols are inked.
             readonly property color fg: frameKind === "ink" ? "#141414" : Appearance.colors.colOnLayer0
 
