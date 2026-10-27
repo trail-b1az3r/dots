@@ -72,6 +72,8 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("usb [--json]", "why a browser can't find or open a USB, HID or serial device (WebUSB, WebHID, Web Serial)"),
         ("usb allow VID:PID ... | --all", "let you open those devices from the browser (a udev rule; asks for sudo)"),
         ("usb remove", "take that rule away again"),
+        ("files", "which file manager opens folders; Loaf is Halcyon's (yay -S loaf-fm)"),
+        ("files use loaf|dolphin|APP", "open folders in that app from now on"),
         ("audio [--json]", "why headphones, a microphone or the webcam work in KDE but not here: PipeWire, EasyEffects, KDE's leftovers"),
         ("audio fix", "put the session right and restart the sound services and portals (installs what is missing)"),
         ("audio easyeffects on|off", "start EasyEffects at login, or not (off unless you turn it on)"),

@@ -98,6 +98,8 @@ hl.on("hyprland.start", function()
         -- Sound, microphones and webcams: drop what a KDE session left in systemd, restart KDE's portal if it is
         -- the one running, start PipeWire if it isn't (halcyon_audio.py; `halcyon audio` says what it found).
         "$HOME/.config/hypr/hyprland/halcyon/halcyon_audio.py boot >/dev/null 2>&1; " ..
+        -- Loaf, once it is installed: folders open in it, and Dolphin's pins go to it (once; halcyon files).
+        "$HOME/.config/hypr/hyprland/halcyon/halcyon_file_manager.py login >/dev/null 2>&1; " ..
         "systemctl --user daemon-reload; " ..
         -- Older Halcyon enabled these for every login, which started the shell in KDE too. They are only
         -- started from here now, so drop those links.
