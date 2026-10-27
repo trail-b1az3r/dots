@@ -20,7 +20,8 @@ Scope {
         property string searchingText: ""
         readonly property HyprlandMonitor monitor: Hyprland.monitorFor(panelWindow.screen)
         property bool monitorIsFocused: (Hyprland.focusedMonitor?.id == monitor?.id)
-        visible: GlobalStates.overviewOpen
+        // The theme's own app picker opens instead, when there is one (themedLauncher/ThemedLauncher.qml).
+        visible: GlobalStates.overviewOpen && GlobalStates.themedLauncher === ""
 
         WlrLayershell.namespace: "quickshell:overview"
         WlrLayershell.layer: WlrLayer.Top
@@ -41,6 +42,8 @@ Scope {
         Connections {
             target: GlobalStates
             function onOverviewOpenChanged() {
+                if (GlobalStates.themedLauncher !== "")
+                    return;
                 if (!GlobalStates.overviewOpen) {
                     searchWidget.disableExpandAnimation();
                     overviewScope.dontAutoCancelSearch = false;

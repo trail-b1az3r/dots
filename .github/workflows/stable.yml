@@ -117,7 +117,8 @@ jobs:
             where=(--verify-tag)
           fi
           # The release's name (CODENAME, e.g. Copper) and its notes (docs/releases/<version>.md), when there are.
-          codename="$(tr -d '[:space:]' < CODENAME 2>/dev/null || true)"
+          # Trimmed at the ends only: a name can have spaces (Weathered Copper).
+          codename="$(head -n1 CODENAME 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || true)"
           notes=(--generate-notes)
           if [[ -f "docs/releases/$VERSION.md" ]]; then
             notes=(--notes-file "docs/releases/$VERSION.md" --generate-notes)

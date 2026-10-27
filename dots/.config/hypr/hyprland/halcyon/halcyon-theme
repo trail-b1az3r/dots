@@ -254,9 +254,11 @@ def validate(theme_id, theme):
     if problems:
         return problems
     known_top = {"name", "description", "wallpaper", "seed", "scheme", "shell", "terminal",
-                 "hyprland", "effects", "shell_config", "banner", "wallpaper_invert_of"}
+                 "hyprland", "effects", "shell_config", "banner", "wallpaper_invert_of", "mode"}
     for key in set(theme) - known_top:
         problems.append(f"'{key}' is not a known key")
+    if theme.get("mode", "dark") not in ("dark", "light"):
+        problems.append("mode must be dark or light")
     if not HEX.match(str(theme["seed"])):
         problems.append(f"seed {theme['seed']!r} is not #RRGGBB")
     if theme["scheme"] not in SCHEMES:
@@ -1413,11 +1415,11 @@ def cmd_apply(args):
         if theme_id == "hsr":
             ensure_starrail_banner()
         wallpaper = compose_banner(theme_id, theme, wallpaper)
-        run([str(SWITCHWALL), "--mode", "dark", "--image", str(wallpaper)])
+        run([str(SWITCHWALL), "--mode", theme.get("mode", "dark"), "--image", str(wallpaper)])
     else:
         print(f"note: wallpaper {wallpaper} not found, keeping the current one", file=sys.stderr)
         print(wallpaper_hint(wallpaper, theme), file=sys.stderr)
-    run([str(SWITCHWALL), "--mode", "dark", "--noswitch",
+    run([str(SWITCHWALL), "--mode", theme.get("mode", "dark"), "--noswitch",
          "--type", theme["scheme"], "--color", theme["seed"]])
 
     colors_json = GENERATED / "colors.json"
@@ -2560,6 +2562,9 @@ def main(argv):
         updater = HERE / "update"
         # By PATH: NixOS has no /bin/bash.
         os.execv(shutil.which("bash") or "/bin/bash", ["bash", str(updater), *(argv[1:] or ["status"])])
+    if argv and argv[0] == "files":
+        tool = HERE / "halcyon_file_manager.py"
+        os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and argv[0] == "icons":
         tool = HERE / "halcyon_icons.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])

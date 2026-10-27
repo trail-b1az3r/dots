@@ -7,6 +7,7 @@
 --            Hold Super, then press the keys in the order written: for "SUPER + F10 + H", F10 before H.
 --            On many laptops F10 is a media key unless Fn is held too, so SUPER + CTRL + H is there as well.
 --   exit     Turns the mode off. Any key.
+--   idle_exit  Seconds without a mode key before the mode turns itself off (0: never).
 --   binds    The chords that work in the mode, as { chord, dispatcher, description }.
 --            While the mode is on the normal binds are off, so a chord here can do something else
 --            from the same chord outside the mode. A chord that is not listed does nothing in the mode.
@@ -16,6 +17,9 @@
 return {
     toggle = { "SUPER + F10 + H", "SUPER + CTRL + H" },
     exit = "Escape",
+    -- The mode turns itself off after this many seconds without one of its keys, so it can't be left on by mistake
+    -- and eat what you type. 0 keeps it on until you leave it.
+    idle_exit = 10,
 
     binds = {
         -- Move with the arrows, grow and shrink with Shift, focus with H J K L (vim's directions).
@@ -35,7 +39,8 @@ return {
         { "F", hl.dsp.window.float({ action = "toggle" }), "Hypr mode: Float or tile" },
         { "C", hl.dsp.window.center(), "Hypr mode: Center a floating window" },
         { "P", hl.dsp.window.pin(), "Hypr mode: Pin on every workspace" },
-        { "M", hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }), "Hypr mode: Maximise" },
+        -- With Shift: a plain M typed into a window while the mode was on maximised it by accident.
+        { "SHIFT + M", hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }), "Hypr mode: Maximise" },
         { "Tab", function()
             hl.dispatch(hl.dsp.window.cycle_next({ floating = true }))
             hl.dispatch(hl.dsp.window.bring_to_top())

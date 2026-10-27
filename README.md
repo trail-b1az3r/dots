@@ -270,7 +270,7 @@ style, animations, wallpaper and, for some, shell layout and effects:
 | **Fractured Glass** | `fractured-glass` | Refraction only, like Apple's Liquid Glass: a squircle glass lens follows the pointer and bends what's behind its rim. No ripples or cracks. Soft blue, lavender and pink over calm fragments of thick glass. |
 | **Red Sun** | `red-sun` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. The ring is the revolver: spin it and the screen breaks, an eye opens in the sun and finds the car, and the tape rewinds. Wallpaper: *Eclipse* by Alena Aenami (2017), from [wallhaven](https://wallhaven.vip/w/yjl8mk); [buy it here](https://www.artstation.com/marketplace/p/oAol/wallpaper-pack-02). |
 | **After ICEY** | `after-icey` | Silver hair, cyan light and ink-dark navy, over the animated *After ICEY* wallpaper (fan art, by way of [MotionBGs](https://motionbgs.com/after-icey)). `halcyon wallpapers get after-icey` fetches it. |
-| **Manga Ink** | `manga-ink` | Black ink on paper with a blush accent, over the animated *Anime Girl x Cat* wallpaper by fw_storm ([DesktopHut](https://www.desktophut.com/anime-girl-x-cat-pl2s)). The site gives the file out from its page: download it there, then `halcyon wallpapers import anime-girl-cat FILE`. |
+| **Manga Ink** | `manga-ink` | Black ink on paper with a blush accent, the whole desktop drawn like a manga page: a light theme whose top bar, side panels, cards and dock are all paper panels in thick ink borders, with hard shadows and screentone, over the animated *Anime Girl x Cat* wallpaper by fw_storm ([DesktopHut](https://www.desktophut.com/anime-girl-x-cat-pl2s)). The site gives the file out from its page: download it there, then `halcyon wallpapers import anime-girl-cat FILE`. |
 | **Manga Ink Dark** | `manga-ink-dark` | Manga Ink in negative: paper-white ink on a black page, the blush kept. Its wallpaper is Manga Ink's, inverted on your computer the first time you apply it (light to dark with the colours kept: ffmpeg's `negate,hue=h=180`). The cards, dock, bar, revolver and clock are ink panels with paper lines. |
 | **Silence** | `silence` | Black, and a face in the dark with red eyes. A still wallpaper (from [wallhaven](https://wallhaven.cc/w/6ll7dx), artist unknown), fetched when the theme is first applied. Everything else stays out of its way: near-black cards with a red hairline, a dock with two small red eyes that slowly open and close, a revolver with almond eye chambers and a red-eyed hub, a clock of needles round an eye, and slow, quiet animations. |
 
@@ -285,6 +285,8 @@ lyrics, weather, clock, system and now playing, as solid keycaps.
 Wallpapers: *After ICEY* fan art via [MotionBGs](https://motionbgs.com/after-icey); *Anime Girl x Cat* by fw_storm
 via [DesktopHut](https://www.desktophut.com/anime-girl-x-cat-pl2s). Neither is included: the commands in the table
 above fetch or import them.</sub>
+
+![Manga Ink: the top bar, the cards, the quick panel and the dock as paper panels in thick ink borders with hard shadows and screentone](docs/assets/preview-manga-ink.jpg)
 
 ![Silence: a face in the dark with red eyes, near-black cards with red hairlines, its eye revolver and needle clock](docs/assets/preview-silence.jpg)
 
@@ -930,6 +932,24 @@ light goes out (hypridle, with `brightnessctl`), and both come back the moment y
 
 ![hyprlock: the clock, the date, the card with the picture, greeting and password field](docs/assets/hyprlock.jpg)
 
+## The themes' own app pickers
+
+In Manga Ink and Manga Ink Dark, Super opens a manga book of apps instead of the overview: the cover swings open,
+the apps are printed sixteen to a page, and you turn the pages by clicking the turned-up corner (or the outer margin)
+of the right page to go on and of the left page to go back. In After ICEY it opens a phone with four apps: Apps,
+Auto (type anything: an app, a sum, a command), Theme and Calculator. Typing works in both, and Enter does what the
+top result says. Turn them off in Settings > Halcyon > On the screen.
+
+![The manga book in Manga Ink and Manga Ink Dark, and the After ICEY phone's home, Apps, Auto and Calculator](docs/assets/themed-launchers.jpg)
+
+## The cheat sheet's Hypr keys page
+
+The cheat sheet (Super + /) has a page of its own for the hypr keys: the Hyper chords (Super + Ctrl + Alt + Shift, or
+one key that sends them) and the keys of hypr mode, with how to turn the mode on and off. The Keybinds page keeps
+everything else.
+
+![The cheat sheet's Hypr keys page](docs/assets/cheatsheet-hypr-keys.jpg)
+
 ## Sound and webcams
 
 Headphones, a webcam or its microphone that work in KDE but not in Hyprland had two causes, both fixed:
@@ -1060,7 +1080,7 @@ full list, including all of upstream's.
 | `Super + Ctrl + Shift + F` | Plus Tiles: back to an ordinary tile |
 | `Super + Ctrl + I` | Plus Tiles: geometry inspector |
 | `Super + Alt + arrow` | Plus Tiles: move that edge out at once (`Shift`: in) |
-| `Super + F10 + H` or `Super + Ctrl + H` | Hypr mode on and off |
+| `Super + F10 + H` or `Super + Ctrl + H` | Hypr mode on and off (it turns itself off after 10 s without one of its keys). The cheat sheet's **Hypr keys** page lists the Hyper chords and hypr mode's keys |
 | Power button | The power menu: lock, sleep, log out, hibernate, shut down, restart, and the power levels (power saver, balanced, performance). Without the shell running it powers off as usual; Settings > Halcyon > On the screen turns it off |
 | `Super` + drag to another monitor | With hyprland-plus, the window stops at the edge like against something elastic, and the other monitor's edge bulges where it would come in; push on and it goes through (Settings > Halcyon > Plus Tiles: how hard, or off) |
 | `Super` + drag, then `Ctrl` + `Super` + `←`/`→` | Carries the window you are dragging to the next workspace, still under the cursor; keep dragging it there |

@@ -1,7 +1,7 @@
 groups=(illogical-impulse)
 pkgname=illogical-impulse-kde
 pkgver=1.0
-pkgrel=3
+pkgrel=4
 pkgdesc='Illogical Impulse KDE Dependencies'
 arch=(any)
 license=(None)
@@ -12,5 +12,6 @@ depends=(
   plasma-nm
   polkit-kde-agent
   dolphin
+  loaf-fm # Halcyon's file manager (AUR); Dolphin stays for KDE's parts and as a fallback
   systemsettings
 )

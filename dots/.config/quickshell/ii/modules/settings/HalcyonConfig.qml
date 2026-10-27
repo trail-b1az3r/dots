@@ -1192,6 +1192,16 @@ ContentPage {
             }
         }
 
+        ConfigSwitch {
+            buttonIcon: "menu_book"
+            text: Translation.tr("The theme's own app picker (Manga Ink, After ICEY)")
+            checked: Config.options.halcyon.themedLauncher
+            onCheckedChanged: Config.options.halcyon.themedLauncher = checked
+            StyledToolTip {
+                text: Translation.tr("Super opens a manga book of apps in Manga Ink and Manga Ink Dark (click a page's corner or margin to turn it), and a phone in After ICEY (Apps, Auto, Theme, Calculator). Typing in either opens an app, works out a sum or runs a command. Off, or in other themes, Super opens the overview.")
+            }
+        }
+
         ContentSubsection {
             title: Translation.tr("Volume and brightness popup")
             tooltip: Translation.tr("The popup that shows when you change the volume, the microphone or the brightness with the keys. Avizo draws its own, in the theme's colours and shape. It has to be installed (yay -S avizo).")

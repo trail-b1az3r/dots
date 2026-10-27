@@ -142,7 +142,7 @@ Scope { // Scope
                 source: "../dock/DockFrame.qml"
                 onLoaded: {
                     item.kind = Qt.binding(() => sidebarLeftBackground.frameKind);
-                    item.inverted = true;
+                    item.inverted = Qt.binding(() => Appearance.m3colors.darkmode);
                     item.colBase = Qt.binding(() => Qt.rgba(Appearance.colors.colLayer0.r, Appearance.colors.colLayer0.g, Appearance.colors.colLayer0.b, 1));
                     item.colAccent = Qt.binding(() => Appearance.colors.colPrimary);
                     item.colAccent2 = Qt.binding(() => Appearance.colors.colTertiary);

@@ -17,6 +17,36 @@ Singleton {
     property var keybinds: []
     property var keybindCategories: []
 
+    // Super + Ctrl + Alt + Shift, what a Hyper key sends (halcyon/keybinds.lua), and Mod3, for one mapped to it.
+    readonly property int hyperMask: (1 << 0) | (1 << 2) | (1 << 3) | (1 << 6)
+    readonly property int mod3Mask: 1 << 5
+    function isHyperChord(bind) {
+        return ((bind.modmask ?? 0) & root.hyperMask) === root.hyperMask || ((bind.modmask ?? 0) & root.mod3Mask) !== 0;
+    }
+    /** A hypr key: a Hyper chord, or a bind of hypr mode (its submap, or described as one). The cheat sheet shows these
+     *  on a page of their own. */
+    function isHyprKey(bind) {
+        return root.isHyperChord(bind) || bind.submap === "hypr" || (bind.description ?? "").startsWith("Hypr mode:");
+    }
+    /** Whether a bind is listed on a page: the Hypr keys page has the hypr keys and what turns hypr mode on and off
+     *  (that one is on the Keybinds page too); the Keybinds page has everything else. */
+    function onPage(bind, hyprPage) {
+        if (hyprPage)
+            return root.isHyprKey(bind) || /hypr mode/i.test(bind.description ?? "");
+        return !root.isHyprKey(bind);
+    }
+    /** The categories of the binds on one page. */
+    function categoriesOf(hyprOnly) {
+        const groups = [];
+        for (const bind of root.keybinds) {
+            const description = bind.description ?? "";
+            const group = description.substring(0, description.indexOf(":"));
+            if (group.length > 0 && root.onPage(bind, hyprOnly) && !groups.includes(group))
+                groups.push(group);
+        }
+        return groups;
+    }
+
     Connections {
         target: Hyprland
 

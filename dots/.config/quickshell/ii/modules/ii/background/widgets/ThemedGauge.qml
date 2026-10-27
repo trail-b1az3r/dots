@@ -122,7 +122,7 @@ ColumnLayout {
                 width: parent.width - 4
                 height: parent.height - 7
                 radius: 14
-                color: Qt.darker(gauge.look.card, 2.6)
+                color: gauge.look.edge
             }
             Rectangle {
                 id: cap
@@ -134,7 +134,7 @@ ColumnLayout {
                 // the key's face, a shade lighter than the card so it stands off it
                 color: ColorUtils.mix(gauge.look.text, gauge.look.card, 0.13)
                 border.width: 2.5
-                border.color: Qt.darker(gauge.look.card, 2.6)
+                border.color: gauge.look.edge
                 // the fill rises inside the cream ring, the ring drawn over its edge
                 Item {
                     anchors.fill: parent
@@ -170,7 +170,7 @@ ColumnLayout {
             font.weight: gauge.kind === "key" ? Font.Black : Font.Medium
             color: gauge.look.text
             style: gauge.kind === "glow" ? Text.Raised : gauge.kind === "key" ? Text.Outline : Text.Normal
-            styleColor: gauge.kind === "glow" ? gauge.look.glow : Qt.darker(gauge.look.card, 2.6)
+            styleColor: gauge.kind === "glow" ? gauge.look.glow : gauge.look.edge
         }
     }
     StyledText {
