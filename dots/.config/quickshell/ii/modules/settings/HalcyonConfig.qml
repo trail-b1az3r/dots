@@ -153,7 +153,9 @@ ContentPage {
         { id: "fractured-glass", name: "Fractured Glass", icon: "lens_blur" },
         { id: "red-sun", name: "Red Sun", icon: "wb_twilight" },
         { id: "after-icey", name: "After ICEY", icon: "ac_unit" },
-        { id: "manga-ink", name: "Manga Ink", icon: "draw" }
+        { id: "manga-ink", name: "Manga Ink", icon: "draw" },
+        { id: "manga-ink-dark", name: "Manga Ink Dark", icon: "invert_colors" },
+        { id: "silence", name: "Silence", icon: "visibility" }
     ]
     // ── When the theme switches: rules, made below and run by halcyon-theme when a theme is applied or turned off ──
     property string ruleTheme: "after-icey"
@@ -849,6 +851,35 @@ ContentPage {
             color: Appearance.colors.colSubtext
             font.pixelSize: Appearance.font.pixelSize.smallie
             text: Translation.tr("Changes made each time the theme switches to, or away from, a theme: the revolver off for After ICEY, other icons for Red Sun... They run in this order, when a theme is applied or turned off.")
+        }
+
+        ConfigSwitch {
+            buttonIcon: "apps"
+            text: Translation.tr("Theme icon packs")
+            checked: Config.options.halcyon.themeIcons
+            onCheckedChanged: {
+                if (Config.options.halcyon.themeIcons === checked)
+                    return;
+                Config.options.halcyon.themeIcons = checked;
+                if (!checked)
+                    Quickshell.execDetached([page.tool, "icons", "restore"]);
+            }
+            StyledToolTip {
+                text: Translation.tr("After ICEY and Manga Ink (and Manga Ink Dark) bring their own icons: every app's icon redrawn in the theme's style, in its frame. They are made on this computer from the icons you use, the first time. Leaving the theme puts your icons back.")
+            }
+        }
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            visible: Config.options.halcyon.themeIcons
+            RippleButtonWithIcon {
+                materialIcon: "refresh"
+                mainText: Translation.tr("Remake the icon packs")
+                onClicked: Quickshell.execDetached(["bash", "-c", `for p in icey ink ink-dark; do '${page.tool}' icons make "$p"; done; t=$('${page.tool}' current 2>/dev/null); case "$t" in after-icey) '${page.tool}' icons apply icey;; manga-ink) '${page.tool}' icons apply ink;; manga-ink-dark) '${page.tool}' icons apply ink-dark;; esac`])
+                StyledToolTip {
+                    text: Translation.tr("After installing apps, so their icons are in the packs too.")
+                }
+            }
         }
 
         Repeater {

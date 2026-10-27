@@ -87,9 +87,9 @@ Item {
     // upstream's cookie.
     readonly property string themeId: Config.options.halcyon.theme
     readonly property bool themedFace: Styles.styleFor(themeId).id !== "default"
-    // After ICEY and Manga Ink have a face of their own, drawn like their revolvers (ThemeClock.qml): the rest of
+    // After ICEY, Manga Ink (and Dark) and Silence have a face of their own, drawn like their revolvers (ThemeClock.qml): the rest of
     // this file is the usual face, hidden under them.
-    readonly property string customFace: ({ "icey": "icey", "ink": "ink" })[Styles.revolverStyleFor(themeId).id] ?? ""
+    readonly property string customFace: ({ "icey": "icey", "ink": "ink", "ink-dark": "ink-dark", "silence": "silence" })[Styles.revolverStyleFor(themeId).id] ?? ""
     Loader {
         anchors.fill: parent
         z: 10

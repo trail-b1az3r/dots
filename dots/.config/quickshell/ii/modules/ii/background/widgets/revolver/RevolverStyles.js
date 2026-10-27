@@ -21,6 +21,13 @@ var STYLES = {
     // The anime themes: squircles, drawn as keycaps (outline, a cream ring, a flat fill, a hard shadow straight down).
     "keycap":  { id: "keycap", drum: "squircle", plate: "keycap", chamber: "squircle", chamberSize: 48, orbit: 79, names: true,
                  hub: "squircle", hammer: "pill", glow: 0.45, waves: 0, statusLabel: true },
+    // Manga Ink Dark's keycaps: ink-black keys with a paper edge and a paper shadow, a manga panel in negative.
+    "keycap-dark": { id: "keycap-dark", drum: "squircle", plate: "keycap", chamber: "squircle", chamberSize: 48, orbit: 79,
+                     names: true, hub: "squircle", hammer: "pill", glow: 0.45, waves: 0, statusLabel: true,
+                     base: "#0d0d0e", edge: "#f1ece2" },
+    // Silence's cards: near-black, a faint edge, and a red hairline along the bottom, brightest in the middle.
+    "hush":    { id: "hush", drum: "squircle", plate: "hush", chamber: "squircle", chamberSize: 48, orbit: 79, names: true,
+                 hub: "squircle", hammer: "pill", glow: 0.6, waves: 0, statusLabel: true },
     "hsr":     { id: "hsr", drum: "rail", chamber: "star", chamberSize: 52, orbit: 80, names: true,
                  hub: "sparkle", hammer: "sparkle", glow: 0.6, waves: 0, statusLabel: true },
     // After ICEY, the revolver only: the game's cyan HUD over the dark navy of its wallpaper. A targeting reticle
@@ -32,7 +39,14 @@ var STYLES = {
     // screentone shading, speech-bubble chambers that point at a blush-pink heart, an ink-drop hammer, and speed
     // lines round it while it spins. Black ink and paper whatever the palette; the pink is the theme's accent.
     "ink":     { id: "ink", drum: "enso", chamber: "bubble", chamberSize: 56, orbit: 80, names: true,
-                 hub: "heart", hammer: "drop", glow: 0.6, waves: 0, statusLabel: true, ink: "#141414", paper: "#f7f3ea" }
+                 hub: "heart", hammer: "drop", glow: 0.6, waves: 0, statusLabel: true, ink: "#141414", paper: "#f7f3ea" },
+    // Manga Ink Dark: the same page in negative, paper-white ink on a black page.
+    "ink-dark": { id: "ink-dark", drum: "enso", chamber: "bubble", chamberSize: 56, orbit: 80, names: true,
+                  hub: "heart", hammer: "drop", glow: 0.6, waves: 0, statusLabel: true, ink: "#f1ece2", paper: "#0d0d0e" },
+    // Silence: as quiet as its wallpaper, a face in the dark. A black disc whose rim catches a little red light,
+    // almond eye-shaped chambers, an eye for a hub with a glowing red iris, and a needle for the hammer.
+    "silence": { id: "silence", drum: "hush", chamber: "lens", chamberSize: 52, orbit: 80, names: true,
+                 hub: "eye", hammer: "needle", glow: 0.7, waves: 0, statusLabel: true }
 };
 
 function styleFor(themeId) {
@@ -48,6 +62,10 @@ function styleFor(themeId) {
     case "after-icey":
     case "manga-ink":
         return STYLES["keycap"];
+    case "manga-ink-dark":
+        return STYLES["keycap-dark"];
+    case "silence":
+        return STYLES["hush"];
     case "hsr":
         return STYLES["hsr"];
     default:
@@ -62,6 +80,10 @@ function revolverStyleFor(themeId) {
         return STYLES["icey"];
     case "manga-ink":
         return STYLES["ink"];
+    case "manga-ink-dark":
+        return STYLES["ink-dark"];
+    case "silence":
+        return STYLES["silence"];
     default:
         return styleFor(themeId);
     }
@@ -103,10 +125,17 @@ function snowflake(cx, cy, r) {
 // The frame the dock, the top bar and the side panels take in a theme (dock/DockFrame.qml); "" keeps the plain
 // panel (no theme, and the glass themes).
 var FRAMES = { "hyperneo": "hyperneo", "hsr": "hsr", "red-sun": "red-sun", "wallpaper-heaven-kenami": "red-sun",
-               "after-icey": "icey", "manga-ink": "ink" };
+               "after-icey": "icey", "manga-ink": "ink", "manga-ink-dark": "ink-dark", "silence": "silence" };
 
 function frameKindFor(themeId) {
     return FRAMES[themeId] || "";
+}
+
+// An almond, an eye's outline, of half-width r round (cx, cy), lying flat.
+function lens(cx, cy, r) {
+    var h = r * 0.62;
+    return "M " + f(cx - r) + " " + f(cy) + " Q " + f(cx) + " " + f(cy - 2 * h) + " " + f(cx + r) + " " + f(cy)
+        + " Q " + f(cx) + " " + f(cy + 2 * h) + " " + f(cx - r) + " " + f(cy) + " Z";
 }
 
 // A speech bubble of radius r round (cx, cy), its tail pointing along `tail` degrees (0 is right, 90 down).
@@ -171,7 +200,13 @@ var LOOKS = {
     "hsr":      { id: "hsr", gauge: "rail", bars: "star", progress: "rail", lyric: "rail",
                   caps: true, spacing: 2.2, colorA: "", colorB: "", text: "", glow: "" },
     "keycap":   { id: "keycap", gauge: "key", bars: "blocks", progress: "blocks", lyric: "key",
-                  caps: true, spacing: 0.8, colorA: "", colorB: "", text: "", glow: "" }
+                  caps: true, spacing: 0.8, colorA: "", colorB: "", text: "", glow: "" },
+    // Drawn as the keycaps are (family), in paper on ink.
+    "keycap-dark": { id: "keycap-dark", family: "keycap", gauge: "key", bars: "blocks", progress: "blocks", lyric: "key",
+                     caps: true, spacing: 0.8, colorA: "", colorB: "", text: "#f1ece2", glow: "" },
+    // Silence: thin and spaced, red light on black.
+    "hush":     { id: "hush", gauge: "ring", bars: "needle", progress: "line", lyric: "plain",
+                  caps: true, spacing: 2.4, colorA: "", colorB: "", text: "#ede6e6", glow: "" }
 };
 
 function lookFor(themeId) {

@@ -34,7 +34,7 @@ On top of that, Halcyon adds:
 | **Glass panels** | Shell transparency is on by default. It can still be turned off in Settings. |
 | **Softer layout** | Wider gaps, rounder corners, deeper blur (popups too), a softer shadow. |
 | **Wallpapers** | The hyperNeo fire wallpaper is the default. It and the three Halcyon wallpapers are copied into `~/Pictures/Wallpapers`, where the wallpaper picker looks. |
-| **Themes** | Seven hand-made themes: HyperNeo, Star Rail, Shattered Glass, Fractured Glass, Red Sun, After ICEY and Manga Ink, and rules for what changes when the theme switches. [More below.](#themes) |
+| **Themes** | Nine hand-made themes: HyperNeo, Star Rail, Shattered Glass, Fractured Glass, Red Sun, After ICEY, Manga Ink, Manga Ink Dark and Silence, icon packs for the anime ones, and rules for what changes when the theme switches. [More below.](#themes) |
 | **Voice assistant** | Press `Super + Shift + Space` and speak. It answers aloud and can run the desktop. [More below.](#voice-assistant) |
 | **Browser themes** | Firefox and Chromium take the desktop's colours, from a theme or the wallpaper. [More below.](#browsers) |
 | **Server mode** | One button in **Settings > Halcyon**: no suspend, no automatic lock or screen blanking, until you stop it. [More below.](#server-mode) |
@@ -262,6 +262,8 @@ style, animations, wallpaper and, for some, shell layout and effects:
 | **Red Sun** | `red-sun` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. The ring is the revolver: spin it and the screen breaks, an eye opens in the sun and finds the car, and the tape rewinds. Wallpaper: *Eclipse* by Alena Aenami (2017), from [wallhaven](https://wallhaven.vip/w/yjl8mk); [buy it here](https://www.artstation.com/marketplace/p/oAol/wallpaper-pack-02). |
 | **After ICEY** | `after-icey` | Silver hair, cyan light and ink-dark navy, over the animated *After ICEY* wallpaper (fan art, by way of [MotionBGs](https://motionbgs.com/after-icey)). `halcyon wallpapers get after-icey` fetches it. |
 | **Manga Ink** | `manga-ink` | Black ink on paper with a blush accent, over the animated *Anime Girl x Cat* wallpaper by fw_storm ([DesktopHut](https://www.desktophut.com/anime-girl-x-cat-pl2s)). The site gives the file out from its page: download it there, then `halcyon wallpapers import anime-girl-cat FILE`. |
+| **Manga Ink Dark** | `manga-ink-dark` | Manga Ink in negative: paper-white ink on a black page, the blush kept. Its wallpaper is Manga Ink's, inverted on your computer the first time you apply it (light to dark with the colours kept: ffmpeg's `negate,hue=h=180`). The cards, dock, bar, revolver and clock are ink panels with paper lines. |
+| **Silence** | `silence` | Black, and a face in the dark with red eyes. A still wallpaper (from [wallhaven](https://wallhaven.cc/w/6ll7dx), artist unknown), fetched when the theme is first applied. Everything else stays out of its way: near-black cards with a red hairline, a dock with two small red eyes that slowly open and close, a revolver with almond eye chambers and a red-eyed hub, a clock of needles round an eye, and slow, quiet animations. |
 
 ![HyperNeo, Star Rail, Shattered Glass and Fractured Glass, each with its wallpaper, its revolver, and Firefox in its colours](docs/assets/preview-themes.jpg)
 
@@ -274,6 +276,29 @@ lyrics, weather, clock, system and now playing, as solid keycaps.
 Wallpapers: *After ICEY* fan art via [MotionBGs](https://motionbgs.com/after-icey); *Anime Girl x Cat* by fw_storm
 via [DesktopHut](https://www.desktophut.com/anime-girl-x-cat-pl2s). Neither is included: the commands in the table
 above fetch or import them.</sub>
+
+![Silence: a face in the dark with red eyes, near-black cards with red hairlines, its eye revolver and needle clock](docs/assets/preview-silence.jpg)
+
+![Manga Ink Dark: the Manga Ink wallpaper in negative, ink cards with paper edges, the negative revolver and clock](docs/assets/preview-manga-ink-dark.jpg)
+
+<sub>Silence and Manga Ink Dark. Wallpapers: Silence's from [wallhaven](https://wallhaven.cc/w/6ll7dx) (artist
+unknown); Manga Ink Dark's is *Anime Girl x Cat* by fw_storm, inverted. Neither is included.</sub>
+
+### Icon packs
+
+After ICEY, Manga Ink and Manga Ink Dark bring their own icons. They are made on your computer from the icons you
+already use, so every installed app is covered: each app's own icon is redrawn in the theme's style and set in its
+frame, a cyan HUD hexagon for After ICEY, an inked paper panel for Manga Ink (and its negative for Dark). Applying
+the theme makes the pack the first time and switches to it; leaving the theme puts your icons back.
+**Settings > Halcyon > When the theme switches** turns this off, and remakes the packs after you install apps.
+
+```sh
+halcyon icons                  # the packs and the icon theme in use
+halcyon icons make icey        # (re)make one: icey, ink, ink-dark  [--base ICON-THEME]
+halcyon icons apply ink        # use one;  halcyon icons restore  goes back
+```
+
+![The After ICEY, Manga Ink and Manga Ink Dark icon packs, made from Papirus](docs/assets/icon-packs.png)
 
 Pick one in **Settings > Halcyon**, with **`Ctrl + Super + Shift + T`**,
 or from a terminal:

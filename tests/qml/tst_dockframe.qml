@@ -18,11 +18,18 @@ Item {
         when: windowShown
 
         function test_every_kind_draws() {
-            for (const kind of ["hyperneo", "hsr", "red-sun", "icey", "ink"]) {
+            for (const kind of ["hyperneo", "hsr", "red-sun", "icey", "ink", "ink-dark", "silence"]) {
                 const frame = createTemporaryObject(frameComponent, parent, { kind: kind });
                 verify(frame !== null, kind);
                 waitForRendering(frame);
             }
+        }
+
+        function test_dark_ink_is_negative_everywhere() {
+            const dock = createTemporaryObject(frameComponent, parent, { kind: "ink-dark" });
+            verify(dock.negative, "the dock too, not only the top bar");
+            verify(dock.paper.hslLightness < 0.1);
+            verify(dock.tone.length > 0, "with its screentone");
         }
 
         function test_ink_screentone() {

@@ -11,6 +11,9 @@ import "../revolver/RevolverStyles.js" as Styles
  *          the seconds (the minutes, without second precision), targeting brackets, chevron hands, a readout
  *   ink    Manga Ink's page: paper in a brush ensō with screentone, brush-stroke hands, bold numerals, a blush-pink
  *          heart in the middle, the date in a speech bubble, and a pink second hand with a heart on its tip
+ *          (ink-dark, Manga Ink Dark: the same page in negative, paper-white ink on black)
+ *   silence  a black face with a fine red rim that catches light at three and nine, faint dots for the hours,
+ *          needle hands, a red hairline for the seconds, an eye with a red iris in the middle, the date below it
  *
  * Needs only QtQuick and RevolverStyles.js, so it can be drawn and tested on its own. Laid out on a 230 x 230 stage
  * and scaled, like the revolver's drum, and drawn into a texture as large as it is shown.
@@ -30,8 +33,9 @@ Item {
     property real renderScale: width / 230
 
     readonly property real c: 115
-    readonly property color ink: "#141414"
-    readonly property color paper: "#f7f3ea"
+    readonly property bool negative: kind === "ink-dark"
+    readonly property color ink: negative ? "#f1ece2" : "#141414"
+    readonly property color paper: negative ? "#0d0d0e" : "#f7f3ea"
     readonly property real hourAngle: ((now.getHours() % 12) + now.getMinutes() / 60) * 30
     readonly property real minuteAngle: (now.getMinutes() + now.getSeconds() / 60) * 6
     readonly property real secondAngle: now.getSeconds() * 6
@@ -229,7 +233,7 @@ Item {
         // ── Manga Ink ──────────────────────────────────────────────────────────────
         Item {
             anchors.fill: parent
-            visible: face.kind === "ink"
+            visible: face.kind === "ink" || face.kind === "ink-dark"
 
             Shape {
                 anchors.fill: parent
@@ -292,7 +296,7 @@ Item {
                 ShapePath {
                     strokeWidth: 2
                     strokeColor: face.ink
-                    fillColor: "#ffffff"
+                    fillColor: face.negative ? "#000000" : "#ffffff"
                     PathSvg { path: Styles.bubble(152, 152, 19, 225) }
                 }
             }
@@ -360,6 +364,134 @@ Item {
                     strokeWidth: -1
                     fillColor: face.paper
                     PathSvg { path: Styles.circle(face.c - 4, face.c - 3, 2) }
+                }
+            }
+        }
+
+        // ── Silence ────────────────────────────────────────────────────────────────
+        Item {
+            anchors.fill: parent
+            visible: face.kind === "silence"
+
+            Shape {
+                anchors.fill: parent
+                ShapePath {
+                    strokeWidth: 1
+                    strokeColor: face.withAlpha(face.colAccent, 0.45)
+                    fillGradient: RadialGradient {
+                        centerX: face.c; centerY: face.c
+                        centerRadius: 108
+                        focalX: face.c; focalY: face.c
+                        GradientStop { position: 0.0; color: face.withAlpha("#000000", 0.9) }
+                        GradientStop { position: 0.84; color: face.withAlpha("#050304", 0.9) }
+                        GradientStop { position: 1.0; color: face.withAlpha(face.colAccent, 0.14) }
+                    }
+                    PathSvg { path: Styles.circle(face.c, face.c, 108) }
+                }
+                // The light caught at three and nine.
+                ShapePath {
+                    strokeWidth: 7
+                    strokeColor: face.withAlpha(face.colAccent, 0.16)
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    PathSvg { path: Styles.arc(face.c, face.c, 108, 166, 194) + " " + Styles.arc(face.c, face.c, 108, -14, 14) }
+                }
+                ShapePath {
+                    strokeWidth: 2
+                    strokeColor: face.withAlpha(Qt.lighter(face.colAccent, 1.2), 0.9)
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    PathSvg { path: Styles.arc(face.c, face.c, 108, 172, 188) + " " + Styles.arc(face.c, face.c, 108, -8, 8) }
+                }
+                // Faint dots for the hours, a red one at twelve.
+                ShapePath {
+                    strokeWidth: 2.4
+                    strokeColor: face.withAlpha(face.colOn, 0.32)
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    PathSvg { path: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(h => Styles.ticks(face.c, face.c, 94, 94.4, 1, -90 + h * 30)).join(" ") }
+                }
+                ShapePath {
+                    strokeWidth: 3.4
+                    strokeColor: face.colAccent
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    PathSvg { path: Styles.ticks(face.c, face.c, 94, 94.4, 1, -90) }
+                }
+            }
+
+            Text {
+                x: face.c - width / 2
+                y: 152
+                text: face.now.getDate() + "  ·  " + Qt.formatDate(face.now, "ddd").toUpperCase()
+                color: face.withAlpha(face.colOn, 0.55)
+                font.family: face.fontFamily
+                font.pixelSize: 10
+                font.letterSpacing: 2
+            }
+
+            // Hour and minute hands: fine needles.
+            Shape {
+                anchors.fill: parent
+                rotation: face.hourAngle
+                ShapePath {
+                    strokeWidth: -1
+                    fillColor: face.withAlpha(face.colOn, 0.92)
+                    PathSvg { path: "M 115 58 L 118 115 L 115 126 L 112 115 Z" }
+                }
+            }
+            Shape {
+                anchors.fill: parent
+                rotation: face.minuteAngle
+                ShapePath {
+                    strokeWidth: -1
+                    fillColor: face.withAlpha(face.colOn, 0.92)
+                    PathSvg { path: "M 115 26 L 117.2 115 L 115 128 L 112.8 115 Z" }
+                }
+            }
+            // The seconds: a red hairline with a glowing point.
+            Shape {
+                anchors.fill: parent
+                visible: face.showSeconds
+                rotation: face.secondAngle
+                ShapePath {
+                    strokeWidth: 1
+                    strokeColor: face.colAccent
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    PathSvg { path: "M 115 136 L 115 24" }
+                }
+                ShapePath {
+                    strokeWidth: 5
+                    strokeColor: face.withAlpha(face.colAccent, 0.25)
+                    fillColor: face.colAccent
+                    PathSvg { path: Styles.circle(face.c, 24, 2) }
+                }
+            }
+            // The middle: an eye, its red iris glowing.
+            Shape {
+                anchors.fill: parent
+                ShapePath {
+                    strokeWidth: 1.2
+                    strokeColor: face.withAlpha(face.colAccent, 0.9)
+                    fillColor: "#000000"
+                    PathSvg { path: Styles.lens(face.c, face.c, 17) }
+                }
+                ShapePath {
+                    strokeWidth: 4
+                    strokeColor: face.withAlpha(face.colAccent, 0.3)
+                    fillColor: face.colAccent
+                    PathSvg { path: Styles.circle(face.c, face.c, 5.6) }
+                }
+                ShapePath {
+                    strokeWidth: -1
+                    fillColor: "#000000"
+                    PathSvg { path: Styles.circle(face.c, face.c, 2.4) }
+                }
+                ShapePath {
+                    strokeWidth: -1
+                    fillColor: face.withAlpha("#ffffff", 0.85)
+                    PathSvg { path: Styles.circle(face.c + 2.2, face.c - 2.2, 1) }
                 }
             }
         }

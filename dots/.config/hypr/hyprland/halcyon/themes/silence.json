@@ -1,0 +1,157 @@
+{
+  "name": "Silence",
+  "description": "Black, and a face in the dark with red eyes. Still, quiet, almost nothing on screen. The wallpaper is fetched when the theme is applied (`halcyon wallpapers get silence`).",
+  "wallpaper": "~/.local/share/halcyon/wallpapers/silence.png",
+  "seed": "#ED4E49",
+  "scheme": "scheme-tonal-spot",
+  "shell": {
+    "background": "#050405",
+    "on_background": "#EDE6E6",
+    "surface": "#050405",
+    "surface_dim": "#050405",
+    "surface_bright": "#2E292A",
+    "surface_container_lowest": "#020102",
+    "surface_container_low": "#0C0A0B",
+    "surface_container": "#121011",
+    "surface_container_high": "#1A1718",
+    "surface_container_highest": "#242021",
+    "surface_variant": "#2A2526",
+    "on_surface": "#EDE6E6",
+    "on_surface_variant": "#C7BCBD",
+    "outline": "#8F8486",
+    "outline_variant": "#3F3739",
+    "primary": "#FF6B6B",
+    "on_primary": "#5F0B10",
+    "primary_container": "#7E1A1E",
+    "on_primary_container": "#FFDAD7",
+    "secondary": "#E5BDB8",
+    "on_secondary": "#432926",
+    "secondary_container": "#5B3F3B",
+    "on_secondary_container": "#FFDAD5",
+    "tertiary": "#C3BEDD",
+    "on_tertiary": "#2C2A43",
+    "tertiary_container": "#43405B",
+    "on_tertiary_container": "#E2DDFF",
+    "surface_tint": "#FF6B6B",
+    "inverse_surface": "#EDE6E6",
+    "inverse_on_surface": "#2A2627",
+    "inverse_primary": "#A3333A",
+    "error": "#FFB4AB",
+    "on_error": "#690005",
+    "error_container": "#93000A",
+    "on_error_container": "#FFDAD6",
+    "shadow": "#000000",
+    "scrim": "#000000"
+  },
+  "terminal": {
+    "term0": "#0A0809",
+    "term1": "#ED4E49",
+    "term2": "#93C99B",
+    "term3": "#E6BF84",
+    "term4": "#8C9CD6",
+    "term5": "#FF6B6B",
+    "term6": "#8EC4C6",
+    "term7": "#C7BCBD",
+    "term8": "#3F3739",
+    "term9": "#FF8A85",
+    "term10": "#B4E3BB",
+    "term11": "#F6D9A8",
+    "term12": "#B1BEEB",
+    "term13": "#FF9D9B",
+    "term14": "#B4DFE0",
+    "term15": "#EDE6E6"
+  },
+  "hyprland": {
+    "rounding": 10,
+    "gaps_in": 6,
+    "gaps_out": 12,
+    "border_size": 1,
+    "active_border": "rgba(ED4E49CC) rgba(5F0B10CC) 90deg",
+    "inactive_border": "rgba(2A252644)",
+    "blur_size": 12,
+    "blur_passes": 4,
+    "shadow_color": "rgba(00000088)",
+    "curves": {
+      "hush": [
+        0.25,
+        0.1,
+        0.25,
+        1.0
+      ],
+      "settle": [
+        0.16,
+        1.0,
+        0.3,
+        1.0
+      ],
+      "linear": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ]
+    },
+    "animations": [
+      {
+        "leaf": "windowsIn",
+        "speed": 4.2,
+        "curve": "settle",
+        "style": "popin 94%"
+      },
+      {
+        "leaf": "windowsOut",
+        "speed": 3.4,
+        "curve": "hush",
+        "style": "popin 96%"
+      },
+      {
+        "leaf": "windowsMove",
+        "speed": 4.0,
+        "curve": "settle"
+      },
+      {
+        "leaf": "fadeIn",
+        "speed": 4.0,
+        "curve": "hush"
+      },
+      {
+        "leaf": "fadeOut",
+        "speed": 3.4,
+        "curve": "hush"
+      },
+      {
+        "leaf": "workspaces",
+        "speed": 5.0,
+        "curve": "settle",
+        "style": "fade"
+      },
+      {
+        "leaf": "layersIn",
+        "speed": 3.6,
+        "curve": "settle",
+        "style": "fade"
+      },
+      {
+        "leaf": "layersOut",
+        "speed": 3.0,
+        "curve": "hush",
+        "style": "fade"
+      },
+      {
+        "leaf": "specialWorkspaceIn",
+        "speed": 4.0,
+        "curve": "settle",
+        "style": "fade"
+      },
+      {
+        "leaf": "border",
+        "speed": 8.0,
+        "curve": "hush"
+      }
+    ]
+  },
+  "banner": {
+    "frame": "#ED4E49",
+    "glow": "#5F0B10"
+  }
+}

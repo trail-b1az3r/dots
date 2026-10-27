@@ -87,6 +87,7 @@ Singleton {
                 property bool glassTheme: false // Written by halcyon-theme: the active theme has glass windows or a glass shader
                 property list<string> themeOrder: [] // Built-in theme ids in the order Settings lists them; the rest follow in the default order
                 property bool powerButtonMenu: true // The power button opens the power menu (shut down, restart, sleep, log out) instead of powering off
+                property bool themeIcons: true // After ICEY and Manga Ink (and Dark) use their icon pack (halcyon icons), made from the icons in use
                 property bool easyEffects: false // Start EasyEffects at login (halcyon audio easyeffects on|off); off because it takes over the default output and microphone
                 property list<string> hiddenThemes: [] // Built-in theme ids hidden from Settings; "Show hidden themes" brings them back
                 property list<string> collapsedSections: [] // Settings sections folded shut, by title; a click on the title opens them again

@@ -12,7 +12,8 @@ QtObject {
 
     property string themeId: Config.options?.halcyon.theme ?? ""
     readonly property var spec: Styles.lookFor(themeId)
-    readonly property string id: spec.id
+    // A look drawn as another is (Manga Ink Dark's keycaps) answers to that one's name.
+    readonly property string id: spec.family ?? spec.id
 
     readonly property color accentA: spec.colorA !== "" ? spec.colorA : Appearance.colors.colPrimary
     readonly property color accentB: spec.colorB !== "" ? spec.colorB : Appearance.colors.colTertiary
@@ -24,7 +25,7 @@ QtObject {
     readonly property real spacing: spec.spacing
     /** The card's colour, solid: the panel colour is see-through when the shell's transparency is on, which washed
      *  keycaps and their shadows out over a bright wallpaper. */
-    readonly property color card: Qt.rgba(Appearance.colors.colLayer1.r, Appearance.colors.colLayer1.g, Appearance.colors.colLayer1.b, 1)
+    readonly property color card: Styles.styleFor(themeId).base ?? Qt.rgba(Appearance.colors.colLayer1.r, Appearance.colors.colLayer1.g, Appearance.colors.colLayer1.b, 1)
 
     /** A label as the theme sets them: Red Sun, Star Rail and the keycaps in capitals. */
     function label(text) {
