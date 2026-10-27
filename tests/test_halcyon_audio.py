@@ -73,7 +73,8 @@ class AudioTest(unittest.TestCase):
         base = Path(self.tmp.name)
         bin_dir = base / "bin"
         bin_dir.mkdir()
-        for name in ("systemctl", "loginctl", "pgrep", "pkill", "pactl", "pw-dump"):
+        # pacman and sudo too: on an Arch machine the real ones would report (and install) packages.
+        for name in ("systemctl", "loginctl", "pgrep", "pkill", "pactl", "pw-dump", "pacman", "sudo"):
             (bin_dir / name).write_text(FAKE)
             (bin_dir / name).chmod(0o755)
         (base / "dev/snd").mkdir(parents=True)

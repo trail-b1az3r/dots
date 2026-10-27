@@ -181,6 +181,8 @@ Singleton {
                     property bool feedback: true // Outlines and flashes for edits, the drag guide and the inspector
                     property int feedbackDuration: 450 // How long a flash lasts, in ms
                     property int dragFullscreenEdge: 8 // Drop a dragged window within this many px of the top: fullscreen. 0 = off
+                    property int monitorWall: 120 // How hard a dragged window pushes before it goes onto another monitor, in px. 0 = no wall
+                    property bool monitorWallBulge: true // The shell draws the wall bulging on the other monitor while a window pushes
                     property bool stripOverFullscreen: false // The music player's strip stays over a fullscreen window (covering its edge)
                 }
             }

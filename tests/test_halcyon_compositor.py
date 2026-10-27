@@ -172,7 +172,8 @@ class InstallerDetectionTests(unittest.TestCase):
             fake.chmod(0o755)
             script = (f'pacman(){{ return 1; }}; source "{ROOT}/sdata/lib/hyprland-plus-detect.sh"; '
                       'hyprland_plus_installed && hyprland_plus_commit && hyprland_plus_base_version')
-            env = dict(os.environ, PATH=f"{d}:/usr/bin:/bin", HOME=d)
+            # Only the stand-in: not a hyprland-plus really installed on this machine.
+            env = dict(os.environ, PATH=f"{d}:/usr/bin:/bin", HOME=d, HALCYON_HYPRLAND_PATHS="")
             return subprocess.run(["bash", "-c", script], capture_output=True, text=True, env=env, check=False)
 
     def test_old_and_new_builds_found(self):

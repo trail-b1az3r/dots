@@ -45,6 +45,7 @@ SETTINGS = {
     "feedback": ("plus.feedback.enabled", "bool", True, None, None),
     "feedbackDuration": ("plus.feedback.duration", "int", 450, 0, 3000),
     "dragFullscreenEdge": ("binds.drag_fullscreen_edge", "int", 8, 0, 512, "binds:drag_fullscreen_edge"),
+    "monitorWall": ("plus.monitor_wall", "int", 120, 0, 1000, "plus:monitor_wall"),
     "stripOverFullscreen": ("superposition.over_fullscreen", "bool", False, None, None, "superposition:over_fullscreen"),
 }
 

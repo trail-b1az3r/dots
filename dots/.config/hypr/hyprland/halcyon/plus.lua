@@ -33,6 +33,16 @@ if caps.dragEdge then
     })
 end
 
+-- The wall between monitors: a dragged window stops at an edge another monitor shares until pushed this many pixels
+-- past it, and the shell draws that monitor's edge bulging where it would come in. 0 turns it off.
+if caps.monitorWall then
+    hl.config({
+        plus = {
+            monitor_wall = 120,
+        },
+    })
+end
+
 if caps.tiles then
     -- Plus Tiles. These are the defaults, written out so they are easy to find and change in
     -- ~/.config/hypr/custom (anything set there wins).
