@@ -1060,6 +1060,41 @@ ContentPage {
     }
 
     ContentSection {
+        icon: "headphones"
+        title: Translation.tr("Sound")
+
+        ConfigSwitch {
+            buttonIcon: "equalizer"
+            text: Translation.tr("Start EasyEffects at login")
+            checked: Config.options.halcyon.easyEffects
+            onCheckedChanged: {
+                if (Config.options.halcyon.easyEffects === checked)
+                    return;
+                Config.options.halcyon.easyEffects = checked;
+                Quickshell.execDetached([page.tool, "audio", "easyeffects", checked ? "on" : "off"]);
+            }
+            StyledToolTip {
+                text: Translation.tr("EasyEffects puts its own output and microphone in front of the real ones and keeps them the default, so headphones you plug in stay silent and the webcam's microphone can't be picked. Leave it off unless you use its effects.")
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            spacing: 8
+
+            RippleButtonWithIcon {
+                materialIcon: "build"
+                mainText: Translation.tr("Fix sound and webcam")
+                onClicked: Quickshell.execDetached(["bash", "-c", `${Config.options.apps.terminal} bash -c "'${page.tool}' audio fix; read -rp 'Press Enter to close. '"`])
+                StyledToolTip {
+                    text: Translation.tr("For headphones, a microphone or a webcam that work in KDE but not here: clears what KDE left behind, restarts PipeWire and the portals, and says what is still in the way.")
+                }
+            }
+        }
+    }
+
+    ContentSection {
         icon: "brush"
         title: Translation.tr("On the screen")
 

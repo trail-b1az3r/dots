@@ -44,15 +44,20 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.bottomMargin: 6
         model: root.devices.map(node => Audio.friendlyDeviceName(node))
-        currentIndex: root.devices.findIndex(item => {
+        // The default is briefly unknown while PipeWire switches it; keep showing the last one meanwhile.
+        readonly property int defaultIndex: root.devices.findIndex(item => {
             if (root.isSink) {
                 return item.id === Pipewire.defaultAudioSink?.id
             } else {
                 return item.id === Pipewire.defaultAudioSource?.id
             }
         })
+        property int shownIndex: -1
+        onDefaultIndexChanged: if (defaultIndex >= 0) shownIndex = defaultIndex
+        Component.onCompleted: shownIndex = defaultIndex
+        currentIndex: shownIndex
         onActivated: (index) => {
-            print(index)
+            shownIndex = index
             const item = root.devices[index]
             if (root.isSink) {
                 Audio.setDefaultSink(item)

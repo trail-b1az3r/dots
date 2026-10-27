@@ -875,6 +875,27 @@ connect. And on Surface (`mwifiex`) cards it turns off random MAC addresses whil
 and power saving, which make those cards fail to connect. It writes
 `/etc/NetworkManager/conf.d/90-halcyon-wifi.conf`; delete that file and restart NetworkManager to undo it.
 
+## Sound and webcams
+
+Headphones, a webcam or its microphone that work in KDE but not in Hyprland had two causes, both fixed:
+
+- **EasyEffects** was started at every Hyprland login. It puts its own output and microphone in front of the real
+  ones and keeps them the default, so plugged-in headphones stayed silent and picking the webcam's microphone
+  flickered back. It now starts only when you turn it on (**Settings > Halcyon > Sound**, or
+  `halcyon audio easyeffects on`).
+- **What KDE leaves behind.** Your systemd user services outlive a KDE session, with KDE's environment and KDE's
+  portal, which browsers and Discord use for the webcam. At login Halcyon clears KDE's variables, hands Hyprland's
+  session to systemd and restarts the portals when KDE's is the one running.
+
+The shell's output and microphone menus also no longer rebuild every time an app opens or closes a stream, which made
+them flicker.
+
+```sh
+halcyon audio         # what PipeWire sees, and what stands in the way
+halcyon audio fix     # put it right and restart PipeWire, WirePlumber and the portals (Settings has the button)
+halcyon audio report  # everything above and the sound services' log in ~/halcyon-audio-report.txt, to send
+```
+
 ## Where new windows open
 
 **Settings > Interface > Windows**, or `halcyon placement MODE` (`halcyon placement --list` shows them all):

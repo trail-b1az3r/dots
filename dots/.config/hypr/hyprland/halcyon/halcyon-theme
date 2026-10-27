@@ -1769,11 +1769,12 @@ def cmd_games(args):
 
 
 def cmd_doctor(args):
-    """Why the revolver, the browser themes, updates or the Wi-Fi don't work, in one report; --fix fixes what it can.
+    """Why the revolver, the browser themes, updates, the Wi-Fi or the sound don't work, in one report; --fix fixes what it can.
 
     One command's output is enough to tell what is wrong on a machine nobody else can look at."""
     fix = "--fix" in args
     sys.path.insert(0, str(HERE))
+    import halcyon_audio
     import halcyon_browsers
     import halcyon_wifi
     import revolver
@@ -1832,6 +1833,15 @@ def cmd_doctor(args):
         if fix:
             print("-> getting the Wi-Fi up for this session (halcyon wifi fix makes it last; it asks for sudo)")
             halcyon_wifi.boot()
+
+    heading("Sound, microphones and webcams")
+    report = halcyon_audio.status()
+    halcyon_audio.print_status(report)
+    if halcyon_audio.problems(report):
+        todo.append("sound or the webcam has problems")
+        if fix:
+            print("-> putting the session right and restarting the sound services")
+            halcyon_audio.fix()
 
     print()
     if not todo:
@@ -2399,6 +2409,9 @@ def main(argv):
         # The updater the bar's button and the hourly timer run; bare `halcyon update` says where things stand.
         updater = HERE / "update"
         os.execv("/bin/bash", ["bash", str(updater), *(argv[1:] or ["status"])])
+    if argv and argv[0] == "audio":
+        tool = HERE / "halcyon_audio.py"
+        os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and argv[0] == "wifi":
         tool = HERE / "halcyon_wifi.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])

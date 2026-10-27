@@ -69,6 +69,10 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("usb [--json]", "why a browser can't find or open a USB, HID or serial device (WebUSB, WebHID, Web Serial)"),
         ("usb allow VID:PID ... | --all", "let you open those devices from the browser (a udev rule; asks for sudo)"),
         ("usb remove", "take that rule away again"),
+        ("audio [--json]", "why headphones, a microphone or the webcam work in KDE but not here: PipeWire, EasyEffects, KDE's leftovers"),
+        ("audio fix", "put the session right and restart the sound services and portals (installs what is missing)"),
+        ("audio easyeffects on|off", "start EasyEffects at login, or not (off unless you turn it on)"),
+        ("audio report", "everything about sound and cameras in ~/halcyon-audio-report.txt, to send when it still fails"),
         ("wifi [--json]", "why the Wi-Fi isn't up: NetworkManager, iwd, the radio, an unmanaged card (a Surface's)"),
         ("wifi boot", "get the Wi-Fi up now: login runs this (log: ~/.local/state/halcyon/wifi.log)"),
         ("wifi fix [--dry-run]", "the lasting fixes, as root: install and enable NetworkManager, keep the card managed, "
