@@ -23,4 +23,9 @@ function install_sleep_hook(){
   printf "${STY_BLUE}Sleep hook installed at ${SLEEP_HOOK_TARGET}.${STY_RST}\n"
 }
 
-install_sleep_hook
+if [[ "$OS_GROUP_ID" == "nixos" ]]; then
+  # /usr/lib is read-only on NixOS: the module runs the hook from powerManagement.resumeCommands instead.
+  printf "${STY_CYAN}NixOS: the sleep hook comes with the Halcyon module.${STY_RST}\n"
+else
+  install_sleep_hook
+fi

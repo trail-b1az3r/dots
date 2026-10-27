@@ -19,6 +19,11 @@ function setup_hyprland_plus(){
     return 0
   fi
 
+  if [[ "${OS_GROUP_ID:-}" == "nixos" ]]; then
+    printf "${STY_YELLOW}NixOS: hyprland-plus isn't built here; nixpkgs' Hyprland (from the Halcyon module) is used.${STY_RST}\n"
+    return 0
+  fi
+
   if ! command -v pacman >/dev/null 2>&1; then
     printf "${STY_YELLOW}hyprland-plus is only installed automatically on Arch. Build it by hand: https://github.com/trail-b1az3r/hyprland-plus${STY_RST}\n"
     return 0

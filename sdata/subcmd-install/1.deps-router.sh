@@ -43,7 +43,12 @@ function outdate_detect(){
 }
 #####################################################################################
 
-if [[ "$INSTALL_VIA_NIX" == "true" ]]; then
+if [[ "$OS_GROUP_ID" == "nixos" ]]; then
+
+  printf "./sdata/dist-nixos/install-deps.sh will be used.\n"
+  source ./sdata/dist-nixos/install-deps.sh
+
+elif [[ "$INSTALL_VIA_NIX" == "true" ]]; then
 
   TARGET_ID=nix
   printf "${STY_YELLOW}"

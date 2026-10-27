@@ -68,6 +68,15 @@ Useful options (`./setup install -h` lists all of them):
 When logging in from a display manager, choose **Hyprland**, not
 *Hyprland (uwsm)*.
 
+### NixOS
+
+`./setup install` notices NixOS and installs the dependencies the NixOS way: a system module copied to
+`/etc/nixos/halcyon` and imported from `configuration.nix` (after a backup, showing the change), then
+`nixos-rebuild dry-build` and `switch`. Hyprland, PipeWire, Bluetooth, NetworkManager, power profiles, the keyring,
+hyprlock's PAM entry, ydotool, i2c, the fonts and the groups all come from the module, so a rebuild keeps them. With
+a flake, the installer prints the lines to add instead of editing it, or use the flake directly. See
+[sdata/dist-nixos](sdata/dist-nixos/README.md).
+
 ### Updates
 
 Halcyon checks the repository for new commits every hour, and a couple of minutes after you log in. When there are

@@ -24,10 +24,18 @@ function setup_user_group(){
 showfun install-python-packages
 v install-python-packages
 
+if [[ "$OS_GROUP_ID" == "nixos" ]]; then
+  # The groups, i2c, ydotool, Bluetooth and power-profiles-daemon are set in the system module
+  # (sdata/dist-nixos/halcyon.nix): changed here, the next rebuild would undo them.
+  printf "${STY_CYAN}NixOS: groups and services come from the Halcyon module.${STY_RST}\n"
+else
 showfun setup_user_group
 v setup_user_group
+fi
 
-if [[ ! -z $(systemctl --version) ]]; then
+if [[ "$OS_GROUP_ID" == "nixos" ]]; then
+  true
+elif [[ ! -z $(systemctl --version) ]]; then
   # For Fedora, uinput is required for the virtual keyboard to function, and udev rules enable input group users to utilize it.
   if [[ "$OS_GROUP_ID" == "fedora" ]]; then
     v bash -c "echo uinput | sudo tee /etc/modules-load.d/uinput.conf"
