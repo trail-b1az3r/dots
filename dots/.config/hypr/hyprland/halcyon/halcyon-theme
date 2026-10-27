@@ -77,6 +77,7 @@ SHELL_RESTORE = HALCYON_STATE / "shell-restore.json"
 BANNERS = DATA / "halcyon/banners"
 
 GENERATED = STATE / "quickshell/user/generated"
+PREVIEWS = Path(os.environ.get("XDG_CACHE_HOME") or HOME / ".cache") / "halcyon/theme-previews"
 SHELL_CONFIG = CONFIG / "illogical-impulse/config.json"
 # Your own themes (halcyon-theme custom new). Built-in ones live in THEMES_DIR.
 USER_THEMES_DIR = CONFIG / "halcyon/themes"
@@ -1160,8 +1161,70 @@ def cmd_custom(args):
     return 0
 
 
-def cmd_list(_args):
+def preview_path(theme_id):
+    return PREVIEWS / f"{theme_id}.jpg"
+
+
+def theme_summary(theme_id, theme, current):
+    """What the shell's theme picker shows for a theme."""
+    shell = theme["shell"]
+    preview = preview_path(theme_id)
+    return {
+        "id": theme_id, "name": theme["name"], "description": theme["description"], "active": theme_id == current,
+        "custom": (USER_THEMES_DIR / f"{theme_id}.json").is_file(),
+        "colors": {key: shell[key] for key in ("background", "on_background", "surface_container", "primary",
+                                               "secondary", "tertiary")},
+        "preview": str(preview) if preview.is_file() else "",
+        "wallpaper": str(resolve_wallpaper(theme)),
+        "has_wallpaper": resolve_wallpaper(theme).is_file(),
+    }
+
+
+def cmd_previews(args):
+    """Small pictures of each theme's wallpaper for the theme picker (the first frame of a video), made once and
+    again when the wallpaper changes. --force remakes them all."""
+    force = "--force" in args
+    tool = shutil.which("ffmpeg")
+    if not tool:
+        raise ThemeError("ffmpeg is needed for the previews (sudo pacman -S ffmpeg)")
+    PREVIEWS.mkdir(parents=True, exist_ok=True)
+    made = 0
+    for theme_id in theme_ids():
+        try:
+            theme = load(theme_id)
+        except ThemeError:
+            continue
+        wallpaper = resolve_wallpaper(theme)
+        preview = preview_path(theme_id)
+        if not wallpaper.is_file():
+            continue
+        if preview.is_file() and not force and preview.stat().st_mtime >= wallpaper.stat().st_mtime:
+            continue
+        staging = preview.with_name(".part-" + preview.name)
+        done = subprocess.run([tool, "-y", "-loglevel", "error", "-i", str(wallpaper), "-frames:v", "1",
+                               "-vf", "scale=640:-2", "-q:v", "4", str(staging)],
+                              capture_output=True, text=True, check=False, timeout=120)
+        if done.returncode == 0 and staging.is_file():
+            os.replace(staging, preview)
+            made += 1
+        else:
+            staging.unlink(missing_ok=True)
+    print(f"{made} previews made in {PREVIEWS}")
+    return 0
+
+
+def cmd_list(args):
     current = active()
+    if "--json" in args:
+        themes = []
+        for theme_id in theme_ids():
+            try:
+                themes.append(theme_summary(theme_id, load(theme_id), current))
+            except ThemeError:
+                continue
+        print(json.dumps({"current": current or "", "effects": effects_for(load(current)) if current else "",
+                          "themes": themes}))
+        return 0
     for theme_id in theme_ids():
         theme = load(theme_id)
         mark = "*" if theme_id == current else " "
@@ -1634,7 +1697,14 @@ def cmd_off(_args):
     return 0
 
 
-def cmd_menu(_args):
+def cmd_menu(args):
+    # The shell's theme picker (cards with each theme's wallpaper, colours and frame); fuzzel when the shell isn't
+    # running, or with --fuzzel.
+    if "--fuzzel" not in args and shutil.which("qs"):
+        done = subprocess.run(["qs", "-c", "ii", "ipc", "call", "themePicker", "toggle"], capture_output=True,
+                              text=True, check=False, timeout=10)
+        if done.returncode == 0 and "error" not in (done.stdout + done.stderr).lower():
+            return 0
     if not shutil.which("fuzzel"):
         raise ThemeError("fuzzel is not installed")
     current = active()
@@ -2453,7 +2523,7 @@ COMMANDS = {
     "placement": cmd_placement,
     "starrail": cmd_starrail,
     "fetch": cmd_fetch,
-    "list": cmd_list, "current": cmd_current, "apply": cmd_apply, "off": cmd_off,
+    "list": cmd_list, "previews": cmd_previews, "current": cmd_current, "apply": cmd_apply, "off": cmd_off,
     "menu": cmd_menu, "check": cmd_check, "render": cmd_render, "detach": cmd_detach,
     "effects": cmd_effects, "banner": cmd_banner, "refresh": cmd_refresh,
     "settings": cmd_settings, "cursor": cmd_cursor,

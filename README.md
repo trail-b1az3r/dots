@@ -301,7 +301,11 @@ halcyon icons apply ink        # use one;  halcyon icons restore  goes back
 ![The After ICEY, Manga Ink and Manga Ink Dark icon packs, made from Papirus](docs/assets/icon-packs.png)
 
 Pick one in **Settings > Halcyon**, with **`Ctrl + Super + Shift + T`**,
-or from a terminal:
+or from a terminal. The keybind opens the theme picker: every theme as a card with its wallpaper, its colours and
+its own dock frame. Arrows or the mouse to choose, Enter or a click to apply, and below them "follow the wallpaper"
+and the effects level. Without the shell running it falls back to a fuzzel menu.
+
+![The theme picker: a card for each theme with its wallpaper, colours and dock frame](docs/assets/theme-picker.jpg)
 
 ```sh
 halcyon list
@@ -338,6 +342,13 @@ wallpaper. The themes are dark themes, so switching to light mode, or
 picking an accent colour, also leaves the theme. The colours are then
 generated from the theme's accent, not hand-made. `halcyon off`
 makes colours follow the wallpaper again.
+
+### A new theme while you are away
+
+**Settings > Halcyon > When the theme switches > When you are away**: after some minutes without the keyboard or
+mouse, the theme changes, like a screensaver. It can move to the next theme, a random one, or one theme you choose,
+keep changing every few minutes while you are gone, and put your theme back when you return. Videos playing and
+server mode hold it off, as they hold off the lock.
 
 ### Applying a theme on a schedule
 
@@ -900,6 +911,16 @@ connect. And on Surface (`mwifiex`) cards it turns off random MAC addresses whil
 and power saving, which make those cards fail to connect. It writes
 `/etc/NetworkManager/conf.d/90-halcyon-wifi.conf`; delete that file and restart NetworkManager to undo it.
 
+## Lock screen and idle
+
+The shell's own lock screen comes first; hyprlock is the one used when the shell isn't running, and it now looks the
+part: what was on the screen, blurred and dimmed, a large clock with the date, a card with your picture (`~/.face`),
+a greeting and a rounded password field that shows when it is checking, a wrong password and Caps Lock, what is
+playing, and your battery. Its colours follow the theme. A minute before the screen locks, it dims and the keyboard
+light goes out (hypridle, with `brightnessctl`), and both come back the moment you touch anything.
+
+![hyprlock: the clock, the date, the card with the picture, greeting and password field](docs/assets/hyprlock.jpg)
+
 ## Sound and webcams
 
 Headphones, a webcam or its microphone that work in KDE but not in Hyprland had two causes, both fixed:
@@ -1022,7 +1043,7 @@ full list, including all of upstream's.
 | `Super + Shift + 4` | Screenshot a region |
 | `Super + Shift + 5` | Record a region |
 | `Super + Shift + 6` | Screenshot the focused window, to clipboard and file |
-| `Ctrl + Super + Shift + T` | Pick a Halcyon theme |
+| `Ctrl + Super + Shift + T` | The theme picker |
 | `Super + Shift + Space` | Voice assistant (again to cancel) |
 | `Super + Shift + H` | HyperNix (if installed) |
 | `Super + Alt + E` | Plus Tiles: Move Edge (see below) |

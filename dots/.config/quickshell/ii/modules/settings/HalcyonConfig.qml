@@ -853,6 +853,59 @@ ContentPage {
             text: Translation.tr("Changes made each time the theme switches to, or away from, a theme: the revolver off for After ICEY, other icons for Red Sun... They run in this order, when a theme is applied or turned off.")
         }
 
+        ContentSubsection {
+            title: Translation.tr("When you are away")
+            tooltip: Translation.tr("A new theme when the computer is left alone (no keyboard or mouse) for a while, like a screensaver. Videos and server mode hold it off.")
+
+            ConfigSwitch {
+                buttonIcon: "bedtime"
+                text: Translation.tr("Change the theme when the computer is left alone")
+                checked: Config.options.halcyon.idleTheme.enable
+                onCheckedChanged: Config.options.halcyon.idleTheme.enable = checked
+            }
+            ConfigSpinBox {
+                visible: Config.options.halcyon.idleTheme.enable
+                icon: "timer"
+                text: Translation.tr("After this many minutes")
+                from: 1
+                to: 240
+                value: Config.options.halcyon.idleTheme.minutes
+                onValueChanged: Config.options.halcyon.idleTheme.minutes = value
+            }
+            ConfigSelectionArray {
+                visible: Config.options.halcyon.idleTheme.enable
+                currentValue: Config.options.halcyon.idleTheme.mode
+                onSelected: newValue => Config.options.halcyon.idleTheme.mode = newValue
+                options: [
+                    { displayName: Translation.tr("The next theme"), icon: "skip_next", value: "next" },
+                    { displayName: Translation.tr("A random theme"), icon: "shuffle", value: "random" },
+                    { displayName: Translation.tr("One theme"), icon: "push_pin", value: "one" }
+                ]
+            }
+            ConfigSelectionArray {
+                visible: Config.options.halcyon.idleTheme.enable && Config.options.halcyon.idleTheme.mode === "one"
+                currentValue: Config.options.halcyon.idleTheme.theme
+                onSelected: newValue => Config.options.halcyon.idleTheme.theme = newValue
+                options: page.builtinThemes.map(t => ({ displayName: t.name, icon: t.icon, value: t.id }))
+            }
+            ConfigSpinBox {
+                visible: Config.options.halcyon.idleTheme.enable && Config.options.halcyon.idleTheme.mode !== "one"
+                icon: "autorenew"
+                text: Translation.tr("Then again every this many minutes (0: once)")
+                from: 0
+                to: 240
+                value: Config.options.halcyon.idleTheme.every
+                onValueChanged: Config.options.halcyon.idleTheme.every = value
+            }
+            ConfigSwitch {
+                visible: Config.options.halcyon.idleTheme.enable
+                buttonIcon: "undo"
+                text: Translation.tr("Put the theme back when I return")
+                checked: Config.options.halcyon.idleTheme.restore
+                onCheckedChanged: Config.options.halcyon.idleTheme.restore = checked
+            }
+        }
+
         ConfigSwitch {
             buttonIcon: "apps"
             text: Translation.tr("Theme icon packs")

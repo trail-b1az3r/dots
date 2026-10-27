@@ -9,11 +9,14 @@ from __future__ import annotations
 # (group, [(usage, what it does)]). A usage's first word is the command, which `halcyon help COMMAND` matches.
 GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
     ("Themes", [
-        ("list", "the themes, and which one is active"),
+        ("list [--json]", "the themes, and which one is active (--json: what the theme picker shows)"),
+        ("previews [--force]", "make the theme picker's pictures from each theme's wallpaper (it does this itself)"),
         ("apply NAME", "switch to a theme"),
         ("off", "back to colours from the wallpaper"),
         ("current", "the active theme's id, or 'none'"),
-        ("menu", "pick a theme or effects level with fuzzel (Ctrl + Super + Shift + T)"),
+        ("menu [--fuzzel]", "the theme picker (Ctrl + Super + Shift + T); fuzzel when the shell isn't running"),
+        ("icons", "the anime themes' icon packs, and the icon theme in use"),
+        ("icons make|apply icey|ink|ink-dark", "make a pack from the icons in use, or use it; `icons restore` goes back"),
         ("custom new [NAME]", "make your own theme from the active one, to edit"),
         ("custom list|duplicate ID|delete ID|open ID|path", "manage your own themes"),
         ("show [ID|all]", "list hidden built-in themes, or bring one back"),
