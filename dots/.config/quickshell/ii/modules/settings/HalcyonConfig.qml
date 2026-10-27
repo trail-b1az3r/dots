@@ -1298,7 +1298,7 @@ ContentPage {
         MaterialTextArea {
             visible: Config.options.halcyon.assistant.provider === "t1" || Config.options.halcyon.assistant.provider === "auto"
             Layout.fillWidth: true
-            placeholderText: Translation.tr("T1 server, e.g. http://127.0.0.1:8000 (key: /key in the AI sidebar on a T1 model, or halcyon assistant key t1)")
+            placeholderText: Translation.tr("T1 server, e.g. http://127.0.0.1:8000")
             text: Config.options.halcyon.assistant.t1Server
             onTextChanged: {
                 if (text.trim() === Config.options.halcyon.assistant.t1Server)
@@ -1307,6 +1307,80 @@ ContentPage {
                 page.reloadAssistant();
                 Ai.refreshHalcyonModels();
             }
+        }
+
+        // The T1 server's key, pasted here: it goes straight to the keyring, never through a shell (T1 keys end in
+        // symbols such as $ ! ` that a shell changes). The AI sidebar and the voice assistant share it.
+        RowLayout {
+            id: t1KeyRow
+            visible: Config.options.halcyon.assistant.provider === "t1" || Config.options.halcyon.assistant.provider === "auto"
+            Layout.fillWidth: true
+            spacing: 8
+            property string status: ""
+            property string pending: ""
+
+            function save() {
+                const key = t1KeyField.text.trim();
+                if (!/^(T1_|T2_|T2S_|T2P_|T2C_|T1S\.)/.test(key)) {
+                    status = Translation.tr("That isn't a T1 server key: it starts with T1_ or T2_ (or T2S_, T2P_, T2C_).");
+                    return;
+                }
+                // Through the assistant's `key t1`, on stdin: it adds the key to the keyring entry the other keys
+                // are in (this window may not have read it) and checks the key is whole.
+                pending = key;
+                t1KeyStore.running = true;
+            }
+
+            Process {
+                id: t1KeyStore
+                command: [page.assistantTool, "key", "t1"]
+                stdinEnabled: true
+                onRunningChanged: {
+                    if (running) {
+                        write(t1KeyRow.pending + "\n");
+                        stdinEnabled = false;
+                    }
+                }
+                stderr: StdioCollector {
+                    id: t1KeyErrors
+                }
+                onExited: (exitCode, exitStatus) => {
+                    stdinEnabled = true;
+                    t1KeyRow.pending = "";
+                    if (exitCode === 0) {
+                        t1KeyField.text = "";
+                        t1KeyRow.status = Translation.tr("Key stored.");
+                        KeyringStorage.fetchKeyringData();
+                        page.reloadAssistant();
+                        Ai.refreshHalcyonModels();
+                    } else {
+                        t1KeyRow.status = t1KeyErrors.text.replace(/^error: /, "").trim() || Translation.tr("Couldn't store the key.");
+                    }
+                }
+            }
+
+            MaterialTextField {
+                id: t1KeyField
+                Layout.fillWidth: true
+                echoMode: TextInput.Password
+                placeholderText: Translation.tr("T1 key: paste a T1_ or T2_ key (none needed if the server trusts this computer)")
+                onAccepted: t1KeyRow.save()
+            }
+            RippleButtonWithIcon {
+                materialIcon: "key"
+                mainText: Translation.tr("Save key")
+                enabled: t1KeyField.text.trim().length > 0
+                onClicked: t1KeyRow.save()
+            }
+        }
+        StyledText {
+            visible: t1KeyRow.visible && t1KeyRow.status !== ""
+            Layout.leftMargin: 10
+            Layout.fillWidth: true
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colSubtext
+            font.pixelSize: Appearance.font.pixelSize.smallie
+            text: t1KeyRow.status
         }
 
         RowLayout {

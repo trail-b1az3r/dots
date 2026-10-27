@@ -5,6 +5,7 @@ import contextlib
 import io
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import threading
@@ -239,18 +240,30 @@ class HyperNixTest(unittest.TestCase):
             localai.hypernix_ensure("", "http://127.0.0.1:9")
 
 
-def t1_routes(content="Hello from T1", model="hnx-nano"):
+def t1_routes(content="Hello from T1", model="hnx-nano", keyless=False):
+    """A T1 server: a T1 or a T2 key gets in; no key only when it trusts this computer (keyless)."""
+    def allowed(headers):
+        auth = headers.get("Authorization")
+        return auth in ("Bearer T1_good", "Bearer T2_good-3") or (keyless and auth is None)
+
+    unauthorized = (401, {"error": {"code": "unauthorized", "hx_code": "HX401", "message": "invalid API key"},
+                          "request_id": "r1"})
+
     def chat(body, headers):
-        if headers.get("Authorization") != "Bearer T1_good":
-            return 401, {"error": {"code": "unauthorized", "hx_code": "HX401", "message": "invalid API key"},
-                         "request_id": "r1"}
+        if not allowed(headers):
+            return unauthorized
         return 200, {"model": body["model"], "requested_model": body["model"], "content": content,
                      "finish_reason": "stop", "input_tokens": 5, "output_tokens": 3, "backend_name": "local"}
 
+    def backends(body, headers):
+        if not allowed(headers):
+            return unauthorized
+        return 200, {"backends": [{"name": "local", "kind": "runner", "reachable": True, "model_id": model}],
+                     "default": "local"}
+
     return {("GET", "/models"): lambda b, h: (200, {"models": [{"model_id": model, "display_name": "HNX Nano",
                                                                  "availability": "available"}], "count": 1}),
-            ("GET", "/inference/backends"): lambda b, h: (200, {"backends": [
-                {"name": "local", "kind": "runner", "reachable": True, "model_id": model}], "default": "local"}),
+            ("GET", "/inference/backends"): backends,
             ("POST", "/inference/chat"): chat}
 
 
@@ -280,8 +293,33 @@ class T1Test(unittest.TestCase):
             providers.resolve(settings)
         settings["t1Server"] = "http://127.0.0.1:9"
         with unittest.mock.patch.object(config, "api_key", return_value=None):
-            with self.assertRaisesRegex(providers.ProviderError, "no T1 key"):
+            with self.assertRaisesRegex(providers.ProviderError, "no T1 key: the T1 server wants a key"):
                 providers.resolve(settings)
+
+    def test_a_t2_key_works_too(self):
+        with FakeServer(t1_routes()) as server:
+            answer = providers.T1("", server.url, "T2_good-3").chat(HISTORY, "sys", {})
+            self.assertEqual(answer["text"], "Hello from T1")
+
+    def test_no_key_says_what_key_it_wants(self):
+        with FakeServer(t1_routes()) as server:
+            with self.assertRaisesRegex(providers.ProviderError, "T1_ or T2_ key"):
+                providers.T1("hnx-nano", server.url, None).chat(HISTORY, "sys", {})
+
+    def test_a_server_that_trusts_this_computer_needs_no_key(self):
+        settings = config.settings({"halcyon": {"assistant": {"provider": "t1"}}})
+        with FakeServer(t1_routes(keyless=True)) as server, \
+                unittest.mock.patch.object(config, "api_key", return_value=None):
+            settings["t1Server"] = server.url
+            provider = providers.resolve(settings)
+            self.assertEqual(provider.chat(HISTORY, "sys", {})["text"], "Hello from T1")
+            _method, _path, _body, headers = server.requests[-1]
+            self.assertNotIn("Authorization", headers)
+            models = localai.sidebar_models(server.url, False)
+            self.assertFalse(next(iter(models.values()))["requires_key"])
+        with FakeServer(t1_routes()) as server:
+            models = localai.sidebar_models(server.url, False)
+            self.assertTrue(next(iter(models.values()))["requires_key"])
 
     def test_auto_prefers_t1_over_local_models_when_set_up(self):
         settings = config.settings({"halcyon": {"assistant": {"t1Server": "http://t1.example"}}})
@@ -346,3 +384,65 @@ class SidebarTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class T1KeyTest(unittest.TestCase):
+    WHOLE = "T1_" + "a" * 20 + "xy" + "!$`'~" + "\\" + "7"
+
+    def test_whole_keys_and_the_t2_family(self):
+        self.assertEqual(config.t1_key_problem(self.WHOLE), "")
+        for key in ("T2_abc_def-3", "T2S_" + "a" * 26, "T2C_sealed", "T2P_billing-2", "T1S.payload.sig"):
+            self.assertEqual(config.t1_key_problem(key), "", key)
+
+    def test_a_key_the_shell_cut_short(self):
+        # What bash leaves of the key above typed unquoted: the symbols after `$` are gone.
+        self.assertIn("isn't whole", config.t1_key_problem("T1_" + "a" * 20 + "xy!"))
+        self.assertIn("T1_ or T2_", config.t1_key_problem("sk-ant-123"))
+
+    def test_store_refuses_a_broken_key(self):
+        with self.assertRaisesRegex(ValueError, "isn't whole"):
+            config.store_api_key("t1", "T1_" + "a" * 20 + "xy")
+
+    def test_found_where_hypernix_keeps_it(self):
+        with tempfile.TemporaryDirectory() as folder, \
+                unittest.mock.patch.object(config, "_keyring_data", return_value={}), \
+                unittest.mock.patch.dict(os.environ, {"T1_CONFIG_DIR": folder}, clear=False):
+            for name in config.KEY_ENV["t1"]:
+                os.environ.pop(name, None)
+            self.assertIsNone(config.api_key("t1"))
+            Path(folder, ".env").write_text("T1_HOST=0.0.0.0\nT1_BOOTSTRAP_KEY='%s'\n" % self.WHOLE)
+            self.assertEqual(config.api_key("t1"), self.WHOLE)
+            with unittest.mock.patch.dict(os.environ, {"T2_API_KEY": "T2_env-4"}):
+                self.assertEqual(config.api_key("t1"), "T2_env-4")
+
+
+class T1KeyCommandTest(unittest.TestCase):
+    """`halcyon-assistant key t1` with the key on stdin, as Settings sends it, against a stand-in secret-tool."""
+
+    TOOL = Path(__file__).resolve().parent.parent / "dots/.config/hypr/hyprland/halcyon/assistant/halcyon-assistant"
+
+    def run_key(self, key, folder):
+        bin_dir = Path(folder, "bin")
+        bin_dir.mkdir(exist_ok=True)
+        store = Path(folder, "keyring.json")
+        if not store.exists():
+            store.write_text(json.dumps({"apiKeys": {"gemini": "AIza-kept"}}))
+        executable(bin_dir / "secret-tool", f"""if [ "$1" = lookup ]; then cat '{store}'; else cat > '{store}'; fi
+""")
+        env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}", "XDG_STATE_HOME": str(Path(folder, "state"))}
+        done = subprocess.run([sys.executable, str(self.TOOL), "key", "t1"], input=key + "\n", capture_output=True,
+                              text=True, env=env, timeout=60)
+        return done, json.loads(store.read_text())
+
+    def test_a_whole_key_is_added_beside_the_others(self):
+        with tempfile.TemporaryDirectory() as folder:
+            done, data = self.run_key(T1KeyTest.WHOLE, folder)
+            self.assertEqual(done.returncode, 0, done.stderr)
+            self.assertEqual(data["apiKeys"], {"gemini": "AIza-kept", "t1": T1KeyTest.WHOLE})
+
+    def test_a_broken_key_is_refused(self):
+        with tempfile.TemporaryDirectory() as folder:
+            done, data = self.run_key("T1_shortxy", folder)
+            self.assertEqual(done.returncode, 2)
+            self.assertIn("isn't whole", done.stderr)
+            self.assertNotIn("t1", data["apiKeys"])

@@ -395,7 +395,8 @@ def _t1_messages(history, system):
 
 
 class T1:
-    """A HyperNix T1 server's governed inference (POST /inference/chat with a T1_ or T2_ key). The server picks
+    """A HyperNix T1 server's governed inference (POST /inference/chat with a T1_ or T2_ key, or none when the server
+    trusts this computer). The server picks
     the backend and applies the key's plan, quota and audit log. It has no tool calls, so it only talks."""
 
     name = "t1"
@@ -537,7 +538,7 @@ def resolve(settings):
             provider = "claude-code"
         elif config.api_key("gemini"):
             provider = "gemini"
-        elif t1_server and config.api_key("t1"):
+        elif t1_server and (config.api_key("t1") or localai.t1_keyless(t1_server)):
             provider = "t1"
         else:
             provider = _local_choice()
@@ -568,7 +569,7 @@ def resolve(settings):
         if not t1_server:
             raise ProviderError("no T1 server: `halcyon assistant set t1Server http://HOST:PORT`")
         key = config.api_key("t1")
-        if not key:
-            raise ProviderError("no T1 key: `halcyon assistant key t1 T1_...`, or /key in the AI sidebar")
+        if not key and not localai.t1_keyless(t1_server):
+            raise ProviderError("no T1 key: " + localai.T1_KEY_HINT)
         return T1(model, t1_server, key)
     return Ollama(model, settings["endpoint"] or config.DEFAULT_ENDPOINTS["ollama"])
