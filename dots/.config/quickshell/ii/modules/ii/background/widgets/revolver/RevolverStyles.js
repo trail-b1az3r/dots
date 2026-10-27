@@ -21,6 +21,10 @@ var STYLES = {
     // The anime themes: squircles, drawn as keycaps (outline, a cream ring, a flat fill, a hard shadow straight down).
     "keycap":  { id: "keycap", drum: "squircle", plate: "keycap", chamber: "squircle", chamberSize: 48, orbit: 79, names: true,
                  hub: "squircle", hammer: "pill", glow: 0.45, waves: 0, statusLabel: true },
+    // Manga Ink's cards: the dock's manga panel (paper in a thick ink border, a hard shadow, screentone), with keys
+    // of paper and ink inside.
+    "manga":   { id: "manga", drum: "squircle", plate: "manga", chamber: "squircle", chamberSize: 48, orbit: 79, names: true,
+                 hub: "squircle", hammer: "pill", glow: 0.45, waves: 0, statusLabel: true, base: "#f7f3ea", edge: "#141414" },
     // Manga Ink Dark's keycaps: ink-black keys with a paper edge and a paper shadow, a manga panel in negative.
     "keycap-dark": { id: "keycap-dark", drum: "squircle", plate: "keycap", chamber: "squircle", chamberSize: 48, orbit: 79,
                      names: true, hub: "squircle", hammer: "pill", glow: 0.45, waves: 0, statusLabel: true,
@@ -60,8 +64,9 @@ function styleFor(themeId) {
     case "hyperneo":
         return STYLES["hyperneo"];
     case "after-icey":
-    case "manga-ink":
         return STYLES["keycap"];
+    case "manga-ink":
+        return STYLES["manga"];
     case "manga-ink-dark":
         return STYLES["keycap-dark"];
     case "silence":
@@ -202,6 +207,9 @@ var LOOKS = {
     "keycap":   { id: "keycap", gauge: "key", bars: "blocks", progress: "blocks", lyric: "key",
                   caps: true, spacing: 0.8, colorA: "", colorB: "", text: "", glow: "" },
     // Drawn as the keycaps are (family), in paper on ink.
+    // Manga Ink: keys of paper and ink, ink text.
+    "manga":    { id: "manga", family: "keycap", gauge: "key", bars: "blocks", progress: "blocks", lyric: "key",
+                  caps: true, spacing: 1.2, colorA: "", colorB: "", text: "#141414", glow: "" },
     "keycap-dark": { id: "keycap-dark", family: "keycap", gauge: "key", bars: "blocks", progress: "blocks", lyric: "key",
                      caps: true, spacing: 0.8, colorA: "", colorB: "", text: "#f1ece2", glow: "" },
     // Silence: thin and spaced, red light on black.

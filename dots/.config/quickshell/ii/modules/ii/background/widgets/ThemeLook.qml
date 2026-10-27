@@ -25,6 +25,8 @@ QtObject {
     readonly property real spacing: spec.spacing
     /** The card's colour, solid: the panel colour is see-through when the shell's transparency is on, which washed
      *  keycaps and their shadows out over a bright wallpaper. */
+    /** The outline of keys and cards: the theme's own (Manga Ink's ink, Manga Ink Dark's paper) or a shade of the card. */
+    readonly property color edge: Styles.styleFor(themeId).edge ?? Qt.darker(look.card, 2.6)
     readonly property color card: Styles.styleFor(themeId).base ?? Qt.rgba(Appearance.colors.colLayer1.r, Appearance.colors.colLayer1.g, Appearance.colors.colLayer1.b, 1)
 
     /** A label as the theme sets them: Red Sun, Star Rail and the keycaps in capitals. */

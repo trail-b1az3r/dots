@@ -31,6 +31,8 @@ Item {
     readonly property bool redSun: style.id === "red-sun"
     readonly property bool keycap: style.plate === "keycap"
     readonly property bool hush: style.plate === "hush"
+    // Manga Ink: the dock's own manga panel (dock/DockFrame.qml), so the cards and the dock are drawn alike.
+    readonly property bool manga: style.plate === "manga"
     // A keycap is solid ink, whatever the shell's transparency: the panel colour it is given is see-through when
     // transparency is on, which washed the cards out on the anime themes' white wallpapers.
     readonly property color solidBase: style.base ? style.base : Qt.rgba(colBase.r, colBase.g, colBase.b, 1)
@@ -42,8 +44,16 @@ Item {
         return Qt.rgba(colour.r, colour.g, colour.b, alpha);
     }
 
+    Loader {
+        anchors.fill: parent
+        active: plate.manga
+        source: "../../dock/DockFrame.qml"
+        onLoaded: item.kind = "ink"
+    }
+
     Item {
         id: surface
+        visible: !plate.manga
         x: -plate.pad
         y: -plate.pad
         width: plate.width + 2 * plate.pad

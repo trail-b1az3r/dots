@@ -60,7 +60,7 @@ AbstractBackgroundWidget {
             radius: root.look.id === "glass" ? 4 : root.look.id === "keycap" ? 14 : Appearance.rounding.normal
             color: Appearance.colors.colLayer2
             border.width: root.look.id === "default" || root.look.id === "hyperneo" ? 0 : (root.look.id === "keycap" ? 2.5 : 1.5)
-            border.color: root.look.id === "keycap" ? Qt.darker(root.look.card, 2.6) : root.look.glow
+            border.color: root.look.id === "keycap" ? root.look.edge : root.look.glow
 
             StyledImage {
                 id: art

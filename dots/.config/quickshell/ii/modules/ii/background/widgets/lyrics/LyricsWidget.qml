@@ -105,7 +105,7 @@ AbstractBackgroundWidget {
                     radius: root.mark === "key" ? 12 : 4
                     color: root.mark === "key" ? Qt.lighter(root.look.card, 1.12) : Qt.rgba(1, 1, 1, 0.12)
                     border.width: root.mark === "key" ? 2.5 : 1
-                    border.color: root.mark === "key" ? Qt.darker(root.look.card, 2.6) : Qt.rgba(1, 1, 1, 0.35)
+                    border.color: root.mark === "key" ? root.look.edge : Qt.rgba(1, 1, 1, 0.35)
                     // the key's hard shadow, straight down
                     Rectangle {
                         z: -1
@@ -114,7 +114,7 @@ AbstractBackgroundWidget {
                         width: parent.width
                         height: parent.height
                         radius: parent.radius
-                        color: Qt.darker(root.look.card, 2.6)
+                        color: root.look.edge
                     }
                 }
 

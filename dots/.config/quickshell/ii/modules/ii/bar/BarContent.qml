@@ -44,7 +44,8 @@ Item { // Bar content region
         source: "../dock/DockFrame.qml"   // by file, so a live reload finds it
         onLoaded: {
             item.kind = Qt.binding(() => root.frameKind);
-            item.inverted = true;   // the bar's text is light: Manga Ink's panel is ink with paper lines
+            // Ink with paper lines where the bar's text is light (a dark palette); Manga Ink's paper panel on a light one.
+            item.inverted = Qt.binding(() => Appearance.m3colors.darkmode);
             item.colBase = Qt.binding(() => Qt.rgba(Appearance.colors.colLayer0.r, Appearance.colors.colLayer0.g, Appearance.colors.colLayer0.b, 1));
             item.colAccent = Qt.binding(() => Appearance.colors.colPrimary);
             item.colAccent2 = Qt.binding(() => Appearance.colors.colTertiary);
