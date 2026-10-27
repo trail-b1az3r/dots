@@ -89,6 +89,9 @@ class CommandTests(unittest.TestCase):
     def run_tool(self, home, *args):
         env = {k: v for k, v in os.environ.items() if k != "HYPRLAND_INSTANCE_SIGNATURE"}
         env.update(HOME=str(home), XDG_CONFIG_HOME=str(home / ".config"), XDG_STATE_HOME=str(home / ".local/state"))
+        # No Hyprland on PATH: these tests are about a machine without hyprland-plus, whatever this one has.
+        env["PATH"] = os.pathsep.join(p for p in env.get("PATH", "").split(os.pathsep)
+                                      if p and not any(Path(p, name).exists() for name in ("Hyprland", "hyprland")))
         return subprocess.run([sys.executable, str(HALCYON / "halcyon-theme"), "plus", *args],
                               capture_output=True, text=True, env=env, check=False)
 

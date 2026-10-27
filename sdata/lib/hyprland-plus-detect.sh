@@ -11,7 +11,10 @@
 # none is installed.
 hyprland_plus_find(){
   local bin line seen=""
-  for bin in /usr/local/bin/Hyprland /usr/bin/Hyprland "$(command -v Hyprland 2>/dev/null)" "$(command -v hyprland 2>/dev/null)"; do
+  # HALCYON_HYPRLAND_PATHS: the fixed places to look before PATH (tests set it empty, to see only their stand-ins).
+  local fixed="${HALCYON_HYPRLAND_PATHS-/usr/local/bin/Hyprland /usr/bin/Hyprland}"
+  # shellcheck disable=SC2086 # the fixed places are space-separated on purpose
+  for bin in $fixed "$(command -v Hyprland 2>/dev/null)" "$(command -v hyprland 2>/dev/null)"; do
     [[ -n "$bin" && -x "$bin" ]] || continue
     bin="$(readlink -f "$bin")"
     [[ " $seen " == *" $bin "* ]] && continue

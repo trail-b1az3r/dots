@@ -116,10 +116,16 @@ jobs:
           else
             where=(--verify-tag)
           fi
+          # The release's name (CODENAME, e.g. Copper) and its notes (docs/releases/<version>.md), when there are.
+          codename="$(tr -d '[:space:]' < CODENAME 2>/dev/null || true)"
+          notes=(--generate-notes)
+          if [[ -f "docs/releases/$VERSION.md" ]]; then
+            notes=(--notes-file "docs/releases/$VERSION.md" --generate-notes)
+          fi
           gh release create "$TAG" \
             "dist/halcyon-$VERSION.tar.gz" \
             "dist/halcyon-$VERSION.tar.gz.sha256" \
             "${where[@]}" \
             --latest \
-            --title "Halcyon $VERSION" \
-            --generate-notes
+            --title "Halcyon $VERSION${codename:+ \"$codename\"}" \
+            "${notes[@]}"
