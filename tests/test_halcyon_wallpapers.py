@@ -11,6 +11,7 @@ import sys
 import tempfile
 import threading
 import unittest
+import unittest.mock
 from contextlib import redirect_stderr, redirect_stdout
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
@@ -66,7 +67,7 @@ class WallpaperTests(unittest.TestCase):
         rows = {r["id"]: r for r in json.loads(out)}
         self.assertEqual(code, 0)
         self.assertEqual({k: (r["installed"], r["downloadable"]) for k, r in rows.items()},
-                         {"after-icey": (False, True), "anime-girl-cat": (False, False)})
+                         {"after-icey": (False, True), "silence": (False, True), "anime-girl-cat": (False, False)})
         self.assertTrue(rows["after-icey"]["path"].startswith(str(wp.DIRECTORY)))
 
     def test_import_installs_a_video(self):
@@ -135,12 +136,56 @@ class ThemeTests(unittest.TestCase):
     def test_the_videos_are_not_in_the_repository(self):
         for path in (HALCYON / "themes").rglob("*"):
             self.assertNotIn(path.suffix, (".mp4", ".webm", ".mkv"), path)
+        self.assertFalse((HALCYON / "themes/wallpapers/silence.png").exists(), "Silence's wallpaper is fetched, not shipped")
+
+    def test_a_still_wallpaper_must_be_an_image(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        saved = wp.DIRECTORY
+        wp.DIRECTORY = Path(tmp.name) / "wallpapers"
+        self.addCleanup(setattr, wp, "DIRECTORY", saved)
+        page = Path(tmp.name) / "page.html"
+        page.write_bytes(HTML)
+        with self.assertRaisesRegex(wp.WallpaperError, "not an image"):
+            wp.install("silence", page)
+        png = Path(tmp.name) / "silence.png"
+        png.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 64)
+        self.assertEqual(wp.install("silence", png), wp.target("silence"))
+        with self.assertRaisesRegex(wp.WallpaperError, "not a video"):
+            wp.install("after-icey", png)
+
+    def test_manga_ink_dark_makes_its_wallpaper_from_manga_inks(self):
+        module = self.load_tool()
+        theme = json.loads((HALCYON / "themes/manga-ink-dark.json").read_text())
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        folder = Path(tmp.name)
+        source = folder / "light.png"
+        target = folder / "dark.png"
+        theme["wallpaper_invert_of"] = str(source)
+        calls = []
+
+        def fake_run(command, **kwargs):
+            calls.append(command)
+            Path(command[-1]).write_bytes(b"inverted")
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        self.assertFalse(module.derive_wallpaper(theme, target), "nothing to make it from yet")
+        source.write_bytes(b"light")
+        with unittest.mock.patch.object(module.subprocess, "run", side_effect=fake_run), \
+                unittest.mock.patch.object(module.shutil, "which", return_value="/usr/bin/ffmpeg"), \
+                unittest.mock.patch.object(module, "notify"):
+            self.assertTrue(module.derive_wallpaper(theme, target))
+            self.assertEqual(target.read_bytes(), b"inverted")
+            self.assertIn("negate,hue=h=180", calls[0])
+            self.assertTrue(module.derive_wallpaper(theme, target))
+            self.assertEqual(len(calls), 1, "made once, not again while the original is older")
 
     def test_themes_pass_the_theme_checker(self):
         with tempfile.TemporaryDirectory() as home:
             env = {**os.environ, "HOME": home, "XDG_CONFIG_HOME": home + "/c", "XDG_DATA_HOME": home + "/d",
                    "XDG_STATE_HOME": home + "/s"}
-            for theme in ("after-icey", "manga-ink"):
+            for theme in ("after-icey", "manga-ink", "manga-ink-dark", "silence"):
                 result = subprocess.run([sys.executable, str(HALCYON / "halcyon-theme"), "check", theme],
                                         env=env, capture_output=True, text=True)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

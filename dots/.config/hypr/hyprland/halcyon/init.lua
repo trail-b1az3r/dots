@@ -13,6 +13,8 @@ require("hyprland.halcyon.mini")
 require("hyprland.halcyon.tiles")
 require("hyprland.halcyon.plus")
 require("hyprland.halcyon.modes")
+-- SUPER + drag a window, then switch workspace: the window comes along (carry.lua).
+require("hyprland.halcyon.carry")
 
 -- The active theme's window style, written by halcyon-theme. It exists only
 -- while a theme is active; see `halcyon-theme list`.
@@ -93,6 +95,9 @@ end)
 hl.on("hyprland.start", function()
     hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE " ..
         "XDG_RUNTIME_DIR DISPLAY XDG_CURRENT_DESKTOP; " ..
+        -- Sound, microphones and webcams: drop what a KDE session left in systemd, restart KDE's portal if it is
+        -- the one running, start PipeWire if it isn't (halcyon_audio.py; `halcyon audio` says what it found).
+        "$HOME/.config/hypr/hyprland/halcyon/halcyon_audio.py boot >/dev/null 2>&1; " ..
         "systemctl --user daemon-reload; " ..
         -- Older Halcyon enabled these for every login, which started the shell in KDE too. They are only
         -- started from here now, so drop those links.

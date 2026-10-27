@@ -43,6 +43,15 @@ CATALOG = {
         "url": "https://motionbgs.com/dl/hd/10303",
         "url_4k": "https://motionbgs.com/dl/4k/10303",
     },
+    "silence": {
+        "title": "Silence",
+        "theme": "silence",
+        "credit": "artist unknown, as published on wallhaven",
+        "page": "https://wallhaven.cc/w/6ll7dx",
+        "file": "silence.png",
+        "url": "https://w.wallhaven.cc/full/6l/wallhaven-6ll7dx.png",
+        "kind": "image",
+    },
     "anime-girl-cat": {
         "title": "Anime Girl x Cat",
         "theme": "manga-ink",
@@ -85,11 +94,20 @@ def status() -> list[dict]:
     return rows
 
 
+def looks_like_image(head: bytes) -> bool:
+    """PNG, JPEG or WebP."""
+    return head[:8] == b"\x89PNG\r\n\x1a\n" or head[:3] == b"\xff\xd8\xff" or (head[:4] == b"RIFF" and head[8:12] == b"WEBP")
+
+
 def install(entry_id: str, source: Path) -> Path:
     """Put a checked file in place. The old one stays until the new one is complete."""
+    image = CATALOG[entry_id].get("kind") == "image"
     with source.open("rb") as handle:
-        if not looks_like_video(handle.read(16)):
-            raise WallpaperError(f"{source} is not a video (MP4 or WebM). A site's own page, saved by mistake, looks like this")
+        head = handle.read(16)
+    if image and not looks_like_image(head):
+        raise WallpaperError(f"{source} is not an image (PNG, JPEG or WebP). A site's own page, saved by mistake, looks like this")
+    if not image and not looks_like_video(head):
+        raise WallpaperError(f"{source} is not a video (MP4 or WebM). A site's own page, saved by mistake, looks like this")
     destination = target(entry_id)
     destination.parent.mkdir(parents=True, exist_ok=True)
     staging = destination.with_name(destination.name + ".part")

@@ -34,7 +34,7 @@ On top of that, Halcyon adds:
 | **Glass panels** | Shell transparency is on by default. It can still be turned off in Settings. |
 | **Softer layout** | Wider gaps, rounder corners, deeper blur (popups too), a softer shadow. |
 | **Wallpapers** | The hyperNeo fire wallpaper is the default. It and the three Halcyon wallpapers are copied into `~/Pictures/Wallpapers`, where the wallpaper picker looks. |
-| **Themes** | Seven hand-made themes: HyperNeo, Star Rail, Shattered Glass, Fractured Glass, Red Sun, After ICEY and Manga Ink, and rules for what changes when the theme switches. [More below.](#themes) |
+| **Themes** | Nine hand-made themes: HyperNeo, Star Rail, Shattered Glass, Fractured Glass, Red Sun, After ICEY, Manga Ink, Manga Ink Dark and Silence, icon packs for the anime ones, and rules for what changes when the theme switches. [More below.](#themes) |
 | **Voice assistant** | Press `Super + Shift + Space` and speak. It answers aloud and can run the desktop. [More below.](#voice-assistant) |
 | **Browser themes** | Firefox and Chromium take the desktop's colours, from a theme or the wallpaper. [More below.](#browsers) |
 | **Server mode** | One button in **Settings > Halcyon**: no suspend, no automatic lock or screen blanking, until you stop it. [More below.](#server-mode) |
@@ -67,6 +67,15 @@ Useful options (`./setup install -h` lists all of them):
 
 When logging in from a display manager, choose **Hyprland**, not
 *Hyprland (uwsm)*.
+
+### NixOS
+
+`./setup install` notices NixOS and installs the dependencies the NixOS way: a system module copied to
+`/etc/nixos/halcyon` and imported from `configuration.nix` (after a backup, showing the change), then
+`nixos-rebuild dry-build` and `switch`. Hyprland, PipeWire, Bluetooth, NetworkManager, power profiles, the keyring,
+hyprlock's PAM entry, ydotool, i2c, the fonts and the groups all come from the module, so a rebuild keeps them. With
+a flake, the installer prints the lines to add instead of editing it, or use the flake directly. See
+[sdata/dist-nixos](sdata/dist-nixos/README.md).
 
 ### Updates
 
@@ -262,6 +271,8 @@ style, animations, wallpaper and, for some, shell layout and effects:
 | **Red Sun** | `red-sun` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. The ring is the revolver: spin it and the screen breaks, an eye opens in the sun and finds the car, and the tape rewinds. Wallpaper: *Eclipse* by Alena Aenami (2017), from [wallhaven](https://wallhaven.vip/w/yjl8mk); [buy it here](https://www.artstation.com/marketplace/p/oAol/wallpaper-pack-02). |
 | **After ICEY** | `after-icey` | Silver hair, cyan light and ink-dark navy, over the animated *After ICEY* wallpaper (fan art, by way of [MotionBGs](https://motionbgs.com/after-icey)). `halcyon wallpapers get after-icey` fetches it. |
 | **Manga Ink** | `manga-ink` | Black ink on paper with a blush accent, over the animated *Anime Girl x Cat* wallpaper by fw_storm ([DesktopHut](https://www.desktophut.com/anime-girl-x-cat-pl2s)). The site gives the file out from its page: download it there, then `halcyon wallpapers import anime-girl-cat FILE`. |
+| **Manga Ink Dark** | `manga-ink-dark` | Manga Ink in negative: paper-white ink on a black page, the blush kept. Its wallpaper is Manga Ink's, inverted on your computer the first time you apply it (light to dark with the colours kept: ffmpeg's `negate,hue=h=180`). The cards, dock, bar, revolver and clock are ink panels with paper lines. |
+| **Silence** | `silence` | Black, and a face in the dark with red eyes. A still wallpaper (from [wallhaven](https://wallhaven.cc/w/6ll7dx), artist unknown), fetched when the theme is first applied. Everything else stays out of its way: near-black cards with a red hairline, a dock with two small red eyes that slowly open and close, a revolver with almond eye chambers and a red-eyed hub, a clock of needles round an eye, and slow, quiet animations. |
 
 ![HyperNeo, Star Rail, Shattered Glass and Fractured Glass, each with its wallpaper, its revolver, and Firefox in its colours](docs/assets/preview-themes.jpg)
 
@@ -275,8 +286,35 @@ Wallpapers: *After ICEY* fan art via [MotionBGs](https://motionbgs.com/after-ice
 via [DesktopHut](https://www.desktophut.com/anime-girl-x-cat-pl2s). Neither is included: the commands in the table
 above fetch or import them.</sub>
 
+![Silence: a face in the dark with red eyes, near-black cards with red hairlines, its eye revolver and needle clock](docs/assets/preview-silence.jpg)
+
+![Manga Ink Dark: the Manga Ink wallpaper in negative, ink cards with paper edges, the negative revolver and clock](docs/assets/preview-manga-ink-dark.jpg)
+
+<sub>Silence and Manga Ink Dark. Wallpapers: Silence's from [wallhaven](https://wallhaven.cc/w/6ll7dx) (artist
+unknown); Manga Ink Dark's is *Anime Girl x Cat* by fw_storm, inverted. Neither is included.</sub>
+
+### Icon packs
+
+After ICEY, Manga Ink and Manga Ink Dark bring their own icons. They are made on your computer from the icons you
+already use, so every installed app is covered: each app's own icon is redrawn in the theme's style and set in its
+frame, a cyan HUD hexagon for After ICEY, an inked paper panel for Manga Ink (and its negative for Dark). Applying
+the theme makes the pack the first time and switches to it; leaving the theme puts your icons back.
+**Settings > Halcyon > When the theme switches** turns this off, and remakes the packs after you install apps.
+
+```sh
+halcyon icons                  # the packs and the icon theme in use
+halcyon icons make icey        # (re)make one: icey, ink, ink-dark  [--base ICON-THEME]
+halcyon icons apply ink        # use one;  halcyon icons restore  goes back
+```
+
+![The After ICEY, Manga Ink and Manga Ink Dark icon packs, made from Papirus](docs/assets/icon-packs.png)
+
 Pick one in **Settings > Halcyon**, with **`Ctrl + Super + Shift + T`**,
-or from a terminal:
+or from a terminal. The keybind opens the theme picker: every theme as a card with its wallpaper, its colours and
+its own dock frame. Arrows or the mouse to choose, Enter or a click to apply, and below them "follow the wallpaper"
+and the effects level. Without the shell running it falls back to a fuzzel menu.
+
+![The theme picker: a card for each theme with its wallpaper, colours and dock frame](docs/assets/theme-picker.jpg)
 
 ```sh
 halcyon list
@@ -313,6 +351,13 @@ wallpaper. The themes are dark themes, so switching to light mode, or
 picking an accent colour, also leaves the theme. The colours are then
 generated from the theme's accent, not hand-made. `halcyon off`
 makes colours follow the wallpaper again.
+
+### A new theme while you are away
+
+**Settings > Halcyon > When the theme switches > When you are away**: after some minutes without the keyboard or
+mouse, the theme changes, like a screensaver. It can move to the next theme, a random one, or one theme you choose,
+keep changing every few minutes while you are gone, and put your theme back when you return. Videos playing and
+server mode hold it off, as they hold off the lock.
 
 ### Applying a theme on a schedule
 
@@ -875,6 +920,37 @@ connect. And on Surface (`mwifiex`) cards it turns off random MAC addresses whil
 and power saving, which make those cards fail to connect. It writes
 `/etc/NetworkManager/conf.d/90-halcyon-wifi.conf`; delete that file and restart NetworkManager to undo it.
 
+## Lock screen and idle
+
+The shell's own lock screen comes first; hyprlock is the one used when the shell isn't running, and it now looks the
+part: what was on the screen, blurred and dimmed, a large clock with the date, a card with your picture (`~/.face`),
+a greeting and a rounded password field that shows when it is checking, a wrong password and Caps Lock, what is
+playing, and your battery. Its colours follow the theme. A minute before the screen locks, it dims and the keyboard
+light goes out (hypridle, with `brightnessctl`), and both come back the moment you touch anything.
+
+![hyprlock: the clock, the date, the card with the picture, greeting and password field](docs/assets/hyprlock.jpg)
+
+## Sound and webcams
+
+Headphones, a webcam or its microphone that work in KDE but not in Hyprland had two causes, both fixed:
+
+- **EasyEffects** was started at every Hyprland login. It puts its own output and microphone in front of the real
+  ones and keeps them the default, so plugged-in headphones stayed silent and picking the webcam's microphone
+  flickered back. It now starts only when you turn it on (**Settings > Halcyon > Sound**, or
+  `halcyon audio easyeffects on`).
+- **What KDE leaves behind.** Your systemd user services outlive a KDE session, with KDE's environment and KDE's
+  portal, which browsers and Discord use for the webcam. At login Halcyon clears KDE's variables, hands Hyprland's
+  session to systemd and restarts the portals when KDE's is the one running.
+
+The shell's output and microphone menus also no longer rebuild every time an app opens or closes a stream, which made
+them flicker.
+
+```sh
+halcyon audio         # what PipeWire sees, and what stands in the way
+halcyon audio fix     # put it right and restart PipeWire, WirePlumber and the portals (Settings has the button)
+halcyon audio report  # everything above and the sound services' log in ~/halcyon-audio-report.txt, to send
+```
+
 ## Where new windows open
 
 **Settings > Interface > Windows**, or `halcyon placement MODE` (`halcyon placement --list` shows them all):
@@ -976,7 +1052,7 @@ full list, including all of upstream's.
 | `Super + Shift + 4` | Screenshot a region |
 | `Super + Shift + 5` | Record a region |
 | `Super + Shift + 6` | Screenshot the focused window, to clipboard and file |
-| `Ctrl + Super + Shift + T` | Pick a Halcyon theme |
+| `Ctrl + Super + Shift + T` | The theme picker |
 | `Super + Shift + Space` | Voice assistant (again to cancel) |
 | `Super + Shift + H` | HyperNix (if installed) |
 | `Super + Alt + E` | Plus Tiles: Move Edge (see below) |
@@ -986,6 +1062,7 @@ full list, including all of upstream's.
 | `Super + Alt + arrow` | Plus Tiles: move that edge out at once (`Shift`: in) |
 | `Super + F10 + H` or `Super + Ctrl + H` | Hypr mode on and off |
 | Power button | The power menu: lock, sleep, log out, hibernate, shut down, restart, and the power levels (power saver, balanced, performance). Without the shell running it powers off as usual; Settings > Halcyon > On the screen turns it off |
+| `Super` + drag, then `Ctrl` + `Super` + `←`/`→` | Carries the window you are dragging to the next workspace, still under the cursor; keep dragging it there |
 | `Hyper + Ctrl + Tab` | The next floating window here, brought to the top (`Shift` as well: the previous one) |
 
 A Hyper key (keyd, kanata, or Caps Lock remapped) sends `Super + Ctrl + Alt + Shift` together, and Hyprland has no

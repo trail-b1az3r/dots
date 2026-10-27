@@ -8,8 +8,9 @@ import "revolver/RevolverStyles.js" as Styles
  * The plate behind a wallpaper widget, in the active Halcyon theme's shapes: the same look as the revolver's drum.
  *
  *   kind "disc"   a clock face: a glowing ring (Red Sun), a cut glass octagon (glass themes), a squircle (HyperNeo),
- *                 a gold rail (Star Rail), a keycap (the anime themes)
- *   kind "card"   a card: a dusk capsule with an ember edge, a cut stone, a squircle card, a gold-framed card, a keycap
+ *                 a gold rail (Star Rail), a keycap (the anime themes; Manga Ink Dark's in negative), a hush (Silence)
+ *   kind "card"   a card: a dusk capsule with an ember edge, a cut stone, a squircle card, a gold-framed card, a keycap,
+ *                 or Silence's near-black card with a red hairline
  *
  * Drawn with QtQuick.Shapes only, in one multisampled layer, so it is smooth on any Qt 6.
  */
@@ -29,9 +30,12 @@ Item {
     readonly property var style: Styles.styleFor(themeId)
     readonly property bool redSun: style.id === "red-sun"
     readonly property bool keycap: style.plate === "keycap"
+    readonly property bool hush: style.plate === "hush"
     // A keycap is solid ink, whatever the shell's transparency: the panel colour it is given is see-through when
     // transparency is on, which washed the cards out on the anime themes' white wallpapers.
-    readonly property color solidBase: Qt.rgba(colBase.r, colBase.g, colBase.b, 1)
+    readonly property color solidBase: style.base ? style.base : Qt.rgba(colBase.r, colBase.g, colBase.b, 1)
+    // The key's outline and side: darker than the key, or (Manga Ink Dark) paper.
+    readonly property color keyEdge: style.edge ? style.edge : Qt.darker(solidBase, 2.6)
     readonly property real pad: 26
 
     function withAlpha(colour, alpha) {
@@ -63,8 +67,8 @@ Item {
                 visible: plate.keycap
                 ShapePath {
                     strokeWidth: 2.5
-                    strokeColor: Qt.darker(plate.solidBase, 2.6)
-                    fillColor: Qt.darker(plate.solidBase, 2.6)
+                    strokeColor: plate.keyEdge
+                    fillColor: plate.keyEdge
                     PathSvg { path: Styles.plateOutline(plate.style, plate.kind, plate.width, plate.height, 2) }
                 }
             }
@@ -74,7 +78,7 @@ Item {
                 anchors.fill: parent
                 y: 5
                 visible: !plate.keycap
-                opacity: plate.redSun ? 0 : 0.3
+                opacity: plate.redSun ? 0 : plate.hush ? 0.6 : 0.3
                 ShapePath {
                     strokeWidth: -1
                     fillColor: "#000000"
@@ -103,8 +107,9 @@ Item {
             Shape {
                 anchors.fill: parent
                 ShapePath {
-                    strokeWidth: plate.keycap ? 2.5 : plate.redSun ? 2.4 : (plate.style.drum === "rail" ? 2 : 1.2)
-                    strokeColor: plate.keycap ? Qt.darker(plate.solidBase, 2.6)
+                    strokeWidth: plate.keycap ? 2.5 : plate.redSun ? 2.4 : plate.hush ? 1 : (plate.style.drum === "rail" ? 2 : 1.2)
+                    strokeColor: plate.keycap ? plate.keyEdge
+                               : plate.hush ? plate.withAlpha(plate.colOn, 0.09)
                                : plate.redSun ? plate.colGlow
                                : plate.style.drum === "rail" ? plate.colAccent
                                : plate.style.drum === "facets" ? plate.withAlpha("#ffffff", 0.55)
@@ -114,6 +119,7 @@ Item {
                         GradientStop {
                             position: 0.0
                             color: plate.keycap ? Qt.lighter(plate.solidBase, 1.08)
+                                 : plate.hush ? plate.withAlpha("#0a0809", 0.9)
                                  : plate.redSun ? plate.withAlpha("#1c1018", 0.78)
                                  : plate.style.drum === "facets" ? plate.withAlpha("#ffffff", 0.16)
                                  : Qt.lighter(plate.colBase, 1.16)
@@ -121,6 +127,7 @@ Item {
                         GradientStop {
                             position: 1.0
                             color: plate.keycap ? Qt.lighter(plate.solidBase, 1.08)
+                                 : plate.hush ? plate.withAlpha("#020102", 0.92)
                                  : plate.redSun ? plate.withAlpha("#09060c", 0.86)
                                  : plate.style.drum === "facets" ? plate.withAlpha(plate.colAccent, 0.07)
                                  : Qt.darker(plate.colBase, 1.22)
@@ -131,10 +138,27 @@ Item {
                 // A thin hot line on Red Sun's edge, and a lit top edge on the others.
                 ShapePath {
                     strokeWidth: plate.redSun ? 1 : 1.6
-                    strokeColor: plate.keycap ? plate.withAlpha(plate.colOn, 0.78)
+                    strokeColor: plate.keycap ? plate.withAlpha(plate.style.edge ? plate.style.edge : plate.colOn, 0.78)
+                               : plate.hush ? "transparent"
                                : plate.redSun ? plate.withAlpha(plate.colHot, 0.85) : plate.withAlpha("#ffffff", plate.style.drum === "facets" ? 0.3 : 0.12)
                     fillColor: "transparent"
                     PathSvg { path: Styles.plateOutline(plate.style, plate.kind, plate.width, plate.height, plate.redSun ? 2 : 5) }
+                }
+            }
+
+            // Silence: the red hairline along the bottom, brightest in the middle.
+            Rectangle {
+                visible: plate.hush
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 2
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: parent.width * 0.7
+                height: 1
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: plate.withAlpha(plate.colAccent, 0) }
+                    GradientStop { position: 0.5; color: plate.withAlpha(plate.colAccent, 0.9) }
+                    GradientStop { position: 1.0; color: plate.withAlpha(plate.colAccent, 0) }
                 }
             }
 

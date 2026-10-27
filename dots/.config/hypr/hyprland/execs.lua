@@ -12,8 +12,9 @@ hl.on("hyprland.start", function ()
     hl.exec_cmd("dbus-update-activation-environment --all")
     hl.exec_cmd("sleep 1 && dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP") -- Some fix idk
 
-    -- Audio
-    hl.exec_cmd("easyeffects --hide-window --service-mode")
+    -- Audio. EasyEffects only when turned on (halcyon audio easyeffects on, or Settings > Halcyon > Sound): it puts
+    -- its own output and microphone in front of the real ones, which broke headphones and webcam microphones.
+    hl.exec_cmd("[ -e \"${XDG_STATE_HOME:-$HOME/.local/state}/halcyon/easyeffects\" ] && easyeffects --hide-window --service-mode")
 
     -- Clipboard: history
     --hl.exec_cmd("wl-paste --watch cliphist store")

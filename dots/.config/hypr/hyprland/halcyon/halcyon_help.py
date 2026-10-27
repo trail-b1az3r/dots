@@ -9,11 +9,14 @@ from __future__ import annotations
 # (group, [(usage, what it does)]). A usage's first word is the command, which `halcyon help COMMAND` matches.
 GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
     ("Themes", [
-        ("list", "the themes, and which one is active"),
+        ("list [--json]", "the themes, and which one is active (--json: what the theme picker shows)"),
+        ("previews [--force]", "make the theme picker's pictures from each theme's wallpaper (it does this itself)"),
         ("apply NAME", "switch to a theme"),
         ("off", "back to colours from the wallpaper"),
         ("current", "the active theme's id, or 'none'"),
-        ("menu", "pick a theme or effects level with fuzzel (Ctrl + Super + Shift + T)"),
+        ("menu [--fuzzel]", "the theme picker (Ctrl + Super + Shift + T); fuzzel when the shell isn't running"),
+        ("icons", "the anime themes' icon packs, and the icon theme in use"),
+        ("icons make|apply icey|ink|ink-dark", "make a pack from the icons in use, or use it; `icons restore` goes back"),
         ("custom new [NAME]", "make your own theme from the active one, to edit"),
         ("custom list|duplicate ID|delete ID|open ID|path", "manage your own themes"),
         ("show [ID|all]", "list hidden built-in themes, or bring one back"),
@@ -69,6 +72,10 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("usb [--json]", "why a browser can't find or open a USB, HID or serial device (WebUSB, WebHID, Web Serial)"),
         ("usb allow VID:PID ... | --all", "let you open those devices from the browser (a udev rule; asks for sudo)"),
         ("usb remove", "take that rule away again"),
+        ("audio [--json]", "why headphones, a microphone or the webcam work in KDE but not here: PipeWire, EasyEffects, KDE's leftovers"),
+        ("audio fix", "put the session right and restart the sound services and portals (installs what is missing)"),
+        ("audio easyeffects on|off", "start EasyEffects at login, or not (off unless you turn it on)"),
+        ("audio report", "everything about sound and cameras in ~/halcyon-audio-report.txt, to send when it still fails"),
         ("wifi [--json]", "why the Wi-Fi isn't up: NetworkManager, iwd, the radio, an unmanaged card (a Surface's)"),
         ("wifi boot", "get the Wi-Fi up now: login runs this (log: ~/.local/state/halcyon/wifi.log)"),
         ("wifi fix [--dry-run]", "the lasting fixes, as root: install and enable NetworkManager, keep the card managed, "

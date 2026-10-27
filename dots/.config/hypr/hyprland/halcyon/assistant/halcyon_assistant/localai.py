@@ -290,10 +290,27 @@ def t1_models(server: str, key: str | None = None) -> list[dict]:
     return [m for m in out if m["id"]]
 
 
-def t1_default_model(server: str, key: str) -> str:
+T1_KEY_HINT = ("the T1 server wants a key: a T1_ or T2_ key from its admin (`gkey create`). Set it in Settings > "
+               "Halcyon > Assistant, with /key in the AI sidebar, or `halcyon assistant key t1` (paste it at the prompt)")
+
+
+def _t1_auth(key: str | None) -> dict:
+    return {"Authorization": f"Bearer {key}"} if key else {}
+
+
+def t1_keyless(server: str) -> bool:
+    """Whether the server lets this computer in without a key (its trusted-network mode, off unless turned on)."""
+    try:
+        http_json(server.rstrip("/") + "/inference/backends", timeout=3)
+        return True
+    except LocalAIError:
+        return False
+
+
+def t1_default_model(server: str, key: str | None) -> str:
     """What the server would answer with: the runner's loaded model, else the first available registry entry."""
     try:
-        data = http_json(server.rstrip("/") + "/inference/backends", headers={"Authorization": f"Bearer {key}"})
+        data = http_json(server.rstrip("/") + "/inference/backends", headers=_t1_auth(key))
         for backend in data.get("backends", []):
             if backend.get("reachable") and backend.get("model_id"):
                 return backend["model_id"]
@@ -305,13 +322,16 @@ def t1_default_model(server: str, key: str) -> str:
     return models[0]["id"]
 
 
-def t1_chat(server: str, key: str, model: str, messages: list[dict], timeout: float = 180) -> dict:
-    """One chat completion through T1's governed inference. Returns the server's InferenceResponse."""
-    if not key:
-        raise LocalAIError("no T1 key: `halcyon assistant key t1 T1_...` (or set it in the AI sidebar with /key)")
-    return http_json(server.rstrip("/") + "/inference/chat",
-                     {"model": model, "messages": messages, "max_tokens": 1024},
-                     {"Authorization": f"Bearer {key}"}, timeout=timeout)
+def t1_chat(server: str, key: str | None, model: str, messages: list[dict], timeout: float = 180) -> dict:
+    """One chat completion through T1's governed inference. Returns the server's InferenceResponse. Without a key
+    only a server that trusts this computer answers."""
+    try:
+        return http_json(server.rstrip("/") + "/inference/chat",
+                         {"model": model, "messages": messages, "max_tokens": 1024}, _t1_auth(key), timeout=timeout)
+    except LocalAIError as error:
+        if str(error).startswith(("HTTP 401", "HTTP 403")):
+            raise LocalAIError(f"{error}. {T1_KEY_HINT}" if key else T1_KEY_HINT) from None
+        raise
 
 
 # --- for the AI sidebar -------------------------------------------------------------------------------------
@@ -357,6 +377,8 @@ def sidebar_models(t1_server: str = "", t1_key_present: bool = False) -> dict[st
             registry = t1_models(t1_server)
         except LocalAIError:
             registry = []
+        # A server that trusts this computer needs no key; the sidebar then doesn't ask for one.
+        keyless = bool(registry) and not t1_key_present and t1_keyless(t1_server)
         for item in registry:
             models[f"t1-{_safe(item['id'])}"] = {
                 "name": f"{item['name']} (T1)",
@@ -365,9 +387,10 @@ def sidebar_models(t1_server: str = "", t1_key_present: bool = False) -> dict[st
                 "homepage": t1_server.rstrip("/") + "/docs",
                 "endpoint": t1_server.rstrip("/") + "/inference/chat/stream",
                 "model": item["id"],
-                "requires_key": True,
+                "requires_key": not keyless,
                 "key_id": "t1",
-                "key_get_description": "A T1_ or T2_ key from your T1 server's admin: `gkey create`, or `waiter serv`.",
+                "key_get_description": "A T1_ or T2_ key (T2S_, T2P_ and T2C_ work too) from your T1 server's admin: "
+                                       "`gkey create`, or `waiter serv`. Paste it whole: /key T1_...",
                 "api_format": "openai",
             }
     return models

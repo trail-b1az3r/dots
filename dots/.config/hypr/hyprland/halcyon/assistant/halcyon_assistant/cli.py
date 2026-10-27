@@ -552,8 +552,18 @@ def main(argv):
     if command == "ensure":
         return ensure(args)
     if command == "key" and args:
-        value = args[1] if len(args) > 1 else getpass.getpass(f"{args[0]} API key: ")
-        config.store_api_key(args[0], value)
+        # A key at the prompt (or on stdin) never passes through the shell, which changes T1 keys' symbols.
+        if len(args) > 1:
+            value = args[1]
+        elif not sys.stdin.isatty():
+            value = sys.stdin.readline()
+        else:
+            value = getpass.getpass(f"{args[0]} API key: ")
+        try:
+            config.store_api_key(args[0], value)
+        except ValueError as error:
+            print(f"error: {error}", file=sys.stderr)
+            return 2
         print(f"stored the {args[0]} key in the keyring")
         return 0
     if command == "set" and len(args) == 2 and args[0] in config.DEFAULTS:

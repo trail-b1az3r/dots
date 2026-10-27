@@ -153,7 +153,9 @@ ContentPage {
         { id: "fractured-glass", name: "Fractured Glass", icon: "lens_blur" },
         { id: "red-sun", name: "Red Sun", icon: "wb_twilight" },
         { id: "after-icey", name: "After ICEY", icon: "ac_unit" },
-        { id: "manga-ink", name: "Manga Ink", icon: "draw" }
+        { id: "manga-ink", name: "Manga Ink", icon: "draw" },
+        { id: "manga-ink-dark", name: "Manga Ink Dark", icon: "invert_colors" },
+        { id: "silence", name: "Silence", icon: "visibility" }
     ]
     // ── When the theme switches: rules, made below and run by halcyon-theme when a theme is applied or turned off ──
     property string ruleTheme: "after-icey"
@@ -851,6 +853,88 @@ ContentPage {
             text: Translation.tr("Changes made each time the theme switches to, or away from, a theme: the revolver off for After ICEY, other icons for Red Sun... They run in this order, when a theme is applied or turned off.")
         }
 
+        ContentSubsection {
+            title: Translation.tr("When you are away")
+            tooltip: Translation.tr("A new theme when the computer is left alone (no keyboard or mouse) for a while, like a screensaver. Videos and server mode hold it off.")
+
+            ConfigSwitch {
+                buttonIcon: "bedtime"
+                text: Translation.tr("Change the theme when the computer is left alone")
+                checked: Config.options.halcyon.idleTheme.enable
+                onCheckedChanged: Config.options.halcyon.idleTheme.enable = checked
+            }
+            ConfigSpinBox {
+                visible: Config.options.halcyon.idleTheme.enable
+                icon: "timer"
+                text: Translation.tr("After this many minutes")
+                from: 1
+                to: 240
+                value: Config.options.halcyon.idleTheme.minutes
+                onValueChanged: Config.options.halcyon.idleTheme.minutes = value
+            }
+            ConfigSelectionArray {
+                visible: Config.options.halcyon.idleTheme.enable
+                currentValue: Config.options.halcyon.idleTheme.mode
+                onSelected: newValue => Config.options.halcyon.idleTheme.mode = newValue
+                options: [
+                    { displayName: Translation.tr("The next theme"), icon: "skip_next", value: "next" },
+                    { displayName: Translation.tr("A random theme"), icon: "shuffle", value: "random" },
+                    { displayName: Translation.tr("One theme"), icon: "push_pin", value: "one" }
+                ]
+            }
+            ConfigSelectionArray {
+                visible: Config.options.halcyon.idleTheme.enable && Config.options.halcyon.idleTheme.mode === "one"
+                currentValue: Config.options.halcyon.idleTheme.theme
+                onSelected: newValue => Config.options.halcyon.idleTheme.theme = newValue
+                options: page.builtinThemes.map(t => ({ displayName: t.name, icon: t.icon, value: t.id }))
+            }
+            ConfigSpinBox {
+                visible: Config.options.halcyon.idleTheme.enable && Config.options.halcyon.idleTheme.mode !== "one"
+                icon: "autorenew"
+                text: Translation.tr("Then again every this many minutes (0: once)")
+                from: 0
+                to: 240
+                value: Config.options.halcyon.idleTheme.every
+                onValueChanged: Config.options.halcyon.idleTheme.every = value
+            }
+            ConfigSwitch {
+                visible: Config.options.halcyon.idleTheme.enable
+                buttonIcon: "undo"
+                text: Translation.tr("Put the theme back when I return")
+                checked: Config.options.halcyon.idleTheme.restore
+                onCheckedChanged: Config.options.halcyon.idleTheme.restore = checked
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "apps"
+            text: Translation.tr("Theme icon packs")
+            checked: Config.options.halcyon.themeIcons
+            onCheckedChanged: {
+                if (Config.options.halcyon.themeIcons === checked)
+                    return;
+                Config.options.halcyon.themeIcons = checked;
+                if (!checked)
+                    Quickshell.execDetached([page.tool, "icons", "restore"]);
+            }
+            StyledToolTip {
+                text: Translation.tr("After ICEY and Manga Ink (and Manga Ink Dark) bring their own icons: every app's icon redrawn in the theme's style, in its frame. They are made on this computer from the icons you use, the first time. Leaving the theme puts your icons back.")
+            }
+        }
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            visible: Config.options.halcyon.themeIcons
+            RippleButtonWithIcon {
+                materialIcon: "refresh"
+                mainText: Translation.tr("Remake the icon packs")
+                onClicked: Quickshell.execDetached(["bash", "-c", `for p in icey ink ink-dark; do '${page.tool}' icons make "$p"; done; t=$('${page.tool}' current 2>/dev/null); case "$t" in after-icey) '${page.tool}' icons apply icey;; manga-ink) '${page.tool}' icons apply ink;; manga-ink-dark) '${page.tool}' icons apply ink-dark;; esac`])
+                StyledToolTip {
+                    text: Translation.tr("After installing apps, so their icons are in the packs too.")
+                }
+            }
+        }
+
         Repeater {
             model: Config.options.halcyon.switchRules
 
@@ -1060,6 +1144,41 @@ ContentPage {
     }
 
     ContentSection {
+        icon: "headphones"
+        title: Translation.tr("Sound")
+
+        ConfigSwitch {
+            buttonIcon: "equalizer"
+            text: Translation.tr("Start EasyEffects at login")
+            checked: Config.options.halcyon.easyEffects
+            onCheckedChanged: {
+                if (Config.options.halcyon.easyEffects === checked)
+                    return;
+                Config.options.halcyon.easyEffects = checked;
+                Quickshell.execDetached([page.tool, "audio", "easyeffects", checked ? "on" : "off"]);
+            }
+            StyledToolTip {
+                text: Translation.tr("EasyEffects puts its own output and microphone in front of the real ones and keeps them the default, so headphones you plug in stay silent and the webcam's microphone can't be picked. Leave it off unless you use its effects.")
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            spacing: 8
+
+            RippleButtonWithIcon {
+                materialIcon: "build"
+                mainText: Translation.tr("Fix sound and webcam")
+                onClicked: Quickshell.execDetached(["bash", "-c", `${Config.options.apps.terminal} bash -c "'${page.tool}' audio fix; read -rp 'Press Enter to close. '"`])
+                StyledToolTip {
+                    text: Translation.tr("For headphones, a microphone or a webcam that work in KDE but not here: clears what KDE left behind, restarts PipeWire and the portals, and says what is still in the way.")
+                }
+            }
+        }
+    }
+
+    ContentSection {
         icon: "brush"
         title: Translation.tr("On the screen")
 
@@ -1263,7 +1382,7 @@ ContentPage {
         MaterialTextArea {
             visible: Config.options.halcyon.assistant.provider === "t1" || Config.options.halcyon.assistant.provider === "auto"
             Layout.fillWidth: true
-            placeholderText: Translation.tr("T1 server, e.g. http://127.0.0.1:8000 (key: /key in the AI sidebar on a T1 model, or halcyon assistant key t1)")
+            placeholderText: Translation.tr("T1 server, e.g. http://127.0.0.1:8000")
             text: Config.options.halcyon.assistant.t1Server
             onTextChanged: {
                 if (text.trim() === Config.options.halcyon.assistant.t1Server)
@@ -1272,6 +1391,80 @@ ContentPage {
                 page.reloadAssistant();
                 Ai.refreshHalcyonModels();
             }
+        }
+
+        // The T1 server's key, pasted here: it goes straight to the keyring, never through a shell (T1 keys end in
+        // symbols such as $ ! ` that a shell changes). The AI sidebar and the voice assistant share it.
+        RowLayout {
+            id: t1KeyRow
+            visible: Config.options.halcyon.assistant.provider === "t1" || Config.options.halcyon.assistant.provider === "auto"
+            Layout.fillWidth: true
+            spacing: 8
+            property string status: ""
+            property string pending: ""
+
+            function save() {
+                const key = t1KeyField.text.trim();
+                if (!/^(T1_|T2_|T2S_|T2P_|T2C_|T1S\.)/.test(key)) {
+                    status = Translation.tr("That isn't a T1 server key: it starts with T1_ or T2_ (or T2S_, T2P_, T2C_).");
+                    return;
+                }
+                // Through the assistant's `key t1`, on stdin: it adds the key to the keyring entry the other keys
+                // are in (this window may not have read it) and checks the key is whole.
+                pending = key;
+                t1KeyStore.running = true;
+            }
+
+            Process {
+                id: t1KeyStore
+                command: [page.assistantTool, "key", "t1"]
+                stdinEnabled: true
+                onRunningChanged: {
+                    if (running) {
+                        write(t1KeyRow.pending + "\n");
+                        stdinEnabled = false;
+                    }
+                }
+                stderr: StdioCollector {
+                    id: t1KeyErrors
+                }
+                onExited: (exitCode, exitStatus) => {
+                    stdinEnabled = true;
+                    t1KeyRow.pending = "";
+                    if (exitCode === 0) {
+                        t1KeyField.text = "";
+                        t1KeyRow.status = Translation.tr("Key stored.");
+                        KeyringStorage.fetchKeyringData();
+                        page.reloadAssistant();
+                        Ai.refreshHalcyonModels();
+                    } else {
+                        t1KeyRow.status = t1KeyErrors.text.replace(/^error: /, "").trim() || Translation.tr("Couldn't store the key.");
+                    }
+                }
+            }
+
+            MaterialTextField {
+                id: t1KeyField
+                Layout.fillWidth: true
+                echoMode: TextInput.Password
+                placeholderText: Translation.tr("T1 key: paste a T1_ or T2_ key (none needed if the server trusts this computer)")
+                onAccepted: t1KeyRow.save()
+            }
+            RippleButtonWithIcon {
+                materialIcon: "key"
+                mainText: Translation.tr("Save key")
+                enabled: t1KeyField.text.trim().length > 0
+                onClicked: t1KeyRow.save()
+            }
+        }
+        StyledText {
+            visible: t1KeyRow.visible && t1KeyRow.status !== ""
+            Layout.leftMargin: 10
+            Layout.fillWidth: true
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colSubtext
+            font.pixelSize: Appearance.font.pixelSize.smallie
+            text: t1KeyRow.status
         }
 
         RowLayout {

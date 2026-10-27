@@ -77,6 +77,7 @@ SHELL_RESTORE = HALCYON_STATE / "shell-restore.json"
 BANNERS = DATA / "halcyon/banners"
 
 GENERATED = STATE / "quickshell/user/generated"
+PREVIEWS = Path(os.environ.get("XDG_CACHE_HOME") or HOME / ".cache") / "halcyon/theme-previews"
 SHELL_CONFIG = CONFIG / "illogical-impulse/config.json"
 # Your own themes (halcyon-theme custom new). Built-in ones live in THEMES_DIR.
 USER_THEMES_DIR = CONFIG / "halcyon/themes"
@@ -253,7 +254,7 @@ def validate(theme_id, theme):
     if problems:
         return problems
     known_top = {"name", "description", "wallpaper", "seed", "scheme", "shell", "terminal",
-                 "hyprland", "effects", "shell_config", "banner"}
+                 "hyprland", "effects", "shell_config", "banner", "wallpaper_invert_of"}
     for key in set(theme) - known_top:
         problems.append(f"'{key}' is not a known key")
     if not HEX.match(str(theme["seed"])):
@@ -809,6 +810,25 @@ def write_window_style(theme_id, theme):
     return effects, native
 
 
+def theme_icons(theme_id):
+    """The theme's icon pack (halcyon_icons.py), made if needed, in the background (making one takes a while);
+    without one, the icons used before a pack was. Settings > Halcyon > Theme icon packs turns this off."""
+    tool = HERE / "halcyon_icons.py"
+    if get_nested(read_shell_config(), "halcyon.themeIcons") is False or not tool.is_file():
+        return
+    sys.path.insert(0, str(HERE))
+    try:
+        import halcyon_icons
+    except ImportError:
+        return
+    pack = halcyon_icons.THEME_PACKS.get(theme_id)
+    if pack:
+        subprocess.Popen([sys.executable, str(tool), "apply", pack], stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    else:
+        halcyon_icons.restore()
+
+
 def leave_theme():
     """Undo everything a theme changed except colours."""
     restore_shell_config()
@@ -1141,8 +1161,70 @@ def cmd_custom(args):
     return 0
 
 
-def cmd_list(_args):
+def preview_path(theme_id):
+    return PREVIEWS / f"{theme_id}.jpg"
+
+
+def theme_summary(theme_id, theme, current):
+    """What the shell's theme picker shows for a theme."""
+    shell = theme["shell"]
+    preview = preview_path(theme_id)
+    return {
+        "id": theme_id, "name": theme["name"], "description": theme["description"], "active": theme_id == current,
+        "custom": (USER_THEMES_DIR / f"{theme_id}.json").is_file(),
+        "colors": {key: shell[key] for key in ("background", "on_background", "surface_container", "primary",
+                                               "secondary", "tertiary")},
+        "preview": str(preview) if preview.is_file() else "",
+        "wallpaper": str(resolve_wallpaper(theme)),
+        "has_wallpaper": resolve_wallpaper(theme).is_file(),
+    }
+
+
+def cmd_previews(args):
+    """Small pictures of each theme's wallpaper for the theme picker (the first frame of a video), made once and
+    again when the wallpaper changes. --force remakes them all."""
+    force = "--force" in args
+    tool = shutil.which("ffmpeg")
+    if not tool:
+        raise ThemeError("ffmpeg is needed for the previews (sudo pacman -S ffmpeg)")
+    PREVIEWS.mkdir(parents=True, exist_ok=True)
+    made = 0
+    for theme_id in theme_ids():
+        try:
+            theme = load(theme_id)
+        except ThemeError:
+            continue
+        wallpaper = resolve_wallpaper(theme)
+        preview = preview_path(theme_id)
+        if not wallpaper.is_file():
+            continue
+        if preview.is_file() and not force and preview.stat().st_mtime >= wallpaper.stat().st_mtime:
+            continue
+        staging = preview.with_name(".part-" + preview.name)
+        done = subprocess.run([tool, "-y", "-loglevel", "error", "-i", str(wallpaper), "-frames:v", "1",
+                               "-vf", "scale=640:-2", "-q:v", "4", str(staging)],
+                              capture_output=True, text=True, check=False, timeout=120)
+        if done.returncode == 0 and staging.is_file():
+            os.replace(staging, preview)
+            made += 1
+        else:
+            staging.unlink(missing_ok=True)
+    print(f"{made} previews made in {PREVIEWS}")
+    return 0
+
+
+def cmd_list(args):
     current = active()
+    if "--json" in args:
+        themes = []
+        for theme_id in theme_ids():
+            try:
+                themes.append(theme_summary(theme_id, load(theme_id), current))
+            except ThemeError:
+                continue
+        print(json.dumps({"current": current or "", "effects": effects_for(load(current)) if current else "",
+                          "themes": themes}))
+        return 0
     for theme_id in theme_ids():
         theme = load(theme_id)
         mark = "*" if theme_id == current else " "
@@ -1240,18 +1322,71 @@ def ensure_starrail_banner():
               file=sys.stderr)
 
 
-def wallpaper_hint(wallpaper):
+def wallpaper_hint(wallpaper, theme=None):
     """How to get a theme's video wallpaper when it is not on the machine (they are not shipped)."""
     try:
         import halcyon_wallpapers
     except ImportError:
         return ""
+    if theme and theme.get("wallpaper_invert_of"):
+        # Made from another theme's: point at that one.
+        wallpaper = Path(os.path.expanduser(theme["wallpaper_invert_of"]))
     for entry_id, entry in halcyon_wallpapers.CATALOG.items():
         if halcyon_wallpapers.target(entry_id) == wallpaper:
             how = "get" if entry.get("url") else "import"
             tail = "" if entry.get("url") else " FILE"
             return f"      `halcyon wallpapers {how} {entry_id}{tail}` brings it ({entry['page']}), then apply the theme again"
     return ""
+
+
+# Light turned to dark with the hues kept: negate flips every channel (and so the hue), hue=h=180 turns it back.
+INVERT_FILTER = "negate,hue=h=180"
+
+
+def derive_wallpaper(theme, wallpaper):
+    """A theme whose wallpaper is another's in negative (wallpaper_invert_of): make it with ffmpeg, once, and again
+    when the original is newer. Returns True when the wallpaper is there to use."""
+    source_name = theme.get("wallpaper_invert_of")
+    if not source_name:
+        return wallpaper.is_file()
+    source = Path(os.path.expanduser(source_name))
+    if not source.is_file():
+        return wallpaper.is_file()
+    if wallpaper.is_file() and wallpaper.stat().st_mtime >= source.stat().st_mtime:
+        return True
+    if not shutil.which("ffmpeg"):
+        print("note: ffmpeg is needed to make the inverted wallpaper (sudo pacman -S ffmpeg)", file=sys.stderr)
+        return wallpaper.is_file()
+    notify(f"{theme['name']} theme", "Making its wallpaper: the original in negative. This takes a moment, once.")
+    staging = wallpaper.with_name(".part-" + wallpaper.name)
+    video = wallpaper.suffix.lower() in (".mp4", ".webm", ".mkv", ".mov")
+    command = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(source), "-vf", INVERT_FILTER]
+    if video:
+        command += ["-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p"]
+    wallpaper.parent.mkdir(parents=True, exist_ok=True)
+    done = subprocess.run([*command, str(staging)], capture_output=True, text=True, check=False, timeout=1800)
+    if done.returncode != 0 or not staging.is_file():
+        staging.unlink(missing_ok=True)
+        print(f"note: could not invert {source}: {done.stderr.strip()[-300:]}", file=sys.stderr)
+        return wallpaper.is_file()
+    os.replace(staging, wallpaper)
+    return True
+
+
+def fetch_wallpaper(wallpaper):
+    """A theme's still wallpaper that isn't here yet and can be downloaded: get it now (they are small)."""
+    try:
+        import halcyon_wallpapers
+    except ImportError:
+        return False
+    for entry_id, entry in halcyon_wallpapers.CATALOG.items():
+        if halcyon_wallpapers.target(entry_id) == wallpaper and entry.get("url") and entry.get("kind") == "image":
+            try:
+                halcyon_wallpapers.download(entry_id)
+                return True
+            except halcyon_wallpapers.WallpaperError as error:
+                print(f"note: {error}", file=sys.stderr)
+    return False
 
 
 def cmd_apply(args):
@@ -1271,6 +1406,9 @@ def cmd_apply(args):
         run_switch_rules("from", previous)
 
     wallpaper = resolve_wallpaper(theme)
+    derive_wallpaper(theme, wallpaper)
+    if not wallpaper.is_file():
+        fetch_wallpaper(wallpaper)
     if wallpaper.is_file():
         if theme_id == "hsr":
             ensure_starrail_banner()
@@ -1278,7 +1416,7 @@ def cmd_apply(args):
         run([str(SWITCHWALL), "--mode", "dark", "--image", str(wallpaper)])
     else:
         print(f"note: wallpaper {wallpaper} not found, keeping the current one", file=sys.stderr)
-        print(wallpaper_hint(wallpaper), file=sys.stderr)
+        print(wallpaper_hint(wallpaper, theme), file=sys.stderr)
     run([str(SWITCHWALL), "--mode", "dark", "--noswitch",
          "--type", theme["scheme"], "--color", theme["seed"]])
 
@@ -1295,6 +1433,7 @@ def cmd_apply(args):
     apply_shell_config(theme)
     if previous != theme_id:
         run_switch_rules("to", theme_id)
+        theme_icons(theme_id)
     effects, native = write_window_style(theme_id, theme)
     write_atomic(ACTIVE_FILE, theme_id + "\n")
     set_shell_value("halcyon.theme", theme_id)
@@ -1546,6 +1685,7 @@ def cmd_off(_args):
     if previous:
         run_switch_rules("from", previous)
         run_switch_rules("to", "off")
+        theme_icons("")
     if SWITCHWALL.is_file():
         # Clearing the accent makes switchwall.sh derive colours from the
         # current wallpaper again.
@@ -1557,7 +1697,14 @@ def cmd_off(_args):
     return 0
 
 
-def cmd_menu(_args):
+def cmd_menu(args):
+    # The shell's theme picker (cards with each theme's wallpaper, colours and frame); fuzzel when the shell isn't
+    # running, or with --fuzzel.
+    if "--fuzzel" not in args and shutil.which("qs"):
+        done = subprocess.run(["qs", "-c", "ii", "ipc", "call", "themePicker", "toggle"], capture_output=True,
+                              text=True, check=False, timeout=10)
+        if done.returncode == 0 and "error" not in (done.stdout + done.stderr).lower():
+            return 0
     if not shutil.which("fuzzel"):
         raise ThemeError("fuzzel is not installed")
     current = active()
@@ -1769,11 +1916,12 @@ def cmd_games(args):
 
 
 def cmd_doctor(args):
-    """Why the revolver, the browser themes, updates or the Wi-Fi don't work, in one report; --fix fixes what it can.
+    """Why the revolver, the browser themes, updates, the Wi-Fi or the sound don't work, in one report; --fix fixes what it can.
 
     One command's output is enough to tell what is wrong on a machine nobody else can look at."""
     fix = "--fix" in args
     sys.path.insert(0, str(HERE))
+    import halcyon_audio
     import halcyon_browsers
     import halcyon_wifi
     import revolver
@@ -1832,6 +1980,15 @@ def cmd_doctor(args):
         if fix:
             print("-> getting the Wi-Fi up for this session (halcyon wifi fix makes it last; it asks for sudo)")
             halcyon_wifi.boot()
+
+    heading("Sound, microphones and webcams")
+    report = halcyon_audio.status()
+    halcyon_audio.print_status(report)
+    if halcyon_audio.problems(report):
+        todo.append("sound or the webcam has problems")
+        if fix:
+            print("-> putting the session right and restarting the sound services")
+            halcyon_audio.fix()
 
     print()
     if not todo:
@@ -2333,6 +2490,9 @@ def cmd_rules(args):
             print(f"{rule.get('when', 'to'):>4} {rule.get('theme', '?'):<16} {rule.get('action', '?')} "
                   f"{rule.get('target', '')} {rule.get('value', '')}{'  (put back after)' if rule.get('restore') else ''}")
         return 0
+    if len(args) == 3 and args[0] == "icons" and args[1] == "set":
+        set_icon_theme(args[2])
+        return 0
     if args and args[0] == "icons":
         themes = icon_themes()
         if "--json" in args:
@@ -2363,7 +2523,7 @@ COMMANDS = {
     "placement": cmd_placement,
     "starrail": cmd_starrail,
     "fetch": cmd_fetch,
-    "list": cmd_list, "current": cmd_current, "apply": cmd_apply, "off": cmd_off,
+    "list": cmd_list, "previews": cmd_previews, "current": cmd_current, "apply": cmd_apply, "off": cmd_off,
     "menu": cmd_menu, "check": cmd_check, "render": cmd_render, "detach": cmd_detach,
     "effects": cmd_effects, "banner": cmd_banner, "refresh": cmd_refresh,
     "settings": cmd_settings, "cursor": cmd_cursor,
@@ -2398,7 +2558,14 @@ def main(argv):
     if argv and argv[0] == "update":
         # The updater the bar's button and the hourly timer run; bare `halcyon update` says where things stand.
         updater = HERE / "update"
-        os.execv("/bin/bash", ["bash", str(updater), *(argv[1:] or ["status"])])
+        # By PATH: NixOS has no /bin/bash.
+        os.execv(shutil.which("bash") or "/bin/bash", ["bash", str(updater), *(argv[1:] or ["status"])])
+    if argv and argv[0] == "icons":
+        tool = HERE / "halcyon_icons.py"
+        os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
+    if argv and argv[0] == "audio":
+        tool = HERE / "halcyon_audio.py"
+        os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and argv[0] == "wifi":
         tool = HERE / "halcyon_wifi.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])

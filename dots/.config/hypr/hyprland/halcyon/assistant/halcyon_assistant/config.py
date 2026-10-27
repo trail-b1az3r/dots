@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -83,8 +84,44 @@ KEY_ENV = {
     "openai": "OPENAI_API_KEY",
     "mistral": "MISTRAL_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
-    "t1": "T1_API_KEY",
+    # A T1 server takes a T1 key or a T2-family one (T2, T2S, T2P, T2C) alike; HyperNix's own tools read these.
+    "t1": ("T1_API_KEY", "T2_API_KEY", "HYPERNIX_T1_KEY", "HNX_T1_API_KEY", "T1_KEY"),
 }
+
+# What a T1 server accepts as a credential: a T1 key, a key of the T2 family, or a scoped token (T1S.).
+T1_KEY_PREFIXES = ("T1_", "T2_", "T2S_", "T2P_", "T2C_", "T1S.")
+# A whole T1 key ends in two lowercase letters, five symbols, a slash or backslash and a digit 1-9.
+T1_KEY_SHAPE = re.compile(r"^T1_[A-Za-z0-9]{16,}[a-z]{2}[!@#$%^&*()\-_=+\[\]{};:',.<>?|~`]{5}[/\\][1-9]$")
+
+
+def t1_key_problem(value):
+    """Why a value can't be a T1 server key, or "" if it looks whole."""
+    value = (value or "").strip()
+    if not value:
+        return "empty"
+    if not value.startswith(T1_KEY_PREFIXES):
+        return "a T1 server takes a T1_ or T2_ key (or T2S_, T2P_, T2C_, or a T1S. token)"
+    if value.startswith("T1_") and not T1_KEY_SHAPE.match(value):
+        # T1 keys end in shell symbols ($ ! ` \ ...), which a shell expands or drops when the key is typed on the
+        # command line.
+        return ("this T1 key isn't whole: its last characters are symbols a shell changes. Run `halcyon "
+                "assistant key t1` with no key and paste it at the prompt, or set it in Settings")
+    return ""
+
+
+def t1_config_key():
+    """The key HyperNix's own T1 setup wrote on this computer (~/.hypernix/t1api/.env), if any."""
+    folder = os.environ.get("T1_CONFIG_DIR") or str(Path.home() / ".hypernix" / "t1api")
+    try:
+        lines = (Path(folder) / ".env").read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+    for line in lines:
+        name, _, value = line.partition("=")
+        value = value.strip().strip("'\"")
+        if name.strip() in ("T1_API_KEY", "T1_BOOTSTRAP_KEY") and value:
+            return value
+    return None
 
 
 def read_shell_config():
@@ -146,16 +183,21 @@ def _keyring_data():
 
 def api_key(key_id):
     """A key from the environment or the keyring, or None."""
-    env = KEY_ENV.get(key_id)
-    if env and os.environ.get(env):
-        return os.environ[env]
+    names = KEY_ENV.get(key_id) or ()
+    for env in (names,) if isinstance(names, str) else names:
+        if os.environ.get(env):
+            return os.environ[env]
     data = _keyring_data() or {}
     value = (data.get("apiKeys") or {}).get(key_id)
+    if not value and key_id == "t1":
+        value = t1_config_key()
     return value or None
 
 
 def store_api_key(key_id, value):
     """Store a key in the same keyring entry the AI sidebar uses."""
+    if key_id == "t1" and t1_key_problem(value):
+        raise ValueError(t1_key_problem(value))
     if not shutil.which("secret-tool"):
         raise RuntimeError("secret-tool (libsecret) is not installed")
     data = _keyring_data()

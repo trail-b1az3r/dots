@@ -2,7 +2,7 @@ import QtQuick
 import QtTest
 import "../../dots/.config/quickshell/ii/modules/ii/background/widgets/clock"
 
-// The After ICEY and Manga Ink clock faces: where their hands point, and both draw.
+// The themes' own clock faces (After ICEY, Manga Ink and Dark, Silence): where their hands point, and each draws.
 Item {
     width: 300
     height: 300
@@ -26,12 +26,18 @@ Item {
             fuzzyCompare(face.sweep, 0.5, 0.001, "and with the minutes without second precision");
         }
 
-        function test_both_faces_draw() {
-            for (const kind of ["icey", "ink"]) {
+        function test_every_face_draws() {
+            for (const kind of ["icey", "ink", "ink-dark", "silence"]) {
                 const face = createTemporaryObject(clockComponent, parent, { kind: kind });
                 verify(face !== null, kind);
                 waitForRendering(face);
             }
+        }
+
+        function test_dark_ink_is_the_page_in_negative() {
+            const dark = createTemporaryObject(clockComponent, parent, { kind: "ink-dark" });
+            verify(dark.paper.hslLightness < 0.1, "a black page");
+            verify(dark.ink.hslLightness > 0.85, "white ink");
         }
     }
 }

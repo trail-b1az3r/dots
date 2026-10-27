@@ -9,6 +9,7 @@ import qs.modules.ii.cheatsheet
 import qs.modules.ii.dock
 import qs.modules.ii.floatingTitleBars
 import qs.modules.ii.hyprMode
+import qs.modules.ii.idleTheme
 import qs.modules.ii.lock
 import qs.modules.ii.mediaControls
 import qs.modules.ii.notificationPopup
@@ -23,6 +24,7 @@ import qs.modules.ii.sessionScreen
 import qs.modules.ii.sidebarLeft
 import qs.modules.ii.sidebarRight
 import qs.modules.ii.stageManager
+import qs.modules.ii.themePicker
 import qs.modules.ii.overlay
 import qs.modules.ii.verticalBar
 import qs.modules.ii.wallpaperSelector
@@ -56,6 +58,8 @@ Scope {
     PanelLoader { component: SessionScreen {} }
     PanelLoader { component: SidebarLeft {} }
     PanelLoader { component: SidebarRight {} }
+    PanelLoader { component: ThemePicker {} }
+    PanelLoader { extraCondition: Config.options.halcyon.idleTheme.enable; component: IdleTheme {} }
     PanelLoader { extraCondition: Config.options.bar.vertical; component: VerticalBar {} }
     PanelLoader { component: WallpaperSelector {} }
 }

@@ -42,8 +42,29 @@ Singleton {
     }
     readonly property list<var> outputAppNodes: root.appNodes(true)
     readonly property list<var> inputAppNodes: root.appNodes(false)
-    readonly property list<var> outputDevices: root.devices(true)
-    readonly property list<var> inputDevices: root.devices(false)
+    // The device lists change only when a device comes or goes, not with every stream an app opens or closes
+    // (Pipewire.nodes changes for those too): a menu built from a new list each time closes and loses its
+    // selection, which made the microphone menu flicker.
+    property list<var> outputDevices: []
+    property list<var> inputDevices: []
+    function deviceKey(list) {
+        return list.map(node => `${node.id}:${node.description}:${node.nickname}`).join("|");
+    }
+    function refreshDevices() {
+        const outputs = root.devices(true);
+        const inputs = root.devices(false);
+        if (root.deviceKey(outputs) !== root.deviceKey(root.outputDevices))
+            root.outputDevices = outputs;
+        if (root.deviceKey(inputs) !== root.deviceKey(root.inputDevices))
+            root.inputDevices = inputs;
+    }
+    Connections {
+        target: Pipewire.nodes
+        function onValuesChanged() {
+            root.refreshDevices();
+        }
+    }
+    Component.onCompleted: root.refreshDevices()
 
     // Signals
     signal sinkProtectionTriggered(string reason);

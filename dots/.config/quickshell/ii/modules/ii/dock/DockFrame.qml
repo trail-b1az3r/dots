@@ -14,6 +14,9 @@ import "../background/widgets/revolver/RevolverStyles.js" as Styles
  *             scan of light that runs along the top
  *   ink       a manga panel: paper in a thick ink border with a hard offset shadow, and screentone at the right
  *             (inverted: an ink panel with paper lines, for the top bar, whose text is light)
+ *   ink-dark  Manga Ink Dark: the ink panel with paper lines everywhere
+ *   silence   black, almost nothing: a faint edge, a red hairline that is brightest in the middle, and at the right
+ *             end two small red eyes that slowly open and close
  *
  * The dock and the top bar both use it, so they match.
  * Needs only QtQuick and RevolverStyles.js.
@@ -29,8 +32,9 @@ Item {
     /** Manga Ink in negative: an ink panel with paper lines, for places whose text is light (the top bar). */
     property bool inverted: false
 
-    readonly property color ink: inverted ? "#f7f3ea" : "#141414"
-    readonly property color paper: inverted ? "#141414" : "#f7f3ea"
+    readonly property bool negative: inverted || kind === "ink-dark"
+    readonly property color ink: negative ? "#f1ece2" : "#141414"
+    readonly property color paper: negative ? "#0d0d0e" : "#f7f3ea"
     readonly property real r: Math.min(height / 2, 18)
     // Red Sun's capsule: round ends on a bar, rounded corners on a tall panel.
     readonly property real capsule: Math.min(height / 2, 30)
@@ -229,7 +233,7 @@ Item {
     // ── Manga Ink ──────────────────────────────────────────────────────────────────
     Item {
         anchors.fill: parent
-        visible: frame.kind === "ink"
+        visible: frame.kind === "ink" || frame.kind === "ink-dark"
         // A manga panel's hard shadow, straight down and right.
         Rectangle {
             x: 5
@@ -258,9 +262,73 @@ Item {
             }
         }
     }
+    // ── Silence ────────────────────────────────────────────────────────────────────
+    Item {
+        anchors.fill: parent
+        visible: frame.kind === "silence"
+        Rectangle {
+            anchors.fill: parent
+            radius: frame.r
+            color: frame.withAlpha("#000000", 0.9)
+            border.width: 1
+            border.color: frame.withAlpha("#ffffff", 0.06)
+        }
+        // The red hairline, brightest in the middle.
+        Rectangle {
+            anchors.bottom: parent.bottom
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: parent.width - 2 * frame.r
+            height: 1
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0.0; color: frame.withAlpha(frame.colAccent, 0) }
+                GradientStop { position: 0.5; color: frame.withAlpha(frame.colAccent, 0.85) }
+                GradientStop { position: 1.0; color: frame.withAlpha(frame.colAccent, 0) }
+            }
+        }
+        // Two red eyes at the right end, opening and closing slowly.
+        Row {
+            id: eyes
+            anchors.right: parent.right
+            anchors.rightMargin: Math.max(6, frame.r * 0.55)
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 5
+            opacity: 0.4
+            Repeater {
+                model: 2
+                Item {
+                    width: 6
+                    height: 6
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 10
+                        height: 10
+                        radius: 5
+                        color: frame.withAlpha(frame.colAccent, 0.22)
+                    }
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 5
+                        height: 3
+                        radius: 1.5
+                        color: Qt.lighter(frame.colAccent, 1.15)
+                    }
+                }
+            }
+            SequentialAnimation on opacity {
+                running: frame.visible && frame.kind === "silence"
+                loops: Animation.Infinite
+                NumberAnimation { to: 1; duration: 2600; easing.type: Easing.InOutSine }
+                PauseAnimation { duration: 1800 }
+                NumberAnimation { to: 0.35; duration: 2600; easing.type: Easing.InOutSine }
+                PauseAnimation { duration: 2400 }
+            }
+        }
+    }
+
     // Screentone at the lower right: dots that grow to the right and downwards.
     readonly property string tone: {
-        if (kind !== "ink" || width < 40)
+        if ((kind !== "ink" && kind !== "ink-dark") || width < 40)
             return "";
         let d = "";
         const step = 6, w = width - 8, h = height - 8;
