@@ -23,12 +23,38 @@ MODE.toggles   = type(SETTINGS.toggle) == "table" and SETTINGS.toggle or { SETTI
 -- a notification says it instead.
 local QS_ALIVE = "qs -c $qsConfig ipc call TEST_ALIVE >/dev/null 2>&1"
 
+-- The mode turns itself off when none of its keys has been used for a while (hypr_mode.lua: idle_exit).
+local IDLE_EXIT = tonumber(SETTINGS.idle_exit or 10) or 10
+local idleTimer = nil
+local exitMode
+
+local function stopIdle()
+    if idleTimer and idleTimer.set_enabled then
+        idleTimer:set_enabled(false)
+    end
+    idleTimer = nil
+end
+
+local function armIdle()
+    stopIdle()
+    if IDLE_EXIT <= 0 or not hl.timer then
+        return
+    end
+    idleTimer = hl.timer(function()
+        if hl.get_current_submap() == MODE.name then
+            exitMode()
+        end
+    end, { timeout = IDLE_EXIT * 1000, type = "oneshot" })
+end
+
 local function enterMode()
+    armIdle()
     hl.dispatch(hl.dsp.submap(MODE.name))
     hl.dispatch(hl.dsp.exec_cmd(QS_ALIVE .. " || notify-send 'Entered hypr mode' 'Keybinds are different until you press " .. MODE.exit .. "' -a 'Hyprland'"))
 end
 
-local function exitMode()
+exitMode = function()
+    stopIdle()
     hl.dispatch(hl.dsp.submap("reset"))
     hl.dispatch(hl.dsp.exec_cmd(QS_ALIVE .. " || notify-send 'Left hypr mode' 'Keybinds are back to normal' -a 'Hyprland'"))
 end
@@ -51,6 +77,15 @@ hl.define_submap(MODE.name, function()
     hl.bind(MODE.exit, exitMode)
 
     for _, b in ipairs(SETTINGS.binds) do
-        hl.bind(b[1], b[2], { description = b[3] })
+        local action = b[2]
+        -- Each key used keeps the mode on a while longer.
+        hl.bind(b[1], function()
+            armIdle()
+            if type(action) == "function" then
+                action()
+            else
+                hl.dispatch(action)
+            end
+        end, { description = b[3] })
     end
 end)

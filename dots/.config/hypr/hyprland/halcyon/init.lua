@@ -15,6 +15,8 @@ require("hyprland.halcyon.plus")
 require("hyprland.halcyon.modes")
 -- SUPER + drag a window, then switch workspace: the window comes along (carry.lua).
 require("hyprland.halcyon.carry")
+-- A maximised tiled window hides the others: say so, with a button to bring them back (maximise.lua).
+require("hyprland.halcyon.maximise")
 
 -- The active theme's window style, written by halcyon-theme. It exists only
 -- while a theme is active; see `halcyon-theme list`.
