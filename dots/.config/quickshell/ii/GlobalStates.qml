@@ -19,6 +19,11 @@ Singleton {
     property bool oskOpen: false
     property bool overlayOpen: false
     property bool overviewOpen: false
+    /** The theme's own app picker, opened in place of the overview (Settings > Halcyon > On the screen): "book" for
+     *  the Manga Ink themes, "phone" for After ICEY, "" for the usual overview. */
+    readonly property string themedLauncher: (Config.options?.halcyon?.themedLauncher ?? false)
+        ? (({ "manga-ink": "book", "manga-ink-dark": "book", "after-icey": "phone" })[Config.options?.halcyon?.theme ?? ""] ?? "")
+        : ""
     property bool regionSelectorOpen: false
     property bool searchOpen: false
     property bool screenLocked: false

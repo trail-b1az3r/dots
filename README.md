@@ -932,6 +932,16 @@ light goes out (hypridle, with `brightnessctl`), and both come back the moment y
 
 ![hyprlock: the clock, the date, the card with the picture, greeting and password field](docs/assets/hyprlock.jpg)
 
+## The themes' own app pickers
+
+In Manga Ink and Manga Ink Dark, Super opens a manga book of apps instead of the overview: the cover swings open,
+the apps are printed sixteen to a page, and you turn the pages by clicking the turned-up corner (or the outer margin)
+of the right page to go on and of the left page to go back. In After ICEY it opens a phone with four apps: Apps,
+Auto (type anything: an app, a sum, a command), Theme and Calculator. Typing works in both, and Enter does what the
+top result says. Turn them off in Settings > Halcyon > On the screen.
+
+![The manga book in Manga Ink and Manga Ink Dark, and the After ICEY phone's home, Apps, Auto and Calculator](docs/assets/themed-launchers.jpg)
+
 ## The cheat sheet's Hypr keys page
 
 The cheat sheet (Super + /) has a page of its own for the hypr keys: the Hyper chords (Super + Ctrl + Alt + Shift, or

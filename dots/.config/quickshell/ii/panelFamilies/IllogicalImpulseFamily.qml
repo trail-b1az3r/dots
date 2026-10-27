@@ -26,6 +26,7 @@ import qs.modules.ii.sidebarLeft
 import qs.modules.ii.sidebarRight
 import qs.modules.ii.stageManager
 import qs.modules.ii.themePicker
+import qs.modules.ii.themedLauncher
 import qs.modules.ii.overlay
 import qs.modules.ii.verticalBar
 import qs.modules.ii.wallpaperSelector
@@ -60,6 +61,7 @@ Scope {
     PanelLoader { component: SidebarLeft {} }
     PanelLoader { component: SidebarRight {} }
     PanelLoader { component: ThemePicker {} }
+    PanelLoader { component: ThemedLauncher {} }
     PanelLoader { extraCondition: Quickshell.screens.length > 1; component: MonitorWall {} }
     PanelLoader { extraCondition: Config.options.halcyon.idleTheme.enable; component: IdleTheme {} }
     PanelLoader { extraCondition: Config.options.bar.vertical; component: VerticalBar {} }
