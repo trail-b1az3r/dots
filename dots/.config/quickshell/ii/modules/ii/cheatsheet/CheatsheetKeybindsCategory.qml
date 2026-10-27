@@ -13,6 +13,8 @@ import Quickshell
 Column {
     id: root
     required property string categoryName
+    /** The Hypr keys page (true) or the Keybinds page (false): each shows only its own binds. */
+    property bool hyprOnly: false
     readonly property bool isCategorized: categoryName?.length > 0
     property int maxBindWidth: 0
     property real columnSpacing: 40
@@ -83,6 +85,16 @@ Column {
 
     function modMaskToStringList(modMask: int): list<string> {
         var list = [];
+        // The four together are the Hyper key: shown as one.
+        const HYPER = (1 << 0) | (1 << 2) | (1 << 3) | (1 << 6);
+        if ((modMask & HYPER) === HYPER) {
+            list.push("Hyper");
+            modMask &= ~HYPER;
+        }
+        if (modMask & (1 << 5)) {
+            if (!list.includes("Hyper")) list.push("Hyper");
+            modMask &= ~(1 << 5);
+        }
         // Funny mathematical order but we wanna have this natural user-facing order
         if (modMask & (1 << 2)) { list.push("Ctrl"); }
         if (modMask & (1 << 6)) { list.push("Super"); }
@@ -160,10 +172,11 @@ Column {
         Repeater {
             id: repeater
             model: {
+                const page = HyprlandKeybinds.keybinds.filter(bind => HyprlandKeybinds.onPage(bind, root.hyprOnly));
                 if (!root.isCategorized) {
-                    return HyprlandKeybinds.keybinds.filter(bind => root.hasDescription(bind) && root.isUncategorized(bind) && !root.containsNonFirstRepetitive(bind));
+                    return page.filter(bind => root.hasDescription(bind) && root.isUncategorized(bind) && !root.containsNonFirstRepetitive(bind));
                 }
-                return HyprlandKeybinds.keybinds.filter(bind => root.hasDescription(bind) && root.isCategory(bind, root.categoryName) && !root.containsNonFirstRepetitive(bind));
+                return page.filter(bind => root.hasDescription(bind) && root.isCategory(bind, root.categoryName) && !root.containsNonFirstRepetitive(bind));
             }
             delegate: BindLine {
                 required property var modelData

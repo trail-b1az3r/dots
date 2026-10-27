@@ -20,8 +20,8 @@ import time
 from dataclasses import dataclass
 from typing import Callable, Optional, Sequence, TextIO
 
-__version__ = "2.0.0"
-__codename__ = "Copper"  # VERSION and CODENAME at the repository root; tests keep them the same
+__version__ = "2.0.1"
+__codename__ = "Weathered Copper"  # VERSION and CODENAME at the repository root; tests keep them the same
 
 # ANSI styling. Colour is only used on a terminal that has not asked for
 # none; NO_COLOR is the convention that asks.

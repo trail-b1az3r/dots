@@ -932,6 +932,14 @@ light goes out (hypridle, with `brightnessctl`), and both come back the moment y
 
 ![hyprlock: the clock, the date, the card with the picture, greeting and password field](docs/assets/hyprlock.jpg)
 
+## The cheat sheet's Hypr keys page
+
+The cheat sheet (Super + /) has a page of its own for the hypr keys: the Hyper chords (Super + Ctrl + Alt + Shift, or
+one key that sends them) and the keys of hypr mode, with how to turn the mode on and off. The Keybinds page keeps
+everything else.
+
+![The cheat sheet's Hypr keys page](docs/assets/cheatsheet-hypr-keys.jpg)
+
 ## Sound and webcams
 
 Headphones, a webcam or its microphone that work in KDE but not in Hyprland had two causes, both fixed:
@@ -1062,7 +1070,7 @@ full list, including all of upstream's.
 | `Super + Ctrl + Shift + F` | Plus Tiles: back to an ordinary tile |
 | `Super + Ctrl + I` | Plus Tiles: geometry inspector |
 | `Super + Alt + arrow` | Plus Tiles: move that edge out at once (`Shift`: in) |
-| `Super + F10 + H` or `Super + Ctrl + H` | Hypr mode on and off |
+| `Super + F10 + H` or `Super + Ctrl + H` | Hypr mode on and off (it turns itself off after 10 s without one of its keys). The cheat sheet's **Hypr keys** page lists the Hyper chords and hypr mode's keys |
 | Power button | The power menu: lock, sleep, log out, hibernate, shut down, restart, and the power levels (power saver, balanced, performance). Without the shell running it powers off as usual; Settings > Halcyon > On the screen turns it off |
 | `Super` + drag to another monitor | With hyprland-plus, the window stops at the edge like against something elastic, and the other monitor's edge bulges where it would come in; push on and it goes through (Settings > Halcyon > Plus Tiles: how hard, or off) |
 | `Super` + drag, then `Ctrl` + `Super` + `←`/`→` | Carries the window you are dragging to the next workspace, still under the cursor; keep dragging it there |

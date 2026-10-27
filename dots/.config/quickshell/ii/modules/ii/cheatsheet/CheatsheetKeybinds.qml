@@ -27,10 +27,12 @@ Item {
             flow: Flow.TopToBottom
             spacing: 10
             Repeater {
-                model: [...HyprlandKeybinds.keybindCategories, ""]
+                // The hypr keys have a page of their own (CheatsheetHyprKeys.qml).
+                model: [...HyprlandKeybinds.categoriesOf(false), ""]
                 delegate: CheatsheetKeybindsCategory {
                     required property var modelData
                     categoryName: modelData
+                    hyprOnly: false
                 }
             }
         }
