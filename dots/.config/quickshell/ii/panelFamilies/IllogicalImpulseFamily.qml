@@ -12,6 +12,7 @@ import qs.modules.ii.hyprMode
 import qs.modules.ii.idleTheme
 import qs.modules.ii.lock
 import qs.modules.ii.mediaControls
+import qs.modules.ii.monitorWall
 import qs.modules.ii.notificationPopup
 import qs.modules.ii.onScreenDisplay
 import qs.modules.ii.onScreenKeyboard
@@ -59,6 +60,7 @@ Scope {
     PanelLoader { component: SidebarLeft {} }
     PanelLoader { component: SidebarRight {} }
     PanelLoader { component: ThemePicker {} }
+    PanelLoader { extraCondition: Quickshell.screens.length > 1; component: MonitorWall {} }
     PanelLoader { extraCondition: Config.options.halcyon.idleTheme.enable; component: IdleTheme {} }
     PanelLoader { extraCondition: Config.options.bar.vertical; component: VerticalBar {} }
     PanelLoader { component: WallpaperSelector {} }

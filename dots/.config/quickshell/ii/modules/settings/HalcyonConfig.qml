@@ -2425,6 +2425,32 @@ ContentPage {
                 font.pixelSize: Appearance.font.pixelSize.smallie
                 text: Translation.tr("Hold Super, drag a window by its middle and let go at the very top of the screen. A click is not a drag, and a window already at the top is left alone. 0 turns it off.")
             }
+            ConfigSpinBox {
+                icon: "fence"
+                text: Translation.tr("The wall between monitors (px)")
+                value: Config.options.halcyon.plus.monitorWall
+                from: 0
+                to: 1000
+                stepSize: 20
+                onValueChanged: {
+                    Config.options.halcyon.plus.monitorWall = value;
+                    page.applyPlus();
+                }
+            }
+            ConfigSwitch {
+                buttonIcon: "waves"
+                text: Translation.tr("Show the wall bulge on the other monitor")
+                checked: Config.options.halcyon.plus.monitorWallBulge
+                onCheckedChanged: Config.options.halcyon.plus.monitorWallBulge = checked
+            }
+            StyledText {
+                Layout.fillWidth: true
+                Layout.leftMargin: 8
+                wrapMode: Text.Wrap
+                color: Appearance.colors.colSubtext
+                font.pixelSize: Appearance.font.pixelSize.smallie
+                text: Translation.tr("A window dragged against the edge of another monitor stops there, and the other monitor's edge bulges where it would come in. Push this far past the edge and it goes through. 0 turns the wall off.")
+            }
             ConfigSwitch {
                 buttonIcon: "queue_music"
                 text: Translation.tr("Music strip over fullscreen")

@@ -1062,6 +1062,7 @@ full list, including all of upstream's.
 | `Super + Alt + arrow` | Plus Tiles: move that edge out at once (`Shift`: in) |
 | `Super + F10 + H` or `Super + Ctrl + H` | Hypr mode on and off |
 | Power button | The power menu: lock, sleep, log out, hibernate, shut down, restart, and the power levels (power saver, balanced, performance). Without the shell running it powers off as usual; Settings > Halcyon > On the screen turns it off |
+| `Super` + drag to another monitor | With hyprland-plus, the window stops at the edge like against something elastic, and the other monitor's edge bulges where it would come in; push on and it goes through (Settings > Halcyon > Plus Tiles: how hard, or off) |
 | `Super` + drag, then `Ctrl` + `Super` + `←`/`→` | Carries the window you are dragging to the next workspace, still under the cursor; keep dragging it there |
 | `Hyper + Ctrl + Tab` | The next floating window here, brought to the top (`Shift` as well: the previous one) |
 
