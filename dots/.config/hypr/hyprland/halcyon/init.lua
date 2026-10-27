@@ -13,6 +13,8 @@ require("hyprland.halcyon.mini")
 require("hyprland.halcyon.tiles")
 require("hyprland.halcyon.plus")
 require("hyprland.halcyon.modes")
+-- SUPER + drag a window, then switch workspace: the window comes along (carry.lua).
+require("hyprland.halcyon.carry")
 
 -- The active theme's window style, written by halcyon-theme. It exists only
 -- while a theme is active; see `halcyon-theme list`.

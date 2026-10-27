@@ -4,6 +4,8 @@
 Hyprland runs every binding registered for a chord, so a Halcyon bind on
 an upstream chord would not replace the upstream action, it would fire
 alongside it. The layer is meant to only add; this keeps it honest.
+A bind marked non_consuming = true is meant to fire alongside (it only
+watches the chord, like carry.lua does the drag), so it is allowed.
 
 Only literal first arguments of hl.bind(...) are compared. Binds built in
 loops (workspace numbers, arrow keys) are expanded from the patterns
@@ -39,7 +41,10 @@ def chords(path):
     text = path.read_text(encoding="utf-8")
     # Ignore everything inside a submap: those chords only apply there.
     text = re.sub(r"hl\.define_submap\(.*?\nend\)", "", text, flags=re.S)
-    found = {normalise(c) for c in BIND.findall(text) if not c.endswith(" ")}
+    # Each bind's call runs up to the next hl.bind; a non-consuming one only watches the chord.
+    calls = re.split(r"(?=hl\.bind\()", text)
+    watching = {m.group(1) for call in calls if (m := BIND.match(call)) and re.search(r"non_consuming\s*=\s*true", call)}
+    found = {normalise(c) for c in BIND.findall(text) if not c.endswith(" ") and c not in watching}
     for prefix, var in LOOP.findall(text):
         found |= {normalise(prefix + v) for v in LOOP_VALUES[var]}
     return found
