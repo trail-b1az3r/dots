@@ -1,0 +1,12 @@
+[Unit]
+Description=halcyon.UwU-agent: answers NetworkManager's Wi-Fi password requests from Halcyon's vault, or asks you
+
+[Service]
+# Only inside a running Hyprland (see halcyon-gpu-guard.service): in KDE, plasma-nm's agent does this job.
+ExecCondition=/bin/sh -c 'hyprctl version >/dev/null 2>&1 || exit 1'
+# The shell's Python environment has dbus-next; the system Python does when python-dbus-next is installed.
+ExecStart=/bin/sh -c 'py="$HOME/.local/state/quickshell/.venv/bin/python"; "$py" -c "import dbus_next" 2>/dev/null || py=python3; exec "$py" "$HOME/.config/hypr/hyprland/halcyon/halcyon_uwu.py" agent'
+Restart=on-failure
+RestartSec=5
+
+# Started by Hyprland (halcyon/init.lua), never enabled on its own: see ExecCondition.

@@ -17,6 +17,7 @@ require("hyprland.halcyon.modes")
 require("hyprland.halcyon.carry")
 -- A maximised tiled window hides the others: say so, with a button to bring them back (maximise.lua).
 require("hyprland.halcyon.maximise")
+require("hyprland.halcyon.scratchpad")
 
 -- The active theme's window style, written by halcyon-theme. It exists only
 -- while a theme is active; see `halcyon-theme list`.
@@ -51,6 +52,8 @@ if is_file_exists(overlaysFile) then
 end
 require("hyprland.halcyon.overlays")
 require("hyprland.halcyon.desk")
+-- The super battery saver, last, so its animations, blur and shadows win (halcyon saver).
+require("hyprland.halcyon.saver")
 
 -- How new windows are placed, from Settings > Interface > Windows (halcyon-theme placement).
 local placementFile = stateHome .. "/halcyon/placement.lua"
@@ -102,14 +105,20 @@ hl.on("hyprland.start", function()
         "$HOME/.config/hypr/hyprland/halcyon/halcyon_audio.py boot >/dev/null 2>&1; " ..
         -- Loaf, once it is installed: folders open in it, and Dolphin's pins go to it (once; halcyon files).
         "$HOME/.config/hypr/hyprland/halcyon/halcyon_file_manager.py login >/dev/null 2>&1; " ..
+        -- Alacritty, once it is installed: kitty's pins go to it (once; halcyon terminal).
+        "$HOME/.config/hypr/hyprland/halcyon/halcyon_terminal.py login >/dev/null 2>&1; " ..
         "systemctl --user daemon-reload; " ..
         -- Older Halcyon enabled these for every login, which started the shell in KDE too. They are only
         -- started from here now, so drop those links.
         "w=\"${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/default.target.wants\"; " ..
         "rm -f \"$w/halcyon-quickshell.service\" \"$w/halcyon-gpu-guard.service\" \"$w/halcyon-resume.service\"; " ..
         "systemctl --user restart halcyon-quickshell.service halcyon-gpu-guard.service halcyon-resume.service; " ..
+        -- halcyon.UwU-agent: Wi-Fi passwords for NetworkManager, in place of plasma-nm's agent (halcyon uwu).
+        "systemctl --user restart halcyon-uwu-agent.service; " ..
         -- The hourly update check. An install made before it existed, or a timer turned off by mistake, gets it.
         "systemctl --user enable --now halcyon-update.timer >/dev/null 2>&1; " ..
+        -- The super battery saver keeps Wi-Fi from reconnecting by itself, so bring it up once after boot.
+        "$HOME/.config/hypr/hyprland/halcyon/halcyon_saver.py kick; " ..
         -- Server mode (Settings > Halcyon) stays on across restarts.
         "$HOME/.config/hypr/hyprland/halcyon/halcyon_server.py apply")
 end)

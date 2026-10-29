@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Nexora Linux's mark, one colour for the shell to tint: the faceted hexagonal gem with an "N" cut through it and
+     three sparks off its top corner (from trail-b1az3r/distro, branding/logo/logo-mark.svg.in). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="256" height="256">
+      <rect width="256" height="256" fill="#fff"/>
+      <path d="M 86 176 L 86 100 L 154 176 L 154 100" fill="none" stroke="#000" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <path mask="url(#cut)" d="M 120 42 L 203 90 L 203 186 L 120 234 L 37 186 L 37 90 Z" fill="#000" stroke="#000" stroke-width="24" stroke-linejoin="round"/>
+  <circle cx="214" cy="46" r="13" fill="#000"/>
+  <circle cx="237" cy="23" r="8" fill="#000" fill-opacity="0.75"/>
+  <circle cx="250" cy="9" r="4.5" fill="#000" fill-opacity="0.5"/>
+</svg>

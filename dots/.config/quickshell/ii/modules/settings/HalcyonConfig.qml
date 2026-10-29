@@ -1193,6 +1193,19 @@ ContentPage {
         }
 
         ConfigSwitch {
+            buttonIcon: "battery_saver"
+            text: Translation.tr("Super battery saver")
+            checked: SuperSaver.active
+            onCheckedChanged: {
+                if (checked !== SuperSaver.active)
+                    SuperSaver.toggle();
+            }
+            StyledToolTip {
+                text: Translation.tr("12 frames a second (with hyprland-plus), 20% brightness, the power-saver profile, no animations, blur or shadows, and Wi-Fi that only reconnects after boot, waking, locking, unlocking or when you pick a network. Off puts back exactly what it found. Also in the quick panel, and `halcyon saver` in a terminal.")
+            }
+        }
+
+        ConfigSwitch {
             buttonIcon: "menu_book"
             text: Translation.tr("The theme's own app picker (Manga Ink, After ICEY)")
             checked: Config.options.halcyon.themedLauncher

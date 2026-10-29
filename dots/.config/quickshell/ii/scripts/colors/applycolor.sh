@@ -56,6 +56,25 @@ apply_kitty() {
   kill -SIGUSR1 $(pidof kitty)
 }
 
+apply_alacritty() {
+  if [ ! -f "$SCRIPT_DIR/terminal/alacritty-theme.toml" ]; then
+    echo "Template file not found for Alacritty theme. Skipping that."
+    return
+  fi
+  if [ "${#colorlist[@]}" -eq 0 ]; then
+    echo "No generated colours yet for Alacritty. Skipping that."
+    return
+  fi
+  # Fill a copy, then move it into place: Alacritty reloads the moment the file changes.
+  mkdir -p "$STATE_DIR"/user/generated/terminal
+  local tmp="$STATE_DIR"/user/generated/terminal/alacritty-theme.toml.tmp
+  cp "$SCRIPT_DIR/terminal/alacritty-theme.toml" "$tmp"
+  for i in "${!colorlist[@]}"; do
+    sed -i "s/${colorlist[$i]} #/${colorvalues[$i]#\#}/g" "$tmp"
+  done
+  mv "$tmp" "$STATE_DIR"/user/generated/terminal/alacritty-theme.toml
+}
+
 apply_anyterm() {
   # Check if terminal escape sequence template exists
   if [ ! -f "$SCRIPT_DIR/terminal/sequences.txt" ]; then
@@ -84,6 +103,7 @@ apply_anyterm() {
 apply_term() {
   apply_anyterm &
   apply_kitty &
+  apply_alacritty &
 }
 
 # Check if terminal theming is enabled in config

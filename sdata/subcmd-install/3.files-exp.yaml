@@ -9,7 +9,7 @@
 version: "1.0"
 user_preferences:
   shell: "fish" # fish | zsh
-  terminal: "foot" # kitty | foot
+  terminal: "alacritty" # alacritty | kitty | foot
   keybindings: "default" # default | vim
 patterns:
   # Always install these files
@@ -36,6 +36,12 @@ patterns:
     condition:
       type: "terminal"
       value: "foot"
+  - from: "dots/.config/alacritty"
+    to: "$XDG_CONFIG_HOME/alacritty"
+    mode: "sync"
+    condition:
+      type: "terminal"
+      value: "alacritty"
   - from: "dots/.config/kitty"
     to: "$XDG_CONFIG_HOME/kitty"
     mode: "sync"

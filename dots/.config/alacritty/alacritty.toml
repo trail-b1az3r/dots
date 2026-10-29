@@ -1,0 +1,41 @@
+# Halcyon's terminal. Colours come from the wallpaper and theme (written by quickshell's applycolor.sh), and Alacritty
+# reloads them as they change.
+[general]
+import = ["~/.local/state/quickshell/user/generated/terminal/alacritty-theme.toml"]
+live_config_reload = true
+
+[terminal.shell]
+program = "fish"
+
+[font]
+size = 11.0
+normal = { family = "JetBrains Mono Nerd Font" }
+
+[window]
+# The same room round the text as foot and kitty had.
+padding = { x = 22, y = 22 }
+dynamic_padding = true
+decorations = "None"
+
+[cursor]
+style = { shape = "Beam", blinking = "On" }
+
+[selection]
+save_to_clipboard = false
+
+# Ctrl+C is left alone: it always interrupts, selection or not. (kitty's copy_or_interrupt copied instead whenever
+# anything was selected, which a tap on a touchscreen or touchpad easily leaves behind, so Ctrl+C seemed not to work.)
+[keyboard]
+bindings = [
+  { key = "C", mods = "Control|Shift", action = "Copy" },
+  { key = "V", mods = "Control|Shift", action = "Paste" },
+  { key = "F", mods = "Control|Shift", action = "SearchForward" },
+  { key = "PageUp", action = "ScrollPageUp" },
+  { key = "PageDown", action = "ScrollPageDown" },
+  { key = "Plus", mods = "Control", action = "IncreaseFontSize" },
+  { key = "Equals", mods = "Control", action = "IncreaseFontSize" },
+  { key = "NumpadAdd", mods = "Control", action = "IncreaseFontSize" },
+  { key = "Minus", mods = "Control", action = "DecreaseFontSize" },
+  { key = "NumpadSubtract", mods = "Control", action = "DecreaseFontSize" },
+  { key = "Key0", mods = "Control", action = "ResetFontSize" },
+]

@@ -29,7 +29,7 @@ AbstractQuickPanel {
     readonly property real baseCellHeight: 56
 
     // Toggles
-    readonly property list<string> availableToggleTypes: ["network", "bluetooth", "idleInhibitor", "easyEffects", "nightLight", "darkMode", "cloudflareWarp", "gameMode", "screenSnip", "colorPicker", "onScreenKeyboard", "mic", "audio", "notifications", "powerProfile","musicRecognition", "antiFlashbang", "halcyonUpdate"]
+    readonly property list<string> availableToggleTypes: ["network", "bluetooth", "idleInhibitor", "easyEffects", "nightLight", "darkMode", "cloudflareWarp", "gameMode", "screenSnip", "colorPicker", "onScreenKeyboard", "mic", "audio", "notifications", "powerProfile","musicRecognition", "antiFlashbang", "halcyonUpdate", "superSaver"]
     readonly property int columns: Config.options.sidebar.quickToggles.android.columns
     readonly property list<var> toggles: Config.ready ? Config.options.sidebar.quickToggles.android.toggles : []
 
@@ -40,12 +40,26 @@ AbstractQuickPanel {
         Config.options.sidebar.quickToggles.android.toggles = Config.options.sidebar.quickToggles.android.toggles.concat([{ "size": 1, "type": "halcyonUpdate" }]);
         Config.options.sidebar.quickToggles.android.updateToggleAdded = true;
     }
+    // The super battery saver is added the same way, once.
+    function addSaverToggle() {
+        if (!Config.ready || Config.options.sidebar.quickToggles.android.saverToggleAdded)
+            return;
+        // A reload can come between saving the layout and saving the flag, so the layout itself is checked too.
+        const toggles = Config.options.sidebar.quickToggles.android.toggles;
+        if (!toggles.some(toggle => toggle && toggle.type === "superSaver"))
+            Config.options.sidebar.quickToggles.android.toggles = toggles.concat([{ "size": 1, "type": "superSaver" }]);
+        Config.options.sidebar.quickToggles.android.saverToggleAdded = true;
+    }
     // The config may still be loading when this panel is made, so it's tried again once it is ready.
-    Component.onCompleted: root.addUpdateToggle()
+    Component.onCompleted: {
+        root.addUpdateToggle();
+        root.addSaverToggle();
+    }
     Connections {
         target: Config
         function onReadyChanged() {
             root.addUpdateToggle();
+            root.addSaverToggle();
         }
     }
     readonly property list<var> toggleRows: toggleRowsForList(toggles)

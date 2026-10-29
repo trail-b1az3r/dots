@@ -22,6 +22,9 @@ hl.bind("SUPER + Comma", hl.dsp.exec_cmd(settingsApp), { description = "App: Set
 hl.bind("XF86PowerOff", hl.dsp.global("quickshell:sessionToggle"), { description = "Shell: Power menu (power button)" })
 
 --# Workspaces
+-- halcyon.UwU-agent: pick a kept web password and copy it; the clipboard is cleared again after 45 seconds.
+hl.bind("SUPER + ALT + P", hl.dsp.exec_cmd("$HOME/.config/hypr/hyprland/halcyon/halcyon_uwu.py web pick"),
+    { description = "App: Passwords (copy one)" })
 hl.bind("SUPER + grave", hl.dsp.focus({ workspace = "previous" }), { description = "Workspace: Back and forth" })
 
 --# Windows

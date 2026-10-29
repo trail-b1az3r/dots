@@ -28,6 +28,7 @@ end
 C.dragEdge = hasOption("binds:drag_fullscreen_edge")           -- drop a dragged window at the top edge: fullscreen
 C.stripFullscreen = hasOption("superposition:over_fullscreen") -- the strip can be kept out of fullscreen windows
 C.monitorWall = hasOption("plus:monitor_wall")                -- a dragged window stops at the edge of another monitor
+C.maxFps = hasOption("plus:max_fps")                          -- the screen can be drawn less often (battery saver)
 
 -- Why a feature is missing, in words, or nil when it is there.
 function C.missing(feature)

@@ -259,13 +259,13 @@ Singleton {
 
             property JsonObject apps: JsonObject {
                 property string bluetooth: "kcmshell6 kcm_bluetooth"
-                property string changePassword: "kitty -1 --hold=yes fish -i -c 'passwd'"
-                property string network: "kcmshell6 kcm_networkmanagement"
+                property string changePassword: "alacritty --hold -e fish -i -c 'passwd'"
+                property string network: "kcmshell6 kcm_networkmanagement 2>/dev/null || nm-connection-editor 2>/dev/null || alacritty -e nmtui"
                 property string manageUser: "kcmshell6 kcm_users"
-                property string networkEthernet: "kcmshell6 kcm_networkmanagement"
+                property string networkEthernet: "kcmshell6 kcm_networkmanagement 2>/dev/null || nm-connection-editor 2>/dev/null || alacritty -e nmtui"
                 property string taskManager: "plasma-systemmonitor --page-name Processes"
-                property string terminal: "kitty -1" // This is only for shell actions
-                property string update: "kitty -1 --hold=yes fish -i -c 'pkexec pacman -Syu'"
+                property string terminal: "alacritty" // This is only for shell actions
+                property string update: "alacritty --hold -e fish -i -c 'pkexec pacman -Syu'"
                 property string volumeMixer: `~/.config/hypr/hyprland/scripts/launch_first_available.sh "pavucontrol-qt" "pavucontrol"`
             }
 
@@ -513,7 +513,7 @@ Singleton {
                 property bool autoHide: true // Hides while a window is focused. Off: always shown
                 property bool hoverToReveal: true // When false, only reveals on empty workspace
                 property list<string> pinnedApps: [ // IDs of pinned entries
-                    "loaf", "kitty",]
+                    "loaf", "Alacritty",]
                 property list<string> ignoredAppRegexes: []
             }
 
@@ -539,7 +539,7 @@ Singleton {
             }
 
             property JsonObject launcher: JsonObject {
-                property list<string> pinnedApps: [ "loaf", "kitty", "cmake-gui"]
+                property list<string> pinnedApps: [ "loaf", "Alacritty", "cmake-gui"]
             }
 
             property JsonObject light: JsonObject {
@@ -718,6 +718,7 @@ Singleton {
                     property JsonObject android: JsonObject {
                         property int columns: 5
                         property bool updateToggleAdded: false // Set once Halcyon's update button has been added to the saved layout
+                        property bool saverToggleAdded: false // Set once the super battery saver has been added to the saved layout
                         property list<var> toggles: [
                             { "size": 2, "type": "network" },
                             { "size": 2, "type": "bluetooth"  },
