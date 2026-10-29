@@ -44,7 +44,10 @@ AbstractQuickPanel {
     function addSaverToggle() {
         if (!Config.ready || Config.options.sidebar.quickToggles.android.saverToggleAdded)
             return;
-        Config.options.sidebar.quickToggles.android.toggles = Config.options.sidebar.quickToggles.android.toggles.concat([{ "size": 1, "type": "superSaver" }]);
+        // A reload can come between saving the layout and saving the flag, so the layout itself is checked too.
+        const toggles = Config.options.sidebar.quickToggles.android.toggles;
+        if (!toggles.some(toggle => toggle && toggle.type === "superSaver"))
+            Config.options.sidebar.quickToggles.android.toggles = toggles.concat([{ "size": 1, "type": "superSaver" }]);
         Config.options.sidebar.quickToggles.android.saverToggleAdded = true;
     }
     // The config may still be loading when this panel is made, so it's tried again once it is ready.

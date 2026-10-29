@@ -932,6 +932,29 @@ light goes out (hypridle, with `brightnessctl`), and both come back the moment y
 
 ![hyprlock: the clock, the date, the card with the picture, greeting and password field](docs/assets/hyprlock.jpg)
 
+## Super battery saver
+
+One switch in the quick panel (or Settings > Halcyon > On the screen, or `halcyon saver on`) for the longest battery:
+the screen is drawn at most 12 times a second (hyprland-plus's `plus:max_fps`), brightness goes to 20%, the
+power-saver profile is set, animations, blur and shadows go off, and Wi-Fi stops reconnecting by itself. It still
+reconnects after boot, waking from suspend, locking and unlocking, and whenever you pick a network. Turning it off
+puts back exactly what it found.
+
+## Terminal, scratchpad and lost windows
+
+Alacritty is the terminal (Super + Return). Ctrl+C always interrupts the program running in it, and Ctrl+Shift+C
+copies; kitty used to copy instead whenever any text was selected, which a tap on a touchscreen easily leaves. Its
+colours follow the theme. Super + Z drops a terminal down from the top of the screen and puts it away again, the same
+one each time; Super + S shows the scratchpad workspace and Super + Alt + S sends a window there. Super + Shift + W
+brings back windows that ended up off every screen (after unplugging a monitor, say); `halcyon lost` lists them.
+
+## Passwords: halcyon.UwU-agent
+
+halcyon.UwU-agent (universal web user [auth]) keeps Wi-Fi and web passwords in one encrypted vault, its key in the
+keyring. It is NetworkManager's password agent, in place of KDE's plasma-nm: a network that needs a password gets it
+from the vault, or a prompt asks you. Super + Alt + P picks a web login and copies its password, and the clipboard is
+cleared again 45 seconds later. `halcyon uwu web add SITE USER` keeps one; `halcyon uwu` says what it holds.
+
 ## The themes' own app pickers
 
 In Manga Ink and Manga Ink Dark, Super opens a manga book of apps instead of the overview: the cover swings open,
