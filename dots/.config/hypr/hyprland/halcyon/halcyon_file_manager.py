@@ -55,8 +55,8 @@ def set_default(app: str) -> bool:
     return subprocess.run(["xdg-mime", "default", f"{app}.desktop", "inode/directory"], check=False).returncode == 0
 
 
-def swap_pins(new: str) -> int:
-    """Dolphin's pins (dock and launcher) go to `new`, in place. Returns how many changed."""
+def swap_pins(new: str, old: tuple[str, ...] = OLD_PINS) -> int:
+    """The `old` app's pins (dock and launcher; Dolphin's by default) go to `new`, in place. Returns how many changed."""
     try:
         data = json.loads(SHELL_CONFIG.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -68,7 +68,7 @@ def swap_pins(new: str) -> int:
             continue
         swapped = []
         for pin in pins:
-            if pin in OLD_PINS and new not in pins:
+            if pin in old and new not in pins:
                 swapped.append(new)
                 changed += 1
             else:

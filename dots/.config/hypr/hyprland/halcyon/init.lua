@@ -51,6 +51,8 @@ if is_file_exists(overlaysFile) then
 end
 require("hyprland.halcyon.overlays")
 require("hyprland.halcyon.desk")
+-- The super battery saver, last, so its animations, blur and shadows win (halcyon saver).
+require("hyprland.halcyon.saver")
 
 -- How new windows are placed, from Settings > Interface > Windows (halcyon-theme placement).
 local placementFile = stateHome .. "/halcyon/placement.lua"
@@ -102,6 +104,8 @@ hl.on("hyprland.start", function()
         "$HOME/.config/hypr/hyprland/halcyon/halcyon_audio.py boot >/dev/null 2>&1; " ..
         -- Loaf, once it is installed: folders open in it, and Dolphin's pins go to it (once; halcyon files).
         "$HOME/.config/hypr/hyprland/halcyon/halcyon_file_manager.py login >/dev/null 2>&1; " ..
+        -- Alacritty, once it is installed: kitty's pins go to it (once; halcyon terminal).
+        "$HOME/.config/hypr/hyprland/halcyon/halcyon_terminal.py login >/dev/null 2>&1; " ..
         "systemctl --user daemon-reload; " ..
         -- Older Halcyon enabled these for every login, which started the shell in KDE too. They are only
         -- started from here now, so drop those links.
@@ -110,6 +114,8 @@ hl.on("hyprland.start", function()
         "systemctl --user restart halcyon-quickshell.service halcyon-gpu-guard.service halcyon-resume.service; " ..
         -- The hourly update check. An install made before it existed, or a timer turned off by mistake, gets it.
         "systemctl --user enable --now halcyon-update.timer >/dev/null 2>&1; " ..
+        -- The super battery saver keeps Wi-Fi from reconnecting by itself, so bring it up once after boot.
+        "$HOME/.config/hypr/hyprland/halcyon/halcyon_saver.py kick; " ..
         -- Server mode (Settings > Halcyon) stays on across restarts.
         "$HOME/.config/hypr/hyprland/halcyon/halcyon_server.py apply")
 end)

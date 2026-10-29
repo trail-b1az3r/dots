@@ -361,8 +361,8 @@ hl.bind("SUPER + T", hl.dsp.exec_cmd(terminal))
 hl.bind("CTRL + ALT + T", hl.dsp.exec_cmd(terminal))
 hl.bind("SUPER + E", hl.dsp.exec_cmd(fileManager), { description = "App: File manager" })
 hl.bind("SUPER + W", hl.dsp.exec_cmd(browser), { description = "App: Browser" })
--- Claude Code in its own terminal window (kitty -1 reuses a running kitty, as the other terminal launchers do).
-hl.bind("SUPER + C", hl.dsp.exec_cmd("kitty -1 claude"), { description = "App: Claude Code" })
+-- Claude Code in its own terminal window.
+hl.bind("SUPER + C", hl.dsp.exec_cmd("alacritty -e claude"), { description = "App: Claude Code" })
 hl.bind("CTRL + SUPER + SHIFT + ALT + W", hl.dsp.exec_cmd(officeSoftware), { description = "App: Office software" })
 hl.bind("SUPER + X", hl.dsp.exec_cmd(textEditor), { description = "App: Text editor" })
 hl.bind("CTRL + SUPER + V", hl.dsp.exec_cmd(volumeMixer), { description = "App: Volume mixer" })

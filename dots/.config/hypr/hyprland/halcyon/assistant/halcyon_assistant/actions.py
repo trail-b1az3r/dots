@@ -122,7 +122,7 @@ def desktop_dirs():
     return [Path(d) / "applications" for d in [data_home, *data_dirs.split(":")] if d]
 
 
-ALIASES = {"terminal": ["terminal", "konsole", "kitty", "foot"], "files": ["files", "file manager", "loaf", "dolphin", "nautilus"],
+ALIASES = {"terminal": ["terminal", "alacritty", "konsole", "kitty", "foot"], "files": ["files", "file manager", "loaf", "dolphin", "nautilus"],
            "browser": ["web browser", "firefox", "chrome", "chromium", "zen"], "settings": ["settings"]}
 
 

@@ -38,7 +38,8 @@ Item {
 
     readonly property int perPage: 16
     property string query: ""
-    readonly property var allApps: host ? host.apps() : []
+    // Read again each time the book opens, so newly installed apps are in it.
+    property var allApps: []
     readonly property var apps: query === "" ? allApps : AppSearch.fuzzyQuery(query)
     readonly property int pageCount: Math.max(2, Math.ceil(apps.length / perPage) + (Math.ceil(apps.length / perPage) % 2))
     // The spread open: pages 2*spread and 2*spread + 1.
@@ -65,7 +66,22 @@ Item {
     property real appear: 0
     property bool closing: false
 
-    Component.onCompleted: openAnim.start()
+    // From the first page, the cover shut. The book is kept between openings, so this resets it.
+    function open() {
+        closeAnim.stop();
+        turnAnim.stop();
+        closing = false;
+        allApps = host ? host.apps() : [];
+        query = "";
+        spread = 0;
+        leftPage = 0;
+        rightPage = 1;
+        turn = 0;
+        cover = 0;
+        appear = 0;
+        forceActiveFocus();
+        openAnim.restart();
+    }
     function close() {
         if (closing)
             return;
@@ -76,8 +92,8 @@ Item {
 
     SequentialAnimation {
         id: openAnim
-        NumberAnimation { target: book; property: "appear"; from: 0; to: 1; duration: 220; easing.type: Easing.OutCubic }
-        NumberAnimation { target: book; property: "cover"; from: 0; to: 180; duration: 560; easing.type: Easing.InOutCubic }
+        NumberAnimation { target: book; property: "appear"; to: 1; duration: 220; easing.type: Easing.OutCubic }
+        NumberAnimation { target: book; property: "cover"; to: 180; duration: 560; easing.type: Easing.InOutCubic }
     }
     SequentialAnimation {
         id: closeAnim
@@ -208,13 +224,16 @@ Item {
             border.width: 0
         }
 
-        // The leaf that turns: blank paper, shaded as it rises, landing on the other side.
+        // The leaf that turns. Its front is the page being turned and its back the page it lands as, so nothing
+        // pops in when it lands: forward, the old right page over to the new left one; back, the old left page over
+        // to the new right one. Shaded as it rises; drawn as one texture while it turns.
         Item {
             id: leaf
             visible: book.turning
             width: book.pageW
             height: parent.height
             x: book.direction > 0 ? book.pageW + book.spine : 0
+            layer.enabled: book.turning
             // Folded over the spine: narrowing to its edge, then opening out on the other side, a little taller as
             // it lifts off the page. (A Rotation about y would do it in 3D, but its perspective is far too strong.)
             transform: Scale {
@@ -223,42 +242,30 @@ Item {
                 xScale: Math.cos(book.turn * Math.PI / 180)
                 yScale: 1 + 0.05 * Math.sin(book.turn * Math.PI / 180)
             }
+            Page {
+                anchors.fill: parent
+                live: false
+                visible: book.turn < 90
+                isLeft: book.direction < 0
+                pageIndex: book.direction > 0 ? book.spread * 2 - 1 : book.spread * 2 + 2
+            }
+            // Past the fold the leaf is mirrored; mirrored once more, its back reads the right way round.
+            Page {
+                anchors.fill: parent
+                live: false
+                visible: book.turn >= 90
+                isLeft: book.direction > 0
+                pageIndex: book.direction > 0 ? book.spread * 2 : book.spread * 2 + 1
+                transform: Scale { origin.x: book.pageW / 2; xScale: -1 }
+            }
+            // The light on it as it turns, dark at the fold.
             Rectangle {
                 anchors.fill: parent
-                radius: 4
-                color: book.paper
-                border.width: 3
-                border.color: book.ink
-                // The light on it as it turns, dark at the fold.
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: 3
-                    gradient: Gradient {
-                        orientation: Gradient.Horizontal
-                        GradientStop { position: book.direction > 0 ? 0.0 : 1.0; color: Qt.rgba(0, 0, 0, 0.35 * Math.sin(book.turn * Math.PI / 180)) }
-                        GradientStop { position: book.direction > 0 ? 0.6 : 0.4; color: Qt.rgba(0, 0, 0, 0.0) }
-                    }
-                }
-                // Speed lines across it, as a page turned in a hurry.
-                Shape {
-                    anchors.fill: parent
-                    anchors.margins: 18
-                    opacity: 0.25
-                    ShapePath {
-                        strokeWidth: 1.2
-                        strokeColor: book.ink
-                        fillColor: "transparent"
-                        PathSvg {
-                            path: {
-                                let d = "";
-                                for (let i = 0; i < 14; i++) {
-                                    const y = (i + 0.5) * leaf.height / 15;
-                                    d += `M ${leaf.width * 0.1 + (i % 3) * 30} ${y} L ${leaf.width * 0.8 - (i % 4) * 25} ${y} `;
-                                }
-                                return d;
-                            }
-                        }
-                    }
+                anchors.margins: 3
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: book.direction > 0 ? 0.0 : 1.0; color: Qt.rgba(0, 0, 0, 0.35 * Math.sin(book.turn * Math.PI / 180)) }
+                    GradientStop { position: book.direction > 0 ? 0.6 : 0.4; color: Qt.rgba(0, 0, 0, 0.0) }
                 }
             }
         }
@@ -323,9 +330,12 @@ Item {
         id: page
         property int pageIndex: 0
         property bool isLeft: true
+        // False for the pictures of pages on the turning leaf: nothing on them can be clicked.
+        property bool live: true
+        enabled: live
         readonly property var entries: book.pageApps(page.pageIndex)
-        readonly property bool hasPrevious: page.isLeft && book.spread > 0
-        readonly property bool hasNext: !page.isLeft && book.spread < book.spreads - 1
+        readonly property bool hasPrevious: page.live && page.isLeft && book.spread > 0
+        readonly property bool hasNext: page.live && !page.isLeft && book.spread < book.spreads - 1
 
         Rectangle {
             anchors.fill: parent

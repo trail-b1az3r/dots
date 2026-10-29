@@ -3,7 +3,7 @@
 pkgs: with pkgs; [
   # Basics
   inetutils libnotify dbus xorg.xlsclients bc coreutils cliphist cmake curlFull wget ripgrep jq yq-go rsync
-  xdg-user-dirs foot kitty fish starship eza fontconfig kdePackages.kconfig python3 git gnumake
+  xdg-user-dirs foot alacritty kitty fish starship eza fontconfig kdePackages.kconfig python3 git gnumake
 
   # Audio
   cava pavucontrol playerctl libdbusmenu-gtk3 easyeffects

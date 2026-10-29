@@ -73,6 +73,8 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("usb allow VID:PID ... | --all", "let you open those devices from the browser (a udev rule; asks for sudo)"),
         ("usb remove", "take that rule away again"),
         ("files", "which file manager opens folders; Loaf is Halcyon's (yay -S loaf-fm)"),
+        ("saver on|off|toggle", "super battery saver: 12 fps, 20% brightness, power saver, Wi-Fi only reconnects on wake/lock/unlock"),
+        ("terminal", "which terminal Super + Return opens; Alacritty is Halcyon's (Ctrl+C interrupts, Ctrl+Shift+C copies)"),
         ("files use loaf|dolphin|APP", "open folders in that app from now on"),
         ("audio [--json]", "why headphones, a microphone or the webcam work in KDE but not here: PipeWire, EasyEffects, KDE's leftovers"),
         ("audio fix", "put the session right and restart the sound services and portals (installs what is missing)"),

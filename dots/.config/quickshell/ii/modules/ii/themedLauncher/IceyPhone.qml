@@ -49,7 +49,16 @@ Item {
     // ── Sliding up and away ──────────────────────────────────────────────────
     property real appear: 0
     property bool closing: false
-    Component.onCompleted: openAnim.start()
+    // Back to the home screen, put away. The phone is kept between openings, so this resets it.
+    function open() {
+        closeAnim.stop();
+        closing = false;
+        page = "home";
+        query = "";
+        appear = 0;
+        forceActiveFocus();
+        openAnim.restart();
+    }
     function close() {
         if (closing)
             return;
@@ -57,7 +66,7 @@ Item {
         openAnim.stop();
         closeAnim.start();
     }
-    NumberAnimation { id: openAnim; target: phone; property: "appear"; from: 0; to: 1; duration: 460; easing.type: Easing.OutBack; easing.overshoot: 1.1 }
+    NumberAnimation { id: openAnim; target: phone; property: "appear"; to: 1; duration: 460; easing.type: Easing.OutBack; easing.overshoot: 1.1 }
     SequentialAnimation {
         id: closeAnim
         NumberAnimation { target: phone; property: "appear"; to: 0; duration: 300; easing.type: Easing.InCubic }
