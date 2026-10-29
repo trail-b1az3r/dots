@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from typing import Callable, Optional, Sequence, TextIO
 
 __version__ = "2.0.3"
-__codename__ = "Verdigris Copper"  # VERSION and CODENAME at the repository root; tests keep them the same
+__codename__ = "(Re)polished Copper"  # VERSION and CODENAME at the repository root; tests keep them the same
 
 # ANSI styling. Colour is only used on a terminal that has not asked for
 # none; NO_COLOR is the convention that asks.
