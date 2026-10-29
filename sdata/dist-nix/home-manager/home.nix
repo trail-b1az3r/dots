@@ -117,7 +117,7 @@ quickshell, home_attrs, ... }:
       kdePackages.bluedevil #bluedevil
       #gnome-keyring #gnome-keyring (TODO: Install via system PM instead; should install via nix in future when authentication problem fixed)
       networkmanager #networkmanager
-      kdePackages.plasma-nm #plasma-nm
+      python3Packages.dbus-next libsecret # halcyon.UwU-agent, in place of plasma-nm
       #polkit-kde-agent (TODO: Install via system PM instead; should install via nix in future when authentication problem fixed)
       kdePackages.dolphin #dolphin
       kdePackages.systemsettings #systemsettings

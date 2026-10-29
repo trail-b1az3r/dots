@@ -1,7 +1,7 @@
 groups=(illogical-impulse)
 pkgname=illogical-impulse-kde
 pkgver=1.0
-pkgrel=4
+pkgrel=5
 pkgdesc='Illogical Impulse KDE Dependencies'
 arch=(any)
 license=(None)
@@ -9,7 +9,8 @@ depends=(
   bluedevil
   gnome-keyring
   networkmanager
-  plasma-nm
+  python-dbus-next # halcyon.UwU-agent: Wi-Fi passwords for NetworkManager, in place of plasma-nm
+  libsecret # secret-tool: the UwU vault's key in the keyring
   polkit-kde-agent
   dolphin
   loaf-fm # Halcyon's file manager (AUR); Dolphin stays for KDE's parts and as a fallback

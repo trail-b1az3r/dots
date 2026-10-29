@@ -111,8 +111,10 @@ Tips:
   - Provide executable `gnome-keyring-daemon`, used in Hyprland and Quickshell config.
 - `networkmanager`
   - Basic component.
-- `plasma-nm`
-  - Provide command `kcmshell6 kcm_networkmanagement` used by Quickshell network functionality.
+- `python-dbus-next`, `libsecret`
+  - halcyon.UwU-agent (`halcyon uwu`): NetworkManager's Wi-Fi password agent and the password vault, in place of
+    `plasma-nm`. The network settings button opens `kcmshell6 kcm_networkmanagement` if plasma-nm is still
+    installed, else `nm-connection-editor`, else `nmtui`.
 - `polkit-kde-agent`
   - Basic component.
 - `dolphin`

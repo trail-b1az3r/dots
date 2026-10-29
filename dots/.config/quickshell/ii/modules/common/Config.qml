@@ -260,9 +260,9 @@ Singleton {
             property JsonObject apps: JsonObject {
                 property string bluetooth: "kcmshell6 kcm_bluetooth"
                 property string changePassword: "alacritty --hold -e fish -i -c 'passwd'"
-                property string network: "kcmshell6 kcm_networkmanagement"
+                property string network: "kcmshell6 kcm_networkmanagement 2>/dev/null || nm-connection-editor 2>/dev/null || alacritty -e nmtui"
                 property string manageUser: "kcmshell6 kcm_users"
-                property string networkEthernet: "kcmshell6 kcm_networkmanagement"
+                property string networkEthernet: "kcmshell6 kcm_networkmanagement 2>/dev/null || nm-connection-editor 2>/dev/null || alacritty -e nmtui"
                 property string taskManager: "plasma-systemmonitor --page-name Processes"
                 property string terminal: "alacritty" // This is only for shell actions
                 property string update: "alacritty --hold -e fish -i -c 'pkexec pacman -Syu'"

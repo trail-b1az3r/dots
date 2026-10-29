@@ -113,6 +113,8 @@ hl.on("hyprland.start", function()
         "w=\"${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/default.target.wants\"; " ..
         "rm -f \"$w/halcyon-quickshell.service\" \"$w/halcyon-gpu-guard.service\" \"$w/halcyon-resume.service\"; " ..
         "systemctl --user restart halcyon-quickshell.service halcyon-gpu-guard.service halcyon-resume.service; " ..
+        -- halcyon.UwU-agent: Wi-Fi passwords for NetworkManager, in place of plasma-nm's agent (halcyon uwu).
+        "systemctl --user restart halcyon-uwu-agent.service; " ..
         -- The hourly update check. An install made before it existed, or a timer turned off by mistake, gets it.
         "systemctl --user enable --now halcyon-update.timer >/dev/null 2>&1; " ..
         -- The super battery saver keeps Wi-Fi from reconnecting by itself, so bring it up once after boot.

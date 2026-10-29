@@ -18,7 +18,7 @@ pkgs: with pkgs; [
   wl-clipboard hypridle hyprlock hyprpicker hyprshot
 
   # KDE parts the shell uses
-  kdePackages.bluedevil kdePackages.plasma-nm kdePackages.dolphin kdePackages.systemsettings
+  kdePackages.bluedevil python3Packages.dbus-next libsecret kdePackages.dolphin kdePackages.systemsettings
   kdePackages.polkit-kde-agent-1 networkmanager
 
   # Python for the shell's helpers (uv makes their environment; nix-ld lets its Python run)

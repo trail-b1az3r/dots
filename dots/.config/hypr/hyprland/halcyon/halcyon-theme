@@ -2565,6 +2565,9 @@ def main(argv):
     if argv and argv[0] == "files":
         tool = HERE / "halcyon_file_manager.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
+    if argv and argv[0] == "uwu":
+        tool = HERE / "halcyon_uwu.py"
+        os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and argv[0] == "lost":
         tool = HERE / "halcyon_lost.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])

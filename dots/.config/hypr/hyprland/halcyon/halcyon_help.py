@@ -73,6 +73,7 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("usb allow VID:PID ... | --all", "let you open those devices from the browser (a udev rule; asks for sudo)"),
         ("usb remove", "take that rule away again"),
         ("files", "which file manager opens folders; Loaf is Halcyon's (yay -S loaf-fm)"),
+        ("uwu", "halcyon.UwU-agent: Wi-Fi and web passwords; `uwu web pick` (Super + Alt + P) copies one for 45 s"),
         ("lost", "windows that ended up off every screen; `lost bring` (or Super + Shift + W) brings them back"),
         ("saver on|off|toggle", "super battery saver: 12 fps, 20% brightness, power saver, Wi-Fi only reconnects on wake/lock/unlock"),
         ("terminal", "which terminal Super + Return opens; Alacritty is Halcyon's (Ctrl+C interrupts, Ctrl+Shift+C copies)"),
