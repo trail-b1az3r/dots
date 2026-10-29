@@ -17,6 +17,7 @@ require("hyprland.halcyon.modes")
 require("hyprland.halcyon.carry")
 -- A maximised tiled window hides the others: say so, with a button to bring them back (maximise.lua).
 require("hyprland.halcyon.maximise")
+require("hyprland.halcyon.scratchpad")
 
 -- The active theme's window style, written by halcyon-theme. It exists only
 -- while a theme is active; see `halcyon-theme list`.
