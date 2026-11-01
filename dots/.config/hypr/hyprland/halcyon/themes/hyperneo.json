@@ -1,7 +1,7 @@
 {
   "name": "HyperNeo",
   "description": "macOS-style in ember and neon: a menu bar and a dock, squircle windows with deep soft shadows, springy animations.",
-  "wallpaper": "~/.config/quickshell/ii/assets/images/default_wallpaper.png",
+  "wallpaper": "wallpapers/hyperNeo-alt1-fire.png",
   "seed": "#FF9A5C",
   "scheme": "scheme-fidelity",
   "shell": {
