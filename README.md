@@ -40,7 +40,7 @@ On top of that, Halcyon adds:
 | **Server mode** | One button in **Settings > Halcyon**: no suspend, no automatic lock or screen blanking, until you stop it. [More below.](#server-mode) |
 | **Settings** | One Settings window at a time: opening it again brings it to the monitor you are on. Every section folds shut with a click on its title, and stays that way. |
 | **Keybinds** | Extra shortcuts, listed below. They only use key combinations upstream leaves free. |
-| **hyprland-plus** | The compositor is [hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus): Hyprland 0.56.2 with mini windows, superposition windows, plustile windows and a drag fix. [More below.](#hyprland-plus) |
+| **hyprland-plus** | The compositor is [hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus): Hyprland 0.57.0 with mini windows, superposition windows, plustile windows and a drag fix. [More below.](#hyprland-plus) |
 
 ## Install
 
@@ -117,7 +117,7 @@ If neither works, the installer says so and you switch back with Ctrl+Alt+F1 to 
 
 ## hyprland-plus
 
-[hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus) is Hyprland 0.56.2 with the
+[hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus) is Hyprland 0.57.0 with the
 Halcyon additions. Its own README describes each one. The desktop uses:
 
 - **Mini windows**, `SUPER + CTRL + N`: a window shrinks to a small floating tile. See [Mini windows](#mini-windows).
