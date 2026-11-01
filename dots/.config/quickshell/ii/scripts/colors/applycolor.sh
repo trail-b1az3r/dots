@@ -16,86 +16,95 @@ if [ ! -d "$STATE_DIR"/user/generated ]; then
 fi
 cd "$CONFIG_DIR" || exit
 
-colornames=''
-colorstrings=''
-colorlist=()
-colorvalues=()
-
-colornames=$(cat $STATE_DIR/user/generated/material_colors.scss | cut -d: -f1)
-colorstrings=$(cat $STATE_DIR/user/generated/material_colors.scss | cut -d: -f2 | cut -d ' ' -f2 | cut -d ";" -f1)
-IFS=$'\n'
-colorlist=($colornames)     # Array of color names
-colorvalues=($colorstrings) # Array of color values
-
-apply_kitty() {  
-  # Check if terminal escape sequence template exists
-  if [ ! -f "$SCRIPT_DIR/terminal/kitty-theme.conf" ]; then
-    echo "Template file not found for Kitty theme. Skipping that."
-    return
+render_terminal_template() {
+  local template="$1"
+  local destination="$2"
+  local kind="${3:-text}"
+  if [ ! -f "$template" ]; then
+    echo "Terminal color template not found: $template"
+    return 0
   fi
-  # Without the material colours there is nothing to put in the template, and
-  # writing it out as-is leaves "#$term0 #" placeholders for kitty to reject.
-  if [ "${#colorlist[@]}" -eq 0 ]; then
-    echo "No generated colours yet for Kitty. Skipping that."
-    return
-  fi
-  # Fill a copy, then move it into place, so kitty never reads a half-filled file.
-  mkdir -p "$STATE_DIR"/user/generated/terminal
-  local tmp="$STATE_DIR"/user/generated/terminal/kitty-theme.conf.tmp
-  cp "$SCRIPT_DIR/terminal/kitty-theme.conf" "$tmp"
-  # Apply colors
-  for i in "${!colorlist[@]}"; do
-    sed -i "s/${colorlist[$i]} #/${colorvalues[$i]#\#}/g" "$tmp"
-  done
-  mv "$tmp" "$STATE_DIR"/user/generated/terminal/kitty-theme.conf
+  mkdir -p "$(dirname "$destination")"
+  python3 - "$template" "$destination" "$kind" "$term_alpha" <<'PY'
+import os
+import re
+import sys
+import tempfile
+from pathlib import Path
 
-  # Reload
-  if ! pgrep -f kitty >/dev/null; then
-    return
+source, destination, kind, alpha = sys.argv[1:]
+source = Path(source)
+destination = Path(destination)
+scss = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "quickshell/user/generated/material_colors.scss"
+if not scss.is_file():
+    raise SystemExit(f"No generated Material colors found at {scss}")
+colors = {}
+for line in scss.read_text(encoding="utf-8").splitlines():
+    match = re.match(r"^\$([A-Za-z0-9_]+):\s*(#[0-9A-Fa-f]{6});\s*$", line)
+    if match:
+        colors[match.group(1)] = match.group(2)
+
+text = source.read_text(encoding="utf-8")
+missing = set()
+def replace(match):
+    name = match.group(1)
+    value = colors.get(name)
+    if value is None:
+        missing.add(name)
+        return match.group(0)
+    return value
+
+# Match the complete placeholder literally. This avoids sed treating '$term10'
+# as an end-of-line anchor and leaving invalid '#$term10 #' values behind.
+text = re.sub(r"#\$([A-Za-z0-9_]+) #", replace, text)
+text = text.replace("$alpha", alpha)
+if missing:
+    raise SystemExit("Missing generated color tokens: " + ", ".join(sorted(missing)))
+if re.search(r"#\$[A-Za-z0-9_]+\s*#", text):
+    raise SystemExit("Unexpanded terminal color placeholder remains")
+if kind == "toml":
+    try:
+        import tomllib
+        tomllib.loads(text)
+    except Exception as error:
+        raise SystemExit(f"Generated Alacritty TOML is invalid: {error}")
+destination.parent.mkdir(parents=True, exist_ok=True)
+fd, temporary = tempfile.mkstemp(prefix=destination.name + ".", suffix=".tmp", dir=destination.parent)
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(text)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, destination)
+except BaseException:
+    try:
+        os.unlink(temporary)
+    except FileNotFoundError:
+        pass
+    raise
+PY
+}
+
+apply_kitty() {
+  render_terminal_template "$SCRIPT_DIR/terminal/kitty-theme.conf" \
+    "$STATE_DIR/user/generated/terminal/kitty-theme.conf" text || return
+  if pgrep -f kitty >/dev/null 2>&1; then
+    pkill -USR1 -x kitty 2>/dev/null || true
   fi
-  kill -SIGUSR1 $(pidof kitty)
 }
 
 apply_alacritty() {
-  if [ ! -f "$SCRIPT_DIR/terminal/alacritty-theme.toml" ]; then
-    echo "Template file not found for Alacritty theme. Skipping that."
-    return
-  fi
-  if [ "${#colorlist[@]}" -eq 0 ]; then
-    echo "No generated colours yet for Alacritty. Skipping that."
-    return
-  fi
-  # Fill a copy, then move it into place: Alacritty reloads the moment the file changes.
-  mkdir -p "$STATE_DIR"/user/generated/terminal
-  local tmp="$STATE_DIR"/user/generated/terminal/alacritty-theme.toml.tmp
-  cp "$SCRIPT_DIR/terminal/alacritty-theme.toml" "$tmp"
-  for i in "${!colorlist[@]}"; do
-    sed -i "s/${colorlist[$i]} #/${colorvalues[$i]#\#}/g" "$tmp"
-  done
-  mv "$tmp" "$STATE_DIR"/user/generated/terminal/alacritty-theme.toml
+  render_terminal_template "$SCRIPT_DIR/terminal/alacritty-theme.toml" \
+    "$STATE_DIR/user/generated/terminal/alacritty-theme.toml" toml
 }
 
 apply_anyterm() {
-  # Check if terminal escape sequence template exists
-  if [ ! -f "$SCRIPT_DIR/terminal/sequences.txt" ]; then
-    echo "Template file not found for Terminal. Skipping that."
-    return
-  fi
-  # Copy template
-  mkdir -p "$STATE_DIR"/user/generated/terminal
-  cp "$SCRIPT_DIR/terminal/sequences.txt" "$STATE_DIR"/user/generated/terminal/sequences.txt
-  # Apply colors
-  for i in "${!colorlist[@]}"; do
-    sed -i "s/${colorlist[$i]} #/${colorvalues[$i]#\#}/g" "$STATE_DIR"/user/generated/terminal/sequences.txt
-  done
-
-  sed -i "s/\$alpha/$term_alpha/g" "$STATE_DIR/user/generated/terminal/sequences.txt"
-
+  render_terminal_template "$SCRIPT_DIR/terminal/sequences.txt" \
+    "$STATE_DIR/user/generated/terminal/sequences.txt" text || return
   for file in /dev/pts/*; do
     if [[ $file =~ ^/dev/pts/[0-9]+$ ]]; then
-      {
-      cat "$STATE_DIR"/user/generated/terminal/sequences.txt >"$file"
-      } & disown || true
+      cat "$STATE_DIR/user/generated/terminal/sequences.txt" >"$file" 2>/dev/null &
+      disown || true
     fi
   done
 }
