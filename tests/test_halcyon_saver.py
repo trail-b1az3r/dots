@@ -17,8 +17,6 @@ TERMINAL = HALCYON / "halcyon_terminal.py"
 STUB = """#!/bin/sh
 echo "$(basename "$0") $*" >> "$LOG"
 case "$(basename "$0") $*" in
-  "nmcli -t -f UUID,TYPE,AUTOCONNECT connection show") printf 'aaa:802-11-wireless:yes\\nbbb:802-11-wireless:no\\nccc:802-3-ethernet:yes\\n' ;;
-  "nmcli -t -f DEVICE,TYPE,STATE device") printf 'wlan0:wifi:${WIFI_STATE:-connected}\\neth0:ethernet:connected\\n' ;;
   "brightnessctl -m -c backlight get") echo 742 ;;
   "powerprofilesctl get") echo balanced ;;
 esac
@@ -47,22 +45,18 @@ class SaverTest(unittest.TestCase):
     def test_on_then_off_puts_everything_back(self):
         self.assertEqual(self.saver("on").returncode, 0)
         state = json.loads((self.tmp / "state/halcyon/saver.json").read_text())
-        self.assertEqual(state, {"brightness": "742", "profile": "balanced", "autoconnect": ["aaa"], "max_fps": 12, "disconnected_wifi": ["wlan0"]})
+        self.assertEqual(state, {"brightness": "742", "profile": "balanced", "max_fps": 12})
         calls = self.calls()
         self.assertIn("brightnessctl -q -c backlight set 20%", calls)
         self.assertIn("powerprofilesctl set power-saver", calls)
-        # Only the Wi-Fi network that autoconnected is changed; Ethernet is left alone.
-        self.assertIn("nmcli connection modify aaa connection.autoconnect no", calls)
-        self.assertIn("nmcli device disconnect wlan0", calls)
-        self.assertEqual(state["disconnected_wifi"], ["wlan0"])
-        self.assertFalse(any("modify bbb" in c or "modify ccc" in c for c in calls))
+        # Super Saver must never touch Wi-Fi or NetworkManager.
+        self.assertFalse(any("nmcli" in c for c in calls))
         self.assertIn("hyprctl reload", calls)
 
         self.log.unlink()
         self.assertEqual(self.saver("off").returncode, 0)
         self.assertFalse((self.tmp / "state/halcyon/saver.json").exists())
         calls = self.calls()
-        self.assertIn("nmcli connection modify aaa connection.autoconnect yes", calls)
         self.assertIn("brightnessctl -q -c backlight set 742", calls)
         self.assertIn("powerprofilesctl set balanced", calls)
 
@@ -72,16 +66,9 @@ class SaverTest(unittest.TestCase):
         self.saver("toggle")
         self.assertIn("off", self.saver("status").stdout)
 
-    def test_kick_only_when_on_and_down(self):
-        self.saver("kick", WIFI_STATE="disconnected")
-        self.assertEqual(self.calls(), [])  # off: does nothing at all
-        self.saver("on")
-        self.log.unlink()
-        self.saver("kick", WIFI_STATE="connected")
-        self.assertEqual(self.calls(), ["nmcli -t -f DEVICE,TYPE,STATE device"])  # Wi-Fi up: leaves it
-        self.log.unlink()
-        self.saver("kick", WIFI_STATE="disconnected")
-        self.assertIn("nmcli -t -f DEVICE,TYPE,STATE device", self.calls())
+    def test_kick_is_a_wifi_preserving_noop(self):
+        self.assertEqual(self.saver("kick").returncode, 0)
+        self.assertEqual(self.calls(), [])
 
     def test_compositor_part(self):
         lua = (HALCYON / "saver.lua").read_text()
