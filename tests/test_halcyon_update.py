@@ -115,7 +115,7 @@ class UpdaterTest(unittest.TestCase):
 
     def plus_waiting(self):
         self.lite.write_text(LITE)
-        self.plus = {"PLUS_RC": "10", "PLUS_SAYS": "An update is waiting: installed abc123456, halcyon-0.56.2 is at def456789."}
+        self.plus = {"PLUS_RC": "10", "PLUS_SAYS": "An update is waiting: installed abc123456, main is at def456789."}
 
     def notifications(self):
         if not self.notify_log.exists():
