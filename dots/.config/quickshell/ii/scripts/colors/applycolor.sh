@@ -25,17 +25,17 @@ render_terminal_template() {
     return 0
   fi
   mkdir -p "$(dirname "$destination")"
-  python3 - "$template" "$destination" "$kind" "$term_alpha" <<'PY'
+  python3 - "$template" "$destination" "$kind" "$term_alpha" "$STATE_DIR/user/generated/material_colors.scss" <<'PY'
 import os
 import re
 import sys
 import tempfile
 from pathlib import Path
 
-source, destination, kind, alpha = sys.argv[1:]
+source, destination, kind, alpha, scss = sys.argv[1:]
 source = Path(source)
 destination = Path(destination)
-scss = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "quickshell/user/generated/material_colors.scss"
+scss = Path(scss)
 if not scss.is_file():
     raise SystemExit(f"No generated Material colors found at {scss}")
 colors = {}
