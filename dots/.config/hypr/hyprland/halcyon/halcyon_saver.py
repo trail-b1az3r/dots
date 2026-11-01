@@ -10,9 +10,8 @@ On, it:
     skipped), and turns off animations, blur and shadows (saver.lua, read with the rest of the config);
   * sets the screen to 20% brightness;
   * sets the power-saver power profile;
-  * stops Wi-Fi reconnecting by itself: NetworkManager's autoconnect goes off for every Wi-Fi network. It still
-    connects after boot, waking from suspend, locking and unlocking (`kick`, run from those), and whenever you pick
-    a network yourself.
+  * disconnects active Wi-Fi and stops automatic reconnects. It reconnects after boot, waking from suspend,
+    locking and unlocking (`kick`, run from those), and whenever you pick a network yourself.
 
 Off puts back exactly what it found: the brightness, the profile, and autoconnect on the networks that had it.
 What it found is kept in ~/.local/state/halcyon/saver.json, which is also how saver.lua and the shell know it is on.
@@ -81,8 +80,25 @@ def set_autoconnect(uuids: list[str], on: bool) -> None:
         run(["nmcli", "connection", "modify", uuid, "connection.autoconnect", "yes" if on else "no"])
 
 
-def network_up() -> bool:
-    return run(["nmcli", "-t", "-f", "STATE", "general", "status"]).stdout.strip() == "connected"
+def connected_wifi_devices() -> list[str]:
+    """Wi-Fi interfaces currently connected (ignore Ethernet; it must not suppress a Wi-Fi reconnect)."""
+    if not have("nmcli"):
+        return []
+    out = run(["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device"]).stdout
+    devices = []
+    for line in out.splitlines():
+        parts = line.split(":")
+        if len(parts) >= 3 and parts[1] == "wifi" and parts[2].startswith("connected"):
+            devices.append(parts[0])
+    return devices
+
+
+def disconnect_wifi() -> list[str]:
+    """Disconnect active Wi-Fi links while preserving the radio and saved networks."""
+    devices = connected_wifi_devices()
+    for device in devices:
+        run(["nmcli", "device", "disconnect", device])
+    return devices
 
 
 # ── Brightness and power profile ──────────────────────────────────────────────
@@ -132,6 +148,8 @@ def turn_on() -> int:
     set_brightness(BRIGHTNESS)
     set_profile("power-saver")
     set_autoconnect(found["autoconnect"], False)
+    found["disconnected_wifi"] = disconnect_wifi()
+    save(found)
     reload_compositor()
     notify(f"On: {MAX_FPS} fps, {BRIGHTNESS} brightness, power saver, and Wi-Fi only reconnects when you wake, "
            "lock or unlock the computer, or pick a network.")
@@ -152,8 +170,8 @@ def turn_off() -> int:
 
 
 def kick() -> int:
-    """After boot, waking, locking or unlocking: Wi-Fi comes back once, since it no longer does by itself."""
-    if not is_on() or not have("nmcli") or network_up():
+    """After boot, waking, locking or unlocking: reconnect Wi-Fi once if no Wi-Fi link is active."""
+    if not is_on() or not have("nmcli") or connected_wifi_devices():
         return 0
     subprocess.Popen([str(HERE / "wifi-reconnect")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                      start_new_session=True)
@@ -167,6 +185,8 @@ def status() -> int:
     found = load()
     print("super battery saver  on")
     print(f"  screen             at most {found.get('max_fps', MAX_FPS)} fps, {BRIGHTNESS} brightness")
+    print(f"  Wi-Fi              disconnected {len(found.get('disconnected_wifi') or [])} active link(s); "
+          "reconnects on wake/lock/unlock")
     print(f"  put back when off  brightness {found.get('brightness') or '(unknown)'}, "
           f"profile {found.get('profile') or '(none)'}, "
           f"autoconnect on {len(found.get('autoconnect') or [])} Wi-Fi network(s)")
