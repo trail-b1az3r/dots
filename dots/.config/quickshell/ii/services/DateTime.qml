@@ -11,6 +11,7 @@ import Quickshell.Io
  * A nice wrapper for date and time strings.
  */
 Singleton {
+    id: root
     property var clock: SystemClock {
         id: clock
         precision: {
