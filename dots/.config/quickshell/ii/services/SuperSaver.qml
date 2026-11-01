@@ -8,7 +8,8 @@ import Quickshell.Io
 
 /**
  * The super battery saver (`halcyon saver`, halcyon_saver.py): 12 fps where supported, 20% brightness and the
- * power-saver profile. Wi-Fi is left connected and untouched. It is on while
+ * power-saver profile, slows resource and uptime polling to 15 seconds, and pauses the shell's extra update check. The
+ * systemd update timer continues to work. Wi-Fi is left connected and untouched. It is on while
  * ~/.local/state/halcyon/saver.json exists, which this watches, so a change from the terminal shows here too.
  */
 Singleton {
