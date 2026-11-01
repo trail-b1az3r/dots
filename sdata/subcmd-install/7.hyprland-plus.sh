@@ -7,7 +7,7 @@
 #
 #   HALCYON_HYPRLAND_CONSOLE       console number for the build (default 3)
 #   HALCYON_HYPRLAND_REPO          where the source lives (default ~/hyprland-plus)
-#   HALCYON_HYPRLAND_REF           branch to build (default main (Hyprland 0.57.0.p1))
+#   HALCYON_HYPRLAND_REF           branch to build (default main (Hyprland 0.57.0.p2))
 #   HALCYON_SKIP_HYPRLAND_PLUS=1   leave the packaged Hyprland alone
 #
 # The packaged binary is copied to /usr/bin/hyprland.official before it is removed, so it can
