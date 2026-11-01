@@ -355,7 +355,7 @@
     "xwayland:enabled": "Bool",
     "xwayland:force_zero_scaling": "Bool",
     "xwayland:use_nearest_neighbor": "Bool",
-    "decoration:blur:variant": "String",
+    "decoration:blur:variant": "Int",
     "decoration:blur:proportional": "Bool",
     "decoration:blur:glass:refraction": "Float",
     "decoration:blur:glass:size": "Float",
