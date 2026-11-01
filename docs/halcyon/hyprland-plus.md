@@ -40,11 +40,13 @@ preserves finger navigation while the pen hovers, and reduces spurious DFT pen-b
 Run `sudo touchdctl calibrate` to tune contact bounds for the actual digitizer.
 
 Hyprland Plus supports the pen's eraser button mode, button override and pressure range. It also
-adds `input:tablettool:pressure_curve` (`linear`, `soft`, `firm`, `precision`). Halcyon selects
-`soft` by default, but the non-linear curve is applied only in Krita, GIMP, Inkscape, MyPaint and
-Blender; other apps receive raw hardware pressure. Use `touchdctl pen-buttons` for button mapping
-examples. A handwriting-to-text overlay can be launched with `touchdctl handwriting` when
-`handwrite-input` or `katip-ink` is installed.
+adds `input:tablettool:pressure_curve` (`linear`, `soft`, `firm`, `precision`), plus
+`pressure_speed` and `pressure_tilt` sensitivity controls (0–1). Halcyon selects `soft`, a small
+speed response (0.15) and a subtle tilt response (0.10). These adjustments apply only in Krita,
+GIMP, Inkscape, MyPaint and Blender; other apps receive raw hardware pressure and tilt. Set either
+sensitivity to 0 to disable it. Use `touchdctl pen-buttons` for button mapping examples. A
+handwriting-to-text overlay can be launched with `touchdctl handwriting` when `handwrite-input`
+or `katip-ink` is installed.
 
 The input path stays in the upstream kernel driver and iptsd. touchD does not add a polling loop
 or do recognition work inside the compositor, which keeps expensive handwriting recognition away
