@@ -304,27 +304,59 @@ def app_icons() -> list[str]:
 def special_icon_svg(pack: str, name: str) -> str:
     """Draw a theme-specific terminal or generic application glyph."""
     terminal = name in ("alacritty", "Alacritty")
-    designs = {
-        "icey": ("#5CD6F2", "M20 30h88v68H20z M20 46h88 M40 61l17 12-17 12m29 0h22 M92 18l4 8 8 4-8 4-4 8-4-8-8-4 8-4Z",
-                 "M20 30h88v68H20z M20 46h88 M39 61h18v18H39z M68 61h24v6H68z M68 75h18v5H68z M96 18l3 8 8 3-8 3-3 8-3-8-8-3 8-3Z"),
-        "ink": ("#171717", "M24 26h80v76H24z M24 45h80 M40 61l16 12-16 12m28 0h22 M94 18v18m-9-9h18",
-                "M24 26h80v76H24z M24 45h80 M39 60h20v20H39z M68 60h22v6H68z M68 74h17v6H68z M96 18v18m-9-9h18"),
-        "ink-dark": ("#F7F3EA", "M18 22h92v84H18z M18 43h92 M38 59l18 13-18 13m30 0h25 M94 14v22m-11-11h22",
-                     "M18 22h92v84H18z M18 43h92 M36 58h23v23H36z M68 58h25v7H68z M68 75h19v7H68z M94 14v22m-11-11h22"),
-        "hyperneo": ("M18 30h92v70H18z M18 48h92 M40 63l14 11-14 11m27 0h24 M28 39h3m10 0h3",
-                     "M18 30h92v70H18z M18 48h92 M37 62h20v20H37z M68 62h25v6H68z M68 76h18v6H68z M28 39h3m10 0h3"),
-        "hsr": ("M20 29h88v70H20z M20 45h88 M41 61l16 12-16 12m29 0h20 M96 15l4 12 12 4-12 4-4 12-4-12-12-4 12-4Z",
-                "M20 29h88v70H20z M20 45h88 M38 59h21v21H38z M68 59h24v6H68z M68 74h18v6H68z M96 15l4 12 12 4-12 4-4 12-4-12-12-4 12-4Z"),
-        "fractured-glass": ("M20 28h88v72H20z M20 45h88 M41 60l17 13-17 13m29 0h20 M63 2l-8 26 17 12-12 19",
-                            "M20 28h88v72H20z M20 45h88 M38 59h20v20H38z M68 59h24v6H68z M68 74h18v6H68z M63 2l-8 26 17 12-12 19"),
-        "red-sun": ("M20 29h88v70H20z M20 46h88 M41 61l16 12-16 12m29 0h20 M64 7a18 18 0 1 0 0 36 18 18 0 0 0 0-36",
-                    "M20 29h88v70H20z M20 46h88 M38 60h21v21H38z M68 60h24v6H68z M68 75h18v6H68z M64 7a18 18 0 1 0 0 36 18 18 0 0 0 0-36"),
-        "shattered-glass": ("M20 28h88v72H20z M20 45h88 M41 61l16 12-16 12m29 0h20 M64 1l-8 45 30 16-22 38",
-                            "M20 28h88v72H20z M20 45h88 M38 59h20v20H38z M68 59h24v6H68z M68 74h18v6H68z M64 1l-8 45 30 16-22 38"),
-        "silence": ("M23 31h82v67H23z M23 47h82 M41 63l15 11-15 11m28 0h19 M42 24h8m28 0h8",
-                    "M23 31h82v67H23z M23 47h82 M39 60h20v20H39z M68 60h22v6H68z M68 75h17v5H68z M42 24h8m28 0h8"),
+    accents = {
+        "icey": "#5CD6F2",
+        "ink": "#171717",
+        "ink-dark": "#F7F3EA",
+        "hyperneo": "#FF9A5C",
+        "hsr": "#F2C879",
+        "fractured-glass": "#9CC2FF",
+        "red-sun": "#FF4940",
+        "shattered-glass": "#9ED8FF",
+        "silence": "#FF6B6B",
     }
-    accent, terminal_path, generic_path = designs[pack]
+    designs = {
+        "icey": (
+            "M20 30h88v68H20z M20 46h88 M40 61l17 12-17 12m29 0h22 M92 18l4 8 8 4-8 4-4 8-4-8-8-4 8-4Z",
+            "M20 30h88v68H20z M20 46h88 M39 61h18v18H39z M68 61h24v6H68z M68 75h18v5H68z M96 18l3 8 8 3-8 3-3 8-3-8-8-3 8-3Z",
+        ),
+        "ink": (
+            "M24 26h80v76H24z M24 45h80 M40 61l16 12-16 12m28 0h22 M94 18v18m-9-9h18",
+            "M24 26h80v76H24z M24 45h80 M39 60h20v20H39z M68 60h22v6H68z M68 74h17v6H68z M96 18v18m-9-9h18",
+        ),
+        "ink-dark": (
+            "M18 22h92v84H18z M18 43h92 M38 59l18 13-18 13m30 0h25 M94 14v22m-11-11h22",
+            "M18 22h92v84H18z M18 43h92 M36 58h23v23H36z M68 58h25v7H68z M68 75h19v7H68z M94 14v22m-11-11h22",
+        ),
+        "hyperneo": (
+            "M18 30h92v70H18z M18 48h92 M40 63l14 11-14 11m27 0h24 M28 39h3m10 0h3",
+            "M18 30h92v70H18z M18 48h92 M37 62h20v20H37z M68 62h25v6H68z M68 76h18v6H68z M28 39h3m10 0h3",
+        ),
+        "hsr": (
+            "M20 29h88v70H20z M20 45h88 M41 61l16 12-16 12m29 0h20 M96 15l4 12 12 4-12 4-4 12-4-12-12-4 12-4Z",
+            "M20 29h88v70H20z M20 45h88 M38 59h21v21H38z M68 59h24v6H68z M68 74h18v6H68z M96 15l4 12 12 4-12 4-4 12-4-12-12-4 12-4Z",
+        ),
+        "fractured-glass": (
+            "M20 28h88v72H20z M20 45h88 M41 60l17 13-17 13m29 0h20 M63 2l-8 26 17 12-12 19",
+            "M20 28h88v72H20z M20 45h88 M38 59h20v20H38z M68 59h24v6H68z M68 74h18v6H68z M63 2l-8 26 17 12-12 19",
+        ),
+        "red-sun": (
+            "M20 29h88v70H20z M20 46h88 M41 61l16 12-16 12m29 0h20 M64 7a18 18 0 1 0 0 36 18 18 0 0 0 0-36",
+            "M20 29h88v70H20z M20 46h88 M38 60h21v21H38z M68 60h24v6H68z M68 75h18v6H68z M64 7a18 18 0 1 0 0 36 18 18 0 0 0 0-36",
+        ),
+        "shattered-glass": (
+            "M20 28h88v72H20z M20 45h88 M41 61l16 12-16 12m29 0h20 M64 1l-8 45 30 16-22 38",
+            "M20 28h88v72H20z M20 45h88 M38 59h20v20H38z M68 59h24v6H68z M68 74h18v6H68z M64 1l-8 45 30 16-22 38",
+        ),
+        "silence": (
+            "M23 31h82v67H23z M23 47h82 M41 63l15 11-15 11m28 0h19 M42 24h8m28 0h8",
+            "M23 31h82v67H23z M23 47h82 M39 60h20v20H39z M68 60h22v6H68z M68 75h17v5H68z M42 24h8m28 0h8",
+        ),
+    }
+    if pack not in designs:
+        raise IconError(f"no custom icon design for '{pack}'")
+    accent = accents[pack]
+    terminal_path, generic_path = designs[pack]
     path = terminal_path if terminal else generic_path
     width = "5" if pack == "ink-dark" else "4"
     return f'''<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
