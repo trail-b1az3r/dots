@@ -52,6 +52,14 @@ PACKS = {
 # Which Halcyon theme uses which pack.
 THEME_PACKS = {"after-icey": "icey", "manga-ink": "ink", "manga-ink-dark": "ink-dark"}
 
+# These are drawn by Halcyon rather than recoloured from the current icon
+# theme. The application-x-executable names are the desktop-spec fallback
+# used when an application has no Icon= entry or its icon cannot be found.
+CUSTOM_ICONS = {
+    "alacritty", "Alacritty",
+    "application-x-executable", "application-default-icon", "application-x-desktop",
+}
+
 # Folders and the like, redrawn too, beside every app's icon.
 PLACES = ["folder", "user-home", "user-desktop", "user-trash", "user-trash-full", "folder-documents",
           "folder-download", "folder-music", "folder-pictures", "folder-videos", "folder-templates", "folder-publicshare",
@@ -213,7 +221,49 @@ def app_icons() -> list[str]:
                 icon = match.group(1).strip()
                 if icon and not os.path.isabs(icon):
                     names.add(icon)
+    # A terminal-specific icon plus a deliberate fallback for applications
+    # whose desktop entries omit Icon= or point at an unavailable icon.
+    names.update(CUSTOM_ICONS)
     return sorted(names)
+
+
+def special_icon_svg(pack: str, name: str) -> str:
+    """A Halcyon-drawn app glyph, independent of the upstream icon theme."""
+    if name in ("alacritty", "Alacritty"):
+        if pack == "icey":
+            drawing = """
+  <path d="M25 30h78a7 7 0 0 1 7 7v54a7 7 0 0 1-7 7H25a7 7 0 0 1-7-7V37a7 7 0 0 1 7-7Z"/>
+  <path d="M18 45h92M31 38h2m9 0h2m9 0h2"/>
+  <path d="m43 61 16 12-16 12m28 0h19"/>
+  <path d="m91 18 3 7 7 3-7 3-3 7-3-7-7-3 7-3Z"/>
+"""
+        else:
+            drawing = """
+  <path d="M22 28h84v72H22z"/>
+  <path d="M22 44h84M34 36h1m9 0h1m9 0h1"/>
+  <path d="m40 61 17 12-17 12m29 0h22"/>
+  <path d="M96 18v12m-6-6h12"/>
+"""
+    else:
+        if pack == "icey":
+            drawing = """
+  <path d="M22 30h84v68H22zM22 46h84"/>
+  <path d="M37 60h18v18H37zM66 60h25v5H66zM66 73h18v5H66z"/>
+  <path d="m96 16 3 8 8 3-8 3-3 8-3-8-8-3 8-3Z"/>
+"""
+        else:
+            drawing = """
+  <path d="M24 26h80v76H24zM24 45h80"/>
+  <path d="M38 59h20v20H38zM68 59h22m-22 12h17m-17 8h12"/>
+  <path d="m96 17 3 8 8 3-8 3-3 8-3-8-8-3 8-3Z"/>
+"""
+    stroke = "#FFFFFF"
+    width = "5" if pack == "ink-dark" else "4"
+    return f\'''<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <g fill="none" stroke="{stroke}" stroke-width="{width}" stroke-linecap="round" stroke-linejoin="round">
+    {drawing}
+  </g>
+</svg>\'''
 
 
 # --- making a pack --------------------------------------------------------------------------------------------------
@@ -240,6 +290,11 @@ def make(pack: str, base: str = "", quiet: bool = False) -> dict:
     with tempfile.TemporaryDirectory() as tmp:
         frame = Path(tmp) / "frame.png"
         svg = Path(tmp) / "frame.svg"
+        custom_sources = {}
+        for name in CUSTOM_ICONS:
+            custom_svg = Path(tmp) / f"{name}.svg"
+            custom_svg.write_text(special_icon_svg(pack, name), encoding="utf-8")
+            custom_sources[name] = custom_svg
         svg.write_text(frame_svg(pack), encoding="utf-8")
         done = run([*tool, "-background", "none", str(svg), str(frame)])
         if done.returncode != 0:
@@ -249,7 +304,7 @@ def make(pack: str, base: str = "", quiet: bool = False) -> dict:
             raise IconError(f"ImageMagick could not draw the frame: {done.stderr.strip()[:200]}")
         inner = 70 if pack == "icey" else 66
         for name in [*PLACES, *app_icons()]:
-            source = find_icon(name, order)
+            source = custom_sources.get(name) or find_icon(name, order)
             if not source:
                 missing.append(name)
                 continue
