@@ -11,7 +11,7 @@ CI runs the same script. It checks that:
 - the Halcyon layer is wired in, and the submodule and wallpapers are present;
 - every theme is complete, has readable contrast, and renders to valid Lua
   at every effects level;
-- every setting in the rendered Lua exists in Hyprland 0.56.2 with a value
+- every setting in the rendered Lua exists in Hyprland 0.57.0 with a value
   of the right type, using the option table in `scripts/data/`, which was
   extracted from Hyprland's source;
 - every shell setting a theme changes exists in the shell, with the right type;
