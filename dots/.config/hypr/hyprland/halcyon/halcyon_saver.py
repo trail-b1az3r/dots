@@ -3,7 +3,7 @@
 
     halcyon saver            on or off, and what it changed
     halcyon saver on|off|toggle
-    halcyon saver kick       reconnect Wi-Fi once, if the saver is on and it is down (boot, wake, lock, unlock)
+    halcyon saver kick       compatibility no-op; Wi-Fi is never changed
 
 On, it:
   * draws the screen at most 12 times a second (hyprland-plus's plus:max_fps; with plain Hyprland that part is
