@@ -30,6 +30,14 @@ C.stripFullscreen = hasOption("superposition:over_fullscreen") -- the strip can 
 C.monitorWall = hasOption("plus:monitor_wall")                -- a dragged window stops at the edge of another monitor
 C.maxFps = hasOption("plus:max_fps")                          -- the screen can be drawn less often (battery saver)
 
+-- Renderer capabilities. Motion blur exists in newer builds; blur variants, proportional blur and wobble arrive
+-- with Hyprland 0.57. Keep these separate so older stock and Plus builds never see unknown keys.
+C.motionBlur = hasOption("decoration:motion_blur:enabled")
+C.blurVariant = hasOption("decoration:blur:variant")
+C.blurProportional = hasOption("decoration:blur:proportional")
+C.glow = hasOption("decoration:glow:enabled")
+C.wobble = hasOption("decoration:wobble:enabled")
+
 -- Why a feature is missing, in words, or nil when it is there.
 function C.missing(feature)
     if C[feature] then
