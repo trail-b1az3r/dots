@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Icon packs for the anime themes: `halcyon icons`.
+"""Theme-specific application icon packs for Halcyon: `halcyon icons`.
 
     halcyon icons                      the packs, whether they are made, and the icon theme in use
     halcyon icons make icey|ink|ink-dark [--base THEME]   make (or remake) a pack
@@ -9,10 +9,16 @@
 
 Each pack is made on this computer from the icons you already have, so it covers every app installed, not only a
 list someone drew by hand: each app's own icon is redrawn in the theme's style and set in the theme's frame.
+Alacritty gets a purpose-drawn terminal mark, and iconless apps get a Halcyon generic application fallback.
 
-    icey      After ICEY: a dark navy hexagon with a cyan rim and a gold mark, the icon in cyan light
-    ink       Manga Ink: a paper disc in a thick ink ring with a hard shadow and screentone, the icon inked
-    ink-dark  Manga Ink Dark: the same in negative, paper-white ink on black
+    icey      After ICEY: cyan hexagon and gold mark
+    ink       Manga Ink: paper disc, ink ring and screentone
+    ink-dark  Manga Ink Dark: Manga Ink in negative
+    hyperneo  Ember and neon macOS-style tile
+    hsr       Star Rail: astral gold and lavender orbit
+    fractured-glass / shattered-glass  Two distinct glass-shard designs
+    red-sun   Ember-red solar horizon
+    silence   Minimal black disc with red accents
 
 Icons the pack doesn't redraw come from the theme it was made from (--base, by default the icon theme in use), so
 nothing goes missing. The packs are written to ~/.local/share/icons/Halcyon-*; applying a Halcyon theme with an
