@@ -34,8 +34,8 @@ hl.config({
         rounding = 20,
 
         blur = {
-            size = 12,
-            passes = 4,
+            size = 10,
+            passes = 2,
             vibrancy = 0.6,
             -- Blur behind popups too, so menus read as the same glass as
             -- the panels they open from.
