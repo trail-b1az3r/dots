@@ -7,8 +7,8 @@ import Quickshell
 import Quickshell.Io
 
 /**
- * The super battery saver (`halcyon saver`, halcyon_saver.py): 12 fps, 20% brightness, the power-saver profile, and
- * Wi-Fi that only reconnects after boot, waking, locking, unlocking or when you pick a network. It is on while
+ * The super battery saver (`halcyon saver`, halcyon_saver.py): 12 fps where supported, 20% brightness and the
+ * power-saver profile. Wi-Fi is left connected and untouched. It is on while
  * ~/.local/state/halcyon/saver.json exists, which this watches, so a change from the terminal shows here too.
  */
 Singleton {
