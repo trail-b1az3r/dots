@@ -48,9 +48,25 @@ PACKS = {
     "icey": {"theme": "Halcyon-After-ICEY", "name": "Halcyon After ICEY"},
     "ink": {"theme": "Halcyon-Manga-Ink", "name": "Halcyon Manga Ink"},
     "ink-dark": {"theme": "Halcyon-Manga-Ink-Dark", "name": "Halcyon Manga Ink Dark"},
+    "hyperneo": {"theme": "Halcyon-HyperNeo", "name": "Halcyon HyperNeo"},
+    "hsr": {"theme": "Halcyon-Star-Rail", "name": "Halcyon Star Rail"},
+    "fractured-glass": {"theme": "Halcyon-Fractured-Glass", "name": "Halcyon Fractured Glass"},
+    "red-sun": {"theme": "Halcyon-Red-Sun", "name": "Halcyon Red Sun"},
+    "shattered-glass": {"theme": "Halcyon-Shattered-Glass", "name": "Halcyon Shattered Glass"},
+    "silence": {"theme": "Halcyon-Silence", "name": "Halcyon Silence"},
 }
-# Which Halcyon theme uses which pack.
-THEME_PACKS = {"after-icey": "icey", "manga-ink": "ink", "manga-ink-dark": "ink-dark"}
+# Every built-in Halcyon theme gets its own generated icon pack.
+THEME_PACKS = {
+    "after-icey": "icey",
+    "manga-ink": "ink",
+    "manga-ink-dark": "ink-dark",
+    "hyperneo": "hyperneo",
+    "hsr": "hsr",
+    "fractured-glass": "fractured-glass",
+    "red-sun": "red-sun",
+    "shattered-glass": "shattered-glass",
+    "silence": "silence",
+}
 
 # These are drawn by Halcyon rather than recoloured from the current icon
 # theme. The application-x-executable names are the desktop-spec fallback
