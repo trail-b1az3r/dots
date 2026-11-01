@@ -95,7 +95,8 @@ class LuaCapabilityTests(unittest.TestCase):
             end
             local caps = dofile("{HALCYON}/compositor.lua")
             dofile("{HALCYON}/general.lua")
-            local renderer = {{ motion = false, glow = false, wobble = false, proportional = false, shader = false, pressureCurve = "none" }}
+            local renderer = {{ motion = false, glow = false, wobble = false, proportional = false, shader = false,
+                pressureCurve = "none", pressureSpeed = -1, pressureTilt = -1 }}
             for _, call in ipairs(config_calls) do
                 if call.decoration then
                     if call.decoration.motion_blur then renderer.motion = call.decoration.motion_blur.enabled end
@@ -168,6 +169,7 @@ class LuaCapabilityTests(unittest.TestCase):
     def test_hyprland_057_renderer_features_are_enabled_when_supported(self):
         out = self.run_lua("newest")
         self.assertIn("renderer=motion:true glow:true wobble:true proportional:true shader:true pressureCurve:soft", out)
+        self.assertIn("pressureSpeed:0.15 pressureTilt:0.1", out)
         self.assertIn("pressureCurveSupported=true", out)
 
     def test_no_build_without_get_config_fails(self):
