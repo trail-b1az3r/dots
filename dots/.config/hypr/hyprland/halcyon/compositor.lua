@@ -38,6 +38,7 @@ C.blurProportional = hasOption("decoration:blur:proportional")
 C.shaderBlurBlend = hasOption("render:use_shader_blur_blend")
 C.glow = hasOption("decoration:glow:enabled")
 C.wobble = hasOption("decoration:wobble:enabled")
+C.pressureCurve = hasOption("input:tablettool:pressure_curve")
 
 -- Why a feature is missing, in words, or nil when it is there.
 function C.missing(feature)
