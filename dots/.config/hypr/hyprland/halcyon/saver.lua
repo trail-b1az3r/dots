@@ -17,6 +17,8 @@ hl.config({
     decoration = { blur = { enabled = false }, shadow = { enabled = false } },
 })
 
+hl.config({ misc = { render_unfocused_fps = 10 } })
+
 if C.maxFps then
     hl.config({ plus = { max_fps = tonumber(text:match('"max_fps"%s*:%s*(%d+)')) or 12 } })
 end
