@@ -28,9 +28,9 @@
 set -euo pipefail
 
 REPO_URL="https://github.com/trail-b1az3r/hyprland-plus"
-REF="halcyon-0.56.2"
+REF="main"
 # Bumped with each change, so an old downloaded copy is easy to spot in its output.
-LITE_VERSION="2026-10-22"
+LITE_VERSION="2026-11-01"
 # Where hyprland-plus is installed (the Makefile's PREFIX/bin). Only the tests change it.
 BIN_DIR="${HYPRCTL_LITE_BIN_DIR:-/usr/local/bin}"
 
