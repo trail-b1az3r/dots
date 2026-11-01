@@ -52,7 +52,7 @@ hyprland_plus_commit(){
   fi
 }
 
-# The Hyprland version it is based on ("0.56.2"), for pacman. Falls back to 0.
+# The Hyprland version it is based on ("0.57.0"), for pacman. Falls back to 0.
 hyprland_plus_base_version(){
   local found line
   found="$(hyprland_plus_find)" || { echo 0; return; }
