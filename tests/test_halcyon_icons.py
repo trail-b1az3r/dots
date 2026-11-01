@@ -117,8 +117,19 @@ class IconPackTest(unittest.TestCase):
             icons.restore()
             self.assertEqual(current["name"], "Papirus-Dark")
 
-    def test_themes_with_packs(self):
-        self.assertEqual(icons.THEME_PACKS, {"after-icey": "icey", "manga-ink": "ink", "manga-ink-dark": "ink-dark"})
+    def test_every_builtin_theme_has_its_own_icon_pack(self):
+        self.assertEqual(
+            set(icons.THEME_PACKS),
+            {
+                "after-icey", "manga-ink", "manga-ink-dark", "hyperneo",
+                "hsr", "fractured-glass", "red-sun", "shattered-glass", "silence",
+            },
+        )
+        frames = [icons.frame_svg(pack) for pack in icons.PACKS]
+        self.assertEqual(len(frames), len(set(frames)))
+        for pack in icons.PACKS:
+            self.assertTrue(icons.special_icon_svg(pack, "alacritty").startswith("<svg"))
+            self.assertTrue(icons.special_icon_svg(pack, "application-x-executable").startswith("<svg"))
 
 
 if __name__ == "__main__":
