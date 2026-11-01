@@ -21,13 +21,18 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import Callable, Optional, Sequence, TextIO
 
+_RELEASE_VERSION = "26.11.0.1.3"
+_RELEASE_CODENAME = "(Re)polished Copper"
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[5]
 try:
     __version__ = (_REPOSITORY_ROOT / "VERSION").read_text(encoding="utf-8").strip()
+except OSError:
+    # Installed dotfiles no longer sit inside the source repository.
+    __version__ = _RELEASE_VERSION
+try:
     __codename__ = (_REPOSITORY_ROOT / "CODENAME").read_text(encoding="utf-8").strip()
 except OSError:
-    __version__ = "unknown"
-    __codename__ = "Halcyon"
+    __codename__ = _RELEASE_CODENAME
 
 # ANSI styling. Colour is only used on a terminal that has not asked for
 # none; NO_COLOR is the convention that asks.
