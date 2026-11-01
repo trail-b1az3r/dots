@@ -42,6 +42,7 @@ KDE's compositor, and Hyprland is doing that job instead.
 
 A theme recolours everything, not just the bar:
 
+- **Application icons:** every built-in Halcyon theme has its own generated icon pack. Alacritty gets a custom terminal mark, and apps without a usable icon get Halcyon's generic application symbol. The original icon theme is restored when you leave a theme.
 - **Shell:** its palette goes straight into the Quickshell colours.
 - **Terminals:** its own 16-colour palette.
 - **GTK, Qt/KDE, fuzzel and the lock screen:** generated from the theme's
