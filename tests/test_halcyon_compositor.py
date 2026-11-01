@@ -85,6 +85,7 @@ class LuaCapabilityTests(unittest.TestCase):
                     ["render:use_shader_blur_blend"] = false,
                     ["decoration:glow:enabled"] = false,
                     ["decoration:wobble:enabled"] = false,
+                    ["input:tablettool:pressure_curve"] = "linear",
                 }}
                 hl.get_config = function(key) return known[key] end
             elseif build == "new" then
@@ -92,7 +93,7 @@ class LuaCapabilityTests(unittest.TestCase):
             end
             local caps = dofile("{HALCYON}/compositor.lua")
             dofile("{HALCYON}/general.lua")
-            local renderer = {{ motion = false, glow = false, wobble = false, proportional = false, shader = false }}
+            local renderer = {{ motion = false, glow = false, wobble = false, proportional = false, shader = false, pressureCurve = "none" }}
             for _, call in ipairs(config_calls) do
                 if call.decoration then
                     if call.decoration.motion_blur then renderer.motion = call.decoration.motion_blur.enabled end
@@ -101,6 +102,7 @@ class LuaCapabilityTests(unittest.TestCase):
                     if call.decoration.blur and call.decoration.blur.proportional then renderer.proportional = true end
                 end
                 if call.render and call.render.use_shader_blur_blend then renderer.shader = true end
+                if call.input and call.input.tablettool then renderer.pressureCurve = call.input.tablettool.pressure_curve end
             end
             local rules = dofile("{HALCYON}/rules.lua")
             local report = rules.apply({{
@@ -117,7 +119,7 @@ class LuaCapabilityTests(unittest.TestCase):
             print("dragEdge=" .. tostring(caps.dragEdge) .. " stripFullscreen=" .. tostring(caps.stripFullscreen))
             print("renderer=motion:" .. tostring(renderer.motion) .. " glow:" .. tostring(renderer.glow)
                 .. " wobble:" .. tostring(renderer.wobble) .. " proportional:" .. tostring(renderer.proportional)
-                .. " shader:" .. tostring(renderer.shader))
+                .. " shader:" .. tostring(renderer.shader) .. " pressureCurve:" .. tostring(renderer.pressureCurve))
         """)
         with tempfile.NamedTemporaryFile("w", suffix=".lua", delete=False) as f:
             f.write(script)
@@ -157,7 +159,7 @@ class LuaCapabilityTests(unittest.TestCase):
 
     def test_hyprland_057_renderer_features_are_enabled_when_supported(self):
         out = self.run_lua("newest")
-        self.assertIn("renderer=motion:true glow:true wobble:true proportional:true shader:true", out)
+        self.assertIn("renderer=motion:true glow:true wobble:true proportional:true shader:true pressureCurve:soft", out)
 
     def test_no_build_without_get_config_fails(self):
         for build in ("stock", "old"):
