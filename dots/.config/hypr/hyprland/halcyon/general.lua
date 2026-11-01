@@ -15,6 +15,7 @@ end
 
 local hasBlurVariant = hasOption("decoration:blur:variant")
 local hasBlurProportional = hasOption("decoration:blur:proportional")
+local hasShaderBlurBlend = hasOption("render:use_shader_blur_blend")
 local hasMotionBlur = hasOption("decoration:motion_blur:enabled")
 local hasGlow = hasOption("decoration:glow:enabled")
 local hasWobble = hasOption("decoration:wobble:enabled")
@@ -56,8 +57,11 @@ if hasBlurVariant then
     hl.config({ decoration = { blur = { variant = "kawase" } } })
 end
 
-if hasBlurProportional then
-    hl.config({ decoration = { blur = { proportional = true } } })
+if hasBlurProportional and hasShaderBlurBlend then
+    hl.config({
+        render = { use_shader_blur_blend = true },
+        decoration = { blur = { proportional = true } }
+    })
 end
 
 if hasMotionBlur then
