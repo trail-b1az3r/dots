@@ -20,6 +20,8 @@ local hasMotionBlur = hasOption("decoration:motion_blur:enabled")
 local hasGlow = hasOption("decoration:glow:enabled")
 local hasWobble = hasOption("decoration:wobble:enabled")
 local hasPressureCurve = hasOption("input:tablettool:pressure_curve")
+local hasPressureSpeed = hasOption("input:tablettool:pressure_speed")
+local hasPressureTilt = hasOption("input:tablettool:pressure_tilt")
 
 hl.config({
     general = {
@@ -99,6 +101,10 @@ end
 
 -- The compositor applies the non-linear curve only inside supported painting apps.
 -- Text input, handwriting and ordinary desktop interactions keep raw pen pressure.
-if hasPressureCurve then
-    hl.config({ input = { tablettool = { pressure_curve = "soft" } } })
+if hasPressureCurve or hasPressureSpeed or hasPressureTilt then
+    local tablettool = {}
+    if hasPressureCurve then tablettool.pressure_curve = "soft" end
+    if hasPressureSpeed then tablettool.pressure_speed = 0.15 end
+    if hasPressureTilt then tablettool.pressure_tilt = 0.10 end
+    hl.config({ input = { tablettool = tablettool } })
 end
