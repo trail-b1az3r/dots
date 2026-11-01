@@ -17,6 +17,40 @@ Halcyon additions. Its own README describes each one. The desktop uses:
   off, and Settings > Halcyon > Plus Tiles has it). A click is not a drag, and a window already at the top is left
   alone. `SUPER + F` still toggles fullscreen.
 
+## touchD: Surface touchscreen and pen
+
+hyprland-plus 0.57.0.p2 includes the touchD package in its source tree. touchD uses the upstream
+linux-surface IPTS kernel driver (DKMS when needed) and the iptsd userspace daemon; it is intended
+for Surface Pro 4–6 hardware such as the Surface Pro 5. It is not a second input daemon.
+
+On Arch, build the package from the hyprland-plus checkout:
+
+```sh
+cd touchD
+makepkg -si
+sudo touchdctl profile surface-pro-5
+sudo touchdctl restart
+touchdctl status
+```
+
+Use a linux-surface kernel with matching headers. The IPTS DKMS module requires the kernel-side
+IPTS prerequisite patches; when IPTS is already built into the kernel, the DKMS module is not needed.
+The profile tunes contact size/aspect and position-stability bounds, enables palm classification,
+preserves finger navigation while the pen hovers, and reduces spurious DFT pen-button events.
+Run `sudo touchdctl calibrate` to tune contact bounds for the actual digitizer.
+
+Hyprland Plus supports the pen's eraser button mode, button override and pressure range. It also
+adds `input:tablettool:pressure_curve` (`linear`, `soft`, `firm`, `precision`). Halcyon selects
+`soft` by default, but the non-linear curve is applied only in Krita, GIMP, Inkscape, MyPaint and
+Blender; other apps receive raw hardware pressure. Use `touchdctl pen-buttons` for button mapping
+examples. A handwriting-to-text overlay can be launched with `touchdctl handwriting` when
+`handwrite-input` or `katip-ink` is installed.
+
+The input path stays in the upstream kernel driver and iptsd. touchD does not add a polling loop
+or do recognition work inside the compositor, which keeps expensive handwriting recognition away
+from pointer and rendering event handling. It cannot guarantee zero hardware/firmware stalls on
+every kernel, so keep the linux-surface kernel and iptsd current.
+
 ## Hyprland 0.57 visual effects
 
 Halcyon detects each renderer option with `hl.get_config` before setting it, so stock 0.56 and older Plus builds
