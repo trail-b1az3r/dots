@@ -452,6 +452,7 @@
     "render:async_commit": "Bool",
     "render:not_shown_fifo_lock": "Int",
     "cursor:warp_on_monitor_change": "Int",
-    "debug:invalidate_buffers": "Int"
+    "debug:invalidate_buffers": "Int",
+    "input:tablettool:pressure_curve": "String"
   }
 }
