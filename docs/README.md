@@ -8,4 +8,4 @@ Also on the web: <https://trail-b1az3r.github.io/dots/>.
 | [`illogical-impulse/`](illogical-impulse/README.md) | illogical-impulse, end-4's desktop that Halcyon is built on. Its docs, ported with attribution. |
 
 The Hyprland compositor that Halcyon runs is [hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus). Its docs are
-in its [`docs/`](https://github.com/trail-b1az3r/hyprland-plus/tree/halcyon-0.56.2/docs) folder.
+in its [`docs/`](https://github.com/trail-b1az3r/hyprland-plus/tree/main/docs) folder.
