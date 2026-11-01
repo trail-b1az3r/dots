@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 
 import qs.modules.common
 import qs.modules.common.functions
+import qs.services
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -74,17 +75,19 @@ Singleton {
     }
 
     Timer {
-        interval: 30000
+        // The status is only two small local files. Refresh less often while on battery saver.
+        interval: SuperSaver.active ? 300000 : 30000
         running: true
         repeat: true
         triggeredOnStart: true
         onTriggered: root.refresh()
     }
 
-    // A check two minutes after the shell starts, then every three hours; the updater keeps it to one notification.
+    // The systemd timer continues to handle scheduled checks. Pause this extra shell-side check while Super Saver is
+    // active; when it is turned off, check two minutes later and then every three hours.
     Timer {
         interval: 120000
-        running: true
+        running: !SuperSaver.active
         onTriggered: {
             root.check();
             interval = 3 * 60 * 60 * 1000;
