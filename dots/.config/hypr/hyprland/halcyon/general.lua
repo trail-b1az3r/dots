@@ -54,7 +54,8 @@ hl.config({
 -- Acrylic is deliberately not selected: Kawase blur is lighter on integrated
 -- GPUs while still benefiting from proportional blur.
 if hasBlurVariant then
-    hl.config({ decoration = { blur = { variant = 0 -- Kawase } } })
+    -- Kawase is the low-overhead default variant (enum value 0).
+    hl.config({ decoration = { blur = { variant = 0 } } })
 end
 
 if hasBlurProportional and hasShaderBlurBlend then
