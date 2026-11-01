@@ -77,8 +77,8 @@ class SaverTest(unittest.TestCase):
         self.assertIn("if C.maxFps then", lua)
         self.assertIn('require("hyprland.halcyon.saver")', (HALCYON / "init.lua").read_text())
         idle = (ROOT / "dots/.config/hypr/hypridle.conf").read_text()
-        self.assertIn("unlock_cmd = $saver_kick", idle)
-        self.assertIn("$saver_kick", idle.split("after_sleep_cmd")[1].splitlines()[0])
+        self.assertNotIn("$saver_kick", idle)
+        self.assertNotIn("halcyon_saver.py kick", idle)
 
 
 class TerminalTest(unittest.TestCase):
