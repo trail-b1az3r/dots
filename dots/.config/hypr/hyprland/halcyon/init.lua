@@ -117,8 +117,6 @@ hl.on("hyprland.start", function()
         "systemctl --user restart halcyon-uwu-agent.service; " ..
         -- The hourly update check. An install made before it existed, or a timer turned off by mistake, gets it.
         "systemctl --user enable --now halcyon-update.timer >/dev/null 2>&1; " ..
-        -- The super battery saver keeps Wi-Fi from reconnecting by itself, so bring it up once after boot.
-        "$HOME/.config/hypr/hyprland/halcyon/halcyon_saver.py kick; " ..
         -- Server mode (Settings > Halcyon) stays on across restarts.
         "$HOME/.config/hypr/hyprland/halcyon/halcyon_server.py apply")
 end)
