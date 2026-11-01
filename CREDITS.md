@@ -23,8 +23,8 @@ The dots are licensed under the GPL-3.0, like upstream. See [LICENSE](LICENSE).
 ## Hyprland and hyprland-plus
 
 - **[Hyprland](https://github.com/hyprwm/Hyprland)** is by vaxerski and the Hyprland contributors, BSD-3-Clause.
-- **[hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus)** is Hyprland 0.56.2 with the Halcyon
-  additions. Its own [CREDITS.md](https://github.com/trail-b1az3r/hyprland-plus/blob/halcyon-0.56.2/CREDITS.md)
+- **[hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus)** is Hyprland 0.57.0 with the Halcyon
+  additions. Its own [CREDITS.md](https://github.com/trail-b1az3r/hyprland-plus/blob/main/CREDITS.md)
   lists the bundled code and its licences.
 
 ## Other projects
