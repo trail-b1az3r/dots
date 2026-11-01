@@ -12,6 +12,14 @@ user_preferences:
   terminal: "alacritty" # alacritty | kitty | foot
   keybindings: "default" # default | vim
 patterns:
+  # Keep the distribution's Fastfetch configuration when it opts out of Halcyon's logo.
+  - from: "dots/.config/fastfetch"
+    to: "$XDG_CONFIG_HOME/fastfetch"
+    mode: "sync"
+    condition:
+      type: "env"
+      name: "HALCYON_FASTFETCH_LOGO_OVERRIDE"
+      value: "1"
   # Always install these files
   - from: "dots/.config/quickshell/ii"
     to: "$XDG_CONFIG_HOME/quickshell/ii"
