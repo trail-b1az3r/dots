@@ -86,6 +86,8 @@ class LuaCapabilityTests(unittest.TestCase):
                     ["decoration:glow:enabled"] = false,
                     ["decoration:wobble:enabled"] = false,
                     ["input:tablettool:pressure_curve"] = "linear",
+                    ["input:tablettool:pressure_speed"] = 0.0,
+                    ["input:tablettool:pressure_tilt"] = 0.0,
                 }}
                 hl.get_config = function(key) return known[key] end
             elseif build == "new" then
@@ -102,7 +104,11 @@ class LuaCapabilityTests(unittest.TestCase):
                     if call.decoration.blur and call.decoration.blur.proportional then renderer.proportional = true end
                 end
                 if call.render and call.render.use_shader_blur_blend then renderer.shader = true end
-                if call.input and call.input.tablettool then renderer.pressureCurve = call.input.tablettool.pressure_curve end
+                if call.input and call.input.tablettool then
+                    renderer.pressureCurve = call.input.tablettool.pressure_curve or renderer.pressureCurve
+                    renderer.pressureSpeed = call.input.tablettool.pressure_speed or renderer.pressureSpeed
+                    renderer.pressureTilt = call.input.tablettool.pressure_tilt or renderer.pressureTilt
+                end
             end
             local rules = dofile("{HALCYON}/rules.lua")
             local report = rules.apply({{
@@ -120,7 +126,8 @@ class LuaCapabilityTests(unittest.TestCase):
             print("pressureCurveSupported=" .. tostring(caps.pressureCurve))
             print("renderer=motion:" .. tostring(renderer.motion) .. " glow:" .. tostring(renderer.glow)
                 .. " wobble:" .. tostring(renderer.wobble) .. " proportional:" .. tostring(renderer.proportional)
-                .. " shader:" .. tostring(renderer.shader) .. " pressureCurve:" .. tostring(renderer.pressureCurve))
+                .. " shader:" .. tostring(renderer.shader) .. " pressureCurve:" .. tostring(renderer.pressureCurve)
+                .. " pressureSpeed:" .. tostring(renderer.pressureSpeed) .. " pressureTilt:" .. tostring(renderer.pressureTilt))
         """)
         with tempfile.NamedTemporaryFile("w", suffix=".lua", delete=False) as f:
             f.write(script)
