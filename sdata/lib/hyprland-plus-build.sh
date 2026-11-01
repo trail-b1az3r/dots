@@ -5,7 +5,7 @@
 # the steps that need root call sudo, and sudo asks for your password on this console.
 #
 #   HALCYON_HYPRLAND_REPO   where the source lives (default ~/hyprland-plus)
-#   HALCYON_HYPRLAND_REF    branch to build (default main; Hyprland 0.57.0.p1)
+#   HALCYON_HYPRLAND_REF    branch to build (default main; Hyprland 0.57.0.p2)
 #
 # Exit status 0 when hyprland-plus is installed. On failure the console stays open until you press Enter,
 # so the error can be read.
