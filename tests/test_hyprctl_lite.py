@@ -32,7 +32,7 @@ exit 0''',
     "make": r'''echo "make $*" >> "$LOG"
 if [ "$3" = all ]; then
   mkdir -p "$2/build/hyprctl"
-  printf '#!/bin/sh\necho "%s"\n' "${FAKE_BUILT:-hyprland-plus 0.57.0.p1 (Hyprland 0.57.0)}" > "$2/build/Hyprland"
+  printf '#!/bin/sh\necho "%s"\n' "${FAKE_BUILT:-hyprland-plus 0.57.0.p2 (Hyprland 0.57.0)}" > "$2/build/Hyprland"
   printf '#!/bin/sh\necho hyprctl\n' > "$2/build/hyprctl/hyprctl"
   chmod +x "$2/build/Hyprland" "$2/build/hyprctl/hyprctl"
 fi
@@ -95,7 +95,7 @@ class HyprctlLiteTest(unittest.TestCase):
         self.assertTrue((self.bin / "Hyprland").is_file())
         self.assertTrue((self.bin / "hyprctl").is_file())
         self.assertEqual(os.readlink(self.bin / "hyprland"), "Hyprland")
-        self.assertIn("hyprland-plus 0.57.0.p1", result.stdout)
+        self.assertIn("hyprland-plus 0.57.0.p2", result.stdout)
 
     def test_an_install_that_is_not_hyprland_plus_fails_loudly(self):
         result = self.run_lite("install", "full", FAKE_BUILT="Hyprland 0.56.2")
