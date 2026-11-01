@@ -5,6 +5,8 @@
 -- Border colours are deliberately not set: they come from the wallpaper
 -- (hyprland/colors.lua, written by matugen) or from the active theme.
 
+local C = require("hyprland.halcyon.compositor")
+
 hl.config({
     general = {
         gaps_in = 5,
@@ -33,3 +35,46 @@ hl.config({
         }
     }
 })
+
+-- Hyprland 0.57 renderer features. Each block is capability-gated so
+-- existing 0.56/stock builds keep loading without unknown-option errors.
+-- Acrylic is deliberately not selected: Kawase blur is lighter on integrated
+-- GPUs while still benefiting from proportional blur.
+if C.blurVariant then
+    hl.config({ decoration = { blur = { variant = "kawase" } } })
+end
+
+if C.blurProportional then
+    hl.config({ decoration = { blur = { proportional = true } } })
+end
+
+if C.motionBlur then
+    hl.config({ decoration = { motion_blur = { enabled = true, samples = 5 } } })
+end
+
+if C.glow then
+    hl.config({
+        decoration = {
+            glow = {
+                enabled = true,
+                range = 8,
+                render_power = 3,
+                color = "rgba(0DB7D455)"
+            }
+        }
+    })
+end
+
+if C.wobble then
+    hl.config({
+        decoration = {
+            wobble = {
+                enabled = true,
+                mesh = 8,
+                stiffness = 220,
+                damping = 18,
+                intensity = 0.14
+            }
+        }
+    })
+end
