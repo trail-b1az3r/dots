@@ -392,10 +392,15 @@ def resolve_wallpaper(theme):
     bundled = THEMES_DIR / path
     if bundled.is_file():
         return bundled
-    # The installer places the repository's wallpapers/ directory in the
-    # user's Pictures/Wallpapers directory. Resolve those assets there too,
-    # rather than silently keeping the previous desktop background.
     if path.parts and path.parts[0] == "wallpapers":
+        # In a source checkout, resolve the same asset from the repository
+        # root. This also lets CI validate the exact image shipped by setup.
+        repository_asset = HERE.parents[4] / "wallpapers" / path.name
+        if repository_asset.is_file():
+            return repository_asset
+        # The installer copies the repository wallpapers into the user's
+        # Pictures/Wallpapers directory. Resolve that installed copy instead
+        # of silently retaining the previous desktop background.
         installed = pictures_directory() / "Wallpapers" / path.name
         if installed.is_file():
             return installed
