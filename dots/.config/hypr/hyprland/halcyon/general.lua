@@ -19,6 +19,7 @@ local hasShaderBlurBlend = hasOption("render:use_shader_blur_blend")
 local hasMotionBlur = hasOption("decoration:motion_blur:enabled")
 local hasGlow = hasOption("decoration:glow:enabled")
 local hasWobble = hasOption("decoration:wobble:enabled")
+local hasPressureCurve = hasOption("input:tablettool:pressure_curve")
 
 hl.config({
     general = {
@@ -94,4 +95,10 @@ if hasWobble then
             }
         }
     })
+end
+
+-- The compositor applies the non-linear curve only inside supported painting apps.
+-- Text input, handwriting and ordinary desktop interactions keep raw pen pressure.
+if hasPressureCurve then
+    hl.config({ input = { tablettool = { pressure_curve = "soft" } } })
 end
