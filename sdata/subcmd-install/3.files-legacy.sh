@@ -10,6 +10,10 @@ case "${SKIP_MISCCONF}" in
   *)
     for i in $(find dots/.config/ -mindepth 1 -maxdepth 1 ! -name 'quickshell' ! -name 'fish' ! -name 'hypr' ! -name 'fontconfig' -exec basename {} \;); do
 #      i="dots/.config/$i"
+      if [[ "$i" == "fastfetch" && "${HALCYON_FASTFETCH_LOGO_OVERRIDE:-1}" == "0" ]]; then
+        echo "[$0]: Keeping the distribution's Fastfetch config (HALCYON_FASTFETCH_LOGO_OVERRIDE=0)"
+        continue
+      fi
       echo "[$0]: Found target: dots/.config/$i"
       if [ -d "dots/.config/$i" ];then install_dir__sync "dots/.config/$i" "$XDG_CONFIG_HOME/$i"
       elif [ -f "dots/.config/$i" ];then install_file "dots/.config/$i" "$XDG_CONFIG_HOME/$i"
