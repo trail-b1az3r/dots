@@ -371,9 +371,35 @@ def load(theme_id):
     return theme
 
 
+def pictures_directory():
+    """Use the same Pictures directory the installer uses for repository wallpapers."""
+    command = shutil.which("xdg-user-dir")
+    if command:
+        try:
+            result = subprocess.run([command, "PICTURES"], capture_output=True, text=True,
+                                    timeout=5, check=False)
+            if result.returncode == 0 and result.stdout.strip():
+                return Path(os.path.expanduser(result.stdout.strip()))
+        except (OSError, subprocess.SubprocessError):
+            pass
+    return HOME / "Pictures"
+
+
 def resolve_wallpaper(theme):
     path = Path(os.path.expanduser(theme["wallpaper"]))
-    return path if path.is_absolute() else THEMES_DIR / path
+    if path.is_absolute():
+        return path
+    bundled = THEMES_DIR / path
+    if bundled.is_file():
+        return bundled
+    # The installer places the repository's wallpapers/ directory in the
+    # user's Pictures/Wallpapers directory. Resolve those assets there too,
+    # rather than silently keeping the previous desktop background.
+    if path.parts and path.parts[0] == "wallpapers":
+        installed = pictures_directory() / "Wallpapers" / path.name
+        if installed.is_file():
+            return installed
+    return bundled
 
 
 # ----------------------------------------------------------------------------
