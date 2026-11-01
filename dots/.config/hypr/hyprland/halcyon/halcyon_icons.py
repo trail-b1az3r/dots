@@ -123,29 +123,81 @@ def frame_svg(pack: str) -> str:
         fill="none" stroke="#5CD6F2" stroke-width="2.4"/>
   <polygon points="64,1 68,5 64,9 60,5" fill="#FFD86B"/>
 </svg>"""
-    ink, paper = (PAPER, "#0D0D0E") if pack == "ink-dark" else (INK, PAPER)
-    dots = []
-    for row in range(0, 9):
-        for col in range(0, 9):
-            x, y = 64 + col * 6 + (row % 2) * 3, 64 + row * 6
-            weight = min(1.0, (x - 64) / 50) * min(1.0, (y - 64) / 50)
-            if weight > 0.08 and (x - 62) ** 2 + (y - 62) ** 2 < 50 ** 2:
-                dots.append(f'<circle cx="{x}" cy="{y}" r="{0.4 + 1.9 * weight:.2f}"/>')
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{SIZE}" height="{SIZE}" viewBox="0 0 128 128">
+    if pack in ("ink", "ink-dark"):
+        ink, paper = (PAPER, "#0D0D0E") if pack == "ink-dark" else (INK, PAPER)
+        dots = []
+        for row in range(0, 9):
+            for col in range(0, 9):
+                x, y = 64 + col * 6 + (row % 2) * 3, 64 + row * 6
+                weight = min(1.0, (x - 64) / 50) * min(1.0, (y - 64) / 50)
+                if weight > 0.08 and (x - 62) ** 2 + (y - 62) ** 2 < 50 ** 2:
+                    dots.append(f'<circle cx="{x}" cy="{y}" r="{0.4 + 1.9 * weight:.2f}"/>')
+        return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{SIZE}" height="{SIZE}" viewBox="0 0 128 128">
   <circle cx="67" cy="67" r="56" fill="{ink}"/>
   <circle cx="62" cy="62" r="56" fill="{paper}" stroke="{ink}" stroke-width="6"/>
   <g fill="{ink}" fill-opacity="0.55">{''.join(dots)}</g>
 </svg>"""
+    if pack == "hyperneo":
+        return """<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <rect x="7" y="7" width="114" height="114" rx="34" fill="#21100F" stroke="#FF9A5C" stroke-width="3"/>
+  <rect x="15" y="15" width="98" height="98" rx="27" fill="none" stroke="#E7BDAA" stroke-opacity=".55"/>
+  <path d="M17 36h94" stroke="#FF9A5C" stroke-width="3"/>
+  <circle cx="27" cy="26" r="3" fill="#FF9A5C"/><circle cx="39" cy="26" r="3" fill="#E7BDAA"/>
+  <path d="M64 2v9m-4-5h8" stroke="#FF9A5C" stroke-width="2"/>
+</svg>"""
+    if pack == "hsr":
+        return """<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <circle cx="64" cy="64" r="57" fill="#10142B" stroke="#F2C879" stroke-width="3"/>
+  <ellipse cx="64" cy="64" rx="48" ry="19" fill="none" stroke="#C8B8FF" stroke-width="2" transform="rotate(-35 64 64)"/>
+  <path d="m64 13 7 20 20 7-20 7-7 20-7-20-20-7 20-7Z" fill="#F2C879"/>
+  <circle cx="100" cy="30" r="4" fill="#C8B8FF"/>
+</svg>"""
+    if pack == "fractured-glass":
+        return """<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <path d="M64 4 116 37 105 99 64 124 12 91 19 30Z" fill="#101522" stroke="#9CC2FF" stroke-width="3"/>
+  <path d="m64 4-4 48 56-15M60 52l45 47M60 52 12 91m48-39 4 72m0-72 52-15" fill="none" stroke="#D6E3FF" stroke-width="2"/>
+  <path d="m60 52 18-21 9 31-27-10Z" fill="#9CC2FF" fill-opacity=".3"/>
+</svg>"""
+    if pack == "red-sun":
+        return """<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <rect x="5" y="5" width="118" height="118" rx="30" fill="#17101D" stroke="#FF4940" stroke-width="3"/>
+  <circle cx="64" cy="57" r="34" fill="none" stroke="#FF6B6B" stroke-width="7"/>
+  <path d="M17 88h94M28 99h72" stroke="#E8B4C6" stroke-width="3" stroke-linecap="round"/>
+  <path d="M64 3v9m-5-5h10" stroke="#FF4940" stroke-width="2"/>
+</svg>"""
+    if pack == "shattered-glass":
+        return """<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <path d="M64 5 119 35 106 101 64 123 9 91 18 29Z" fill="#0D1720" stroke="#9ED8FF" stroke-width="3"/>
+  <path d="m64 5-7 42 35 17-28 59m0-76-46-18m46 18 55-12M57 47 9 91m48-44 49 54" fill="none" stroke="#DEE8F0" stroke-width="2.5"/>
+  <path d="m64 5 14 31-21 11Z" fill="#9ED8FF" fill-opacity=".45"/>
+</svg>"""
+    if pack == "silence":
+        return """<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <circle cx="64" cy="64" r="58" fill="#090708" stroke="#FF6B6B" stroke-width="2"/>
+  <path d="M32 56h64M42 76h44" stroke="#EDE6E6" stroke-opacity=".8" stroke-width="2"/>
+  <circle cx="46" cy="48" r="5" fill="#FF6B6B"/><circle cx="82" cy="48" r="5" fill="#FF6B6B"/>
+</svg>"""
+    raise IconError(f"no frame design for icon pack '{pack}'")
 
 
 # How the app's icon is redrawn: ImageMagick operations on it, alpha kept.
 def recolour(pack: str) -> list[str]:
-    if pack == "icey":
-        # Cyan light: dark parts navy-cyan, light parts near white.
-        return ["-colorspace", "gray", "-level", "0%,88%", "+level-colors", "#1A8FAD,#F4FEFF"]
+    palettes = {
+        "icey": ("#1A8FAD", "#F4FEFF"),
+        "hyperneo": ("#B94E31", "#FFF0E8"),
+        "hsr": ("#8C75D9", "#FFF0C2"),
+        "fractured-glass": ("#527DBB", "#EAF3FF"),
+        "red-sun": ("#A92E38", "#FFE0DA"),
+        "shattered-glass": ("#477E9C", "#E8F7FF"),
+        "silence": ("#B52E3A", "#F3E6E6"),
+    }
     if pack == "ink-dark":
-        return ["-colorspace", "gray", "-level", "30%,75%", "+level-colors", f"{PAPER},#202022"]
-    return ["-colorspace", "gray", "-level", "30%,75%", "+level-colors", f"{INK},#FFFFFF"]
+        dark, light = PAPER, "#202022"
+    elif pack == "ink":
+        dark, light = INK, "#FFFFFF"
+    else:
+        dark, light = palettes[pack]
+    return ["-colorspace", "gray", "-level", "30%,88%", "+level-colors", dark + "," + light]
 
 
 # --- finding icons --------------------------------------------------------------------------------------------------
