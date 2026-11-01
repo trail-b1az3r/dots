@@ -26,7 +26,7 @@ WindowDialog {
             }
         }
         onExited: (exitCode, exitStatus) => {
-            if (exitCode !== 0 && !root.detailsOutput.length)
+            if (exitCode !== 0 && root.detailsOutput === Translation.tr("Loading connection details…"))
                 root.detailsOutput = Translation.tr("Could not read network details. Check that NetworkManager is running.")
         }
     }
