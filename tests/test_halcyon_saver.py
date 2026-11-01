@@ -47,7 +47,7 @@ class SaverTest(unittest.TestCase):
     def test_on_then_off_puts_everything_back(self):
         self.assertEqual(self.saver("on").returncode, 0)
         state = json.loads((self.tmp / "state/halcyon/saver.json").read_text())
-        self.assertEqual(state, {"brightness": "742", "profile": "balanced", "autoconnect": ["aaa"], "max_fps": 12})
+        self.assertEqual(state, {"brightness": "742", "profile": "balanced", "autoconnect": ["aaa"], "max_fps": 12, "disconnected_wifi": ["wlan0"]})
         calls = self.calls()
         self.assertIn("brightnessctl -q -c backlight set 20%", calls)
         self.assertIn("powerprofilesctl set power-saver", calls)
