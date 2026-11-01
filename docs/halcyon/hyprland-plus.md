@@ -25,7 +25,7 @@ inner glow and restrained window wobble. Kawase remains the blur variant by defa
 than the animated glass variants on integrated GPUs.
 
 Super Saver disables motion blur, glow, wobble, blur, shadows and animations; it also caps unfocused rendering at
-10 FPS and uses the Plus per-monitor 12 FPS cap where available. Wi-Fi is not modified.
+10 FPS and uses the Plus per-monitor 12 FPS cap where available. Resource and uptime sampling slows to 15 seconds, and the shell-side update check pauses while the systemd update timer remains active. Wi-Fi is not modified.
 
 The settings are in `~/.config/hypr/hyprland/halcyon/plus.lua`. They only take effect with the fork, and each option
 added after Plus Tiles is set only when the running build has it, so older hyprland-plus builds load without errors.
