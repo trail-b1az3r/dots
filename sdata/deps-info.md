@@ -113,8 +113,8 @@ Tips:
   - Basic component.
 - `python-dbus-next`, `libsecret`
   - halcyon.UwU-agent (`halcyon uwu`): NetworkManager's Wi-Fi password agent and the password vault, in place of
-    `plasma-nm`. The network settings button opens `kcmshell6 kcm_networkmanagement` if plasma-nm is still
-    installed, else `nm-connection-editor`, else `nmtui`.
+    `plasma-nm`. The network settings button opens `nm-connection-editor` when installed, with `nmtui` as the
+    terminal fallback; it does not depend on KDE's optional `kcm_networkmanagement` plugin.
 - `polkit-kde-agent`
   - Basic component.
 - `dolphin`
