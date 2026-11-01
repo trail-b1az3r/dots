@@ -1,6 +1,6 @@
 # hyprland-plus
 
-[hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus) is Hyprland 0.56.2 with the
+[hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus) is based on Hyprland 0.57.0 and carries the
 Halcyon additions. Its own README describes each one. The desktop uses:
 
 - **Mini windows**, `SUPER + CTRL + N`: a window shrinks to a small floating tile.
@@ -17,22 +17,28 @@ Halcyon additions. Its own README describes each one. The desktop uses:
   off, and Settings > Halcyon > Plus Tiles has it). A click is not a drag, and a window already at the top is left
   alone. `SUPER + F` still toggles fullscreen.
 
+## Hyprland 0.57 visual effects
+
+Halcyon detects each renderer option with `hl.get_config` before setting it, so stock 0.56 and older Plus builds
+never receive unsupported options. On 0.57 builds, it enables proportional blur, five-sample motion blur, a subtle
+inner glow and restrained window wobble. Kawase remains the blur variant by default because it is less demanding
+than the animated glass variants on integrated GPUs.
+
+Super Saver disables motion blur, glow, wobble, blur, shadows and animations; it also caps unfocused rendering at
+10 FPS and uses the Plus per-monitor 12 FPS cap where available. Wi-Fi is not modified.
+
 The settings are in `~/.config/hypr/hyprland/halcyon/plus.lua`. They only take effect with the fork, and each option
-added after Plus Tiles is set only when the running build has it, so an older hyprland-plus loads the config without
-errors (update it with `sudo hyprctl-lite install update` to get them).
+added after Plus Tiles is set only when the running build has it, so older hyprland-plus builds load without errors.
 
 hyprland-plus is not a command. It is Hyprland itself, built with the Halcyon additions, and it takes the place of
 the `Hyprland` program. After installing it, log out and back in and start Hyprland as you always do. To check, run
-`halcyon hyprland`, which says whether you run stock Hyprland, hyprland-plus, or a hyprland-plus built before Plus
-Tiles (that one still has mini windows and the superposition strip; `sudo hyprctl-lite install update` updates it).
-`hyprctl version` says `hyprland-plus` too. (`hyprctl dots plus` below uses `plus` as the name of a dot set, not a
-command.)
+`halcyon hyprland`, which says whether you run stock Hyprland, hyprland-plus, or an older Plus build.
+`hyprctl version` says `hyprland-plus` too.
 
-On Arch, `./setup install` looks for hyprland-plus however it was installed: the AUR package (see `packaging/aur`
-in the fork), or a build in `/usr/local` from hyprctl-lite or an earlier install. A build that is already up to date
-is not built again; one behind its branch is updated. Otherwise the installer builds the fork on a text console of its
-own and installs it to `/usr/local`, ahead of any packaged Hyprland in PATH. Set `HALCYON_SKIP_HYPRLAND_PLUS=1` to
-skip that, or `HALCYON_REBUILD_HYPRLAND_PLUS=1` to rebuild anyway.
+On Arch, `./setup install` looks for hyprland-plus however it was installed: the AUR package, or a build in
+`/usr/local` from hyprctl-lite or an earlier install. The installer builds the maintained `main` branch (0.57.0.p1)
+on a text console and installs it to `/usr/local`, ahead of any packaged Hyprland in PATH. Set
+`HALCYON_SKIP_HYPRLAND_PLUS=1` to skip that, or `HALCYON_REBUILD_HYPRLAND_PLUS=1` to rebuild anyway.
 
 You do not need the stock `hyprland` package. pacman does not know about `/usr/local`, so when nothing in pacman
 provides `hyprland`, the installer (and hyprctl-lite) adds a small empty package, `hyprland-plus-local`, that does.
@@ -76,7 +82,7 @@ repository says it was archived in March 2026 and is now maintained at
 
 A `.dhyprsave` is a gzipped tar. It holds the entries of `~/.config` that the dot sets install, as they are now.
 It also holds the `.local` files the config refers to: scripts in `~/.local/bin`, fonts, icons and themes, and the
-Halcyon state files `theme.lua` and `placement.lua`. Nothing else in `~/.local` is saved. Its `manifest.txt` lists
+Halcyon state files `theme.lua` and `placement.lua`. Nothing else in `.local` is saved. Its `manifest.txt` lists
 what it holds.
 
 Loading first backs up the files it replaces to `~/.local/state/halcyon/backups/before-load-<time>`. Each dot set
