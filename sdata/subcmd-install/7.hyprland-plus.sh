@@ -7,7 +7,7 @@
 #
 #   HALCYON_HYPRLAND_CONSOLE       console number for the build (default 3)
 #   HALCYON_HYPRLAND_REPO          where the source lives (default ~/hyprland-plus)
-#   HALCYON_HYPRLAND_REF           branch to build (default halcyon-0.56.2)
+#   HALCYON_HYPRLAND_REF           branch to build (default main (Hyprland 0.57.0.p1))
 #   HALCYON_SKIP_HYPRLAND_PLUS=1   leave the packaged Hyprland alone
 #
 # The packaged binary is copied to /usr/bin/hyprland.official before it is removed, so it can
@@ -33,7 +33,7 @@ function setup_hyprland_plus(){
   local job="$REPO_ROOT/sdata/lib/hyprland-plus-build.sh"
   local console="${HALCYON_HYPRLAND_CONSOLE:-3}"
   local repo="${HALCYON_HYPRLAND_REPO:-$HOME/hyprland-plus}"
-  local ref="${HALCYON_HYPRLAND_REF:-halcyon-0.56.2}"
+  local ref="${HALCYON_HYPRLAND_REF:-main}"
   local url="https://github.com/trail-b1az3r/hyprland-plus"
   local state="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon"
 
