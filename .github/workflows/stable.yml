@@ -103,7 +103,7 @@ jobs:
         run: ./scripts/validate.sh
 
       - name: Build the archive
-        run: ./scripts/release.sh "$VERSION" dist
+        run: bash ./.build.sh "$VERSION" dist
 
       - name: Publish the release
         env:
