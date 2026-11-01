@@ -124,7 +124,9 @@ class LuaCapabilityTests(unittest.TestCase):
             for _, r in ipairs(rules_made) do if r.match.class == "^(kitty)$" then print("kitty_plustile=" .. tostring(r.plustile)) end end
             print("missing_tiles=" .. tostring(caps.missing("tiles")))
             print("dragEdge=" .. tostring(caps.dragEdge) .. " stripFullscreen=" .. tostring(caps.stripFullscreen))
-            print("pressureCurveSupported=" .. tostring(caps.pressureCurve))
+            print("pressureCurveSupported=" .. tostring(caps.pressureCurve)
+                .. " pressureSpeedSupported=" .. tostring(caps.pressureSpeed)
+                .. " pressureTiltSupported=" .. tostring(caps.pressureTilt))
             print("renderer=motion:" .. tostring(renderer.motion) .. " glow:" .. tostring(renderer.glow)
                 .. " wobble:" .. tostring(renderer.wobble) .. " proportional:" .. tostring(renderer.proportional)
                 .. " shader:" .. tostring(renderer.shader) .. " pressureCurve:" .. tostring(renderer.pressureCurve)
@@ -170,7 +172,7 @@ class LuaCapabilityTests(unittest.TestCase):
         out = self.run_lua("newest")
         self.assertIn("renderer=motion:true glow:true wobble:true proportional:true shader:true pressureCurve:soft", out)
         self.assertIn("pressureSpeed:0.15 pressureTilt:0.1", out)
-        self.assertIn("pressureCurveSupported=true", out)
+        self.assertIn("pressureCurveSupported=true pressureSpeedSupported=true pressureTiltSupported=true", out)
 
     def test_no_build_without_get_config_fails(self):
         for build in ("stock", "old"):
