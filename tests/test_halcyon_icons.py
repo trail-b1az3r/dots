@@ -51,6 +51,7 @@ class IconPackTest(unittest.TestCase):
         (apps / "firefox.desktop").write_text("[Desktop Entry]\nName=Firefox\nIcon=firefox\n")
         (apps / "hidden.desktop").write_text("[Desktop Entry]\nName=Hidden\nIcon=hidden-app\nNoDisplay=true\n")
         (apps / "gone.desktop").write_text("[Desktop Entry]\nName=Gone\nIcon=no-such-icon\n")
+        (apps / "iconless.desktop").write_text("[Desktop Entry]\nName=Iconless app\n")
         patches = {"DATA": base / "data", "STATE": base / "state", "PREVIOUS": base / "state/before.txt",
                    "ICON_DIRS": [base / "icons"], "PIXMAPS": [], "APP_DIRS": [apps]}
         for name, value in patches.items():
@@ -59,12 +60,25 @@ class IconPackTest(unittest.TestCase):
             self.addCleanup(patcher.stop)
 
     def test_apps_come_from_the_desktop_files_that_show(self):
-        self.assertEqual(icons.app_icons(), ["firefox", "no-such-icon"])
+        self.assertEqual(
+            icons.app_icons(),
+            sorted(["firefox", "no-such-icon", *icons.CUSTOM_ICONS]),
+        )
 
     def test_the_scalable_icon_wins_and_symbolic_ones_are_skipped(self):
         found = icons.find_icon("firefox", icons.search_order("Base"))
         self.assertEqual(found.name, "firefox.svg")
         self.assertIsNone(icons.find_icon("no-such-icon", icons.search_order("Base")))
+
+    def test_custom_app_icons_are_drawn_for_each_halcyon_pack(self):
+        for name in ("alacritty", "application-x-executable"):
+            icey = icons.special_icon_svg("icey", name)
+            ink = icons.special_icon_svg("ink", name)
+            dark = icons.special_icon_svg("ink-dark", name)
+            self.assertIn("<svg", icey)
+            self.assertIn("<path", icey)
+            self.assertNotEqual(icey, ink)
+            self.assertNotEqual(ink, dark)
 
     def test_frames_are_drawn(self):
         self.assertIn("#5CD6F2", icons.frame_svg("icey"))
@@ -77,8 +91,15 @@ class IconPackTest(unittest.TestCase):
         result = icons.make("ink", base="Base", quiet=True)
         out = Path(result["path"])
         made = sorted(p.name for p in (out / "128x128/apps").glob("*.png"))
-        self.assertEqual(made, ["firefox.png", "folder.png"])
-        self.assertEqual(result["icons"], 2)
+        self.assertEqual(
+            made,
+            sorted([
+                "Alacritty.png", "alacritty.png", "application-default-icon.png",
+                "application-x-desktop.png", "application-x-executable.png",
+                "firefox.png", "folder.png",
+            ]),
+        )
+        self.assertEqual(result["icons"], 7)
         index = (out / "index.theme").read_text()
         self.assertIn("Inherits=Base,hicolor", index)
         self.assertEqual(out.name, "Halcyon-Manga-Ink")
