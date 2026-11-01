@@ -95,7 +95,7 @@ class HyprctlLiteTest(unittest.TestCase):
         self.assertTrue((self.bin / "Hyprland").is_file())
         self.assertTrue((self.bin / "hyprctl").is_file())
         self.assertEqual(os.readlink(self.bin / "hyprland"), "Hyprland")
-        self.assertIn("hyprland-plus 0.56.2.p3", result.stdout)
+        self.assertIn("hyprland-plus 0.57.0.p1", result.stdout)
 
     def test_an_install_that_is_not_hyprland_plus_fails_loudly(self):
         result = self.run_lite("install", "full", FAKE_BUILT="Hyprland 0.56.2")
