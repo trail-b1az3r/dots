@@ -74,6 +74,7 @@ class SaverTest(unittest.TestCase):
         lua = (HALCYON / "saver.lua").read_text()
         self.assertIn('/halcyon/saver.json', lua)
         self.assertIn("max_fps", lua)
+        self.assertIn("render_unfocused_fps = 10", lua)
         self.assertIn("if C.maxFps then", lua)
         self.assertIn('require("hyprland.halcyon.saver")', (HALCYON / "init.lua").read_text())
         idle = (ROOT / "dots/.config/hypr/hypridle.conf").read_text()
