@@ -7,7 +7,7 @@
 #   update check    look for new commits on main; one notification for them, at most one an hour (the default).
 #                   The notification's "Update now" runs apply.
 #   update apply    bring the repository to main, copy the changed dots/ files into $HOME, reload what they change,
-#                   then update hyprland-plus (the Hyprland fork) when its branch has moved on
+#                   then reload Hyprland and restart Quickshell, and update hyprland-plus (the Hyprland fork) when its branch has moved on
 #   update apply halcyon          only Halcyon
 #   update apply hyprland-plus    only hyprland-plus
 #   update status   what is installed, what is waiting, and the last problem
@@ -352,10 +352,13 @@ apply() {
         systemctl --user daemon-reload 2>/dev/null || true
     fi
 
-    # Only what changed is reloaded: Hyprland reads its config once, and the shell's QML is
-    # restarted (not the whole session) so new files are compiled.
-    if (( hypr_changed )) && pgrep -x Hyprland >/dev/null; then
-        hyprctl reload >/dev/null 2>&1 || true
+    # Refresh the desktop after every successful Halcyon file update. Hyprland reloads
+    # configuration in-place; Quickshell is restarted through its user service so all QML
+    # components are recompiled. Neither operation logs the user out or kills applications.
+    if command -v hyprctl >/dev/null 2>&1 && pgrep -x Hyprland >/dev/null 2>&1; then
+        if ! hyprctl reload >/dev/null 2>&1; then
+            notify "Halcyon update" "Files were updated, but Hyprland could not reload. Run: hyprctl reload" -u normal
+        fi
     fi
     # A theme applied before this update may have gained settings (Red Sun turning on the revolver) or a new name;
     # apply it again so they take effect. With no theme on, this just rewrites the browser themes.
@@ -374,8 +377,11 @@ apply() {
     notify "Halcyon updated" "$body"
     [[ "$what" == all ]] && plus_apply
     # Last, since restarting the shell ends a run that the shell itself started.
-    if (( shell_changed )) && systemctl --user is-active --quiet halcyon-quickshell.service 2>/dev/null; then
-        systemctl --user restart halcyon-quickshell.service || true
+    if command -v systemctl >/dev/null 2>&1 &&
+       systemctl --user is-active --quiet halcyon-quickshell.service 2>/dev/null; then
+        if ! systemctl --user restart halcyon-quickshell.service; then
+            notify "Halcyon update" "Files were updated, but Quickshell could not restart. Run: systemctl --user restart halcyon-quickshell.service" -u normal
+        fi
     fi
 }
 
