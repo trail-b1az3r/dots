@@ -32,7 +32,7 @@ exit 0''',
     "make": r'''echo "make $*" >> "$LOG"
 if [ "$3" = all ]; then
   mkdir -p "$2/build/hyprctl"
-  printf '#!/bin/sh\necho "%s"\n' "${FAKE_BUILT:-hyprland-plus 0.56.2.p3 (Hyprland 0.56.2)}" > "$2/build/Hyprland"
+  printf '#!/bin/sh\necho "%s"\n' "${FAKE_BUILT:-hyprland-plus 0.57.0.p1 (Hyprland 0.57.0)}" > "$2/build/Hyprland"
   printf '#!/bin/sh\necho hyprctl\n' > "$2/build/hyprctl/hyprctl"
   chmod +x "$2/build/Hyprland" "$2/build/hyprctl/hyprctl"
 fi
@@ -43,7 +43,7 @@ args="$*"
 case "$args" in
   *"rev-parse --short HEAD"*) echo "${FAKE_HEAD:0:7}" ;;
   *"rev-parse HEAD"*) echo "$FAKE_HEAD" ;;
-  *"ls-remote"*) printf '%s\trefs/heads/halcyon-0.56.2\n' "$FAKE_HEAD" ;;
+  *"ls-remote"*) printf '%s\trefs/heads/main\n' "$FAKE_HEAD" ;;
   *" log "*) echo "2222222 Drop at the top to fullscreen" ;;
   *"clone"*) mkdir -p "${@: -1}/.git" ;;
 esac
@@ -119,7 +119,7 @@ class HyprctlLiteTest(unittest.TestCase):
         result = self.run_lite("install", "update", head=NEW)
         self.assertEqual(result.returncode, 0, result.stderr)
         log = self.log.read_text()
-        self.assertIn("pull --ff-only origin halcyon-0.56.2", log)
+        self.assertIn("pull --ff-only origin main", log)
         self.assertIn(f"log --oneline --no-decorate {OLD[:7]}..{NEW}", log)
         self.assertIn("Drop at the top to fullscreen", result.stdout)
         self.assertIn("all", [line.split()[-1] for line in log.splitlines() if line.startswith("make")])
