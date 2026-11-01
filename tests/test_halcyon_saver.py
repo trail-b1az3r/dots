@@ -18,7 +18,7 @@ STUB = """#!/bin/sh
 echo "$(basename "$0") $*" >> "$LOG"
 case "$(basename "$0") $*" in
   "nmcli -t -f UUID,TYPE,AUTOCONNECT connection show") printf 'aaa:802-11-wireless:yes\\nbbb:802-11-wireless:no\\nccc:802-3-ethernet:yes\\n' ;;
-  "nmcli -t -f STATE general status") echo "${NET:-connected}" ;;
+  "nmcli -t -f DEVICE,TYPE,STATE device") printf 'wlan0:wifi:${WIFI_STATE:-connected}\\neth0:ethernet:connected\\n' ;;
   "brightnessctl -m -c backlight get") echo 742 ;;
   "powerprofilesctl get") echo balanced ;;
 esac
@@ -53,6 +53,8 @@ class SaverTest(unittest.TestCase):
         self.assertIn("powerprofilesctl set power-saver", calls)
         # Only the Wi-Fi network that autoconnected is changed; Ethernet is left alone.
         self.assertIn("nmcli connection modify aaa connection.autoconnect no", calls)
+        self.assertIn("nmcli device disconnect wlan0", calls)
+        self.assertEqual(state["disconnected_wifi"], ["wlan0"])
         self.assertFalse(any("modify bbb" in c or "modify ccc" in c for c in calls))
         self.assertIn("hyprctl reload", calls)
 
@@ -71,12 +73,15 @@ class SaverTest(unittest.TestCase):
         self.assertIn("off", self.saver("status").stdout)
 
     def test_kick_only_when_on_and_down(self):
-        self.saver("kick", NET="disconnected")
-        self.assertNotIn("nmcli -t -f STATE general status", self.calls())   # off: does nothing at all
+        self.saver("kick", WIFI_STATE="disconnected")
+        self.assertEqual(self.calls(), [])  # off: does nothing at all
         self.saver("on")
         self.log.unlink()
-        self.saver("kick", NET="connected")
-        self.assertEqual(self.calls(), ["nmcli -t -f STATE general status"])  # up: leaves it
+        self.saver("kick", WIFI_STATE="connected")
+        self.assertEqual(self.calls(), ["nmcli -t -f DEVICE,TYPE,STATE device"])  # Wi-Fi up: leaves it
+        self.log.unlink()
+        self.saver("kick", WIFI_STATE="disconnected")
+        self.assertIn("nmcli -t -f DEVICE,TYPE,STATE device", self.calls())
 
     def test_compositor_part(self):
         lua = (HALCYON / "saver.lua").read_text()
