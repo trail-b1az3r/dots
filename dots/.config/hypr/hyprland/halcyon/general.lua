@@ -5,7 +5,19 @@
 -- Border colours are deliberately not set: they come from the wallpaper
 -- (hyprland/colors.lua, written by matugen) or from the active theme.
 
-local C = require("hyprland.halcyon.compositor")
+local function hasOption(key)
+    if not (hl and hl.get_config) then
+        return false
+    end
+    local ok, value = pcall(hl.get_config, key)
+    return ok and value ~= nil
+end
+
+local hasBlurVariant = hasOption("decoration:blur:variant")
+local hasBlurProportional = hasOption("decoration:blur:proportional")
+local hasMotionBlur = hasOption("decoration:motion_blur:enabled")
+local hasGlow = hasOption("decoration:glow:enabled")
+local hasWobble = hasOption("decoration:wobble:enabled")
 
 hl.config({
     general = {
@@ -40,19 +52,19 @@ hl.config({
 -- existing 0.56/stock builds keep loading without unknown-option errors.
 -- Acrylic is deliberately not selected: Kawase blur is lighter on integrated
 -- GPUs while still benefiting from proportional blur.
-if C.blurVariant then
+if hasBlurVariant then
     hl.config({ decoration = { blur = { variant = "kawase" } } })
 end
 
-if C.blurProportional then
+if hasBlurProportional then
     hl.config({ decoration = { blur = { proportional = true } } })
 end
 
-if C.motionBlur then
+if hasMotionBlur then
     hl.config({ decoration = { motion_blur = { enabled = true, samples = 5 } } })
 end
 
-if C.glow then
+if hasGlow then
     hl.config({
         decoration = {
             glow = {
@@ -65,7 +77,7 @@ if C.glow then
     })
 end
 
-if C.wobble then
+if hasWobble then
     hl.config({
         decoration = {
             wobble = {
