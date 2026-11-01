@@ -35,6 +35,7 @@ C.maxFps = hasOption("plus:max_fps")                          -- the screen can 
 C.motionBlur = hasOption("decoration:motion_blur:enabled")
 C.blurVariant = hasOption("decoration:blur:variant")
 C.blurProportional = hasOption("decoration:blur:proportional")
+C.shaderBlurBlend = hasOption("render:use_shader_blur_blend")
 C.glow = hasOption("decoration:glow:enabled")
 C.wobble = hasOption("decoration:wobble:enabled")
 
