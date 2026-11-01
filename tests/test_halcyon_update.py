@@ -190,6 +190,35 @@ class UpdaterTest(unittest.TestCase):
 
     # --- apply ----------------------------------------------------------------------------------------------------
 
+    def test_apply_reloads_hyprland_and_restarts_quickshell(self):
+        self.clone()
+        reload_log = self.tmp / "reload.log"
+        (self.bin / "pgrep").write_text("#!/bin/sh\\nexit 0\\n")
+        (self.bin / "hyprctl").write_text(f"#!/bin/sh\\necho hyprland-reload >> '{reload_log}'\\n")
+        (self.bin / "systemctl").write_text(
+            f"#!/bin/sh\\n"
+            f"if [ \\"$3\\" = is-active ]; then exit 0; fi\\n"
+            f"echo \\"$*\\" >> '{reload_log}'\\n"
+        )
+        for name in ("pgrep", "hyprctl", "systemctl"):
+            (self.bin / name).chmod(0o755)
+        self.commit({
+            "dots/.config/hypr/halcyon-test.conf": "hyprland config\\n",
+            "dots/.config/quickshell/halcyon-test.qml": "quickshell config\\n",
+        }, "Desktop config update")
+        done = self.run_update("apply", "halcyon")
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        actions = reload_log.read_text()
+        self.assertIn("hyprland-reload", actions)
+        self.assertIn("--user restart halcyon-quickshell.service", actions)
+
+    def test_wifi_dialog_imports_qtquick_controls(self):
+        dialog = ROOT / "dots/.config/quickshell/ii/modules/ii/sidebarRight/wifiNetworks/WifiDialog.qml"
+        source = dialog.read_text()
+        self.assertIn("import QtQuick.Controls", source)
+        self.assertIn("ScrollView {", source)
+        self.assertIn("TextArea {", source)
+
     def test_apply_copies_the_changed_files(self):
         self.clone()
         self.commit({"dots/.config/halcyon-test/a.txt": "two\n", "dots/.config/halcyon-test/new.txt": "new\n"}, "Two")
