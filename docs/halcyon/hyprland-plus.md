@@ -36,7 +36,7 @@ the `Hyprland` program. After installing it, log out and back in and start Hyprl
 `hyprctl version` says `hyprland-plus` too.
 
 On Arch, `./setup install` looks for hyprland-plus however it was installed: the AUR package, or a build in
-`/usr/local` from hyprctl-lite or an earlier install. The installer builds the maintained `main` branch (0.57.0.p1)
+`/usr/local` from hyprctl-lite or an earlier install. The installer builds the maintained `main` branch (0.57.0.p2)
 on a text console and installs it to `/usr/local`, ahead of any packaged Hyprland in PATH. Set
 `HALCYON_SKIP_HYPRLAND_PLUS=1` to skip that, or `HALCYON_REBUILD_HYPRLAND_PLUS=1` to rebuild anyway.
 
