@@ -20,7 +20,7 @@ import halcyon_config_check as cc  # noqa: E402
 import halcyon_crashes as cr  # noqa: E402
 
 OLD_PLUS = "hyprland-plus 0.56.2.p1 built from branch halcyon-0.56.2 at commit 7dd6020 (Drag fix)."
-NEW_PLUS = "hyprland-plus 0.57.0.p1 (Hyprland 0.57.0) built from branch main at commit 42102df (x)."
+NEW_PLUS = "hyprland-plus 0.57.0.p2 (Hyprland 0.57.0) built from branch main at commit 42102df (x)."
 STOCK = "Hyprland 0.57.0 built from branch  at commit abcdef0 (version: bump)."
 LUA = shutil.which("lua") or shutil.which("lua5.4")
 
