@@ -23,7 +23,7 @@ class InstallTest(unittest.TestCase):
         self.stubs = self.tmp / "stubs"
         self.stubs.mkdir()
 
-    def built(self, version="hyprland-plus 0.57.0.p1 (Hyprland 0.57.0)"):
+    def built(self, version="hyprland-plus 0.57.0.p2 (Hyprland 0.57.0)"):
         for path, text in ((self.repo / "build/Hyprland", f'echo "{version}"'), (self.repo / "build/start/start-hyprland", "true")):
             path.write_text(f"#!/bin/sh\n{text}\n")
             path.chmod(0o755)
