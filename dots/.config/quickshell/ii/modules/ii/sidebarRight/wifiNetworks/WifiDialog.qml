@@ -6,26 +6,52 @@ import qs.modules.common.widgets
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 
 WindowDialog {
     id: root
     backgroundHeight: 600
 
+    property bool showingDetails: false
+    property string detailsOutput: Translation.tr("Loading connection details…")
+
+    Process {
+        id: detailsProcess
+        command: ["nmcli", "-f", "GENERAL,IP4,IP6", "device", "show"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.detailsOutput = text.trim().length
+                    ? text
+                    : Translation.tr("NetworkManager returned no connection details.")
+            }
+        }
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0 && !root.detailsOutput.length)
+                root.detailsOutput = Translation.tr("Could not read network details. Check that NetworkManager is running.")
+        }
+    }
+
     WindowDialogTitle {
-        text: Translation.tr("Connect to Wi-Fi")
+        text: root.showingDetails
+            ? Translation.tr("Network details")
+            : Translation.tr("Connect to Wi-Fi")
     }
+
     WindowDialogSeparator {
-        visible: !Network.wifiScanning
+        visible: !root.showingDetails && !Network.wifiScanning
     }
+
     StyledIndeterminateProgressBar {
-        visible: Network.wifiScanning
+        visible: !root.showingDetails && Network.wifiScanning
         Layout.fillWidth: true
         Layout.topMargin: -8
         Layout.bottomMargin: -8
         Layout.leftMargin: -Appearance.rounding.large
         Layout.rightMargin: -Appearance.rounding.large
     }
+
     ListView {
+        visible: !root.showingDetails
         Layout.fillHeight: true
         Layout.fillWidth: true
         Layout.topMargin: -15
@@ -45,13 +71,41 @@ WindowDialog {
             width: ListView.view.width
         }
     }
+
+    ScrollView {
+        visible: root.showingDetails
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.topMargin: -8
+        Layout.bottomMargin: -8
+
+        TextArea {
+            text: root.detailsOutput
+            readOnly: true
+            selectByMouse: true
+            wrapMode: TextEdit.NoWrap
+            color: Appearance.colors.colOnSurface
+            font.family: "monospace"
+            font.pixelSize: 12
+            background: null
+        }
+    }
+
     WindowDialogSeparator {}
+
     WindowDialogButtonRow {
         DialogButton {
-            buttonText: Translation.tr("Details")
+            buttonText: root.showingDetails
+                ? Translation.tr("Back")
+                : Translation.tr("Details")
             onClicked: {
-                Quickshell.execDetached(["bash", "-c", `${Network.ethernet ? Config.options.apps.networkEthernet : Config.options.apps.network}`]);
-                GlobalStates.sidebarRightOpen = false;
+                if (root.showingDetails) {
+                    root.showingDetails = false;
+                } else {
+                    root.showingDetails = true;
+                    root.detailsOutput = Translation.tr("Loading connection details…");
+                    detailsProcess.running = true;
+                }
             }
         }
 
