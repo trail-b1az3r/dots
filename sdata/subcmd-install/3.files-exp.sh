@@ -106,7 +106,13 @@ should_process_pattern() {
     local type=$(echo "$condition" | yq '.type')
     local value=$(echo "$condition" | yq '.value')
 
-    [[ "$(get_pref "$type")" == "$value" ]]
+    if [[ "$type" == "env" ]]; then
+      local name=$(echo "$condition" | yq -r '.name')
+      local actual="${!name:-1}"
+      [[ "$actual" == "$value" ]]
+    else
+      [[ "$(get_pref "$type")" == "$value" ]]
+    fi
 
   }
 
