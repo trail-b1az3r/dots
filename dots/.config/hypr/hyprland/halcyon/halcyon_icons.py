@@ -259,11 +259,11 @@ def special_icon_svg(pack: str, name: str) -> str:
 """
     stroke = "#FFFFFF"
     width = "5" if pack == "ink-dark" else "4"
-    return f\'''<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
   <g fill="none" stroke="{stroke}" stroke-width="{width}" stroke-linecap="round" stroke-linejoin="round">
     {drawing}
   </g>
-</svg>\'''
+</svg>'''
 
 
 # --- making a pack --------------------------------------------------------------------------------------------------
