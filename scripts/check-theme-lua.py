@@ -6,7 +6,7 @@ values of the wrong shape at runtime: a gradient written as
 "rgba(..) rgba(..) 45deg" parses fine but fails with "invalid color",
 because the Lua config wants { colors = {...}, angle = 45 }. This runs each
 file with a stand-in `hl` that records every setting, then checks each
-one exists in Hyprland 0.56.2 (scripts/data/hyprland-0.56.2-options.json,
+one exists in Hyprland 0.57.0 (scripts/data/hyprland-0.57.0-options.json,
 extracted from its ConfigValues.cpp) with a value of the right type.
 
     check-theme-lua.py FILE...
@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OPTIONS = json.loads((ROOT / "scripts/data/hyprland-0.56.2-options.json").read_text())["options"]
+OPTIONS = json.loads((ROOT / "scripts/data/hyprland-0.57.0-options.json").read_text())["options"]
 # Hyprland's development version adds these; halcyon-theme only emits them
 # after asking the running compositor whether it has them.
 FUTURE = re.compile(r"^decoration:blur:(variant|acrylic:.*)$")
@@ -109,7 +109,7 @@ def check(path):
             known = {k.replace(".", ":"): v for k, v in OPTIONS.items()}
             if key not in known:
                 if not FUTURE.match(key):
-                    problems.append(f"{path}: '{name}' is not a Hyprland 0.56 option")
+                    problems.append(f"{path}: '{name}' is not a Hyprland 0.57 option")
                 continue
             if not check_value(known[key], value):
                 problems.append(f"{path}: '{name}' = {raw} is not a valid {known[key]}")
@@ -143,7 +143,7 @@ def main(paths):
         print(problem, file=sys.stderr)
     if problems:
         return 1
-    print(f"ok: {len(paths)} theme.lua files match Hyprland 0.56.2's options")
+    print(f"ok: {len(paths)} theme.lua files match Hyprland 0.57.0's options")
     return 0
 
 
