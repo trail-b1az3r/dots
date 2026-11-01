@@ -80,7 +80,7 @@ class LuaCapabilityTests(unittest.TestCase):
                     ["binds:drag_fullscreen_edge"] = 0,
                     ["superposition:over_fullscreen"] = true,
                     ["decoration:motion_blur:enabled"] = false,
-                    ["decoration:blur:variant"] = "kawase",
+                    ["decoration:blur:variant"] = 0,
                     ["decoration:blur:proportional"] = false,
                     ["render:use_shader_blur_blend"] = false,
                     ["decoration:glow:enabled"] = false,
@@ -92,7 +92,7 @@ class LuaCapabilityTests(unittest.TestCase):
             end
             local caps = dofile("{HALCYON}/compositor.lua")
             dofile("{HALCYON}/general.lua")
-            local renderer = { motion = false, glow = false, wobble = false, proportional = false, shader = false }
+            local renderer = {{ motion = false, glow = false, wobble = false, proportional = false, shader = false }}
             for _, call in ipairs(config_calls) do
                 if call.decoration then
                     if call.decoration.motion_blur then renderer.motion = call.decoration.motion_blur.enabled end
