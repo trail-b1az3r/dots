@@ -453,6 +453,8 @@
     "render:not_shown_fifo_lock": "Int",
     "cursor:warp_on_monitor_change": "Int",
     "debug:invalidate_buffers": "Int",
-    "input:tablettool:pressure_curve": "String"
+    "input:tablettool:pressure_curve": "String",
+    "input:tablettool:pressure_speed": "Float",
+    "input:tablettool:pressure_tilt": "Float"
   }
 }
