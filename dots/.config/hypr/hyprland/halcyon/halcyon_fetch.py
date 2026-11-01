@@ -17,11 +17,17 @@ import socket
 import subprocess
 import sys
 import time
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Callable, Optional, Sequence, TextIO
 
-__version__ = "2.0.3"
-__codename__ = "(Re)polished Copper"  # VERSION and CODENAME at the repository root; tests keep them the same
+_REPOSITORY_ROOT = Path(__file__).resolve().parents[5]
+try:
+    __version__ = (_REPOSITORY_ROOT / "VERSION").read_text(encoding="utf-8").strip()
+    __codename__ = (_REPOSITORY_ROOT / "CODENAME").read_text(encoding="utf-8").strip()
+except OSError:
+    __version__ = "unknown"
+    __codename__ = "Halcyon"
 
 # ANSI styling. Colour is only used on a terminal that has not asked for
 # none; NO_COLOR is the convention that asks.
