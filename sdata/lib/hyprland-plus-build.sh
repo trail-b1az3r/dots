@@ -5,19 +5,18 @@
 # the steps that need root call sudo, and sudo asks for your password on this console.
 #
 #   HALCYON_HYPRLAND_REPO   where the source lives (default ~/hyprland-plus)
-#   HALCYON_HYPRLAND_REF    branch to build (default halcyon-0.56.2)
+#   HALCYON_HYPRLAND_REF    branch to build (default main; Hyprland 0.57.0.p1)
 #
 # Exit status 0 when hyprland-plus is installed. On failure the console stays open until you press Enter,
 # so the error can be read.
 
 REPO="${HALCYON_HYPRLAND_REPO:-$HOME/hyprland-plus}"
-REF="${HALCYON_HYPRLAND_REF:-halcyon-0.56.2}"
+REF="${HALCYON_HYPRLAND_REF:-main}"
 URL="https://github.com/trail-b1az3r/hyprland-plus"
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon"
 
 LOG="$STATE/hyprland-plus-install.log"
 mkdir -p "$STATE"
-# Everything this console shows also goes to the log, so `halcyon hyprland` can say what happened afterwards.
 exec > >(tee -a "$LOG") 2>&1
 printf '\n# %s: building %s into /usr/local\n' "$(date '+%F %T')" "$REF"
 
@@ -39,14 +38,10 @@ if [[ -d "$REPO/.git" ]]; then
     git -C "$REPO" checkout "$REF" || fail "Could not check out $REF."
     git -C "$REPO" pull --ff-only origin "$REF" || fail "$REPO has local changes that stop the update. Commit or stash them, then run ./setup install again."
 else
-    step "Cloning $URL ($REF) into $REPO"
     git clone --branch "$REF" "$URL" "$REPO" || fail "Could not clone $URL."
 fi
 git -C "$REPO" submodule update --init --recursive || fail "Could not fetch the submodules."
 
-# The libraries hyprland-plus builds against, from its own PKGBUILD. Only the ones not already satisfied (pacman -T
-# counts what other packages provide, so -git variants are left alone). Without them the build stopped at its first
-# step and nothing was installed.
 step "Installing hyprland-plus's build dependencies"
 mapfile -t deps < <(bash -c 'source "$1" >/dev/null 2>&1; printf "%s\n" "${depends[@]}" "${makedepends[@]}"' _ "$REPO/packaging/aur/PKGBUILD")
 mapfile -t missing < <(pacman -T -- "${deps[@]}" 2>/dev/null || true)
@@ -60,8 +55,6 @@ fi
 step "Building hyprland-plus (this takes a while)"
 make -C "$REPO" all || fail "hyprland-plus did not build. Read the first error above."
 
-# The packaged Hyprland is not removed: illogical-impulse-hyprland and others depend on it.
-# hyprland-plus goes to /usr/local/bin, which comes before /usr/bin in PATH, so it is the one that runs.
 if pacman -Q hyprland >/dev/null 2>&1 && [[ -e /usr/bin/hyprland && ! -e /usr/bin/hyprland.official ]]; then
     step "Keeping a copy of the packaged Hyprland binary"
     sudo cp /usr/bin/hyprland /usr/bin/hyprland.official || fail "Could not copy /usr/bin/hyprland."
@@ -75,8 +68,6 @@ if [[ "$(command -v Hyprland)" != /usr/local/bin/Hyprland ]]; then
     printf '\033[33mPATH finds %s first, not /usr/local/bin/Hyprland. Put /usr/local/bin before /usr/bin in PATH.\033[0m\n' "$(command -v Hyprland)"
 fi
 
-# pacman does not know about /usr/local. Without this, packages that depend on hyprland would pull the stock
-# hyprland package in beside the fork.
 source "$(dirname "$(readlink -f "$0")")/hyprland-plus-detect.sh"
 hyprland_plus_register_with_pacman || true
 
