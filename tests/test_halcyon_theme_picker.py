@@ -38,7 +38,7 @@ class PickerDataTest(unittest.TestCase):
         self.assertEqual(done.returncode, 0, done.stderr)
         data = json.loads(done.stdout)
         ids = [t["id"] for t in data["themes"]]
-        for theme_id in ("silence", "manga-ink-dark", "after-icey", "red-sun"):
+        for theme_id in ("silence", "manga-ink-dark", "after-icey", "red-sun", "sao"):
             self.assertIn(theme_id, ids)
         silence = next(t for t in data["themes"] if t["id"] == "silence")
         self.assertEqual(set(silence["colors"]), {"background", "on_background", "surface_container", "primary",
