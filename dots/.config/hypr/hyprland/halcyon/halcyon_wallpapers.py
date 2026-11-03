@@ -43,6 +43,14 @@ CATALOG = {
         "url": "https://motionbgs.com/dl/hd/10303",
         "url_4k": "https://motionbgs.com/dl/4k/10303",
     },
+    "sao-aincrad": {
+        "title": "Sword Art Online — Kirito & Asuna",
+        "theme": "sao",
+        "credit": "fan-made animated artwork, as published on MotionBGs",
+        "page": "https://motionbgs.com/kirito-asuna-sao",
+        "file": "sao-aincrad.mp4",
+        "url": "https://motionbgs.com/dl/hd/7700",
+    },
     "silence": {
         "title": "Silence",
         "theme": "silence",
