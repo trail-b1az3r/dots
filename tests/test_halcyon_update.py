@@ -279,12 +279,27 @@ class UpdaterTest(unittest.TestCase):
         self.assertEqual(self.run_update("apply").returncode, 0)
         self.assertEqual(self.home_file(), "three\n")
 
+    def test_manual_install_bootstraps_and_first_syncs_without_setup(self):
+        # Nexora/manual installs have no repo marker because ./setup install
+        # was never run. The updater should initialize itself and offer a sync.
+        self.commit({"dots/.config/halcyon-test/a.txt": "two\n"}, "Two")
+        checked = self.run_update("check")
+        self.assertEqual(checked.returncode, 0, checked.stderr)
+        self.assertTrue((self.state / "repo").is_file())
+        self.assertEqual(self.waiting(), "1")
+        self.assertIn("first updater sync", checked.stdout)
+        applied = self.run_update("apply", "halcyon")
+        self.assertEqual(applied.returncode, 0, applied.stdout + applied.stderr)
+        self.assertEqual(self.home_file(), "two\n")
+        self.assertTrue((self.state / "installed").is_file())
+        self.assertIsNone(self.waiting())
+
     def test_status_only_reports(self):
-        done = self.run_update("status")   # nothing recorded yet
-        self.assertNotEqual(done.returncode, 0)
-        self.assertIn("No repository is recorded", done.stderr)
+        done = self.run_update("status")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertIn("folder:", done.stdout)
+        self.assertIn("updates waiting: none", done.stdout)
         self.assertEqual(self.notifications(), [])
-        self.assertFalse((self.state / "update-error").exists())
 
     def test_status_says_where_it_stands(self):
         self.clone()
