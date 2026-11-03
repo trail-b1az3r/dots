@@ -28,7 +28,7 @@ Item {
         { title: "Skills", glyph: "S" },
         { title: "Quests", glyph: "Q" },
         { title: "Map", glyph: "M" },
-        { title: "System", glyph: "⚙" }
+        { title: "System", glyph: "X" }
     ]
     property int category: 0
     property int selected: 0
@@ -38,6 +38,7 @@ Item {
     readonly property var visibleApps: category === 0 ? apps : []
 
     function open() {
+        closing = false;
         allApps = host ? host.apps() : [];
         category = 0;
         selected = 0;
