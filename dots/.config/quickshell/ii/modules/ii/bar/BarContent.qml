@@ -19,11 +19,12 @@ Item { // Bar content region
     readonly property int centerSideModuleWidth: (useShortenedForm == 2) ? Appearance.sizes.barCenterSideModuleWidthHellaShortened : (useShortenedForm == 1) ? Appearance.sizes.barCenterSideModuleWidthShortened : Appearance.sizes.barCenterSideModuleWidth
 
     component VerticalBarSeparator: Rectangle {
-        Layout.topMargin: Appearance.sizes.baseBarHeight / 3
-        Layout.bottomMargin: Appearance.sizes.baseBarHeight / 3
+        // Manga Ink: a straight ink rule, the height of the panels, as between manga panels.
+        Layout.topMargin: Appearance.squareBar ? 6 : Appearance.sizes.baseBarHeight / 3
+        Layout.bottomMargin: Appearance.squareBar ? 6 : Appearance.sizes.baseBarHeight / 3
         Layout.fillHeight: true
-        implicitWidth: 1
-        color: Appearance.colors.colOutlineVariant
+        implicitWidth: Appearance.squareBar ? 2 : 1
+        color: Appearance.squareBar ? Appearance.colors.colOnLayer1 : Appearance.colors.colOutlineVariant
     }
 
     // Background shadow
@@ -261,7 +262,7 @@ Item { // Bar content region
                 implicitWidth: indicatorsRowLayout.implicitWidth + 10 * 2
                 implicitHeight: indicatorsRowLayout.implicitHeight + 5 * 2
 
-                buttonRadius: Appearance.rounding.full
+                buttonRadius: Appearance.squareBar ? 0 : Appearance.rounding.full
                 colBackground: barRightSideMouseArea.hovered ? Appearance.colors.colLayer1Hover : ColorUtils.transparentize(Appearance.colors.colLayer1Hover, 1)
                 colBackgroundHover: Appearance.colors.colLayer1Hover
                 colRipple: Appearance.colors.colLayer1Active

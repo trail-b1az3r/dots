@@ -122,12 +122,14 @@ class IconPackTest(unittest.TestCase):
             set(icons.THEME_PACKS),
             {
                 "after-icey", "manga-ink", "manga-ink-dark", "hyperneo",
-                "hsr", "fractured-glass", "red-sun", "shattered-glass", "silence",
+                "hsr", "fractured-glass", "red-sun", "shattered-glass", "silence", "sword-art-online",
             },
         )
         frames = [icons.frame_svg(pack) for pack in icons.PACKS]
         self.assertEqual(len(frames), len(set(frames)))
         for pack in icons.PACKS:
+            # Every pack's recolouring maps the greys onto two colours, whatever its palette holds.
+            self.assertIn("+level-colors", icons.recolour(pack))
             self.assertTrue(icons.special_icon_svg(pack, "alacritty").startswith("<svg"))
             self.assertTrue(icons.special_icon_svg(pack, "application-x-executable").startswith("<svg"))
 

@@ -12,6 +12,9 @@ import "../revolver/RevolverStyles.js" as Styles
  *   ink    Manga Ink's page: paper in a brush ensō with screentone, brush-stroke hands, bold numerals, a blush-pink
  *          heart in the middle, the date in a speech bubble, and a pink second hand with a heart on its tip
  *          (ink-dark, Manga Ink Dark: the same page in negative, paper-white ink on black)
+ *   neo    HyperNeo, a macOS-style widget in ember and neon: a smoked-glass squircle, a neon ring that fills with
+ *          the seconds (ember into rose into violet), crisp hour ticks, white rounded hands with an ember second
+ *          hand, the day above the centre and the time in light digits below it
  *   silence  a black face with a fine red rim that catches light at three and nine, faint dots for the hours,
  *          needle hands, a red hairline for the seconds, an eye with a red iris in the middle, the date below it
  *
@@ -26,6 +29,8 @@ Item {
     property bool showSeconds: true
     property color colAccent: "#5cd6f2"
     property color colAccent2: "#ffd86b"
+    /** The third colour of HyperNeo's ring. */
+    property color colAccent3: "#9b7bff"
     property color colOn: "#e4ecf7"
     property color colBase: "#080d18"
     property string fontFamily: ""
@@ -364,6 +369,143 @@ Item {
                     strokeWidth: -1
                     fillColor: face.paper
                     PathSvg { path: Styles.circle(face.c - 4, face.c - 3, 2) }
+                }
+            }
+        }
+
+        // ── HyperNeo ───────────────────────────────────────────────────────────────
+        Item {
+            anchors.fill: parent
+            visible: face.kind === "neo"
+
+            Shape {
+                anchors.fill: parent
+                // A soft shadow under the tile.
+                ShapePath {
+                    strokeWidth: -1
+                    fillColor: face.withAlpha("#000000", 0.35)
+                    PathSvg { path: Styles.squircle(face.c, face.c + 5, 112, 5) }
+                }
+                // The tile: smoked glass, lit from above.
+                ShapePath {
+                    strokeWidth: 1
+                    strokeColor: face.withAlpha("#ffffff", 0.1)
+                    fillGradient: LinearGradient {
+                        x1: 0; y1: 0; x2: 0; y2: 230
+                        GradientStop { position: 0.0; color: "#2a1c1e" }
+                        GradientStop { position: 1.0; color: "#0c0809" }
+                    }
+                    PathSvg { path: Styles.squircle(face.c, face.c, 112, 5) }
+                }
+                // The track of the ring, faint all the way round.
+                ShapePath {
+                    strokeWidth: -1
+                    fillRule: ShapePath.OddEvenFill
+                    fillColor: face.withAlpha("#ffffff", 0.06)
+                    PathSvg { path: Styles.annulus(face.c, face.c, 94, 99) }
+                }
+                // The seconds (or the minutes) filling it: a glow, then the ring itself.
+                ShapePath {
+                    strokeWidth: -1
+                    fillGradient: ConicalGradient {
+                        centerX: face.c; centerY: face.c
+                        angle: 90
+                        GradientStop { position: 0.0; color: face.withAlpha(face.colAccent, 0.25) }
+                        GradientStop { position: 0.5; color: face.withAlpha(face.colAccent2, 0.25) }
+                        GradientStop { position: 1.0; color: face.withAlpha(face.colAccent3, 0.25) }
+                    }
+                    PathSvg { path: Styles.band(face.c, face.c, 91, 102, -90, -90 + face.sweep * 360) }
+                }
+                ShapePath {
+                    strokeWidth: -1
+                    fillGradient: ConicalGradient {
+                        centerX: face.c; centerY: face.c
+                        angle: 90
+                        GradientStop { position: 0.0; color: face.colAccent }
+                        GradientStop { position: 0.5; color: face.colAccent2 }
+                        GradientStop { position: 1.0; color: face.colAccent3 }
+                    }
+                    PathSvg { path: Styles.band(face.c, face.c, 94, 99, -90, -90 + face.sweep * 360) }
+                }
+                // Hour ticks: long and bright at twelve, three, six and nine.
+                ShapePath {
+                    strokeWidth: 2
+                    strokeColor: face.withAlpha(face.colOn, 0.45)
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    PathSvg { path: [1, 2, 4, 5, 7, 8, 10, 11].map(h => Styles.ticks(face.c, face.c, 80, 85, 1, -90 + h * 30)).join(" ") }
+                }
+                ShapePath {
+                    strokeWidth: 3.2
+                    strokeColor: face.colOn
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    PathSvg { path: Styles.ticks(face.c, face.c, 76, 85, 4, -90) }
+                }
+            }
+
+            Text {
+                x: face.c - width / 2
+                y: 62
+                text: Qt.formatDate(face.now, "ddd").toUpperCase() + " " + face.now.getDate()
+                color: face.colAccent
+                font.family: face.fontFamily
+                font.pixelSize: 12
+                font.weight: Font.DemiBold
+                font.letterSpacing: 2
+            }
+            Text {
+                x: face.c - width / 2
+                y: 140
+                text: face.pad(face.now.getHours()) + ":" + face.pad(face.now.getMinutes())
+                color: face.withAlpha(face.colOn, 0.75)
+                font.family: face.fontFamily
+                font.pixelSize: 22
+                font.weight: Font.Light
+            }
+
+            // Hour and minute hands: white, rounded, with a dark core where they cross the centre.
+            Shape {
+                anchors.fill: parent
+                rotation: face.hourAngle
+                ShapePath {
+                    strokeWidth: 7
+                    strokeColor: face.colOn
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    PathSvg { path: "M 115 115 L 115 62" }
+                }
+            }
+            Shape {
+                anchors.fill: parent
+                rotation: face.minuteAngle
+                ShapePath {
+                    strokeWidth: 5
+                    strokeColor: face.colOn
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    PathSvg { path: "M 115 115 L 115 34" }
+                }
+            }
+            Shape {
+                anchors.fill: parent
+                visible: face.showSeconds
+                rotation: face.secondAngle
+                ShapePath {
+                    strokeWidth: 1.6
+                    strokeColor: face.colAccent
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    PathSvg { path: "M 115 134 L 115 28" }
+                }
+            }
+            Shape {
+                anchors.fill: parent
+                ShapePath {
+                    strokeWidth: 2
+                    strokeColor: face.colAccent
+                    fillColor: "#120c0d"
+                    PathSvg { path: Styles.circle(face.c, face.c, 5) }
                 }
             }
         }

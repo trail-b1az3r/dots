@@ -28,6 +28,7 @@ end
 C.dragEdge = hasOption("binds:drag_fullscreen_edge")           -- drop a dragged window at the top edge: fullscreen
 C.stripFullscreen = hasOption("superposition:over_fullscreen") -- the strip can be kept out of fullscreen windows
 C.monitorWall = hasOption("plus:monitor_wall")                -- a dragged window stops at the edge of another monitor
+C.windowResistance = hasOption("plus:window_resistance")      -- a dragged window stops at screen and window edges
 C.maxFps = hasOption("plus:max_fps")                          -- the screen can be drawn less often (battery saver)
 
 -- Renderer capabilities. Motion blur exists in newer builds; blur variants, proportional blur and wobble arrive

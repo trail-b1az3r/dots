@@ -43,6 +43,19 @@ if caps.monitorWall then
     })
 end
 
+-- Window resistance: a dragged floating window stops at the screen's edges and at other windows' edges until pushed
+-- this many pixels past them. Plain Hyprland has no resistance, so it gets the nearest thing it does have: snapping
+-- to those edges when the window comes within a few pixels of them.
+if caps.windowResistance then
+    hl.config({
+        plus = {
+            window_resistance = 24,
+        },
+    })
+else
+    hl.config({ general = { snap = { enabled = true, window_gap = 12, monitor_gap = 16 } } })
+end
+
 if caps.tiles then
     -- Plus Tiles. These are the defaults, written out so they are easy to find and change in
     -- ~/.config/hypr/custom (anything set there wins).

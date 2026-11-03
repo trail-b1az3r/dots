@@ -123,13 +123,19 @@ Scope { // Scope
                             spacing: 3
                             property real padding: 5
 
-                            VerticalButtonGroup {
-                                Layout.topMargin: Appearance.sizes.hyprlandGapsOut // why does this work
+                            // Minimise all and pin, side by side, sized to the dock's own height so neither sticks out of
+                            // it in any theme (stacked, they were taller than the dock and the pin hung off its bottom).
+                            ButtonGroup {
+                                id: dockControls
+                                readonly property real size: Math.max(24, Math.min(35, dockVisualBackground.height - dockRow.padding * 2))
+                                Layout.alignment: Qt.AlignVCenter
+                                Layout.topMargin: Appearance.sizes.elevationMargin - Appearance.sizes.hyprlandGapsOut
+                                spacing: 3
                                 GroupButton {
                                     // Minimise every window on this workspace, or bring them back.
-                                    baseWidth: 35
-                                    baseHeight: 35
-                                    clickedWidth: baseWidth
+                                    baseWidth: dockControls.size
+                                    baseHeight: dockControls.size
+                                    clickedWidth: baseWidth + 6
                                     clickedHeight: baseHeight
                                     buttonRadius: Appearance.rounding.normal
                                     onClicked: Quickshell.execDetached(["bash", "-c",
@@ -146,10 +152,10 @@ Scope { // Scope
                                 }
                                 GroupButton {
                                     // Pin button
-                                    baseWidth: 35
-                                    baseHeight: 35
-                                    clickedWidth: baseWidth
-                                    clickedHeight: baseHeight + 20
+                                    baseWidth: dockControls.size
+                                    baseHeight: dockControls.size
+                                    clickedWidth: baseWidth + 6
+                                    clickedHeight: baseHeight
                                     buttonRadius: Appearance.rounding.normal
                                     toggled: root.pinned
                                     onClicked: root.pinned = !root.pinned
@@ -158,6 +164,9 @@ Scope { // Scope
                                         horizontalAlignment: Text.AlignHCenter
                                         iconSize: Appearance.font.pixelSize.larger
                                         color: root.pinned ? Appearance.m3colors.m3onPrimary : dockRoot.fg
+                                    }
+                                    StyledToolTip {
+                                        text: root.pinned ? Translation.tr("Unpin the dock") : Translation.tr("Keep the dock shown")
                                     }
                                 }
                             }

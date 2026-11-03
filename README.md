@@ -272,6 +272,7 @@ style, animations, wallpaper and, for some, shell layout and effects:
 | **After ICEY** | `after-icey` | Silver hair, cyan light and ink-dark navy, over the animated *After ICEY* wallpaper (fan art, by way of [MotionBGs](https://motionbgs.com/after-icey)). `halcyon wallpapers get after-icey` fetches it. |
 | **Manga Ink** | `manga-ink` | Black ink on paper with a blush accent, the whole desktop drawn like a manga page: a light theme whose top bar, side panels, cards and dock are all paper panels in thick ink borders, with hard shadows and screentone, over the animated *Anime Girl x Cat* wallpaper by fw_storm ([DesktopHut](https://www.desktophut.com/anime-girl-x-cat-pl2s)). The site gives the file out from its page: download it there, then `halcyon wallpapers import anime-girl-cat FILE`. |
 | **Manga Ink Dark** | `manga-ink-dark` | Manga Ink in negative: paper-white ink on a black page, the blush kept. Its wallpaper is Manga Ink's, inverted on your computer the first time you apply it (light to dark with the colours kept: ffmpeg's `negate,hue=h=180`). The cards, dock, bar, revolver and clock are ink panels with paper lines. |
+| **Sword Art Online** | `sword-art-online` | Aincrad at dusk: slate fog, crimson clouds, and the game's own main menu in place of the overview (below). The menu's orange and white over the animated *Twilight Aincrad* wallpaper (fan art, by way of [MotionBGs](https://motionbgs.com/twilight-aincrad)), fetched when the theme is first applied (1.5 MB; `halcyon wallpapers get twilight-aincrad --4k` for the 4K one). A slate HUD bar and dock with an orange rule, dark cards, and a smoked-glass revolver and clock whose ring runs orange into crimson and silver. |
 | **Silence** | `silence` | Black, and a face in the dark with red eyes. A still wallpaper (from [wallhaven](https://wallhaven.cc/w/6ll7dx), artist unknown), fetched when the theme is first applied. Everything else stays out of its way: near-black cards with a red hairline, a dock with two small red eyes that slowly open and close, a revolver with almond eye chambers and a red-eyed hub, a clock of needles round an eye, and slow, quiet animations. |
 
 ![HyperNeo, Star Rail, Shattered Glass and Fractured Glass, each with its wallpaper, its revolver, and Firefox in its colours](docs/assets/preview-themes.jpg)
@@ -294,6 +295,11 @@ above fetch or import them.</sub>
 
 <sub>Silence and Manga Ink Dark. Wallpapers: Silence's from [wallhaven](https://wallhaven.cc/w/6ll7dx) (artist
 unknown); Manga Ink Dark's is *Anime Girl x Cat* by fw_storm, inverted. Neither is included.</sub>
+
+![Sword Art Online: Aincrad at dusk, the dark cards, the HUD dock and the orange-and-crimson revolver and clock](docs/assets/preview-sao-desktop.jpg)
+
+<sub>Sword Art Online. Wallpaper: *Twilight Aincrad*, fan art via [MotionBGs](https://motionbgs.com/twilight-aincrad);
+not included, fetched when the theme is applied.</sub>
 
 ### Icon packs
 
@@ -958,12 +964,33 @@ cleared again 45 seconds later. `halcyon uwu web add SITE USER` keeps one; `halc
 ## The themes' own app pickers
 
 In Manga Ink and Manga Ink Dark, Super opens a manga book of apps instead of the overview: the cover swings open,
-the apps are printed sixteen to a page, and you turn the pages by clicking the turned-up corner (or the outer margin)
-of the right page to go on and of the left page to go back. In After ICEY it opens a phone with four apps: Apps,
-Auto (type anything: an app, a sum, a command), Theme and Calculator. Typing works in both, and Enter does what the
-top result says. Turn them off in Settings > Halcyon > On the screen.
+the first page is the table of contents, and the apps follow in chapters by type (games, pictures, sound and
+screen, making things, work, the web, tools...), sixteen to a page, each chapter from a new page. Click a chapter in
+the contents to go to it. Turn the pages by clicking the turned-up corner (or the outer margin), or drag a page
+across the book: it follows your hand and turns over when you let go past the middle, or falls back. Double-click
+the empty space below the last row of apps and a tablet drops down over the book with every workspace and its
+apps: click an app to go to it, or hold Shift and drag it onto another workspace (or the empty one at the end) to
+move it there.
+
+In After ICEY it opens a phone with five apps: Apps, Auto (type anything: an app, a sum, a command), Theme,
+Calculator and Spaces. Spaces unfolds the phone like a foldable: a second screen swings open on a hinge beside it,
+with the same workspaces and apps, tap to go, Shift + drag to move. Esc or the fold button folds it shut.
+
+In Sword Art Online it opens the game's main menu: a column of round white buttons drops in, one after another, and
+the chosen one's panel unfolds beside it on a pointer. Status (HP is the battery, MP the free memory), Items (the apps
+by category, a second panel for each), Party (the open windows), Map (the workspaces, as floors), Messages (the
+notifications) and System (Wi-Fi, Bluetooth, do not disturb, Settings, lock, and Log Out, which asks first with the
+game's round ○ and ✕). The player's card stands to the left with the name, the level and the HP bar. Arrows move,
+right and Enter go in, left comes back out.
+
+Typing works in all of them, and Enter does what the top result says. Turn them off in Settings > Halcyon > On the
+screen.
 
 ![The manga book in Manga Ink and Manga Ink Dark, and the After ICEY phone's home, Apps, Auto and Calculator](docs/assets/themed-launchers.jpg)
+
+![2.0.4: the book's contents and its workspace tablet, the After ICEY phone unfolded, and the new HyperNeo clock, revolver and dock](docs/assets/preview-2.0.4.jpg)
+
+![The Sword Art Online menu: Status and Party](docs/assets/preview-sao.jpg)
 
 ## The cheat sheet's Hypr keys page
 

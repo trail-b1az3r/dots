@@ -17,7 +17,7 @@ RippleButton {
 
     implicitHeight: 28
     implicitWidth: row.implicitWidth + 10 * 2
-    buttonRadius: Appearance.rounding.full
+    buttonRadius: Appearance.squareBar ? 0 : Appearance.rounding.full
     colBackground: root.failed ? Appearance.colors.colErrorContainer : Appearance.colors.colPrimaryContainer
     colBackgroundHover: root.failed ? Appearance.colors.colErrorContainerHover : Appearance.colors.colPrimaryContainerHover
     colRipple: root.failed ? Appearance.colors.colErrorContainerActive : Appearance.colors.colPrimaryContainerActive

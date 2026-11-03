@@ -1,4 +1,5 @@
 import qs.modules.common
+import qs.services
 import QtQuick
 import QtQuick.Shapes
 import Quickshell
@@ -12,11 +13,59 @@ import Quickshell.Hyprland
  *
  * Driven by hyprland-plus's monitorwall event: MONITOR,EDGE,START,LENGTH,STRENGTH (EDGE none when the push ends),
  * and monitorwallbreak. Clicks go straight through.
+ *
+ * Without hyprland-plus there is no wall, but a window that crosses onto another monitor (dragged, or sent there by a
+ * key) still gives that monitor's edge a little bulge where it came in, which springs back with a wobble.
  */
 Scope {
     id: root
 
     readonly property real maxDepth: 64
+    // How deep the little bulge is when a window arrives on another monitor, as a share of maxDepth.
+    readonly property real arrivalDepth: 0.35
+
+    // Which monitor each window was on, to see when one changes monitor (HyprlandData's windows: hyprctl clients).
+    property var monitorOf: ({})
+
+    /** The edge of monitor `to` that touches monitor `from` (both hyprctl monitors entries), or "". */
+    function sharedEdge(from, to) {
+        const box = m => ({ x: m.x, y: m.y, w: m.width / (m.scale || 1), h: m.height / (m.scale || 1) });
+        const a = box(from), b = box(to);
+        const near = (p, q) => Math.abs(p - q) < 2;
+        const overlapY = a.y < b.y + b.h && a.y + a.h > b.y, overlapX = a.x < b.x + b.w && a.x + a.w > b.x;
+        if (overlapY && near(a.x + a.w, b.x)) return "left";
+        if (overlapY && near(b.x + b.w, a.x)) return "right";
+        if (overlapX && near(a.y + a.h, b.y)) return "top";
+        if (overlapX && near(b.y + b.h, a.y)) return "bottom";
+        return "";
+    }
+
+    signal arrived(string monitorName, string edge, real start, real length)
+
+    Connections {
+        target: HyprlandData
+        function onWindowListChanged() {
+            const seen = {};
+            for (const w of HyprlandData.windowList) {
+                seen[w.address] = w.monitor;
+                const before = root.monitorOf[w.address];
+                if (before === undefined || before === w.monitor || w.monitor < 0 || before < 0 || (w.workspace?.id ?? 0) < 0)
+                    continue;
+                const from = HyprlandData.monitors.find(m => m.id === before);
+                const to = HyprlandData.monitors.find(m => m.id === w.monitor);
+                if (!from || !to)
+                    continue;
+                const edge = root.sharedEdge(from, to);
+                if (edge === "")
+                    continue;
+                // Where along that edge the window is, in the new monitor's own coordinates.
+                const along = edge === "left" || edge === "right";
+                const start = along ? w.at[1] - to.y : w.at[0] - to.x;
+                root.arrived(to.name, edge, Math.max(0, start), along ? w.size[1] : w.size[0]);
+            }
+            root.monitorOf = seen;
+        }
+    }
 
     /** The bulge, as an SVG path, on a monitor `w` x `h`: along `edge`, from `start` for `length`, `depth` deep. */
     function bulgePath(edge, start, length, depth, w, h) {
@@ -79,6 +128,25 @@ Scope {
                         rippleAnim.restart();
                     }
                 }
+            }
+
+            // A window came in through this monitor's edge: a little bulge that springs back (stock Hyprland too).
+            Connections {
+                target: root
+                function onArrived(monitorName, edge, start, length) {
+                    if (!Config.options.halcyon.plus.monitorWallBulge || monitorName !== perScreen.modelData.name || perScreen.target > 0)
+                        return;
+                    perScreen.edge = edge;
+                    perScreen.start = start;
+                    perScreen.length = length;
+                    perScreen.depth = root.arrivalDepth * root.maxDepth;
+                    settle.restart();
+                }
+            }
+            Timer {
+                id: settle
+                interval: 160
+                onTriggered: perScreen.depth = 0
             }
 
             NumberAnimation {

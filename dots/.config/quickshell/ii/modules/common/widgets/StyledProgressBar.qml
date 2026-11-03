@@ -3,6 +3,7 @@ import qs.modules.common
 import qs.modules.common.widgets
 import QtQuick
 import QtQuick.Controls
+import Quickshell
 
 
 /**
@@ -58,8 +59,9 @@ ProgressBar {
                     function onValueChanged() { wavyFill.requestPaint(); }
                     function onHighlightColorChanged() { wavyFill.requestPaint(); }
                 }
+                // Only while it can be seen: a hidden panel would otherwise repaint this canvas every frame.
                 FrameAnimation {
-                    running: root.animateWave
+                    running: root.animateWave && root.visible && (root.QsWindow?.window?.visible ?? true)
                     onTriggered: {
                         wavyFill.requestPaint()
                     }

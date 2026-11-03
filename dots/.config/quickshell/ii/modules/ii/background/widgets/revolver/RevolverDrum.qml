@@ -10,7 +10,7 @@ import "RevolverStyles.js" as Styles
  *   default   a Material cookie dial with round chambers
  *   red-sun   the red ring itself: lit only while it turns, with ember beads riding on it
  *   glass     a faceted glass disc with cut-gem chambers
- *   hyperneo  a squircle with squircle chambers, like app icons
+ *   hyperneo  a smoked-glass disc in a neon ring (ember, rose, violet), dark glass app-icon chambers
  *   hsr       a gold rail with four-pointed star chambers
  *   icey      After ICEY's cyan HUD: a reticle with a scanning arc, hexagonal ice cells, a snowflake hub
  *   ink       Manga Ink's page: a paper disc in a brush ensō, screentone, speech bubbles round a blush heart
@@ -68,6 +68,8 @@ Item {
     readonly property bool hush: style.drum === "hush"
     readonly property color inkColour: style.ink ?? "#141414"
     readonly property color paperColour: style.paper ?? "#f7f3ea"
+    // The neon ring's third colour, after the accent and the second accent: violet, or the theme's own.
+    readonly property color neoThird: style.third ?? "#9b7bff"
 
     width: 230
     height: 230
@@ -79,6 +81,7 @@ Item {
         case "rail": return Styles.circle(cx, cy, r * 0.97);
         case "facets": return Styles.polygon(cx, cy, r, 8, 22.5);
         case "enso": return Styles.circle(cx, cy, r * 0.95);
+        case "neo": return Styles.circle(cx, cy, r * 0.97);
         default: return Styles.circle(cx, cy, r);
         }
     }
@@ -155,6 +158,65 @@ Item {
                     strokeColor: drum.withAlpha("#000000", 0.22)
                     fillColor: "transparent"
                     PathSvg { path: drum.platePath(drum.c, drum.c, 98) }
+                }
+            }
+
+            // HyperNeo: smoked glass, lit from above, in a neon ring with a soft glow outside it.
+            Shape {
+                anchors.fill: parent
+                visible: drum.style.drum === "neo"
+                ShapePath {
+                    strokeWidth: -1
+                    fillGradient: RadialGradient {
+                        centerX: drum.c; centerY: drum.c - 44
+                        centerRadius: 170
+                        focalX: drum.c; focalY: drum.c - 60
+                        GradientStop { position: 0.0; color: "#2a1d1f" }
+                        GradientStop { position: 0.55; color: "#150e10" }
+                        GradientStop { position: 1.0; color: "#09060a" }
+                    }
+                    PathSvg { path: Styles.circle(drum.c, drum.c, 108) }
+                }
+                // The glow: two faint bands outside the ring.
+                ShapePath {
+                    strokeWidth: -1
+                    fillRule: ShapePath.OddEvenFill
+                    fillGradient: ConicalGradient {
+                        centerX: drum.c; centerY: drum.c
+                        angle: 90
+                        GradientStop { position: 0.0; color: drum.withAlpha(drum.colAccent, 0.22) }
+                        GradientStop { position: 0.35; color: drum.withAlpha(drum.colAccent2, 0.22) }
+                        GradientStop { position: 0.7; color: drum.withAlpha(drum.neoThird, 0.22) }
+                        GradientStop { position: 1.0; color: drum.withAlpha(drum.colAccent, 0.22) }
+                    }
+                    PathSvg { path: Styles.annulus(drum.c, drum.c, 110, 116) }
+                }
+                ShapePath {
+                    strokeWidth: -1
+                    fillRule: ShapePath.OddEvenFill
+                    fillGradient: ConicalGradient {
+                        centerX: drum.c; centerY: drum.c
+                        angle: 90
+                        GradientStop { position: 0.0; color: drum.colAccent }
+                        GradientStop { position: 0.35; color: drum.colAccent2 }
+                        GradientStop { position: 0.7; color: drum.neoThird }
+                        GradientStop { position: 1.0; color: drum.colAccent }
+                    }
+                    PathSvg { path: Styles.annulus(drum.c, drum.c, 107, 110) }
+                }
+                // A glass highlight across the top, and a hairline circle where the chambers ride.
+                ShapePath {
+                    strokeWidth: 1.4
+                    strokeColor: drum.withAlpha("#ffffff", 0.14)
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    PathSvg { path: Styles.arc(drum.c, drum.c, 102, -150, -30) }
+                }
+                ShapePath {
+                    strokeWidth: 1
+                    strokeColor: drum.withAlpha("#ffffff", 0.06)
+                    fillColor: "transparent"
+                    PathSvg { path: Styles.circle(drum.c, drum.c, 80) }
                 }
             }
 
@@ -410,6 +472,26 @@ Item {
                     }
                 }
 
+                // HyperNeo: fine ticks inside the ring, every fifth one brighter, turning with the drum.
+                Shape {
+                    anchors.fill: parent
+                    visible: drum.style.drum === "neo"
+                    ShapePath {
+                        strokeWidth: 1
+                        strokeColor: drum.withAlpha(drum.colOn, 0.16)
+                        capStyle: ShapePath.RoundCap
+                        fillColor: "transparent"
+                        PathSvg { path: Styles.ticks(drum.c, drum.c, 101, 104, 60, 0) }
+                    }
+                    ShapePath {
+                        strokeWidth: 1.6
+                        strokeColor: drum.withAlpha(drum.colOn, 0.4)
+                        capStyle: ShapePath.RoundCap
+                        fillColor: "transparent"
+                        PathSvg { path: Styles.ticks(drum.c, drum.c, 99, 104, 12, 0) }
+                    }
+                }
+
                 // Star Rail: the dashed track, which runs as the drum turns.
                 Shape {
                     anchors.fill: parent
@@ -611,7 +693,7 @@ Item {
                                 anchors.fill: parent
                                 visible: !drum.redSun
                                 readonly property real h: slot.size / 2
-                                readonly property color fill: slot.live ? drum.colAccent : drum.colChamber
+                                readonly property color fill: slot.live ? drum.colAccent : drum.style.drum === "neo" ? "#3a2a2c" : drum.colChamber
                                 // A bubble's tail points at the hub, wherever the drum has turned it.
                                 readonly property real tailAngle: Math.atan2(drum.c - slot.point.y, drum.c - slot.point.x) * 180 / Math.PI + rotor.rotation
 
@@ -635,6 +717,7 @@ Item {
                                                : drum.style.chamber === "bubble" ? drum.inkColour
                                                : drum.style.chamber === "lens" ? drum.withAlpha(drum.colAccent, slot.live ? 1 : 0.6)
                                                : drum.style.chamber === "hex" ? drum.withAlpha(drum.colAccent, slot.live ? 1 : 0.8)
+                                               : drum.style.drum === "neo" ? (slot.live ? Qt.lighter(drum.colAccent, 1.3) : drum.withAlpha("#ffffff", 0.16))
                                                : drum.withAlpha(Qt.darker(chamberShape.fill, 1.4), 0.9)
                                     fillGradient: LinearGradient {
                                         x1: 0; y1: 0; x2: slot.size * 0.3; y2: slot.size
@@ -720,6 +803,7 @@ Item {
                             case "crystal": return Styles.polygon(drum.c, drum.c, 24, 6, 30);
                             case "heart": return Styles.heart(drum.c, drum.c + 2, 22);
                             case "eye": return Styles.lens(drum.c, drum.c, 30);
+                            case "neo": return Styles.circle(drum.c, drum.c, 24);
                             default: return Styles.circle(drum.c, drum.c, 23);
                             }
                         }
@@ -734,6 +818,7 @@ Item {
                             : drum.style.hub === "prism" ? Styles.gemTable(drum.c, drum.c, 22)
                             : drum.style.hub === "crystal" ? Styles.polygon(drum.c, drum.c, 4, 6, 30)
                             : drum.style.hub === "eye" ? Styles.circle(drum.c, drum.c, 10)
+                            : drum.style.hub === "neo" ? Styles.circle(drum.c, drum.c, 7)
                             : Styles.circle(drum.c, drum.c, 12)
                     }
                 }
@@ -748,6 +833,19 @@ Item {
                     strokeWidth: -1
                     fillColor: drum.style.hub === "eye" ? drum.withAlpha("#ffffff", 0.85) : "transparent"
                     PathSvg { path: drum.style.hub === "eye" ? Styles.circle(drum.c + 3.5, drum.c - 3.5, 1.6) : "" }
+                }
+                // HyperNeo: a neon ring round the hub.
+                ShapePath {
+                    strokeWidth: -1
+                    fillRule: ShapePath.OddEvenFill
+                    fillGradient: ConicalGradient {
+                        centerX: drum.c; centerY: drum.c
+                        angle: 90
+                        GradientStop { position: 0.0; color: drum.style.hub === "neo" ? drum.colAccent : "transparent" }
+                        GradientStop { position: 0.5; color: drum.style.hub === "neo" ? drum.neoThird : "transparent" }
+                        GradientStop { position: 1.0; color: drum.style.hub === "neo" ? drum.colAccent : "transparent" }
+                    }
+                    PathSvg { path: drum.style.hub === "neo" ? Styles.annulus(drum.c, drum.c, 24, 26.5) : "" }
                 }
                 // After ICEY: a snowflake on the hub.
                 ShapePath {

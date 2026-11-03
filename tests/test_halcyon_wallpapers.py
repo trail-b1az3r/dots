@@ -67,7 +67,8 @@ class WallpaperTests(unittest.TestCase):
         rows = {r["id"]: r for r in json.loads(out)}
         self.assertEqual(code, 0)
         self.assertEqual({k: (r["installed"], r["downloadable"]) for k, r in rows.items()},
-                         {"after-icey": (False, True), "silence": (False, True), "anime-girl-cat": (False, False)})
+                         {"after-icey": (False, True), "silence": (False, True), "twilight-aincrad": (False, True),
+                          "anime-girl-cat": (False, False)})
         self.assertTrue(rows["after-icey"]["path"].startswith(str(wp.DIRECTORY)))
 
     def test_import_installs_a_video(self):
@@ -185,10 +186,18 @@ class ThemeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as home:
             env = {**os.environ, "HOME": home, "XDG_CONFIG_HOME": home + "/c", "XDG_DATA_HOME": home + "/d",
                    "XDG_STATE_HOME": home + "/s"}
-            for theme in ("after-icey", "manga-ink", "manga-ink-dark", "silence"):
+            for theme in ("after-icey", "manga-ink", "manga-ink-dark", "silence", "sword-art-online"):
                 result = subprocess.run([sys.executable, str(HALCYON / "halcyon-theme"), "check", theme],
                                         env=env, capture_output=True, text=True)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_applying_fetches_small_videos_but_not_large_ones(self):
+        module = self.load_tool()
+        got = []
+        with unittest.mock.patch.object(wp, "download", side_effect=lambda entry_id, *a: got.append(entry_id)):
+            self.assertTrue(module.fetch_wallpaper(wp.target("twilight-aincrad")), "marked auto: fetched on apply")
+            self.assertFalse(module.fetch_wallpaper(wp.target("after-icey")), "large: left to `halcyon wallpapers get`")
+        self.assertEqual(got, ["twilight-aincrad"])
 
     def load_tool(self):
         loader = importlib.machinery.SourceFileLoader("halcyon_theme_wp", str(HALCYON / "halcyon-theme"))

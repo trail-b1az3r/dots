@@ -13,6 +13,8 @@ local function hasOption(key)
     return ok and value ~= nil
 end
 
+-- Blur: Kawase with 2 passes of 10 is the lightest blur that still reads as glass. Layers use xray (rules.lua), so
+-- they blur only the wallpaper, which Hyprland caches, not the windows behind them.
 local hasBlurVariant = hasOption("decoration:blur:variant")
 local hasBlurProportional = hasOption("decoration:blur:proportional")
 local hasShaderBlurBlend = hasOption("render:use_shader_blur_blend")
@@ -69,7 +71,14 @@ if hasBlurProportional and hasShaderBlurBlend then
 end
 
 if hasMotionBlur then
-    hl.config({ decoration = { motion_blur = { enabled = true, samples = 5 } } })
+    -- Three samples look the same as five while a window moves, for three fifths of the work.
+    hl.config({ decoration = { motion_blur = { enabled = true, samples = 3 } } })
+end
+
+-- Fullscreen games and video go straight to the screen, skipping composition, whenever the app says it is a
+-- game or video (2 = automatic). Saves a full-screen copy every frame.
+if hasOption("render:direct_scanout") then
+    hl.config({ render = { direct_scanout = 2 } })
 end
 
 if hasGlow then

@@ -31,6 +31,7 @@ class WhichPickerTest(unittest.TestCase):
         self.assertEqual(self.picker(True, "manga-ink"), "book")
         self.assertEqual(self.picker(True, "manga-ink-dark"), "book")
         self.assertEqual(self.picker(True, "after-icey"), "phone")
+        self.assertEqual(self.picker(True, "sword-art-online"), "sao")
 
     def test_other_themes_and_off(self):
         self.assertEqual(self.picker(True, "silence"), "")
@@ -41,28 +42,51 @@ class WhichPickerTest(unittest.TestCase):
 
 @unittest.skipUnless(NODE, "node is not installed")
 class BookPagingTest(unittest.TestCase):
-    def paging(self, count):
+    """The book's pages, worked out by its own code (the chapters and the layout, lifted from MangaBook.qml)."""
+
+    def layout(self, apps, query=""):
         src = (LAUNCHER / "MangaBook.qml").read_text()
         per = re.search(r"readonly property int perPage: (\d+)", src).group(1)
-        pages = re.search(r"readonly property int pageCount: (.*)\n", src).group(1)
-        spreads = re.search(r"readonly property int spreads: (.*)\n", src).group(1)
-        script = (f"const perPage = {per}; const apps = {{ length: {count} }};\n"
-                  f"const pageCount = {pages};\nconst spreads = {spreads};\n"
-                  "console.log(JSON.stringify([pageCount, spreads]));")
+        chapters = re.search(r"readonly property var chapterDefs: (\[.*?\n    \])", src, re.S).group(1)
+        chapter_of = re.search(r"(function chapterOf\(entry\) \{.*?\n    \})", src, re.S).group(1)
+        layout = re.search(r"readonly property var layout: (\{.*?\n    \})\n", src, re.S).group(1)
+        script = ("const Translation = { tr: s => s };\n"
+                  f"const perPage = {per}; const query = {json.dumps(query)}; const apps = {json.dumps(apps)};\n"
+                  f"const chapterDefs = {chapters};\n{chapter_of}\n"
+                  f"const layout = (() => {layout})();\n"
+                  "console.log(JSON.stringify({ kinds: layout.pages.map(p => p.kind), "
+                  "chapters: layout.pages.map(p => p.chapter ?? null), toc: layout.toc }));")
         return node(script)
 
-    def test_always_a_whole_spread(self):
-        self.assertEqual(self.paging(0), [2, 1])
-        self.assertEqual(self.paging(16), [2, 1])
-        self.assertEqual(self.paging(32), [2, 1])
-        self.assertEqual(self.paging(33), [4, 2])
-        self.assertEqual(self.paging(43), [4, 2])
-        self.assertEqual(self.paging(65), [6, 3])
+    @staticmethod
+    def apps(n, category):
+        return [{"name": f"{category}{i}", "categories": [category]} for i in range(n)]
+
+    def test_contents_first_then_a_chapter_per_type(self):
+        out = self.layout(self.apps(3, "Game") + self.apps(2, "Office"))
+        self.assertEqual(out["kinds"], ["toc", "apps", "apps", "blank"])
+        self.assertEqual(out["chapters"][1:3], ["Games", "Work"])
+        self.assertEqual([(t["name"], t["number"], t["page"], t["count"]) for t in out["toc"]],
+                         [("Games", 1, 1, 3), ("Work", 2, 2, 2)])
+
+    def test_a_long_chapter_runs_on_and_spreads_are_whole(self):
+        out = self.layout(self.apps(20, "Development"))
+        self.assertEqual(out["kinds"], ["toc", "apps", "apps", "blank"])
+        self.assertEqual(len(out["kinds"]) % 2, 0)
+
+    def test_searching_shows_only_the_matches(self):
+        out = self.layout(self.apps(3, "Game"), query="ga")
+        self.assertEqual(out["kinds"], ["apps", "blank"])
+        self.assertEqual(out["toc"], [])
+
+    def test_an_app_without_categories_is_in_everything_else(self):
+        out = self.layout([{"name": "odd"}])
+        self.assertEqual(out["toc"][0]["name"], "Everything Else")
 
     def test_turns_stop_at_the_covers(self):
         src = (LAUNCHER / "MangaBook.qml").read_text()
-        self.assertIn("if (turning || spread >= spreads - 1)", src)
-        self.assertIn("if (turning || spread <= 0)", src)
+        self.assertIn("if (turning || target === spread || target < 0 || target >= spreads)", src)
+        self.assertIn("readonly property int pageCount: Math.max(2, pages.length)", src)
 
 
 class WiringTest(unittest.TestCase):
@@ -75,6 +99,7 @@ class WiringTest(unittest.TestCase):
         launcher = (LAUNCHER / "ThemedLauncher.qml").read_text()
         self.assertIn('"MangaBook.qml"', launcher)
         self.assertIn('"IceyPhone.qml"', launcher)
+        self.assertIn('"SaoMenu.qml"', launcher)
 
     def test_a_setting_on_by_default(self):
         config = (II / "modules/common/Config.qml").read_text()
@@ -90,8 +115,15 @@ class WiringTest(unittest.TestCase):
         # Auto runs whatever LauncherSearch makes of the typing: an app, a sum, a command.
         self.assertIn("host.runResult(LauncherSearch.results[0])", phone)
 
-    def test_both_animate_out_before_they_go(self):
-        for name in ("MangaBook.qml", "IceyPhone.qml"):
+    def test_the_sao_menu_has_the_games_buttons_and_asks_before_logging_out(self):
+        sao = (LAUNCHER / "SaoMenu.qml").read_text()
+        for button in ("status", "items", "party", "map", "messages", "system"):
+            self.assertIn(f'id: "{button}"', sao)
+        self.assertIn("run: () => menu.confirmLogout = true", sao)
+        self.assertIn("Session.logout()", sao)
+
+    def test_all_animate_out_before_they_go(self):
+        for name in ("MangaBook.qml", "IceyPhone.qml", "SaoMenu.qml"):
             src = (LAUNCHER / name).read_text()
             self.assertIn("function close()", src)
             self.assertIn("ScriptAction { script: ", src)

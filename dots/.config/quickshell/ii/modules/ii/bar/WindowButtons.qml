@@ -41,7 +41,7 @@ Item {
         property string tip
         implicitWidth: 26
         implicitHeight: 26
-        buttonRadius: Appearance.rounding.full
+        buttonRadius: Appearance.squareBar ? 0 : Appearance.rounding.full
         colBackgroundHover: Appearance.colors.colLayer1Hover
         colRipple: Appearance.colors.colLayer1Active
         contentItem: MaterialSymbol {

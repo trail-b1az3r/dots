@@ -20,7 +20,7 @@ Item {
     property real shapeRotation: 0
 
     Loader {
-        active: constantlyRotate
+        active: constantlyRotate && visible
         sourceComponent: FrameAnimation {
             running: true
             onTriggered: {

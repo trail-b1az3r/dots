@@ -22,7 +22,7 @@ Singleton {
     /** The theme's own app picker, opened in place of the overview (Settings > Halcyon > On the screen): "book" for
      *  the Manga Ink themes, "phone" for After ICEY, "" for the usual overview. */
     readonly property string themedLauncher: (Config.options?.halcyon?.themedLauncher ?? false)
-        ? (({ "manga-ink": "book", "manga-ink-dark": "book", "after-icey": "phone" })[Config.options?.halcyon?.theme ?? ""] ?? "")
+        ? (({ "manga-ink": "book", "manga-ink-dark": "book", "after-icey": "phone", "sword-art-online": "sao" })[Config.options?.halcyon?.theme ?? ""] ?? "")
         : ""
     property bool regionSelectorOpen: false
     property bool searchOpen: false

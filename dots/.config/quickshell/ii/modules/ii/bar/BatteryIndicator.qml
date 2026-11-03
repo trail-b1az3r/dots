@@ -21,6 +21,7 @@ MouseArea {
     ClippedProgressBar {
         id: batteryProgress
         anchors.centerIn: parent
+        radius: Appearance.squareBar ? 0 : 9999
         value: percentage
         highlightColor: (isLow && !isCharging) ? Appearance.m3colors.m3error : Appearance.colors.colOnSecondaryContainer
 
