@@ -16,7 +16,7 @@ import Quickshell.Hyprland
 Scope {
     id: root
 
-    readonly property real maxDepth: 64
+    readonly property real maxDepth: 40
 
     /** The bulge, as an SVG path, on a monitor `w` x `h`: along `edge`, from `start` for `length`, `depth` deep. */
     function bulgePath(edge, start, length, depth, w, h) {
