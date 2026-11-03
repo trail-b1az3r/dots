@@ -196,9 +196,10 @@ class UpdaterTest(unittest.TestCase):
         (self.bin / "pgrep").write_text("#!/bin/sh\\nexit 0\\n")
         (self.bin / "hyprctl").write_text(f"#!/bin/sh\\necho hyprland-reload >> '{reload_log}'\\n")
         (self.bin / "systemctl").write_text(
-            f"#!/bin/sh\\n"
-            f"if [ \\"$3\\" = is-active ]; then exit 0; fi\\n"
-            f"echo \\"$*\\" >> '{reload_log}'\\n"
+            f"""#!/bin/sh
+if [ "$3" = is-active ]; then exit 0; fi
+echo "$*" >> '{reload_log}'
+"""
         )
         for name in ("pgrep", "hyprctl", "systemctl"):
             (self.bin / name).chmod(0o755)
