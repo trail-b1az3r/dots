@@ -36,6 +36,7 @@ PLUS_SEEN_FILE="$STATE/hyprland-plus-seen"  # the last hyprland-plus update alre
 REMOTE_URL="${HALCYON_REMOTE:-https://github.com/trail-b1az3r/dots.git}"
 BRANCH="main"
 TARGET_REF="refs/remotes/origin/$BRANCH"
+BOOTSTRAPPED=0
 
 mkdir -p "$STATE"
 
@@ -73,6 +74,7 @@ repo() {
         # updater-registration step. Bootstrap a private source checkout instead
         # of making the user reinstall. The first apply safely backs up and syncs
         # the tracked dots/ files into HOME, then records the installed commit.
+        BOOTSTRAPPED=1
         REPO="$STATE/repository"
         if [[ ! -d "$REPO/.git" ]]; then
             rm -rf "$REPO"
@@ -288,7 +290,7 @@ apply() {
 
     local before after changed ts backup copied=0 needs_install=0 hypr_changed=0 shell_changed=0 units_changed=0
     local stashed="" from_archive=0 first_deploy=0
-    [[ -s "$INSTALLED_FILE" ]] || first_deploy=1
+    (( BOOTSTRAPPED )) && first_deploy=1
     ts="$(date +%Y%m%d-%H%M%S)"
 
     if (( first_deploy )); then
