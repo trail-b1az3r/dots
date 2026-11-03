@@ -89,7 +89,7 @@ if [[ "$OS_DISTRO_ID" == "nixos" ]]; then
   # NixOS: a system module (sdata/dist-nixos), not the home-manager route for other distros.
   OS_GROUP_ID="nixos"
   print_os_group_id_functions=(print_os_group_id)
-elif [[ "$OS_DISTRO_ID" =~ ^(arch|endeavouros|cachyos)$ ]]; then
+elif [[ "$OS_DISTRO_ID" =~ ^(arch|endeavouros|nexora|cachyos)$ ]]; then
   OS_GROUP_ID="arch"
   print_os_group_id_functions=(print_os_group_id)
 elif [[ "$OS_DISTRO_ID_LIKE" == "arch" ]]; then
