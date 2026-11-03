@@ -18,17 +18,21 @@ WindowDialog {
 
     Process {
         id: detailsProcess
-        command: ["nmcli", "-f", "GENERAL,IP4,IP6", "device", "show"]
+        // nmxcli (nmx) or nmcli (NetworkManager): the same command, the same output.
+        command: [Network.cli, "-f", "GENERAL,IP4,IP6", "device", "show"]
         stdout: StdioCollector {
             onStreamFinished: {
                 root.detailsOutput = text.trim().length
                     ? text
-                    : Translation.tr("NetworkManager returned no connection details.")
+                    : (Network.usingNmx ? Translation.tr("nmx returned no connection details.")
+                                        : Translation.tr("NetworkManager returned no connection details."))
             }
         }
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0 && root.detailsOutput === Translation.tr("Loading connection details…"))
-                root.detailsOutput = Translation.tr("Could not read network details. Check that NetworkManager is running.")
+                root.detailsOutput = Network.usingNmx
+                    ? Translation.tr("Could not read network details. Check that nmx is running (nmxcli general).")
+                    : Translation.tr("Could not read network details. Check that NetworkManager is running.")
         }
     }
 

@@ -9,13 +9,33 @@ import QtQuick
 import qs.services.network
 
 /**
- * Network service with nmcli.
+ * Network service. With nmx running (Nexora's network manager) it talks to nmxcli, which answers nmcli's commands
+ * the same way; otherwise to NetworkManager's nmcli.
  */
 Singleton {
     id: root
 
     property bool wifi: true
     property bool ethernet: false
+
+    // nmxcli when nmx is running, nmcli otherwise (found once at start, by detectNmx).
+    property string cli: "nmcli"
+    readonly property bool usingNmx: cli === "nmxcli"
+    onCliChanged: {
+        subscriber.running = false;
+        subscriber.running = true;
+        update();
+        getNetworks.running = true;
+    }
+
+    Process {
+        id: detectNmx
+        running: true
+        command: ["sh", "-c", "command -v nmxcli >/dev/null 2>&1 && nmxcli -t -f RUNNING general 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: if (text.trim() === "running") root.cli = "nmxcli"
+        }
+    }
 
     property bool wifiEnabled: false
     property bool wifiScanning: false
@@ -56,7 +76,7 @@ Singleton {
     // Control
     function enableWifi(enabled = true): void {
         const cmd = enabled ? "on" : "off";
-        enableWifiProc.exec(["nmcli", "radio", "wifi", cmd]);
+        enableWifiProc.exec([root.cli, "radio", "wifi", cmd]);
     }
 
     function toggleWifi(): void {
@@ -70,29 +90,50 @@ Singleton {
 
     function connectToWifiNetwork(accessPoint: WifiAccessPoint): void {
         accessPoint.askingPassword = false;
+        accessPoint.lastError = "";
         root.wifiConnectTarget = accessPoint;
         // We use this instead of `nmcli connection up SSID` because this also creates a connection profile
-        connectProc.exec(["nmcli", "dev", "wifi", "connect", accessPoint.ssid])
+        connectProc.exec([root.cli, "dev", "wifi", "connect", accessPoint.ssid])
 
     }
 
     function disconnectWifiNetwork(): void {
-        if (active) disconnectProc.exec(["nmcli", "connection", "down", active.ssid]);
+        if (active) disconnectProc.exec([root.cli, "connection", "down", active.ssid]);
     }
 
     function openPublicWifiPortal() {
         Quickshell.execDetached(["xdg-open", "https://nmcheck.gnome.org/"]) // From some StackExchange thread, seems to work
     }
 
+    /** Connect with a password, and a username for enterprise (802.1X) networks. The secrets go through the
+     *  environment, never the command line. */
     function changePassword(network: WifiAccessPoint, password: string, username = ""): void {
-        // TODO: enterprise wifi with username
         network.askingPassword = false;
+        network.lastError = "";
+        root.wifiConnectTarget = network;
+        if (root.usingNmx) {
+            // nmx works out the rest itself: the EAP method, the certificates, the anonymous identity.
+            const command = ["nmxcli", "dev", "wifi", "connect", network.ssid, "password", "env:NMX_PASSWORD"];
+            if (network.isEnterprise)
+                command.push("username", "env:NMX_USERNAME");
+            connectProc.exec({
+                "environment": { "NMX_PASSWORD": password, "NMX_USERNAME": username, "LANG": "C", "LC_ALL": "C" },
+                "command": command
+            });
+            return;
+        }
         changePasswordProc.exec({
             "environment": {
                 "PASSWORD": password,
+                "USERNAME": username,
                 "SSID": network.ssid
             },
-            "command": ["bash", "-c", 'nmcli connection modify "$SSID" wifi-sec.psk "$PASSWORD"']
+            "command": ["bash", "-c", network.isEnterprise
+                // NetworkManager needs an enterprise profile made by hand: PEAP/MSCHAPv2, the common case.
+                ? 'nmcli connection delete "$SSID" >/dev/null 2>&1; nmcli connection add type wifi con-name "$SSID" ssid "$SSID" '
+                  + 'wifi-sec.key-mgmt wpa-eap 802-1x.eap peap 802-1x.phase2-auth mschapv2 '
+                  + '802-1x.identity "$USERNAME" 802-1x.password "$PASSWORD"'
+                : 'nmcli connection modify "$SSID" wifi-sec.psk "$PASSWORD"']
         })
     }
 
@@ -115,14 +156,23 @@ Singleton {
         stderr: SplitParser {
             onRead: line => {
                 // print("err:", line)
+                if (!root.wifiConnectTarget)
+                    return;
                 if (line.includes("Secrets were required")) {
                     root.wifiConnectTarget.askingPassword = true
+                } else if (line.startsWith("Error:")) {
+                    root.wifiConnectTarget.lastError = line.replace(/^Error: */, "")
                 }
             }
         }
         onExited: (exitCode, exitStatus) => {
-            root.wifiConnectTarget.askingPassword = (exitCode !== 0)
+            if (root.wifiConnectTarget) {
+                // A refused certificate or a DHCP timeout is not fixed by a password: say what it was instead.
+                root.wifiConnectTarget.askingPassword = (exitCode !== 0) && root.wifiConnectTarget.lastError.length === 0
+                    || root.wifiConnectTarget.askingPassword
+            }
             root.wifiConnectTarget = null
+            getNetworks.running = true
         }
     }
 
@@ -143,7 +193,7 @@ Singleton {
 
     Process {
         id: rescanProcess
-        command: ["nmcli", "dev", "wifi", "list", "--rescan", "yes"]
+        command: [root.cli, "dev", "wifi", "list", "--rescan", "yes"]
         stdout: SplitParser {
             onRead: {
                 wifiScanning = false;
@@ -163,7 +213,7 @@ Singleton {
     Process {
         id: subscriber
         running: true
-        command: ["nmcli", "monitor"]
+        command: [root.cli, "monitor"]
         stdout: SplitParser {
             onRead: root.update()
         }
@@ -172,7 +222,7 @@ Singleton {
     Process {
         id: updateConnectionType
         property string buffer
-        command: ["sh", "-c", "nmcli -t -f TYPE,STATE d status && nmcli -t -f CONNECTIVITY g"]
+        command: ["sh", "-c", `${root.cli} -t -f TYPE,STATE d status && ${root.cli} -t -f CONNECTIVITY g`]
         running: true
         function startCheck() {
             buffer = "";
@@ -221,7 +271,7 @@ Singleton {
 
     Process {
         id: updateNetworkName
-        command: ["sh", "-c", "nmcli -t -f NAME c show --active | head -1"]
+        command: ["sh", "-c", `${root.cli} -t -f NAME c show --active | head -1`]
         running: true
         stdout: SplitParser {
             onRead: data => {
@@ -233,7 +283,7 @@ Singleton {
     Process {
         id: updateNetworkStrength
         running: true
-        command: ["sh", "-c", "nmcli -f IN-USE,SIGNAL,SSID device wifi | awk '/^\\*/{if (NR!=1) {print $2}}'"]
+        command: ["sh", "-c", `${root.cli} -f IN-USE,SIGNAL,SSID device wifi | awk '/^\\*/{if (NR!=1) {print $2}}'`]
         stdout: SplitParser {
             onRead: data => {
                 root.networkStrength = parseInt(data);
@@ -243,7 +293,7 @@ Singleton {
 
     Process {
         id: wifiStatusProcess
-        command: ["nmcli", "radio", "wifi"]
+        command: [root.cli, "radio", "wifi"]
         Component.onCompleted: running = true
         environment: ({
             LANG: "C",
@@ -259,7 +309,7 @@ Singleton {
     Process {
         id: getNetworks
         running: true
-        command: ["nmcli", "-g", "ACTIVE,SIGNAL,FREQ,SSID,BSSID,SECURITY", "d", "w"]
+        command: [root.cli, "-g", "ACTIVE,SIGNAL,FREQ,SSID,BSSID,SECURITY", "d", "w"]
         environment: ({
             LANG: "C",
             LC_ALL: "C"

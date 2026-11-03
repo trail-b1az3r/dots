@@ -55,6 +55,16 @@ DialogListItem {
             Layout.topMargin: 8
             visible: root.wifiNetwork?.askingPassword ?? false
 
+            // Enterprise (802.1X) networks ask for a username too.
+            MaterialTextField {
+                id: usernameField
+                Layout.fillWidth: true
+                visible: root.wifiNetwork?.isEnterprise ?? false
+                placeholderText: Translation.tr("Username")
+                inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText
+                onAccepted: passwordField.forceActiveFocus()
+            }
+
             MaterialTextField {
                 id: passwordField
                 Layout.fillWidth: true
@@ -65,7 +75,7 @@ DialogListItem {
                 inputMethodHints: Qt.ImhSensitiveData
 
                 onAccepted: {
-                    Network.changePassword(root.wifiNetwork, passwordField.text);
+                    Network.changePassword(root.wifiNetwork, passwordField.text, usernameField.text);
                 }
             }
 
@@ -86,10 +96,20 @@ DialogListItem {
                 DialogButton {
                     buttonText: Translation.tr("Connect")
                     onClicked: {
-                        Network.changePassword(root.wifiNetwork, passwordField.text);
+                        Network.changePassword(root.wifiNetwork, passwordField.text, usernameField.text);
                     }
                 }
             }
+        }
+
+        StyledText { // Why the last attempt failed, when a password would not fix it
+            Layout.topMargin: 6
+            Layout.fillWidth: true
+            visible: (root.wifiNetwork?.lastError ?? "").length > 0 && !(root.wifiNetwork?.askingPassword ?? false)
+            text: root.wifiNetwork?.lastError ?? ""
+            wrapMode: Text.Wrap
+            font.pixelSize: Appearance.font.pixelSize.smaller
+            color: Appearance.colors.colError
         }
 
         ColumnLayout { // Public wifi login page

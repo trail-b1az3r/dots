@@ -24,7 +24,9 @@ state.setdefault("calls", []).append([name] + args)
 out, code = "", 0
 def save():
     json.dump(state, open(path, "w"))
-if name == "nmcli":
+if name == "nmxcli" and not state.get("nmx"):
+    out, code = "", 8
+elif name in ("nmcli", "nmxcli"):
     a = [x for x in args if x not in ("-t",)]
     if a[:2] == ["-w", "25"]:
         a = a[2:]
@@ -237,6 +239,27 @@ class WifiTest(unittest.TestCase):
                        nm_config="[keyfile]\nunmanaged-devices=interface-name:wlp*\n")
         report = json.loads(self.run_tool("--json").stdout)
         self.assertIn("unmanaged-devices=interface-name:wlp*", " ".join(report["problems"]))
+
+    def nmx(self, **state):
+        (self.bin / "nmxcli").write_text(FAKE)
+        (self.bin / "nmxcli").chmod(0o755)
+        self.set_state(nmx=True, **state)
+
+    def test_with_nmx_boot_asks_nmx_and_leaves_unmanaged_cards_alone(self):
+        self.nmx(running=True, radio=False, devices=[{"device": "wlp1s0", "state": "disconnected"}], known_network=True)
+        done = self.run_tool("boot")
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        calls = self.state()["calls"]
+        self.assertIn(["nmxcli", "radio", "wifi", "on"], calls)
+        self.assertIn(["nmxcli", "-w", "25", "device", "connect", "wlp1s0"], calls)
+        self.assertFalse(any(c[0] == "nmcli" for c in calls), "NetworkManager is not asked")
+        self.assertFalse(any(c[1:3] == ["device", "set"] for c in calls), "an unmanaged card stays unmanaged")
+
+    def test_with_nmx_fix_has_nothing_to_do_and_status_says_nmx(self):
+        self.nmx(running=True, radio=True, devices=[{"device": "wlp1s0", "state": "connected", "connection": "Home"}])
+        self.assertIn("nothing for `fix` to change", self.run_tool("fix").stdout)
+        self.assertEqual(json.loads(self.run_tool("--json").stdout),
+                         {"manager": "nmx", "wifi": [{"device": "wlp1s0", "state": "connected", "connection": "Home"}]})
 
     def test_login_runs_it(self):
         init = (ROOT / "dots/.config/hypr/hyprland/halcyon/init.lua").read_text()

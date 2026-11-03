@@ -26,6 +26,10 @@ above all a Microsoft Surface, whose Marvell card (the mwifiex_pcie driver) is s
     card only.
 
 `fix` writes /etc/NetworkManager/conf.d/90-halcyon-wifi.conf; delete it (and restart NetworkManager) to undo.
+
+With nmx (Nexora's network manager) running, nmx keeps the Wi-Fi up itself, across suspends too: `boot` only turns
+the radio on and asks nmx to connect, `status` shows nmx's view, and `fix` has nothing to change (a device nmx does
+not manage was handed back on purpose, with `sudo nmxcli device unmanage`).
 """
 
 from __future__ import annotations
@@ -459,6 +463,10 @@ def fix(dry_run: bool = False) -> int:
 
 REPORT = Path(os.environ.get("HALCYON_WIFI_REPORT", Path.home() / "halcyon-wifi-report.txt"))
 REPORT_COMMANDS = [
+    ["nmxcli", "general"],
+    ["nmxcli", "device"],
+    ["nmxcli", "-f", "IN-USE,SSID,SIGNAL,SECURITY,NEEDS", "device", "wifi"],
+    ["journalctl", "-b", "--no-pager", "-n", "80", "-u", "nmx"],
     ["nmcli", "general"],
     ["nmcli", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device"],
     ["nmcli", "radio"],
@@ -534,12 +542,63 @@ def print_status(report: dict) -> None:
         print("\nNothing in the way.")
 
 
+# --- nmx -----------------------------------------------------------------------------------------------------------
+
+def nmx_running() -> bool:
+    return bool(shutil.which("nmxcli")) and run(["nmxcli", "-t", "-f", "RUNNING", "general"]).stdout.strip() == "running"
+
+
+def nmx_wifi() -> list[dict]:
+    found = []
+    for line in run(["nmxcli", "-t", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device"]).stdout.splitlines():
+        fields = split_terse(line)
+        if len(fields) >= 3 and fields[1] == "wifi":
+            found.append({"device": fields[0], "state": fields[2].split(" ")[0],
+                          "connection": fields[3] if len(fields) > 3 and fields[3] != "--" else ""})
+    return found
+
+
+def boot_nmx() -> int:
+    if run(["nmxcli", "radio", "wifi"]).stdout.strip() != "enabled":
+        log("turning nmx's Wi-Fi radio on")
+        run(["nmxcli", "radio", "wifi", "on"])
+    if wait_for(lambda: connected(nmx_wifi()), WAIT_CONNECT):
+        log("Wi-Fi connected (nmx)")
+        return 0
+    for device in nmx_wifi():
+        if device["state"] == "disconnected":
+            log(f"asking nmx to connect {device['device']}")
+            if run(["nmxcli", "-w", "25", "device", "connect", device["device"]], timeout=40).returncode == 0:
+                return 0
+    states = ", ".join(f"{d['device']} {d['state']}" for d in nmx_wifi()) or "no Wi-Fi device"
+    log(f"Wi-Fi not connected ({states})")
+    notify("Wi-Fi not connected", f"nmx: {states}. `nmxcli device wifi list` shows the networks in range; "
+                                  "`nmxtui` connects to one.")
+    return 1
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="halcyon wifi", description="Wi-Fi when Hyprland starts.")
     parser.add_argument("action", nargs="?", default="status", choices=("status", "boot", "fix", "report"))
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--dry-run", action="store_true", help="fix: say what it would do")
     args = parser.parse_args(argv)
+    if nmx_running():
+        if args.action == "boot":
+            return boot_nmx()
+        if args.action == "fix":
+            print("nmx manages the network and keeps the Wi-Fi up itself; there is nothing for `fix` to change. "
+                  "`nmxcli device` shows each device, `journalctl -u nmx` what nmx did.")
+            return 0
+        if args.action == "status":
+            devices = nmx_wifi()
+            if args.json:
+                print(json.dumps({"manager": "nmx", "wifi": devices}, indent=2))
+            else:
+                print("manager:  nmx")
+                for d in devices or [{"device": "(none)", "state": "no Wi-Fi device", "connection": ""}]:
+                    print(f"{d['device']}:  {d['state']}" + (f" to {d['connection']}" if d["connection"] else ""))
+            return 0
     if args.action == "boot":
         return boot()
     if args.action == "fix":

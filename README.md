@@ -909,6 +909,14 @@ its status bar and help panel use the theme's surfaces. Applying a theme or a wa
 
 ## Wi-Fi at login
 
+**With nmx** (Nexora's network manager, [`apps/nmx`](https://github.com/trail-b1az3r/distro/tree/main/apps/nmx)),
+the shell's network menu, the Wi-Fi details and `halcyon wifi` all talk to `nmxcli` instead of `nmcli`: the same
+commands, the same answers. nmx keeps the Wi-Fi up across suspends by itself, works out what each network needs, and
+for enterprise (802.1X) networks the menu asks for a username as well as the password; nmx then picks the EAP method,
+validates (or, for a network with its own CA, pins) the server's certificate and hides the username in an anonymous
+outer identity. A failure a password would not fix (a refused certificate, no address) is shown under the network.
+Without nmx, everything below applies to NetworkManager as before.
+
 At every Hyprland login, Halcyon gets the Wi-Fi up. It waits for the card (a Surface's Marvell card is slow to
 start), unblocks the radio, takes the card back if NetworkManager left it **unmanaged**, and connects. If it can't,
 a notification says why. Its log is `~/.local/state/halcyon/wifi.log`.
