@@ -7,7 +7,7 @@ import "../background/widgets/revolver/RevolverStyles.js" as Styles
 /**
  * The dock's frame in each Halcyon theme that isn't a glass one (Dock.qml loads it in place of the plain panel):
  *
- *   hyperneo  a dark shelf with a neon hairline along the top, ember fading to violet, and a soft reflection
+ *   hyperneo  smoked glass in a neon edge (ember, rose, violet), a lit lip on top and an ember glow along the bottom
  *   hsr       Star Rail's gold rail: a double gold frame, a dashed track along the bottom, a star at each end
  *   red-sun   a dusk capsule, violet into night, its edge lit like the ring, a red ring at the left end
  *   icey      After ICEY's HUD: chamfered corners, a cyan edge, corner brackets, gold diamonds at the ends, and a
@@ -15,6 +15,8 @@ import "../background/widgets/revolver/RevolverStyles.js" as Styles
  *   ink       a manga panel: paper in a thick ink border with a hard offset shadow, and screentone at the right
  *             (inverted: an ink panel with paper lines, for the top bar, whose text is light)
  *   ink-dark  Manga Ink Dark: the ink panel with paper lines everywhere
+ *   sao       Sword Art Online's HUD: slate glass with a fine light edge, an orange rule along the top, and a white
+ *             notch at each end, like the game's bars
  *   silence   black, almost nothing: a faint edge, a red hairline that is brightest in the middle, and at the right
  *             end two small red eyes that slowly open and close
  *
@@ -44,43 +46,117 @@ Item {
     }
 
     // ── HyperNeo ───────────────────────────────────────────────────────────────────
+    // Smoked glass in a neon edge that runs ember, rose, violet; a lit lip along the top and an ember glow
+    // reflected along the bottom, brightest in the middle. Plain rectangles and gradients: no shaders, no layers.
     Item {
         anchors.fill: parent
         visible: frame.kind === "hyperneo"
+        // The neon edge: a gradient slab with the glass laid 1.5 px inside it.
         Rectangle {
             anchors.fill: parent
             radius: frame.r
             gradient: Gradient {
-                GradientStop { position: 0.0; color: frame.withAlpha(Qt.lighter(frame.colBase, 1.6), 0.86) }
-                GradientStop { position: 1.0; color: frame.withAlpha(frame.colBase, 0.92) }
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0.0; color: frame.withAlpha(frame.colAccent, 0.95) }
+                GradientStop { position: 0.5; color: frame.withAlpha(frame.colAccent2, 0.95) }
+                GradientStop { position: 1.0; color: frame.withAlpha("#9b7bff", 0.95) }
+            }
+        }
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: 1.5
+            radius: frame.r - 1.5
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: frame.withAlpha("#2a1c1e", 0.94) }
+                GradientStop { position: 0.55; color: frame.withAlpha("#160f11", 0.95) }
+                GradientStop { position: 1.0; color: frame.withAlpha("#0c0809", 0.96) }
+            }
+        }
+        // The lit lip.
+        Rectangle {
+            anchors.top: parent.top
+            anchors.topMargin: 2.5
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: parent.width - 2 * frame.r
+            height: 1
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0.0; color: frame.withAlpha("#ffffff", 0) }
+                GradientStop { position: 0.5; color: frame.withAlpha("#ffffff", 0.22) }
+                GradientStop { position: 1.0; color: frame.withAlpha("#ffffff", 0) }
+            }
+        }
+        // The glow along the bottom: a bright line, brightest in the middle, with a soft halo above it.
+        Rectangle {
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 2
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: parent.width * 0.7
+            height: 6
+            radius: 3
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0.0; color: frame.withAlpha(frame.colAccent, 0) }
+                GradientStop { position: 0.5; color: frame.withAlpha(frame.colAccent, 0.22) }
+                GradientStop { position: 1.0; color: frame.withAlpha(frame.colAccent2, 0) }
+            }
+        }
+        Rectangle {
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 2
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: parent.width * 0.62
+            height: 1.5
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0.0; color: frame.withAlpha(frame.colAccent, 0) }
+                GradientStop { position: 0.5; color: Qt.lighter(frame.colAccent, 1.25) }
+                GradientStop { position: 1.0; color: frame.withAlpha(frame.colAccent2, 0) }
+            }
+        }
+    }
+
+    // ── Sword Art Online ───────────────────────────────────────────────────────────
+    Item {
+        anchors.fill: parent
+        visible: frame.kind === "sao"
+        Rectangle {
+            anchors.fill: parent
+            radius: Math.min(6, frame.height / 2)
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: frame.withAlpha("#28313C", 0.9) }
+                GradientStop { position: 1.0; color: frame.withAlpha("#161B22", 0.92) }
             }
             border.width: 1
-            border.color: frame.withAlpha("#ffffff", 0.1)
+            border.color: frame.withAlpha("#FFFFFF", 0.14)
         }
-        // The neon hairline.
+        // The orange rule, brightest in the middle.
         Rectangle {
             anchors.top: parent.top
             anchors.topMargin: 1
             anchors.horizontalCenter: parent.horizontalCenter
-            width: parent.width - 2 * frame.r
+            width: parent.width * 0.5
             height: 2
-            radius: 1
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: frame.withAlpha(frame.colAccent, 0) }
-                GradientStop { position: 0.3; color: frame.colAccent }
-                GradientStop { position: 0.7; color: frame.colAccent2 }
-                GradientStop { position: 1.0; color: frame.withAlpha(frame.colAccent2, 0) }
+                GradientStop { position: 0.0; color: frame.withAlpha("#F5A43B", 0) }
+                GradientStop { position: 0.5; color: "#F5A43B" }
+                GradientStop { position: 1.0; color: frame.withAlpha("#F5A43B", 0) }
             }
         }
-        // The reflection across the lower half.
-        Rectangle {
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 4
-            anchors.horizontalCenter: parent.horizontalCenter
-            width: parent.width - 3 * frame.r
-            height: 1
-            color: frame.withAlpha("#ffffff", 0.07)
+        // The notches.
+        Repeater {
+            model: 2
+            Rectangle {
+                required property int index
+                width: 7
+                height: 7
+                rotation: 45
+                x: index === 0 ? 6 : frame.width - 13
+                anchors.verticalCenter: parent.verticalCenter
+                color: frame.withAlpha("#F4F6F8", 0.85)
+                visible: frame.width > 60
+            }
         }
     }
 
@@ -218,13 +294,14 @@ Item {
                     GradientStop { position: 0.5; color: Qt.lighter(frame.colAccent, 1.4) }
                     GradientStop { position: 1.0; color: frame.withAlpha(frame.colAccent, 0) }
                 }
-                NumberAnimation on x {
+                x: -80
+                // One sweep, then a long rest with nothing moving, so the bar and the dock are not redrawn every
+                // frame for it.
+                SequentialAnimation on x {
                     running: frame.visible && frame.kind === "icey"
-                    from: -80
-                    to: frame.width
-                    duration: 3200
                     loops: Animation.Infinite
-                    easing.type: Easing.InOutSine
+                    NumberAnimation { from: -80; to: frame.width; duration: 3200; easing.type: Easing.InOutSine }
+                    PauseAnimation { duration: 9000 }
                 }
             }
         }
@@ -319,9 +396,9 @@ Item {
                 running: frame.visible && frame.kind === "silence"
                 loops: Animation.Infinite
                 NumberAnimation { to: 1; duration: 2600; easing.type: Easing.InOutSine }
-                PauseAnimation { duration: 1800 }
+                PauseAnimation { duration: 7000 }
                 NumberAnimation { to: 0.35; duration: 2600; easing.type: Easing.InOutSine }
-                PauseAnimation { duration: 2400 }
+                PauseAnimation { duration: 5000 }
             }
         }
     }

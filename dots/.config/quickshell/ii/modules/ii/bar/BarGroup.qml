@@ -20,10 +20,10 @@ Item {
             rightMargin: root.vertical ? 4 : 0
         }
         color: Config.options?.bar.borderless ? "transparent" : Appearance.colors.colLayer1
-        radius: Appearance.rounding.small
+        radius: Appearance.squareBar ? 0 : Appearance.rounding.small
         // Halcyon themes edge each group in their own light: Red Sun's ember, Star Rail's gold, glass's frost.
         readonly property string theme: Config.options?.halcyon.theme ?? ""
-        border.width: Config.options?.bar.borderless ? 0 : (edgeColour.a > 0 ? 1 : 0)
+        border.width: Config.options?.bar.borderless ? 0 : Appearance.squareBar ? 2 : (edgeColour.a > 0 ? 1 : 0)
         border.color: edgeColour
         readonly property color edgeColour: {
             switch (theme) {
@@ -31,7 +31,7 @@ Item {
             case "silence": return Qt.rgba(Appearance.colors.colPrimary.r, Appearance.colors.colPrimary.g, Appearance.colors.colPrimary.b, 0.24);
             case "after-icey":
             case "manga-ink":
-            case "manga-ink-dark":
+            case "manga-ink-dark": return Appearance.colors.colOnLayer1;   // ink
             case "hsr": return Qt.rgba(Appearance.colors.colPrimary.r, Appearance.colors.colPrimary.g, Appearance.colors.colPrimary.b, 0.38);
             case "shattered-glass":
             case "fractured-glass": return Qt.rgba(1, 1, 1, 0.16);

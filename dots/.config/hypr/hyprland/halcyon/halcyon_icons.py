@@ -60,6 +60,7 @@ PACKS = {
     "red-sun": {"theme": "Halcyon-Red-Sun", "name": "Halcyon Red Sun"},
     "shattered-glass": {"theme": "Halcyon-Shattered-Glass", "name": "Halcyon Shattered Glass"},
     "silence": {"theme": "Halcyon-Silence", "name": "Halcyon Silence"},
+    "sao": {"theme": "Halcyon-Sword-Art-Online", "name": "Halcyon Sword Art Online"},
 }
 # Every built-in Halcyon theme gets its own generated icon pack.
 THEME_PACKS = {
@@ -72,6 +73,7 @@ THEME_PACKS = {
     "red-sun": "red-sun",
     "shattered-glass": "shattered-glass",
     "silence": "silence",
+    "sword-art-online": "sao",
 }
 
 # These are drawn by Halcyon rather than recoloured from the current icon
@@ -183,6 +185,15 @@ def frame_svg(pack: str) -> str:
   <path d="M32 56h64M42 76h44" stroke="#EDE6E6" stroke-opacity=".8" stroke-width="2"/>
   <circle cx="46" cy="48" r="5" fill="#FF6B6B"/><circle cx="82" cy="48" r="5" fill="#FF6B6B"/>
 </svg>"""
+    if pack == "sao":
+        # The game's menu button: a round white plate with a grey edge, an orange arc at the top.
+        return """<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs><linearGradient id="p" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#DDE2E8"/></linearGradient></defs>
+  <circle cx="64" cy="66" r="57" fill="#000000" fill-opacity=".25"/>
+  <circle cx="64" cy="63" r="57" fill="url(#p)" stroke="#C9D0D8" stroke-width="2"/>
+  <path d="M 26 26 A 54 54 0 0 1 102 26" fill="none" stroke="#F5A43B" stroke-width="4" stroke-linecap="round"/>
+</svg>"""
     raise IconError(f"no frame design for icon pack '{pack}'")
 
 
@@ -196,13 +207,16 @@ def recolour(pack: str) -> list[str]:
         "red-sun": ("#FF4940", "#A92E38", "#FFE0DA"),
         "shattered-glass": ("#9ED8FF", "#477E9C", "#E8F7FF"),
         "silence": ("#FF6B6B", "#B52E3A", "#F3E6E6"),
+        # Slate into the menu's orange, to read on the white plate.
+        "sao": ("#3A434F", "#F5A43B"),
     }
     if pack == "ink-dark":
         dark, light = PAPER, "#202022"
     elif pack == "ink":
         dark, light = INK, "#FFFFFF"
     else:
-        dark, light = palettes[pack]
+        # Two colours, or an accent then the two: the last two are the ends the greys are mapped onto.
+        dark, light = palettes[pack][-2:]
     return ["-colorspace", "gray", "-level", "30%,88%", "+level-colors", dark + "," + light]
 
 
@@ -314,6 +328,7 @@ def special_icon_svg(pack: str, name: str) -> str:
         "red-sun": "#FF4940",
         "shattered-glass": "#9ED8FF",
         "silence": "#FF6B6B",
+        "sao": "#F5A43B",
     }
     designs = {
         "icey": (
@@ -351,6 +366,10 @@ def special_icon_svg(pack: str, name: str) -> str:
         "silence": (
             "M23 31h82v67H23z M23 47h82 M41 63l15 11-15 11m28 0h19 M42 24h8m28 0h8",
             "M23 31h82v67H23z M23 47h82 M39 60h20v20H39z M68 60h22v6H68z M68 75h17v5H68z M42 24h8m28 0h8",
+        ),
+        "sao": (
+            "M20 30h88v68H20z M20 46h88 M40 61l16 12-16 12m29 0h21 M58 14h12 M64 8v12",
+            "M20 30h88v68H20z M20 46h88 M38 60h20v20H38z M68 60h24v6H68z M68 74h18v6H68z M58 14h12 M64 8v12",
         ),
     }
     if pack not in designs:

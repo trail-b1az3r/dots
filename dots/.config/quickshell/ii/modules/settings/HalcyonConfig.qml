@@ -155,6 +155,7 @@ ContentPage {
         { id: "after-icey", name: "After ICEY", icon: "ac_unit" },
         { id: "manga-ink", name: "Manga Ink", icon: "draw" },
         { id: "manga-ink-dark", name: "Manga Ink Dark", icon: "invert_colors" },
+        { id: "sword-art-online", name: "Sword Art Online", icon: "swords" },
         { id: "silence", name: "Silence", icon: "visibility" }
     ]
     // ── When the theme switches: rules, made below and run by halcyon-theme when a theme is applied or turned off ──
@@ -2458,6 +2459,21 @@ ContentPage {
                 onValueChanged: {
                     Config.options.halcyon.plus.monitorWall = value;
                     page.applyPlus();
+                }
+            }
+            ConfigSpinBox {
+                icon: "border_outer"
+                text: Translation.tr("Window resistance (px)")
+                value: Config.options.halcyon.plus.windowResistance
+                from: 0
+                to: 400
+                stepSize: 4
+                onValueChanged: {
+                    Config.options.halcyon.plus.windowResistance = value;
+                    page.applyPlus();
+                }
+                StyledToolTip {
+                    text: Translation.tr("A floating window you drag stops at the screen's edges and at other windows' edges, and goes past one once you push this far beyond it. 0 turns it off. Without hyprland-plus, windows snap to those edges instead.")
                 }
             }
             ConfigSwitch {

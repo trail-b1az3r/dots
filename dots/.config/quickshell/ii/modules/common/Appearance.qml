@@ -24,6 +24,8 @@ Singleton {
         depth: 0 // 2^0 = 1 color
         rescaleSize: 10
     }
+    // Manga Ink (both) draws the bar as manga panels: square corners, ink borders, no pills.
+    readonly property bool squareBar: ["manga-ink", "manga-ink-dark"].includes(Config.options?.halcyon?.theme ?? "")
     property real wallpaperVibrancy: (wallColorQuant.colors[0]?.hslSaturation + wallColorQuant.colors[0]?.hslLightness) / 2
     property real autoBackgroundTransparency: { // y = 0.5768x^2 - 0.759x + 0.2896
         let x = wallpaperVibrancy

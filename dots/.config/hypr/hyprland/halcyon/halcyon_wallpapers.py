@@ -52,6 +52,17 @@ CATALOG = {
         "url": "https://w.wallhaven.cc/full/6l/wallhaven-6ll7dx.png",
         "kind": "image",
     },
+    "twilight-aincrad": {
+        "title": "Twilight Aincrad",
+        "theme": "sword-art-online",
+        "credit": "fan art, as published on MotionBGs",
+        "page": "https://motionbgs.com/twilight-aincrad",
+        "file": "twilight-aincrad.mp4",
+        "url": "https://motionbgs.com/dl/hd/7935",
+        "url_4k": "https://motionbgs.com/dl/4k/7935",
+        # Small (1.5 MB in HD), so applying the theme fetches it, like a still.
+        "auto": True,
+    },
     "anime-girl-cat": {
         "title": "Anime Girl x Cat",
         "theme": "manga-ink",

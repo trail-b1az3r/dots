@@ -13,10 +13,14 @@ import Quickshell.Io
 import Quickshell.Widgets
 
 /**
- * After ICEY's app picker: a phone, slid up from the bottom of the screen. Its home screen has four apps: Apps (every
+ * After ICEY's app picker: a phone, slid up from the bottom of the screen. Its home screen has five apps: Apps (every
  * app, with a search), Auto (type anything: an app opens, a sum is worked out, a command runs, whatever LauncherSearch
  * finds), Theme (the Halcyon themes, tap one to wear it) and Calculator. Typing on the home screen goes straight to
  * Auto. Esc goes back home, and from home puts the phone away.
+ *
+ * A fifth app, Spaces, unfolds the phone: a second screen swings open on a hinge at its right edge, like a foldable,
+ * showing every workspace and its apps (WorkspaceBoard.qml). Tap an app to go to it; Shift + drag one to move it to
+ * another workspace. Esc, the fold button or the home bar folds it shut again.
  */
 Item {
     id: phone
@@ -46,6 +50,19 @@ Item {
             themeProc.running = true;
     }
 
+    // ── Folding out the second screen ────────────────────────────────────────
+    property bool unfolded: false
+    // 0 folded shut, 1 open flat; overshoots a little as the hinge settles.
+    property real fold: unfolded ? 1 : 0
+    Behavior on fold {
+        NumberAnimation {
+            duration: phone.unfolded ? 620 : 340
+            easing.type: phone.unfolded ? Easing.OutBack : Easing.InCubic
+            easing.overshoot: 0.9
+        }
+    }
+    readonly property real hingeGap: 10
+
     // ── Sliding up and away ──────────────────────────────────────────────────
     property real appear: 0
     property bool closing: false
@@ -55,6 +72,7 @@ Item {
         closing = false;
         page = "home";
         query = "";
+        unfolded = false;
         appear = 0;
         forceActiveFocus();
         openAnim.restart();
@@ -77,7 +95,9 @@ Item {
     focus: true
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Escape) {
-            if (phone.query !== "")
+            if (phone.unfolded)
+                phone.unfolded = false;
+            else if (phone.query !== "")
                 phone.query = "";
             else if (phone.page !== "home")
                 phone.go("home");
@@ -112,7 +132,8 @@ Item {
         id: body
         width: phone.phoneW
         height: phone.phoneH
-        anchors.horizontalCenter: parent.horizontalCenter
+        // Unfolding moves the phone left so the pair of screens stays centred.
+        x: (phone.width - width - Math.max(0, phone.fold) * (width + phone.hingeGap)) / 2
         y: (phone.height - height) / 2 + (1 - phone.appear) * (phone.height * 0.7)
         opacity: Math.min(1, phone.appear * 1.6)
         transform: Rotation {
@@ -124,26 +145,111 @@ Item {
 
         MouseArea { anchors.fill: parent }    // clicks on the phone stay on the phone
 
-        // The hull: a chamfered slab, a cyan rim, HUD brackets at the corners.
-        Shape {
-            anchors.fill: parent
-            anchors.margins: -14
-            preferredRendererType: Shape.CurveRenderer
-            ShapePath {
-                strokeWidth: 2
-                strokeColor: phone.cyan
-                fillColor: phone.hull
-                joinStyle: ShapePath.MiterJoin
-                PathSvg { path: phone.chamfer(body.width + 28, body.height + 28, 34) }
+        // The second screen, on a hinge at the right edge. Folded, it lies face down on the phone (turned 180° about
+        // the hinge); unfolding swings it out flat beside it.
+        Item {
+            id: wing
+            x: body.width + phone.hingeGap
+            width: body.width
+            height: body.height
+            visible: phone.fold > 0.005
+            enabled: phone.unfolded
+            transform: Rotation {
+                origin.x: -phone.hingeGap / 2
+                origin.y: wing.height / 2
+                axis { x: 0; y: 1; z: 0 }
+                angle: -(1 - phone.fold) * 180
             }
-            ShapePath {
-                strokeWidth: 3
-                strokeColor: phone.cyan
-                fillColor: "transparent"
-                capStyle: ShapePath.FlatCap
-                PathSvg { path: phone.brackets(body.width + 28, body.height + 28, 34, 28) }
+            MouseArea { anchors.fill: parent }
+            Hull { anchors.fill: parent }
+            Rectangle {
+                id: wingScreen
+                anchors.fill: parent
+                anchors.margins: 6
+                radius: 14
+                color: phone.glass
+                clip: true
+                border.width: 1
+                border.color: Qt.rgba(0.36, 0.84, 0.95, 0.25)
+                // Dark while it is still turned away, lit as it comes round.
+                opacity: Math.min(1, Math.max(0, phone.fold * 1.4 - 0.2))
+                Row {
+                    x: 18
+                    y: 14
+                    spacing: 10
+                    StyledText {
+                        text: Translation.tr("Spaces").toUpperCase()
+                        color: phone.text
+                        font.pixelSize: 16
+                        font.weight: Font.Bold
+                        font.letterSpacing: 3
+                    }
+                    StyledText {
+                        anchors.baseline: parent.children[0].baseline
+                        text: Translation.tr("tap: go · shift+drag: move")
+                        color: phone.dim
+                        font.pixelSize: 11
+                        font.family: Appearance.font.family.monospace
+                    }
+                }
+                // Fold it shut.
+                Rectangle {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 14
+                    y: 12
+                    width: 30
+                    height: 26
+                    radius: 3
+                    color: foldArea.containsMouse ? Qt.rgba(1, 0.85, 0.42, 0.18) : "transparent"
+                    border.width: 1.5
+                    border.color: foldArea.containsMouse ? phone.amber : phone.cyan
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        text: "close_fullscreen"
+                        iconSize: 16
+                        color: foldArea.containsMouse ? phone.amber : phone.cyan
+                    }
+                    MouseArea {
+                        id: foldArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: phone.unfolded = false
+                    }
+                }
+                WorkspaceBoard {
+                    anchors {
+                        fill: parent
+                        topMargin: 54
+                        leftMargin: 14
+                        rightMargin: 14
+                        bottomMargin: 30
+                    }
+                    ink: phone.cyan
+                    paper: Qt.rgba(0.36, 0.84, 0.95, 0.05)
+                    accent: phone.amber
+                    corner: 3
+                    border: 1.5
+                    columns: 2
+                    onPicked: phone.host.dismiss()
+                }
             }
         }
+        // The hinge between the screens.
+        Rectangle {
+            visible: phone.fold > 0.005
+            x: body.width + 1
+            y: body.height * 0.08
+            width: phone.hingeGap - 2
+            height: body.height * 0.84
+            radius: 2
+            color: phone.hull
+            border.width: 1
+            border.color: Qt.rgba(0.36, 0.84, 0.95, 0.5 * Math.min(1, phone.fold))
+        }
+
+        // The hull: a chamfered slab, a cyan rim, HUD brackets at the corners.
+        Hull { anchors.fill: parent }
         // The screen.
         Rectangle {
             id: screenRect
@@ -238,9 +344,29 @@ Item {
                     anchors.margins: -12
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: phone.page === "home" ? phone.host.dismiss() : phone.go("home")
+                    onClicked: phone.unfolded ? (phone.unfolded = false) : phone.page === "home" ? phone.host.dismiss() : phone.go("home")
                 }
             }
+        }
+    }
+
+    component Hull: Shape {
+        id: hull
+        anchors.margins: -14
+        preferredRendererType: Shape.CurveRenderer
+        ShapePath {
+            strokeWidth: 2
+            strokeColor: phone.cyan
+            fillColor: phone.hull
+            joinStyle: ShapePath.MiterJoin
+            PathSvg { path: phone.chamfer(hull.width, hull.height, 34) }
+        }
+        ShapePath {
+            strokeWidth: 3
+            strokeColor: phone.cyan
+            fillColor: "transparent"
+            capStyle: ShapePath.FlatCap
+            PathSvg { path: phone.brackets(hull.width, hull.height, 34, 28) }
         }
     }
 
@@ -323,7 +449,7 @@ Item {
         }
     }
 
-    // ── Home: the clock, and four apps ───────────────────────────────────────
+    // ── Home: the clock, and five apps ───────────────────────────────────────
     component HomePage: Item {
         Column {
             anchors.horizontalCenter: parent.horizontalCenter
@@ -349,19 +475,20 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
             anchors.bottomMargin: parent.height * 0.1
-            columns: 2
-            spacing: 22
+            columns: 3
+            spacing: 16
             Repeater {
                 model: [
                     { page: "apps", icon: "apps", label: Translation.tr("Apps") },
                     { page: "auto", icon: "bolt", label: Translation.tr("Auto") },
                     { page: "theme", icon: "palette", label: Translation.tr("Theme") },
-                    { page: "calc", icon: "calculate", label: Translation.tr("Calculator") }
+                    { page: "calc", icon: "calculate", label: Translation.tr("Calculator") },
+                    { page: "spaces", icon: "view_quilt", label: Translation.tr("Spaces") }
                 ]
                 delegate: Item {
                     id: tile
                     required property var modelData
-                    width: phone.phoneW * 0.32
+                    width: phone.phoneW * 0.25
                     height: width + 24
                     Shape {
                         id: hex
@@ -407,7 +534,7 @@ Item {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: phone.go(tile.modelData.page)
+                        onClicked: tile.modelData.page === "spaces" ? (phone.unfolded = !phone.unfolded) : phone.go(tile.modelData.page)
                     }
                 }
             }

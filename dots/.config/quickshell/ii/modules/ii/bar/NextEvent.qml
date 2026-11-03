@@ -37,7 +37,7 @@ RippleButton {
     visible: root.shown
     implicitHeight: 28
     implicitWidth: row.implicitWidth + 12 * 2
-    buttonRadius: Appearance.rounding.full
+    buttonRadius: Appearance.squareBar ? 0 : Appearance.rounding.full
     colBackground: root.soon ? Appearance.colors.colSecondaryContainer : Appearance.colors.colLayer1
     colBackgroundHover: root.soon ? Appearance.colors.colSecondaryContainerHover : Appearance.colors.colLayer1Hover
     colRipple: Appearance.colors.colLayer1Active

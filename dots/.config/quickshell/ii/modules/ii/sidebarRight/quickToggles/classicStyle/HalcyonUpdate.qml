@@ -38,17 +38,20 @@ QuickToggleButton {
             opacity: 0
 
             SequentialAnimation on opacity {
+                running: GlobalStates.sidebarRightOpen
                 loops: Animation.Infinite
                 PauseAnimation { duration: star.index * 260 }
                 NumberAnimation { to: 0.9; duration: 900; easing.type: Easing.InOutSine }
                 NumberAnimation { to: 0.1; duration: 900; easing.type: Easing.InOutSine }
             }
             SequentialAnimation on y {
+                running: GlobalStates.sidebarRightOpen
                 loops: Animation.Infinite
                 NumberAnimation { to: star.startY - 4; duration: 2200 + star.index * 150; easing.type: Easing.InOutSine }
                 NumberAnimation { to: star.startY; duration: 2200 + star.index * 150; easing.type: Easing.InOutSine }
             }
             SequentialAnimation on x {
+                running: GlobalStates.sidebarRightOpen
                 loops: Animation.Infinite
                 NumberAnimation { to: star.startX + 2; duration: 1700; easing.type: Easing.InOutSine }
                 NumberAnimation { to: star.startX - 2; duration: 1700; easing.type: Easing.InOutSine }

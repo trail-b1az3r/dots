@@ -122,6 +122,7 @@ ButtonMouseArea {
                     // The idea: over-stretch to occupied sides, animate this for a smooth transition.
                     //           masking already prevents weird overlaps
                     Pill {
+                        radius: Appearance.squareBar ? 0 : Math.min(width, height) / 2
                         property real undirectionalWidth: root.workspaceButtonWidth * wsBg.currentOccupied
                         property real undirectionalLength: root.workspaceButtonWidth * (1 + 0.5 * wsBg.previousOccupied + 0.5 * wsBg.nextOccupied) * currentOccupied
                         property real undirectionalOffset: (!wsBg.currentOccupied ? 0.5 : -0.5 * wsBg.previousOccupied) * root.workspaceButtonWidth
@@ -174,7 +175,7 @@ ButtonMouseArea {
             StateOverlay {
                 id: hoverOverlay
                 anchors.fill: interactionIndicator.indicatorRectangle
-                radius: root.activeWorkspaceSize / 2
+                radius: Appearance.squareBar ? 0 : root.activeWorkspaceSize / 2
                 hover: root.containsMouse
                 press: root.containsPress
                 drag: true // There are too many layers so we need to force this to be a lil more opaque
@@ -301,6 +302,7 @@ ButtonMouseArea {
                 return specialWsText.implicitWidth + undirectionalWidth;
             }
             color: Appearance.colors.colPrimary
+            radius: Appearance.squareBar ? 0 : Math.min(width, height) / 2
 
             implicitWidth: root.vertical ? undirectionalWidth : undirectionalLength
             implicitHeight: root.vertical ? undirectionalLength : undirectionalWidth
@@ -429,7 +431,7 @@ ButtonMouseArea {
             property real indicatorThickness: root.activeWorkspaceSize
 
             contentLayer: StyledRectangle.ContentLayer.Group
-            radius: indicatorThickness / 2
+            radius: Appearance.squareBar ? 0 : indicatorThickness / 2
             color: Appearance.colors.colPrimary
 
             x: root.vertical ? null : indicatorPosition

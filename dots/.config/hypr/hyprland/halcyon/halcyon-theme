@@ -1407,13 +1407,14 @@ def derive_wallpaper(theme, wallpaper):
 
 
 def fetch_wallpaper(wallpaper):
-    """A theme's still wallpaper that isn't here yet and can be downloaded: get it now (they are small)."""
+    """A theme's wallpaper that isn't here yet and can be downloaded: get it now when it is small (the stills, and
+    the videos marked auto). The large videos stay a `halcyon wallpapers get` away."""
     try:
         import halcyon_wallpapers
     except ImportError:
         return False
     for entry_id, entry in halcyon_wallpapers.CATALOG.items():
-        if halcyon_wallpapers.target(entry_id) == wallpaper and entry.get("url") and entry.get("kind") == "image":
+        if halcyon_wallpapers.target(entry_id) == wallpaper and entry.get("url") and (entry.get("kind") == "image" or entry.get("auto")):
             try:
                 halcyon_wallpapers.download(entry_id)
                 return True

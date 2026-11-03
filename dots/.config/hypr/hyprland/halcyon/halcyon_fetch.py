@@ -21,8 +21,8 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import Callable, Optional, Sequence, TextIO
 
-_RELEASE_VERSION = "26.11.0.1.3"
-_RELEASE_CODENAME = "(Re)polished Copper"
+_RELEASE_VERSION = "26.11.0.1.4"
+_RELEASE_CODENAME = "Short Sword"
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[5]
 try:
     __version__ = (_REPOSITORY_ROOT / "VERSION").read_text(encoding="utf-8").strip()

@@ -10,7 +10,7 @@ import Quickshell.Hyprland
 /**
  * The theme's own app picker, opened with Super (or Hyper) in place of the overview when the theme has one and
  * Settings > Halcyon > On the screen allows it: a manga book for Manga Ink and Manga Ink Dark (MangaBook.qml), a
- * phone for After ICEY (IceyPhone.qml). Both take typing: an app, a sum, a command, whatever LauncherSearch finds.
+ * phone for After ICEY (IceyPhone.qml), the game's main menu for Sword Art Online (SaoMenu.qml). All take typing: an app, a sum, a command, whatever LauncherSearch finds.
  *
  * The picker is built once, while the theme is one of these, and kept: building the pages' icons and drawings when Super
  * is pressed made the opening animation stutter, so Super only shows the window and plays it (open()). The window stays
@@ -97,7 +97,7 @@ Scope {
                 anchors.fill: parent
                 focus: true
                 // By file, so a live reload finds them however the folder was imported.
-                source: root.kind === "book" ? "MangaBook.qml" : root.kind === "phone" ? "IceyPhone.qml" : ""
+                source: ({ "book": "MangaBook.qml", "phone": "IceyPhone.qml", "sao": "SaoMenu.qml" })[root.kind] ?? ""
                 onLoaded: {
                     item.host = root;
                     root.picker = item;

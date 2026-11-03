@@ -40,6 +40,18 @@ class BulgeTest(unittest.TestCase):
         self.assertEqual(min(x for x, _ in points("right", 200, 600, 40)), 1880)
         self.assertEqual(min(y for _, y in points("bottom", 300, 500, 30)), 1050)
 
+    def test_arrival_edge(self):
+        body = re.search(r"(function sharedEdge\(.*?\n    \})", QML.read_text(), re.S).group(1)
+        left = {"x": 0, "y": 0, "width": 1920, "height": 1080, "scale": 1}
+        right = {"x": 1920, "y": 0, "width": 3840, "height": 2160, "scale": 2}   # 1920x1080 logical
+        below = {"x": 0, "y": 1080, "width": 1920, "height": 1080, "scale": 1}
+        apart = {"x": 5000, "y": 0, "width": 1920, "height": 1080, "scale": 1}
+        pairs = [[left, right], [right, left], [left, below], [below, left], [left, apart]]
+        script = body + f"\nconsole.log(JSON.stringify({json.dumps(pairs)}.map(p => sharedEdge(p[0], p[1]))))"
+        edges = json.loads(subprocess.run([NODE, "-e", script], capture_output=True, text=True, check=True).stdout)
+        # Coming in from the left monitor, the bulge is on the right monitor's left edge, and so on.
+        self.assertEqual(edges, ["left", "right", "top", "bottom", ""])
+
     def test_top_edge_runs_along_x(self):
         pts = points("top", 400, 300, 20)
         self.assertEqual(max(y for _, y in pts), 20)

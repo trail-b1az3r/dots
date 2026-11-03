@@ -4,6 +4,7 @@ import qs.modules.common.widgets
 import qs.services
 import QtQuick
 import QtQuick.Controls
+import Quickshell
 import QtQuick.Layouts
 import Quickshell.Widgets
 
@@ -156,8 +157,9 @@ Slider {
                         function onValueChanged() { wavyFill.requestPaint(); }
                         function onHighlightColorChanged() { wavyFill.requestPaint(); }
                     }
+                    // Only while it can be seen: a hidden panel would otherwise repaint this canvas every frame.
                     FrameAnimation {
-                        running: root.animateWave
+                        running: root.animateWave && root.visible && (root.QsWindow?.window?.visible ?? true)
                         onTriggered: {
                             wavyFill.requestPaint()
                         }

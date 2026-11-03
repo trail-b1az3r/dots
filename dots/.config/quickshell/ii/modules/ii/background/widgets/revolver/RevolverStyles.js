@@ -18,6 +18,13 @@ var STYLES = {
                  hub: "prism", hammer: "shard", glow: 0.5, waves: 0, statusLabel: true },
     "hyperneo": { id: "hyperneo", drum: "squircle", chamber: "squircle", chamberSize: 48, orbit: 79, names: true,
                   hub: "squircle", hammer: "pill", glow: 0.45, waves: 0, statusLabel: true },
+    // HyperNeo, the revolver only: a smoked-glass disc in a neon ring that runs ember, rose, violet and back, fine
+    // ticks that turn with it, dark glass app-icon chambers (the live one lit ember), and a neon ring round the hub.
+    "neo":     { id: "neo", drum: "neo", chamber: "squircle", chamberSize: 46, orbit: 80, names: true,
+                 hub: "neo", hammer: "pill", glow: 0.55, waves: 0, statusLabel: true },
+    // Sword Art Online: the same smoked disc, its ring running the menu's orange into crimson and silver.
+    "sao":     { id: "sao", drum: "neo", chamber: "squircle", chamberSize: 46, orbit: 80, names: true,
+                 hub: "neo", hammer: "pill", glow: 0.55, waves: 0, statusLabel: true, third: "#D5DDE6" },
     // The anime themes: squircles, drawn as keycaps (outline, a cream ring, a flat fill, a hard shadow straight down).
     "keycap":  { id: "keycap", drum: "squircle", plate: "keycap", chamber: "squircle", chamberSize: 48, orbit: 79, names: true,
                  hub: "squircle", hammer: "pill", glow: 0.45, waves: 0, statusLabel: true },
@@ -70,6 +77,7 @@ function styleFor(themeId) {
     case "manga-ink-dark":
         return STYLES["keycap-dark"];
     case "silence":
+    case "sword-art-online":
         return STYLES["hush"];
     case "hsr":
         return STYLES["hsr"];
@@ -89,6 +97,10 @@ function revolverStyleFor(themeId) {
         return STYLES["ink-dark"];
     case "silence":
         return STYLES["silence"];
+    case "hyperneo":
+        return STYLES["neo"];
+    case "sword-art-online":
+        return STYLES["sao"];
     default:
         return styleFor(themeId);
     }
@@ -130,7 +142,8 @@ function snowflake(cx, cy, r) {
 // The frame the dock, the top bar and the side panels take in a theme (dock/DockFrame.qml); "" keeps the plain
 // panel (no theme, and the glass themes).
 var FRAMES = { "hyperneo": "hyperneo", "hsr": "hsr", "red-sun": "red-sun", "wallpaper-heaven-kenami": "red-sun",
-               "after-icey": "icey", "manga-ink": "ink", "manga-ink-dark": "ink-dark", "silence": "silence" };
+               "after-icey": "icey", "manga-ink": "ink", "manga-ink-dark": "ink-dark", "silence": "silence",
+               "sword-art-online": "sao" };
 
 function frameKindFor(themeId) {
     return FRAMES[themeId] || "";
@@ -236,6 +249,26 @@ function closedPoly(points) {
 function circle(cx, cy, r) {
     return "M " + f(cx - r) + " " + f(cy) + " A " + f(r) + " " + f(r) + " 0 1 0 " + f(cx + r) + " " + f(cy)
          + " A " + f(r) + " " + f(r) + " 0 1 0 " + f(cx - r) + " " + f(cy) + " Z";
+}
+
+// A band between radii r0 and r1 from a0 to a1 degrees, closed: for gradient-filled arcs (a stroke takes no
+// gradient). Stops just short of a full turn, where the arc's ends would meet.
+function band(cx, cy, r0, r1, a0, a1) {
+    if (a1 - a0 >= 360)
+        a1 = a0 + 359.9;
+    if (a1 - a0 <= 0.05)
+        return "";
+    var t0 = a0 * Math.PI / 180, t1 = a1 * Math.PI / 180;
+    var large = a1 - a0 > 180 ? 1 : 0;
+    return "M " + f(cx + r1 * Math.cos(t0)) + " " + f(cy + r1 * Math.sin(t0))
+         + " A " + f(r1) + " " + f(r1) + " 0 " + large + " 1 " + f(cx + r1 * Math.cos(t1)) + " " + f(cy + r1 * Math.sin(t1))
+         + " L " + f(cx + r0 * Math.cos(t1)) + " " + f(cy + r0 * Math.sin(t1))
+         + " A " + f(r0) + " " + f(r0) + " 0 " + large + " 0 " + f(cx + r0 * Math.cos(t0)) + " " + f(cy + r0 * Math.sin(t0)) + " Z";
+}
+
+// A ring between radii r0 and r1, all the way round (fill it with OddEvenFill).
+function annulus(cx, cy, r0, r1) {
+    return circle(cx, cy, r1) + " " + circle(cx, cy, r0);
 }
 
 // An arc from a0 to a1 degrees (0 = right, clockwise on screen), not closed: for strokes.

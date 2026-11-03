@@ -87,9 +87,9 @@ Item {
     // upstream's cookie.
     readonly property string themeId: Config.options.halcyon.theme
     readonly property bool themedFace: Styles.styleFor(themeId).id !== "default"
-    // After ICEY, Manga Ink (and Dark) and Silence have a face of their own, drawn like their revolvers (ThemeClock.qml): the rest of
+    // After ICEY, Manga Ink (and Dark), Silence and HyperNeo have a face of their own, drawn like their revolvers (ThemeClock.qml): the rest of
     // this file is the usual face, hidden under them.
-    readonly property string customFace: ({ "icey": "icey", "ink": "ink", "ink-dark": "ink-dark", "silence": "silence" })[Styles.revolverStyleFor(themeId).id] ?? ""
+    readonly property string customFace: ({ "icey": "icey", "ink": "ink", "ink-dark": "ink-dark", "silence": "silence", "neo": "neo", "sao": "neo" })[Styles.revolverStyleFor(themeId).id] ?? ""
     Loader {
         anchors.fill: parent
         z: 10
@@ -101,6 +101,7 @@ Item {
             item.showSeconds = Qt.binding(() => Config.options.time.secondPrecision);
             item.colAccent = Qt.binding(() => Appearance.colors.colPrimary);
             item.colAccent2 = Qt.binding(() => Appearance.colors.colTertiary);
+            item.colAccent3 = Qt.binding(() => Styles.revolverStyleFor(root.themeId).third ?? "#9b7bff");
             item.colOn = Qt.binding(() => Appearance.colors.colOnLayer1);
             item.colBase = Qt.binding(() => Qt.rgba(Appearance.colors.colLayer0.r, Appearance.colors.colLayer0.g, Appearance.colors.colLayer0.b, 1));
             item.fontFamily = Qt.binding(() => Appearance.font.family.main);
@@ -123,7 +124,8 @@ Item {
         target: root.useSineCookie ? sineCookieLoader : roundedPolygonCookieLoader
 
         RotationAnimation on rotation {
-            running: Config.options.background.widgets.clock.cookie.constantlyRotate
+            // Not under a theme's face, where the cookie is hidden: it would redraw its shadow every frame for nothing.
+            running: Config.options.background.widgets.clock.cookie.constantlyRotate && !root.themedFace
             duration: 30000
             easing.type: Easing.Linear
             loops: Animation.Infinite

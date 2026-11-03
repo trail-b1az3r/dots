@@ -11,11 +11,16 @@ import Quickshell.Widgets
 import "../background/widgets/revolver/RevolverStyles.js" as Styles
 
 /**
- * Manga Ink's app picker: a manga book. It opens with its ink cover swinging over the spine, the apps are printed on
- * its pages, sixteen to a page, and a page turns over when you click the turned-up corner (or the margin) of the
- * left page to go back or of the right page to go on; the arrows, Page Up and Down and the wheel turn them too.
- * Typing searches every app, and a speech bubble on the left page says what Enter will do: open an app, give a sum,
- * run a command (LauncherSearch). Esc closes the book again before it goes.
+ * Manga Ink's app picker: a manga book. It opens with its ink cover swinging over the spine. The first page is the
+ * table of contents; the apps follow in chapters by type (the web, making things, pictures, sound and screen,
+ * games...), sixteen to a page. A page turns over when you click the turned-up corner (or the margin) of the left
+ * page to go back or of the right page to go on, when you drag it across the book (it follows your hand, and falls
+ * back if you let go early), and with the arrows, Page Up and Down and the wheel. Typing searches every app, and a
+ * speech bubble on the left page says what Enter will do: open an app, give a sum, run a command (LauncherSearch).
+ *
+ * Double-click the space under the last row of apps on a page and a tablet drops down over the book with every
+ * workspace and the apps open on it: click one to go to it, or hold Shift and drag it onto another workspace to move
+ * it there (WorkspaceTablet). Esc puts the tablet away, then closes the book.
  *
  * In Manga Ink Dark the same book is printed in negative.
  */
@@ -41,7 +46,57 @@ Item {
     // Read again each time the book opens, so newly installed apps are in it.
     property var allApps: []
     readonly property var apps: query === "" ? allApps : AppSearch.fuzzyQuery(query)
-    readonly property int pageCount: Math.max(2, Math.ceil(apps.length / perPage) + (Math.ceil(apps.length / perPage) % 2))
+
+    // The chapters, by the categories in the apps' desktop files; an app goes in the first chapter it fits.
+    readonly property var chapterDefs: [
+        { name: Translation.tr("Games"), keys: ["Game"] },
+        { name: Translation.tr("Pictures"), keys: ["Graphics", "Photography", "2DGraphics", "3DGraphics", "RasterGraphics", "VectorGraphics"] },
+        { name: Translation.tr("Sound & Screen"), keys: ["AudioVideo", "Audio", "Video", "Music", "Player", "Recorder"] },
+        { name: Translation.tr("Making Things"), keys: ["Development", "IDE", "TextEditor", "Building", "Debugger"] },
+        { name: Translation.tr("Work"), keys: ["Office", "WordProcessor", "Spreadsheet", "Presentation", "Calendar", "ContactManagement"] },
+        { name: Translation.tr("Learning"), keys: ["Education", "Science", "Math"] },
+        { name: Translation.tr("The Web"), keys: ["Network", "WebBrowser", "Email", "Chat", "InstantMessaging", "P2P"] },
+        { name: Translation.tr("Tools"), keys: ["Utility", "Accessories", "FileManager", "TerminalEmulator", "Archiving", "Calculator"] },
+        { name: Translation.tr("The System"), keys: ["Settings", "System", "Monitor", "PackageManager", "Security", "HardwareSettings"] },
+        { name: Translation.tr("Everything Else"), keys: [] },
+    ]
+    function chapterOf(entry) {
+        const cats = entry?.categories ?? [];
+        for (let i = 0; i < chapterDefs.length - 1; i++)
+            if (chapterDefs[i].keys.some(k => cats.includes(k)))
+                return i;
+        return chapterDefs.length - 1;
+    }
+    // The pages: the contents, then each chapter from a new page; or, while searching, just the matches.
+    // Each page is { kind: "toc" | "apps" | "blank", chapter, chapterNumber, first, entries }; toc lists the chapters.
+    readonly property var layout: {
+        const pages = [];
+        const toc = [];
+        if (query !== "") {
+            for (let i = 0; i < Math.max(1, apps.length); i += perPage)
+                pages.push({ kind: "apps", chapter: "", entries: apps.slice(i, i + perPage) });
+        } else {
+            pages.push({ kind: "toc", entries: [] });
+            const buckets = chapterDefs.map(() => []);
+            for (const a of apps)
+                buckets[chapterOf(a)].push(a);
+            let number = 0;
+            buckets.forEach((entries, c) => {
+                if (entries.length === 0)
+                    return;
+                number += 1;
+                toc.push({ name: chapterDefs[c].name, number: number, page: pages.length, count: entries.length });
+                for (let i = 0; i < entries.length; i += perPage)
+                    pages.push({ kind: "apps", chapter: chapterDefs[c].name, chapterNumber: number, first: i === 0, entries: entries.slice(i, i + perPage) });
+            });
+        }
+        if (pages.length % 2 === 1)
+            pages.push({ kind: "blank", entries: [] });
+        return { pages: pages, toc: toc };
+    }
+    readonly property var pages: layout.pages
+    readonly property var toc: layout.toc
+    readonly property int pageCount: Math.max(2, pages.length)
     // The spread open: pages 2*spread and 2*spread + 1.
     property int spread: 0
     readonly property int spreads: Math.ceil(pageCount / 2)
@@ -57,7 +112,7 @@ Item {
     }
 
     function pageApps(page) {
-        return book.apps.slice(page * perPage, (page + 1) * perPage);
+        return book.pages[page]?.entries ?? [];
     }
 
     // ── Opening and closing ──────────────────────────────────────────────────
@@ -70,6 +125,10 @@ Item {
     function open() {
         closeAnim.stop();
         turnAnim.stop();
+        finishAnim.stop();
+        cancelAnim.stop();
+        dragTurning = false;
+        tabletShown = false;
         closing = false;
         allApps = host ? host.apps() : [];
         query = "";
@@ -106,32 +165,78 @@ Item {
     // turn: 0..180 while a leaf is over; direction 1 forward (right to left), -1 back.
     property real turn: 0
     property int direction: 1
-    readonly property bool turning: turnAnim.running
+    // A page held by a drag: it follows the hand, then turns over or falls back on release.
+    property bool dragTurning: false
+    readonly property bool turning: turnAnim.running || finishAnim.running || cancelAnim.running || dragTurning
 
+    // Put the leaf up for a turn to `target` (a spread): the page under it shows the new side at once.
+    function lift(target) {
+        if (turning || target === spread || target < 0 || target >= spreads)
+            return false;
+        direction = target > spread ? 1 : -1;
+        spread = target;
+        if (direction > 0)
+            rightPage = spread * 2 + 1;   // under the leaf as it lifts
+        else
+            leftPage = spread * 2;
+        return true;
+    }
+    function goToSpread(target) {
+        if (lift(target))
+            turnAnim.start();
+    }
+    function goToPage(page) {
+        goToSpread(Math.floor(page / 2));
+    }
     function next() {
-        if (turning || spread >= spreads - 1)
-            return;
-        direction = 1;
-        spread += 1;
-        rightPage = spread * 2 + 1;   // under the leaf as it lifts
-        turnAnim.start();
+        goToSpread(spread + 1);
     }
     function previous() {
-        if (turning || spread <= 0)
-            return;
-        direction = -1;
-        spread -= 1;
-        leftPage = spread * 2;
-        turnAnim.start();
+        goToSpread(spread - 1);
     }
+    function land() {
+        leftPage = spread * 2;
+        rightPage = spread * 2 + 1;
+        turn = 0;
+    }
+
+    function dragBegin(dir) {
+        if (!lift(spread + dir))
+            return false;
+        turn = 0;
+        dragTurning = true;
+        return true;
+    }
+    function dragMove(dx) {
+        turn = Math.max(0, Math.min(179, Math.abs(dx) / (pageW * 0.9) * 180));
+    }
+    function dragEnd() {
+        dragTurning = false;
+        if (turn > 60)
+            finishAnim.start();
+        else
+            cancelAnim.start();
+    }
+
     SequentialAnimation {
         id: turnAnim
         NumberAnimation { target: book; property: "turn"; from: 0; to: 180; duration: 540; easing.type: Easing.InOutCubic }
+        ScriptAction { script: book.land() }
+    }
+    // Let go past a third of the way: the page finishes turning over.
+    SequentialAnimation {
+        id: finishAnim
+        NumberAnimation { target: book; property: "turn"; to: 180; duration: 240; easing.type: Easing.OutCubic }
+        ScriptAction { script: book.land() }
+    }
+    // Let go early: it falls back, and the book is as it was.
+    SequentialAnimation {
+        id: cancelAnim
+        NumberAnimation { target: book; property: "turn"; to: 0; duration: 220; easing.type: Easing.OutCubic }
         ScriptAction {
             script: {
-                book.leftPage = book.spread * 2;
-                book.rightPage = book.spread * 2 + 1;
-                book.turn = 0;
+                book.spread -= book.direction;
+                book.land();
             }
         }
     }
@@ -140,7 +245,9 @@ Item {
     focus: true
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Escape) {
-            if (book.query !== "")
+            if (book.tabletShown)
+                book.tabletShown = false;
+            else if (book.query !== "")
                 book.query = "";
             else
                 book.host.dismiss();
@@ -176,6 +283,30 @@ Item {
         MouseArea {
             anchors.fill: parent
             onWheel: wheel => wheel.angleDelta.y < 0 ? book.next() : book.previous()
+        }
+
+        // Drag across the book to turn a page: leftwards on, rightwards back. A click on an app is still a click; the
+        // drag only takes over once the hand has moved.
+        DragHandler {
+            id: pageDrag
+            target: null
+            yAxis.enabled: false
+            property int dir: 0
+            onActiveChanged: {
+                if (active)
+                    dir = 0;
+                else if (book.dragTurning)
+                    book.dragEnd();
+            }
+            onTranslationChanged: {
+                if (!active)
+                    return;
+                const dx = translation.x;
+                if (dir === 0 && Math.abs(dx) > 24)
+                    dir = book.dragBegin(dx < 0 ? 1 : -1) ? (dx < 0 ? 1 : -1) : 2;
+                if (book.dragTurning)
+                    book.dragMove(dx);
+            }
         }
 
         // The hard shadow under both pages, straight down and right, as the manga panels have it.
@@ -325,6 +456,132 @@ Item {
         }
     }
 
+    // ── The workspace tablet ─────────────────────────────────────────────────
+    // Drops down over the book on a double-click under the apps, swinging a little as it lands; goes back up the same way.
+    property bool tabletShown: false
+    property real tabletOpen: tabletShown ? 1 : 0
+    Behavior on tabletOpen {
+        NumberAnimation {
+            duration: book.tabletShown ? 520 : 280
+            easing.type: book.tabletShown ? Easing.OutBack : Easing.InCubic
+            easing.overshoot: 1.2
+        }
+    }
+
+    // The page dims behind it; a click there puts it away.
+    Rectangle {
+        anchors.fill: parent
+        visible: book.tabletOpen > 0.01
+        color: Qt.rgba(0, 0, 0, 0.28 * Math.min(1, book.tabletOpen))
+        MouseArea {
+            anchors.fill: parent
+            onClicked: book.tabletShown = false
+        }
+    }
+
+    Item {
+        id: tablet
+        visible: book.tabletOpen > 0.01
+        width: Math.min(book.bookW * 0.92, 1120)
+        height: width * 0.62
+        x: (book.width - width) / 2
+        y: (book.height - height) / 2 - (1 - book.tabletOpen) * (book.height * 0.75)
+        rotation: (1 - Math.min(1, book.tabletOpen)) * -7
+        transformOrigin: Item.Top
+
+        MouseArea { anchors.fill: parent }   // clicks on the tablet stay on it
+
+        // The hard shadow, as everything in Manga Ink has.
+        Rectangle {
+            x: 12
+            y: 12
+            width: parent.width
+            height: parent.height
+            radius: 36
+            color: book.ink
+            opacity: 0.85
+        }
+        // The body: an ink bezel with a camera, a power button on top.
+        Rectangle {
+            x: parent.width * 0.78
+            y: -6
+            width: 70
+            height: 10
+            radius: 4
+            color: book.ink
+        }
+        Rectangle {
+            id: bezel
+            anchors.fill: parent
+            radius: 36
+            color: book.ink
+            border.width: 3
+            border.color: book.negative ? book.paper : "#000000"
+            Rectangle {
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: 10
+                width: 8
+                height: 8
+                radius: 4
+                color: Qt.rgba(book.paper.r, book.paper.g, book.paper.b, 0.35)
+            }
+            // The screen: paper, the workspaces printed on it.
+            Rectangle {
+                id: tabletScreen
+                anchors.fill: parent
+                anchors.margins: 26
+                radius: 14
+                color: book.paper
+                clip: true
+                Item {
+                    anchors.fill: parent
+                    anchors.margins: 4
+                    clip: true
+                    Shape {
+                        anchors.fill: parent
+                        ShapePath {
+                            strokeWidth: -1
+                            fillColor: Qt.rgba(book.ink.r, book.ink.g, book.ink.b, 0.22)
+                            PathSvg { path: Styles.screentone(tabletScreen.width - 10, 0, 120, 7) }
+                        }
+                    }
+                }
+                Row {
+                    x: 22
+                    y: 14
+                    spacing: 14
+                    StyledText {
+                        text: Translation.tr("WORKSPACES")
+                        color: book.ink
+                        font.pixelSize: 24
+                        font.weight: Font.Black
+                        font.letterSpacing: 4
+                    }
+                    StyledText {
+                        anchors.baseline: parent.children[0].baseline
+                        text: Translation.tr("click an app to go to it · Shift + drag it to move it")
+                        color: Qt.rgba(book.ink.r, book.ink.g, book.ink.b, 0.7)
+                        font.pixelSize: 13
+                        font.weight: Font.DemiBold
+                        font.italic: true
+                    }
+                }
+                WorkspaceBoard {
+                    anchors.fill: parent
+                    anchors.margins: 22
+                    anchors.topMargin: 60
+                    ink: book.ink
+                    paper: book.paper
+                    accent: book.blush
+                    corner: 2
+                    border: 2.5
+                    columns: 4
+                    onPicked: book.host.dismiss()
+                }
+            }
+        }
+    }
+
     // ── A page ───────────────────────────────────────────────────────────────
     component Page: Item {
         id: page
@@ -334,6 +591,7 @@ Item {
         property bool live: true
         enabled: live
         readonly property var entries: book.pageApps(page.pageIndex)
+        readonly property var info: book.pages[page.pageIndex] ?? ({ kind: "blank", entries: [] })
         readonly property bool hasPrevious: page.live && page.isLeft && book.spread > 0
         readonly property bool hasNext: page.live && !page.isLeft && book.spread < book.spreads - 1
 
@@ -367,7 +625,7 @@ Item {
             y: 18
             width: parent.width - 52
             height: 58
-            visible: page.isLeft
+            visible: page.isLeft && (book.query !== "" || page.info.kind === "toc")
             StyledText {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: book.query === ""
@@ -408,6 +666,117 @@ Item {
                 }
             }
         }
+        // A chapter's title, at the head of its pages: big on its first page, small after.
+        Row {
+            x: 26
+            y: page.info.first ? 22 : 34
+            spacing: 10
+            visible: page.info.kind === "apps" && page.info.chapter !== "" && !(page.isLeft && book.query !== "")
+            Rectangle {
+                visible: page.info.first === true
+                anchors.verticalCenter: parent.verticalCenter
+                width: chapterNumber.implicitWidth + 16
+                height: chapterNumber.implicitHeight + 6
+                color: book.ink
+                StyledText {
+                    id: chapterNumber
+                    anchors.centerIn: parent
+                    text: Translation.tr("CH. %1").arg(page.info.chapterNumber ?? "")
+                    color: book.paper
+                    font.pixelSize: 12
+                    font.weight: Font.Black
+                    font.letterSpacing: 2
+                }
+            }
+            StyledText {
+                anchors.verticalCenter: parent.verticalCenter
+                text: page.info.first ? (page.info.chapter ?? "").toUpperCase() : Translation.tr("%1 (cont.)").arg(page.info.chapter ?? "")
+                color: book.ink
+                font.pixelSize: page.info.first ? 26 : 13
+                font.weight: Font.Black
+                font.letterSpacing: page.info.first ? 3 : 1
+            }
+        }
+
+        // The contents: each chapter, a dotted leader, and its page; click one to turn to it.
+        Column {
+            visible: page.info.kind === "toc"
+            x: 30
+            y: 92
+            width: parent.width - 60
+            spacing: 4
+            StyledText {
+                text: Translation.tr("CONTENTS")
+                color: book.ink
+                font.pixelSize: 30
+                font.weight: Font.Black
+                font.letterSpacing: 6
+                bottomPadding: 10
+            }
+            Repeater {
+                model: page.info.kind === "toc" ? book.toc : []
+                delegate: Item {
+                    id: tocRow
+                    required property var modelData
+                    width: parent.width
+                    height: 34
+                    Rectangle {
+                        anchors.fill: parent
+                        color: tocArea.containsMouse ? Qt.rgba(book.blush.r, book.blush.g, book.blush.b, 0.16) : "transparent"
+                    }
+                    StyledText {
+                        id: tocName
+                        anchors.verticalCenter: parent.verticalCenter
+                        x: 6
+                        text: Translation.tr("%1. %2").arg(tocRow.modelData.number).arg(tocRow.modelData.name)
+                        color: book.ink
+                        font.pixelSize: 16
+                        font.weight: Font.Bold
+                    }
+                    // The leader: dots from the name to the page number.
+                    StyledText {
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left: tocName.right
+                        anchors.leftMargin: 8
+                        anchors.right: tocPage.left
+                        anchors.rightMargin: 8
+                        clip: true
+                        text: "· ".repeat(80)
+                        color: Qt.rgba(book.ink.r, book.ink.g, book.ink.b, 0.5)
+                        font.pixelSize: 14
+                    }
+                    StyledText {
+                        id: tocPage
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.right: parent.right
+                        anchors.rightMargin: 6
+                        text: tocRow.modelData.page + 1
+                        color: book.ink
+                        font.pixelSize: 16
+                        font.weight: Font.Black
+                    }
+                    MouseArea {
+                        id: tocArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: book.goToPage(tocRow.modelData.page)
+                    }
+                }
+            }
+        }
+
+        // A blank last page, as a volume ends.
+        StyledText {
+            visible: page.info.kind === "blank"
+            anchors.centerIn: parent
+            text: Translation.tr("— to be continued —")
+            color: Qt.rgba(book.ink.r, book.ink.g, book.ink.b, 0.55)
+            font.pixelSize: 16
+            font.weight: Font.Bold
+            font.italic: true
+        }
+
         // The right page's heading: where you are in the book.
         StyledText {
             visible: !page.isLeft
@@ -423,6 +792,7 @@ Item {
         // The apps, four by four.
         Grid {
             id: grid
+            visible: page.info.kind === "apps"
             x: 26
             y: 88
             width: parent.width - 52
@@ -438,6 +808,29 @@ Item {
                     width: grid.cellW
                     height: grid.cellH
                 }
+            }
+        }
+
+        // Under the last row of apps: double-click for the workspace tablet. A faint hint while the mouse is there.
+        MouseArea {
+            id: tabletSpot
+            readonly property int rows: Math.ceil(page.entries.length / 4)
+            visible: page.info.kind === "apps" || page.info.kind === "blank"
+            x: 76
+            width: parent.width - 152
+            y: page.info.kind === "blank" ? parent.height * 0.6 : grid.y + Math.max(1, rows) * grid.cellH
+            height: Math.max(24, parent.height - 44 - y)
+            hoverEnabled: true
+            onDoubleClicked: book.tabletShown = true
+            StyledText {
+                anchors.centerIn: parent
+                opacity: tabletSpot.containsMouse ? 0.6 : 0
+                Behavior on opacity { NumberAnimation { duration: 160 } }
+                text: Translation.tr("double-click: workspaces")
+                color: book.ink
+                font.pixelSize: 12
+                font.weight: Font.DemiBold
+                font.italic: true
             }
         }
 
