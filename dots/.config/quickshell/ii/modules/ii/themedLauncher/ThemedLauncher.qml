@@ -97,7 +97,7 @@ Scope {
                 anchors.fill: parent
                 focus: true
                 // By file, so a live reload finds them however the folder was imported.
-                source: root.kind === "book" ? "MangaBook.qml" : root.kind === "phone" ? "IceyPhone.qml" : ""
+                source: root.kind === "book" ? "MangaBook.qml" : root.kind === "phone" ? "IceyPhone.qml" : root.kind === "sao" ? "SwordArtOnline.qml" : ""
                 onLoaded: {
                     item.host = root;
                     root.picker = item;
