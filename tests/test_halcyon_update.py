@@ -95,6 +95,8 @@ class UpdaterTest(unittest.TestCase):
         repo = self.tmp / name
         git(self.tmp, "clone", "-q", str(self.upstream), str(repo))
         (self.state / "repo").write_text(f"{repo}\n")
+        # Match ./setup install: this checkout and its current files are registered.
+        (self.state / "installed").write_text(git(repo, "rev-parse", "HEAD") + "\n")
         # As ./setup install leaves it: the files are in $HOME too.
         dest = self.home / ".config/halcyon-test/a.txt"
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -193,8 +195,8 @@ class UpdaterTest(unittest.TestCase):
     def test_apply_reloads_hyprland_and_restarts_quickshell(self):
         self.clone()
         reload_log = self.tmp / "reload.log"
-        (self.bin / "pgrep").write_text("#!/bin/sh\\nexit 0\\n")
-        (self.bin / "hyprctl").write_text(f"#!/bin/sh\\necho hyprland-reload >> '{reload_log}'\\n")
+        (self.bin / "pgrep").write_text("#!/bin/sh\nexit 0\n")
+        (self.bin / "hyprctl").write_text(f"#!/bin/sh\necho hyprland-reload >> '{reload_log}'\n")
         (self.bin / "systemctl").write_text(
             f"""#!/bin/sh
 if [ "$3" = is-active ]; then exit 0; fi
@@ -217,8 +219,8 @@ echo "$*" >> '{reload_log}'
         dialog = ROOT / "dots/.config/quickshell/ii/modules/ii/sidebarRight/wifiNetworks/WifiDialog.qml"
         source = dialog.read_text()
         self.assertIn("import QtQuick.Controls", source)
-        self.assertIn("ScrollView {", source)
-        self.assertIn("TextArea {", source)
+        self.assertIn("Flickable {", source)
+        self.assertIn("TextEdit {", source)
 
     def test_apply_copies_the_changed_files(self):
         self.clone()
