@@ -67,7 +67,7 @@ class WallpaperTests(unittest.TestCase):
         rows = {r["id"]: r for r in json.loads(out)}
         self.assertEqual(code, 0)
         self.assertEqual({k: (r["installed"], r["downloadable"]) for k, r in rows.items()},
-                         {"after-icey": (False, True), "silence": (False, True), "anime-girl-cat": (False, False)})
+                         {"after-icey": (False, True), "sao-aincrad": (False, True), "silence": (False, True), "anime-girl-cat": (False, False)})
         self.assertTrue(rows["after-icey"]["path"].startswith(str(wp.DIRECTORY)))
 
     def test_import_installs_a_video(self):
