@@ -56,6 +56,13 @@ class SettingsTest(unittest.TestCase):
         self.assertEqual(ps.SETTINGS["monitorWall"][5], "plus:monitor_wall", "only for a hyprland-plus that has it")
 
 
+class GeneralSnapTest(unittest.TestCase):
+    def test_floating_windows_snap_to_nearby_windows_and_monitor_edges(self):
+        source = (ROOT / "dots/.config/hypr/hyprland/halcyon/general.lua").read_text()
+        self.assertIn("enabled = true", source)
+        self.assertIn("respect_gaps = true", source)
+
+
 class WiringTest(unittest.TestCase):
     def test_loaded_with_more_than_one_monitor(self):
         family = (ROOT / "dots/.config/quickshell/ii/panelFamilies/IllogicalImpulseFamily.qml").read_text()
