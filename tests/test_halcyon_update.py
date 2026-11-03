@@ -298,7 +298,7 @@ class UpdaterTest(unittest.TestCase):
         done = self.run_update("status")
         self.assertEqual(done.returncode, 0, done.stderr)
         self.assertIn("folder:", done.stdout)
-        self.assertIn("updates waiting: none", done.stdout)
+        self.assertIn("updates waiting: initial sync required", done.stdout)
         self.assertEqual(self.notifications(), [])
 
     def test_status_says_where_it_stands(self):
