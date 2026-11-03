@@ -31,12 +31,14 @@ class WhichPickerTest(unittest.TestCase):
         self.assertEqual(self.picker(True, "manga-ink"), "book")
         self.assertEqual(self.picker(True, "manga-ink-dark"), "book")
         self.assertEqual(self.picker(True, "after-icey"), "phone")
+        self.assertEqual(self.picker(True, "sao"), "sao")
 
     def test_other_themes_and_off(self):
         self.assertEqual(self.picker(True, "silence"), "")
         self.assertEqual(self.picker(True, ""), "")
         self.assertEqual(self.picker(False, "manga-ink"), "")
         self.assertEqual(self.picker(False, "after-icey"), "")
+        self.assertEqual(self.picker(False, "sao"), "")
 
 
 @unittest.skipUnless(NODE, "node is not installed")
@@ -75,12 +77,20 @@ class WiringTest(unittest.TestCase):
         launcher = (LAUNCHER / "ThemedLauncher.qml").read_text()
         self.assertIn('"MangaBook.qml"', launcher)
         self.assertIn('"IceyPhone.qml"', launcher)
+        self.assertIn('"SwordArtOnline.qml"', launcher)
 
     def test_a_setting_on_by_default(self):
         config = (II / "modules/common/Config.qml").read_text()
         self.assertIn("property bool themedLauncher: true", config)
         settings = (II / "modules/settings/HalcyonConfig.qml").read_text()
         self.assertIn("Config.options.halcyon.themedLauncher = checked", settings)
+
+    def test_sao_launcher_is_a_separate_hud_not_a_reskinned_existing_picker(self):
+        sao = (LAUNCHER / "SwordArtOnline.qml").read_text()
+        self.assertIn("AINCRAD", sao)
+        self.assertIn("PLAYER STATUS", sao)
+        self.assertIn("host.runResult(LauncherSearch.results[0])", sao)
+        self.assertIn("host.launchEntry", sao)
 
     def test_the_phone_has_its_four_apps(self):
         phone = (LAUNCHER / "IceyPhone.qml").read_text()
