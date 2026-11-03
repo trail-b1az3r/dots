@@ -73,14 +73,22 @@ WindowDialog {
         }
     }
 
-    ScrollView {
+    // Use QtQuick's Flickable instead of QtQuick.Controls.ScrollView.
+    // This avoids depending on the Controls ScrollView plugin at runtime.
+    Flickable {
+        id: detailsFlickable
         visible: root.showingDetails
         Layout.fillWidth: true
         Layout.fillHeight: true
         Layout.topMargin: -8
         Layout.bottomMargin: -8
+        clip: true
+        contentWidth: Math.max(width, detailsText.implicitWidth)
+        contentHeight: detailsText.implicitHeight
 
-        TextArea {
+        TextEdit {
+            id: detailsText
+            width: Math.max(detailsFlickable.width, implicitWidth)
             text: root.detailsOutput
             readOnly: true
             selectByMouse: true
@@ -88,7 +96,6 @@ WindowDialog {
             color: Appearance.colors.colOnSurface
             font.family: "monospace"
             font.pixelSize: 12
-            background: null
         }
     }
 
