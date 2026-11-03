@@ -209,7 +209,9 @@ check() {
     fetch || { echo "no network: the update check will try again later"; return 0; }
     local count
     rm -f "$ERROR_FILE"
-    if [[ ! -s "$INSTALLED_FILE" ]]; then
+    # Only an install setup never registered (bootstrapped just now, or on an earlier check) needs the first sync.
+    # A registered clone or release archive without a recorded commit is compared as usual.
+    if (( BOOTSTRAPPED )) || [[ -f "$FIRST_SYNC_FILE" ]]; then
         # Persist this state: check may bootstrap the checkout before apply runs.
         : > "$FIRST_SYNC_FILE"
         # A source checkout exists now, but setup never recorded which dotfiles
@@ -448,15 +450,17 @@ status() {
     has_commits && echo "branch:          $branch at $(g rev-parse --short HEAD)"
     if [[ -s "$INSTALLED_FILE" ]]; then
         echo "installed:       $(cut -c1-7 "$INSTALLED_FILE")"
-    else
+    elif (( BOOTSTRAPPED )) || [[ -f "$FIRST_SYNC_FILE" ]]; then
         echo "installed:       not registered (manual/Nexora install; first sync required)"
+    else
+        echo "installed:       not recorded yet (the next update records it)"
     fi
     if [[ -f "$CHECKED_FILE" ]]; then
         echo "last check:      $(date -d "@$(cat "$CHECKED_FILE")" '+%Y-%m-%d %H:%M' 2>/dev/null || cat "$CHECKED_FILE")"
     else
         echo "last check:      never"
     fi
-    if [[ ! -s "$INSTALLED_FILE" ]]; then
+    if (( BOOTSTRAPPED )) || [[ -f "$FIRST_SYNC_FILE" ]]; then
         echo "updates waiting: initial sync required (update apply, or the bar's update button)"
     elif [[ -f "$AVAILABLE_FILE" ]]; then
         echo "updates waiting: $(cat "$AVAILABLE_FILE")  (update apply, or the bar's update button)"
