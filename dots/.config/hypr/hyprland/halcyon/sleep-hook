@@ -48,6 +48,19 @@ restart_bluetooth_if_off() {
 
 sleep 6
 restart_bluetooth_if_off
+
+# Surface Pro 3-6 devices use the Marvell mwifiex_pcie driver. Its firmware
+# can leave the PCIe function wedged after suspend; a NetworkManager restart
+# alone cannot recover it. Reload the module before testing connectivity.
+if [ -d /sys/module/mwifiex_pcie ]; then
+    logger -t halcyon-resume "reloading Marvell mwifiex_pcie after resume"
+    systemctl stop NetworkManager.service || true
+    modprobe -r mwifiex_pcie || logger -t halcyon-resume "could not unload mwifiex_pcie"
+    sleep 2
+    modprobe mwifiex_pcie || logger -t halcyon-resume "could not reload mwifiex_pcie"
+    systemctl start NetworkManager.service || logger -t halcyon-resume "could not start NetworkManager"
+    sleep 3
+fi
 if wait_for_network 12; then
     logger -t halcyon-resume "network is up after resume"
     exit 0
