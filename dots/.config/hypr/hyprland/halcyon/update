@@ -25,6 +25,7 @@ set -u
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon"
 REPO_FILE="$STATE/repo"                 # written by ./setup install
 INSTALLED_FILE="$STATE/installed"       # the commit whose dots/ files are in $HOME
+FIRST_SYNC_FILE="$STATE/first-sync-required"
 SEEN_FILE="$STATE/update-seen"          # the last upstream commit already announced
 AVAILABLE_FILE="$STATE/update-available"  # how many commits are waiting; the shell's indicator reads it
 NOTIFIED_FILE="$STATE/update-notified"  # when the last notification went out (epoch seconds)
@@ -209,6 +210,8 @@ check() {
     local count
     rm -f "$ERROR_FILE"
     if [[ ! -s "$INSTALLED_FILE" ]]; then
+        # Persist this state: check may bootstrap the checkout before apply runs.
+        : > "$FIRST_SYNC_FILE"
         # A source checkout exists now, but setup never recorded which dotfiles
         # were deployed. Offer one initial sync; apply backs up existing files.
         count="$(g ls-tree -r --name-only "$TARGET" -- dots | grep -c . || true)"
@@ -290,7 +293,7 @@ apply() {
 
     local before after changed ts backup copied=0 needs_install=0 hypr_changed=0 shell_changed=0 units_changed=0
     local stashed="" from_archive=0 first_deploy=0
-    (( BOOTSTRAPPED )) && first_deploy=1
+    if (( BOOTSTRAPPED )) || [[ -f "$FIRST_SYNC_FILE" ]]; then first_deploy=1; fi
     ts="$(date +%Y%m%d-%H%M%S)"
 
     if (( first_deploy )); then
@@ -341,6 +344,7 @@ apply() {
     if [[ "$before" == "$after" ]]; then
         rm -f "$AVAILABLE_FILE" "$ERROR_FILE"
         echo "$after" > "$INSTALLED_FILE"
+        rm -f "$FIRST_SYNC_FILE"
         echo "Already up to date."
         notify "Halcyon is up to date" "Nothing new on main." -u low
         [[ "$what" == all ]] && plus_apply
