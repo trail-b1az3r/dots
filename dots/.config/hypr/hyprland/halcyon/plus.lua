@@ -38,7 +38,7 @@ end
 if caps.monitorWall then
     hl.config({
         plus = {
-            monitor_wall = 120,
+            monitor_wall = 96,
         },
     })
 end
