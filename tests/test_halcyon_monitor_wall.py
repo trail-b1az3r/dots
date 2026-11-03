@@ -51,6 +51,8 @@ class SettingsTest(unittest.TestCase):
         values, _ = ps.resolve({"monitorWall": 200})
         self.assertEqual(values["monitorWall"], 200)
         self.assertEqual(ps.SETTINGS["monitorWall"][0], "plus.monitor_wall")
+        self.assertEqual(ps.SETTINGS["monitorWall"][2], 96, "Halcyon uses a softer default wall")
+        self.assertIn("readonly property real maxDepth: 40", QML.read_text(), "the shell bulge stays subtle")
         self.assertEqual(ps.SETTINGS["monitorWall"][5], "plus:monitor_wall", "only for a hyprland-plus that has it")
 
 
