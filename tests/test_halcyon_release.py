@@ -14,6 +14,9 @@ class ReleaseTest(unittest.TestCase):
     def test_fetch_shows_this_release(self):
         self.assertEqual(halcyon_fetch.__version__, (ROOT / "VERSION").read_text().strip())
         self.assertEqual(halcyon_fetch.__codename__, (ROOT / "CODENAME").read_text().strip())
+        # Installed copies have no VERSION file next to them: the built-in fallback must be this release too.
+        self.assertEqual(halcyon_fetch._RELEASE_VERSION, (ROOT / "VERSION").read_text().strip())
+        self.assertEqual(halcyon_fetch._RELEASE_CODENAME, (ROOT / "CODENAME").read_text().strip())
 
     def test_the_release_has_notes_with_its_name(self):
         version = (ROOT / "VERSION").read_text().strip()

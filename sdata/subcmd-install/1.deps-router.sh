@@ -64,7 +64,8 @@ elif [[ "$INSTALL_VIA_NIX" == "true" ]]; then
 elif [[ "$OS_GROUP_ID" =~ ^(arch|gentoo|fedora)$ ]]; then
 
   TARGET_ID=$OS_GROUP_ID
-  if ! [[ "${TARGET_ID}" = "arch" || "nexora"]]; then
+  # dist-arch is the reference itself (Nexora, EndeavourOS and CachyOS are in the arch group): nothing to compare.
+  if ! [[ "${TARGET_ID}" == "arch" ]]; then
     tmp_update_status="$(outdate_detect sdata/dist-arch sdata/dist-${TARGET_ID})"
     if [[ "${tmp_update_status}" =~ ^(OUTDATED|EMPTY_TARGET|EMPTY_SOURCE|FORCE_OUTDATED|WIP)$ ]]; then
       printf "${STY_RED}${STY_BOLD}===URGENT===${STY_RST}\n"

@@ -79,6 +79,8 @@ else
   printf "${STY_RED}/etc/os-release does not exist, aborting...${STY_RST}\n" ; exit 1
 fi
 export OS_DISTRO_ID=$(awk -F'=' '/^ID=/ { gsub(/["\x27]/,"",$2); print tolower($2) }' ${OS_RELEASE_FILE} 2> /dev/null)
+# ID_LIKE may name several parents ("endeavouros arch" on Nexora): like() matches any one of them.
+like() { [[ " $OS_DISTRO_ID_LIKE " == *" $1 "* ]]; }
 export OS_DISTRO_ID_LIKE=$(awk -F'=' '/^ID_LIKE=/ { gsub(/["\x27]/,"",$2); print tolower($2) }' ${OS_RELEASE_FILE} 2> /dev/null)
 
 
@@ -92,26 +94,26 @@ if [[ "$OS_DISTRO_ID" == "nixos" ]]; then
 elif [[ "$OS_DISTRO_ID" =~ ^(arch|endeavouros|nexora|cachyos)$ ]]; then
   OS_GROUP_ID="arch"
   print_os_group_id_functions=(print_os_group_id)
-elif [[ "$OS_DISTRO_ID_LIKE" == "arch" ]]; then
+elif like arch; then
   OS_GROUP_ID="arch"
   print_os_group_id_functions=(print_os_group_id{,_alike})
 elif [[ "$OS_DISTRO_ID" == "gentoo" ]]; then
   OS_GROUP_ID="gentoo"
   print_os_group_id_functions=(print_os_group_id{,_unofficial})
-elif [[ "$OS_DISTRO_ID_LIKE" == "gentoo" ]]; then
+elif like gentoo; then
   OS_GROUP_ID="gentoo"
   print_os_group_id_functions=(print_os_group_id{,_alike,_unofficial})
 elif [[ "$OS_DISTRO_ID" == "fedora" ]]; then
   OS_GROUP_ID="fedora"
   print_os_group_id_functions=(print_os_group_id{,_unofficial})
-elif [[ "$OS_DISTRO_ID_LIKE" == "fedora" ]]; then
+elif like fedora; then
   OS_GROUP_ID="fedora"
   print_os_group_id_functions=(print_os_group_id{,_alike,_unofficial})
 elif [[ "$OS_DISTRO_ID" =~ ^(opensuse-leap|opensuse-tumbleweed)$ ]] || [[ "$OS_DISTRO_ID_LIKE" =~ ^(opensuse|suse)(\ (opensuse|suse))?$ ]]; then
   OS_GROUP_ID="suse"
   INSTALL_VIA_NIX=true
   print_os_group_id_functions=(print_os_group_id{,_unsupported})
-elif [[ "$OS_DISTRO_ID" == "debian" || "$OS_DISTRO_ID_LIKE" == "debian" ]]; then
+elif [[ "$OS_DISTRO_ID" == "debian" ]] || like debian; then
   OS_GROUP_ID="debian"
   INSTALL_VIA_NIX=true
   print_os_group_id_functions=(print_os_group_id{,_unsupported})

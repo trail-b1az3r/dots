@@ -21,7 +21,7 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import Callable, Optional, Sequence, TextIO
 
-_RELEASE_VERSION = "26.11.0.1.4"
+_RELEASE_VERSION = "2.0.4"
 _RELEASE_CODENAME = "Short Sword"
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[5]
 try:
