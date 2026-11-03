@@ -417,6 +417,23 @@ apply() {
 
 status() {
     MODE=status
+    if [[ ! -r "$REPO_FILE" ]]; then
+        echo "No repository is recorded. The updater will initialize a checkout on the next check."
+        echo "folder:          not registered (manual/Nexora install)"
+        echo "installed:       not registered (first sync required)"
+        echo "last check:      never"
+        echo "updates waiting: initial sync required (run update check, then update apply)"
+        if command -v systemctl >/dev/null 2>&1; then
+            echo "timer:           $(systemctl --user is-enabled halcyon-update.timer 2>/dev/null || echo "not enabled") (checks hourly)"
+        fi
+        plus_check
+        case "$PLUS_STATE" in
+            none) echo "hyprland-plus:   not installed" ;;
+            aur) echo "hyprland-plus:   from the AUR (update apply runs your AUR helper)" ;;
+            *) echo "hyprland-plus:   $PLUS_LINE" ;;
+        esac
+        return 0
+    fi
     repo
     local branch kind="git clone"
     has_commits || kind="release archive (becomes a clone on its first update)"
