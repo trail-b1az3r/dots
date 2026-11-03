@@ -423,13 +423,19 @@ status() {
     branch="$(g symbolic-ref --quiet --short HEAD 2>/dev/null || echo "detached")"
     echo "folder:          $REPO ($kind)"
     has_commits && echo "branch:          $branch at $(g rev-parse --short HEAD)"
-    [[ -f "$INSTALLED_FILE" ]] && echo "installed:       $(cut -c1-7 "$INSTALLED_FILE")"
+    if [[ -s "$INSTALLED_FILE" ]]; then
+        echo "installed:       $(cut -c1-7 "$INSTALLED_FILE")"
+    else
+        echo "installed:       not registered (manual/Nexora install; first sync required)"
+    fi
     if [[ -f "$CHECKED_FILE" ]]; then
         echo "last check:      $(date -d "@$(cat "$CHECKED_FILE")" '+%Y-%m-%d %H:%M' 2>/dev/null || cat "$CHECKED_FILE")"
     else
         echo "last check:      never"
     fi
-    if [[ -f "$AVAILABLE_FILE" ]]; then
+    if [[ ! -s "$INSTALLED_FILE" ]]; then
+        echo "updates waiting: initial sync required (update apply, or the bar's update button)"
+    elif [[ -f "$AVAILABLE_FILE" ]]; then
         echo "updates waiting: $(cat "$AVAILABLE_FILE")  (update apply, or the bar's update button)"
     else
         echo "updates waiting: none"
