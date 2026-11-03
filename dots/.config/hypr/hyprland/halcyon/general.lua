@@ -29,6 +29,7 @@ hl.config({
         gaps_out = 10,
 
         snap = {
+            enabled = true,
             window_gap = 5,
             monitor_gap = 10
         }
