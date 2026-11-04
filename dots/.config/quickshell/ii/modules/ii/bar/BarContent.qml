@@ -36,8 +36,20 @@ Item { // Bar content region
             target: barBackground
         }
     }
+    // Sword Art Online draws the whole bar as the game's HUD (SaoBar.qml), floating over the wallpaper.
+    readonly property bool sao: Config.options.halcyon.theme === "sword-art-online" && !Config.options.bar.vertical
+    Loader {
+        anchors.fill: parent
+        active: root.sao
+        z: 1
+        source: "SaoBar.qml"   // by file, so a live reload finds it
+        onLoaded: {
+            item.screen = Qt.binding(() => root.screen);
+            item.compact = Qt.binding(() => root.useShortenedForm);
+        }
+    }
     // Each Halcyon theme that isn't a glass one draws the bar the way it draws the dock (dock/DockFrame.qml).
-    readonly property string frameKind: Config.options.bar.showBackground ? Styles.frameKindFor(Config.options.halcyon.theme) : ""
+    readonly property string frameKind: Config.options.bar.showBackground && !root.sao ? Styles.frameKindFor(Config.options.halcyon.theme) : ""
     Loader {
         anchors.fill: barBackground
         z: -1
@@ -59,7 +71,7 @@ Item { // Bar content region
             fill: parent
             margins: Config.options.bar.cornerStyle === 1 ? (Appearance.sizes.hyprlandGapsOut) : 0 // idk why but +1 is needed
         }
-        opacity: root.frameKind !== "" ? 0 : 1
+        opacity: root.frameKind !== "" || root.sao ? 0 : 1
         color: Config.options.bar.showBackground ? Appearance.colors.colLayer0 : "transparent"
         radius: Config.options.bar.cornerStyle === 1 ? Appearance.rounding.windowRounding : 0
         border.width: Config.options.bar.cornerStyle === 1 ? 1 : 0
@@ -67,6 +79,7 @@ Item { // Bar content region
     }
 
     FocusedScrollMouseArea { // Left side | scroll to change brightness
+        visible: !root.sao
         id: barLeftSideMouseArea
 
         anchors {
@@ -126,6 +139,7 @@ Item { // Bar content region
     }
 
     Row { // Middle section
+        visible: !root.sao
         id: middleSection
         anchors {
             top: parent.top
@@ -220,6 +234,7 @@ Item { // Bar content region
     }
 
     FocusedScrollMouseArea { // Right side | scroll to change volume
+        visible: !root.sao
         id: barRightSideMouseArea
 
         anchors {

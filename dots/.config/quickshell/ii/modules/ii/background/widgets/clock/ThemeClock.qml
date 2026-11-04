@@ -47,7 +47,8 @@ Item {
     // The ICEY scanning arc: the seconds, or the minutes without second precision.
     readonly property real sweep: showSeconds ? now.getSeconds() / 60 : now.getMinutes() / 60
 
-    function withAlpha(colour, alpha) {
+    // Typed, so a "#RRGGBB" string is made a colour first: an untyped string has no .r, and came out black.
+    function withAlpha(colour: color, alpha: real): color {
         return Qt.rgba(colour.r, colour.g, colour.b, alpha);
     }
     function pad(n) {

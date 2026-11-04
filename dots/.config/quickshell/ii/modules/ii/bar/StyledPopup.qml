@@ -58,6 +58,16 @@ LazyLoader {
             target: popupBackground
         }
 
+        // Sword Art Online: the game's panel, its pointer towards the bar.
+        readonly property bool sao: Config.options.halcyon.theme === "sword-art-online"
+        Loader {
+            active: popupWindow.sao
+            anchors.fill: popupBackground
+            sourceComponent: SaoPanel {
+                pointer: Config.options.bar.vertical ? "" : Config.options.bar.bottom ? "bottom" : "top"
+            }
+        }
+
         Rectangle {
             id: popupBackground
             readonly property real margin: 10
@@ -70,11 +80,11 @@ LazyLoader {
             }
             implicitWidth: root.contentItem.implicitWidth + margin * 2
             implicitHeight: root.contentItem.implicitHeight + margin * 2
-            color: Appearance.m3colors.m3surfaceContainer
-            radius: Appearance.rounding.small
+            color: popupWindow.sao ? "transparent" : Appearance.m3colors.m3surfaceContainer
+            radius: popupWindow.sao ? 4 : Appearance.rounding.small
             children: [root.contentItem]
 
-            border.width: 1
+            border.width: popupWindow.sao ? 0 : 1
             border.color: Appearance.colors.colLayer0Border
         }
     }

@@ -62,7 +62,9 @@ PopupWindow {
 
         Rectangle {
             id: popupBackground
-            readonly property real padding: 4
+            // Sword Art Online: the game's panel (SaoPanel), a little more room inside for its edge and notches.
+            readonly property bool sao: Config.options.halcyon.theme === "sword-art-online"
+            readonly property real padding: sao ? 7 : 4
             anchors {
                 left: parent.left
                 right: parent.right
@@ -72,11 +74,17 @@ PopupWindow {
                 margins: root.padding
             }
 
-            color: Appearance.colors.colLayer0
-            radius: Appearance.rounding.windowRounding
-            border.width: 1
+            color: sao ? "transparent" : Appearance.colors.colLayer0
+            radius: sao ? 4 : Appearance.rounding.windowRounding
+            border.width: sao ? 0 : 1
             border.color: Appearance.colors.colLayer0Border
             clip: true
+
+            Loader {
+                active: popupBackground.sao
+                anchors.fill: parent
+                sourceComponent: SaoPanel { pointer: "" }
+            }
 
             opacity: 0
             Component.onCompleted: opacity = 1

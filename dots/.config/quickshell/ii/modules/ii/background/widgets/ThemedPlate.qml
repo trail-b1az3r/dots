@@ -40,7 +40,8 @@ Item {
     readonly property color keyEdge: style.edge ? style.edge : Qt.darker(solidBase, 2.6)
     readonly property real pad: 26
 
-    function withAlpha(colour, alpha) {
+    // Typed, so a "#RRGGBB" string is made a colour first: an untyped string has no .r, and came out black.
+    function withAlpha(colour: color, alpha: real): color {
         return Qt.rgba(colour.r, colour.g, colour.b, alpha);
     }
 
