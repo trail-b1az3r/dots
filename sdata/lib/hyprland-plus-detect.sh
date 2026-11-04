@@ -106,3 +106,28 @@ EOF
   printf 'Could not register hyprland-plus with pacman. The stock hyprland package may be installed beside it; the fork in /usr/local still runs first.\n' >&2
   return 1
 }
+
+# A hyprland-plus built into /usr/local while the hyprland-plus package is installed: /usr/local/bin comes first in
+# PATH (and its wayland-sessions entry is what the login screen starts), so the old build starts instead of the
+# package, and once a library it was linked against moves on (aquamarine 0.16 dropped libaquamarine.so.14) it
+# cannot start at all. Moves it aside, never deletes it. HALCYON_LOCAL_PREFIX: tests point it elsewhere.
+hyprland_plus_retire_local(){
+  local prefix="${HALCYON_LOCAL_PREFIX:-/usr/local}" sudo_cmd=""
+  local bin="$prefix/bin/Hyprland" dest name session
+  command -v pacman >/dev/null 2>&1 && pacman -Q hyprland-plus >/dev/null 2>&1 || return 0
+  [[ -f "$bin" ]] || return 0
+  grep -aqs 'hyprland-plus' "$bin" || return 0
+  [[ -w "$prefix/bin" ]] || sudo_cmd=sudo
+  dest="$prefix/lib/hyprland-plus-retired/$(date +%Y%m%d-%H%M%S)"
+  $sudo_cmd mkdir -p "$dest/bin" "$dest/share/wayland-sessions" || return 1
+  for name in Hyprland hyprland hyprctl hyprpm start-hyprland; do
+    if [[ -e "$prefix/bin/$name" || -L "$prefix/bin/$name" ]]; then
+      $sudo_cmd mv -f "$prefix/bin/$name" "$dest/bin/" || return 1
+    fi
+  done
+  for session in "$prefix"/share/wayland-sessions/hyprland*.desktop; do
+    [[ -e "$session" ]] && { $sudo_cmd mv -f "$session" "$dest/share/wayland-sessions/" || return 1; }
+  done
+  printf 'The hyprland-plus package is installed, so the older build in %s (which started instead of it) is now in %s.\n' \
+    "$prefix" "$dest"
+}
