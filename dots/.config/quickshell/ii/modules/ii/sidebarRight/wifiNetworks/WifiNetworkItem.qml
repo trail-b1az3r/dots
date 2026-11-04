@@ -115,12 +115,15 @@ DialogListItem {
         ColumnLayout { // Public wifi login page
             id: publicWifiPortal
             Layout.topMargin: 8
-            visible: (root.wifiNetwork?.active && (root.wifiNetwork?.security ?? "").trim().length === 0) ?? false
+            // An open network, or any network that is holding us at a captive portal
+            visible: (root.wifiNetwork?.active && (Network.connectivity === "portal"
+                || (root.wifiNetwork?.security ?? "").trim().length === 0)) ?? false
 
             RowLayout {
                 DialogButton {
                     Layout.fillWidth: true
-                    buttonText: Translation.tr("Open network portal")
+                    buttonText: Network.connectivity === "portal" ? Translation.tr("Sign in to this network")
+                                                                   : Translation.tr("Open network portal")
                     colBackground: Appearance.colors.colLayer4
                     colBackgroundHover: Appearance.colors.colLayer4Hover
                     colRipple: Appearance.colors.colLayer4Active

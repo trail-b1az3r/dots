@@ -6,6 +6,8 @@ pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.modules.common
+import qs.modules.common.functions
 import qs.services.network
 
 /**
@@ -28,13 +30,73 @@ Singleton {
         getNetworks.running = true;
     }
 
+    // On Nexora, nmx whenever it is the network manager there (running, or enabled and on its way back), so nothing
+    // needs NetworkManager, nmtui or KDE's network settings. Elsewhere nmx only while it runs.
+    property bool nexora: false
+    readonly property string toolScript: FileUtils.trimFileProtocol(`${Directories.scriptPath}/network/network-tool.sh`)
+    function redetect(): void {
+        if (!detectNmx.running) detectNmx.running = true;
+    }
     Process {
         id: detectNmx
         running: true
-        command: ["sh", "-c", "command -v nmxcli >/dev/null 2>&1 && nmxcli -t -f RUNNING general 2>/dev/null"]
+        // Same test as nmxcli -t -f RUNNING general, plus Nexora's rules (scripts/network/network-tool.sh).
+        command: ["sh", root.toolScript]
         stdout: StdioCollector {
-            onStreamFinished: if (text.trim() === "running") root.cli = "nmxcli"
+            onStreamFinished: {
+                const lines = text.trim().split("\n");
+                root.nexora = lines.includes("nexora");
+                if (lines[0] === "nmxcli" || lines[0] === "nmcli") root.cli = lines[0];
+            }
         }
+    }
+    Timer { // nmx enabled or started after the shell, or a switch back to NetworkManager
+        interval: 30000
+        repeat: true
+        running: true
+        onTriggered: root.redetect()
+    }
+
+    // ── Connectivity and captive portals ──
+    // full, limited, portal (hotel/airport/café Wi-Fi waiting for a sign-in), none or unknown.
+    property string connectivity: "unknown"
+    // The sign-in page. nmx finds the real one; NetworkManager is given a plain-HTTP page the portal redirects.
+    property string portalUrl: ""
+    readonly property string portalFallback: "http://nmcheck.gnome.org/check_network_status.txt"
+    onConnectivityChanged: {
+        if (connectivity !== "portal") {
+            portalUrl = "";
+            return;
+        }
+        if (usingNmx) portalProc.running = true;
+        portalNotice.running = true;
+    }
+    Process {
+        id: portalProc
+        command: ["nmxcli", "-t", "portal"]
+        stdout: StdioCollector {
+            onStreamFinished: if (text.trim().length > 0) root.portalUrl = text.trim()
+        }
+    }
+    Process { // "Sign in" on the notification opens the portal; notify-send prints the action it was given
+        id: portalNotice
+        command: ["notify-send", "-a", "Shell", "-i", "network-wireless", "-A", "signin=" + Translation.tr("Sign in"),
+            Translation.tr("Sign in to this network"),
+            root.networkName.length > 0
+                ? Translation.tr("%1 wants you to sign in before it lets you online.").arg(root.networkName)
+                : Translation.tr("This network wants you to sign in before it lets you online.")]
+        stdout: StdioCollector {
+            onStreamFinished: if (text.trim() === "signin") root.openPublicWifiPortal()
+        }
+    }
+
+    /** The network settings: nmx's own TUI with nmx, the configured app (nm-connection-editor or nmtui) otherwise. */
+    function openSettings(ethernet = false): void {
+        if (usingNmx) {
+            Quickshell.execDetached(["bash", "-c", `${Config.options.apps.terminal} -e nmxtui`]);
+            return;
+        }
+        Quickshell.execDetached(["bash", "-c", ethernet ? Config.options.apps.networkEthernet : Config.options.apps.network]);
     }
 
     property bool wifiEnabled: false
@@ -101,8 +163,15 @@ Singleton {
         if (active) disconnectProc.exec([root.cli, "connection", "down", active.ssid]);
     }
 
+    /** Open the captive portal's sign-in page. Plain HTTP when we do not know it, so the portal can redirect it. */
     function openPublicWifiPortal() {
-        Quickshell.execDetached(["xdg-open", "https://nmcheck.gnome.org/"]) // From some StackExchange thread, seems to work
+        Quickshell.execDetached(["xdg-open", root.portalUrl.length > 0 ? root.portalUrl : root.portalFallback]);
+        if (usingNmx) recheckTimer.restart();
+    }
+    Timer { // nmx checks every 15 s while signed out; ask again sooner after the page is opened
+        id: recheckTimer
+        interval: 20000
+        onTriggered: Quickshell.execDetached(["nmxcli", "networking", "connectivity", "check"])
     }
 
     /** Connect with a password, and a username for enterprise (802.1X) networks. The secrets go through the
@@ -217,6 +286,7 @@ Singleton {
         stdout: SplitParser {
             onRead: root.update()
         }
+        onExited: root.redetect() // the manager stopped (or was switched): find the one that is running now
     }
 
     Process {
@@ -235,7 +305,8 @@ Singleton {
         }
         onExited: (exitCode, exitStatus) => {
             const lines = updateConnectionType.buffer.trim().split('\n');
-            const connectivity = lines.pop() // none, limited, full
+            const connectivity = lines.pop() // none, limited, portal, full
+            root.connectivity = connectivity || "unknown";
             let hasEthernet = false;
             let hasWifi = false;
             let wifiStatus = "disconnected";
@@ -250,7 +321,7 @@ Singleton {
                         hasWifi = true;
                         wifiStatus = "connected"
 
-                        if (connectivity === "limited") {
+                        if (connectivity === "limited" || connectivity === "portal") {
                             hasWifi = false;
                             wifiStatus = "limited"
                         }

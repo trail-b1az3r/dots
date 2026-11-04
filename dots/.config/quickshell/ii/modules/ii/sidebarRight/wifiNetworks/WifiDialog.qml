@@ -18,8 +18,12 @@ WindowDialog {
 
     Process {
         id: detailsProcess
-        // nmxcli (nmx) or nmcli (NetworkManager): the same command, the same output.
-        command: [Network.cli, "-f", "GENERAL,IP4,IP6", "device", "show"]
+        // nmxcli (nmx) or nmcli (NetworkManager): the same command, the same output. The tool is picked again when
+        // Details is pressed, so a Nexora with nmx never falls back to NetworkManager (network-tool.sh); with nmx,
+        // a captive portal's sign-in page is shown under the devices.
+        command: ["sh", "-c", 'tool=$(sh "$0" | head -n1); "${tool:-nmcli}" -f GENERAL,IP4,IP6 device show; status=$?; '
+            + 'if [ "$tool" = nmxcli ] && url=$(nmxcli -t portal 2>/dev/null); then printf "\\nCAPTIVE-PORTAL:  %s\\n" "$url"; fi; '
+            + 'exit $status', Network.toolScript]
         stdout: StdioCollector {
             onStreamFinished: {
                 root.detailsOutput = text.trim().length
@@ -114,10 +118,25 @@ WindowDialog {
                 if (root.showingDetails) {
                     root.showingDetails = false;
                 } else {
+                    Network.redetect();
                     root.showingDetails = true;
                     root.detailsOutput = Translation.tr("Loading connection details…");
                     detailsProcess.running = true;
                 }
+            }
+        }
+
+        DialogButton { // captive portal: hotel, airport and café Wi-Fi that wants a sign-in first
+            visible: Network.connectivity === "portal"
+            buttonText: Translation.tr("Sign in")
+            onClicked: Network.openPublicWifiPortal()
+        }
+
+        DialogButton { // nmx's own settings (nmxtui); NetworkManager's editor without nmx
+            buttonText: Translation.tr("Settings")
+            onClicked: {
+                Network.openSettings();
+                root.dismiss();
             }
         }
 
