@@ -261,21 +261,21 @@ hl.bind("CTRL + SUPER + S", hl.dsp.workspace.toggle_special("special"))
 --#/# bind = SUPER, Hash,, -- Focus workspace -- (1, 2, 3,...)
 for i = 1, 10 do
     hl.bind("SUPER + " .. (i % 10), function()
-        hl.dispatch(hl.dsp.focus({ workspace = workspace_in_group(i) }))
+        focus_workspace(workspace_in_group(i))   -- turns a page in Manga Ink (lib/init.lua)
     end, { description = "Workspace: Focus " .. i })
 end
 --# We also use raw keycodes because some keyboard layouts register number keys as different chars. The codes can be verified with `wev`
 for i = 1, 10 do
     local numberkey = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 }
     hl.bind("SUPER + code:" .. numberkey[i], function()
-        hl.dispatch(hl.dsp.focus({ workspace = workspace_in_group(i) }))
+        focus_workspace(workspace_in_group(i))   -- turns a page in Manga Ink (lib/init.lua)
     end)
 end
 --# keypad numbers
 for i = 1, 10 do
     local numpadkey = { 87, 88, 89, 83, 84, 85, 79, 80, 81, 90 }
     hl.bind("SUPER + code:" .. numpadkey[i], function()
-        hl.dispatch(hl.dsp.focus({ workspace = workspace_in_group(i) }))
+        focus_workspace(workspace_in_group(i))   -- turns a page in Manga Ink (lib/init.lua)
     end)
 end
 
@@ -285,7 +285,8 @@ for i = 1, 2 do
     local keys = { "Left", "Right" }
     local prefix = { "r-", "r+" }
     local descdir = { "left", "right" }
-    hl.bind("CTRL + SUPER + " .. keys[i], hl.dsp.focus({ workspace = prefix[i] .. "1" }), {description = "Workspace: Focus " .. descdir[i]})
+    local step = { -1, 1 }
+    hl.bind("CTRL + SUPER + " .. keys[i], function() focus_workspace_step(step[i]) end, {description = "Workspace: Focus " .. descdir[i]})
 end
 for i = 1, 2 do
     local keys = { "Left", "Right" }
@@ -296,8 +297,8 @@ end
 for i = 1, 4 do
     local key = { "SUPER + Page_Down", "SUPER + Page_Up" }
     local keycombos = { key[1], key[2], "CTRL + " .. key[1], "CTRL + " .. key[2] }
-    local prefix = { "r+", "r-", "r+", "r-" }
-    hl.bind(keycombos[i], hl.dsp.focus({ workspace = prefix[i] .. "1" }))
+    local step = { 1, -1, 1, -1 }
+    hl.bind(keycombos[i], function() focus_workspace_step(step[i]) end)
 end
 --#/# bind = SUPER, Scroll ↑/↓,, -- Focus left/right
 for i = 1, 4 do

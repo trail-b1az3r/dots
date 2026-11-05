@@ -19,11 +19,13 @@ Item {
             leftMargin: root.vertical ? 4 : 0
             rightMargin: root.vertical ? 4 : 0
         }
-        color: Config.options?.bar.borderless ? "transparent" : Appearance.colors.colLayer1
+        // Manga Ink: no box round each group (a box in a box, on the bar's panel); gutters part them instead.
+        readonly property bool manga: Appearance.squareBar && !root.vertical
+        color: Config.options?.bar.borderless || manga ? "transparent" : Appearance.colors.colLayer1
         radius: Appearance.squareBar ? 0 : Appearance.rounding.small
         // Halcyon themes edge each group in their own light: Red Sun's ember, Star Rail's gold, glass's frost.
         readonly property string theme: Config.options?.halcyon.theme ?? ""
-        border.width: Config.options?.bar.borderless ? 0 : Appearance.squareBar ? 2 : (edgeColour.a > 0 ? 1 : 0)
+        border.width: Config.options?.bar.borderless || manga ? 0 : Appearance.squareBar ? 2 : (edgeColour.a > 0 ? 1 : 0)
         border.color: edgeColour
         readonly property color edgeColour: {
             switch (theme) {
@@ -37,6 +39,20 @@ Item {
             case "fractured-glass": return Qt.rgba(1, 1, 1, 0.16);
             default: return "transparent";
             }
+        }
+    }
+
+    // Manga Ink's gutters: an ink rule at each side of the group, so two groups side by side are parted the way manga
+    // panels are, by a strip of paper between two rules.
+    Repeater {
+        model: background.manga && !(Config.options?.bar.borderless ?? false) ? 2 : 0
+        delegate: Rectangle {
+            required property int index
+            x: index === 0 ? 0 : root.width - width
+            anchors.verticalCenter: root.verticalCenter
+            width: 2
+            height: root.height - 14
+            color: Appearance.colors.colOnLayer1
         }
     }
 
