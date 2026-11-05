@@ -14,8 +14,9 @@ import "../background/widgets/revolver/RevolverStyles.js" as Styles
  * Manga Ink's app picker: a manga book. It opens with its ink cover swinging over the spine. The first page is the
  * table of contents; the apps follow in chapters by type (the web, making things, pictures, sound and screen,
  * games...), sixteen to a page. A page turns over when you click the turned-up corner (or the margin) of the left
- * page to go back or of the right page to go on, when you drag it across the book (it follows your hand, and falls
- * back if you let go early), and with the arrows, Page Up and Down and the wheel. Typing searches every app, and a
+ * page to go back or of the right page to go on, when you drag it across the book, and with the arrows, Page Up and
+ * Down and the wheel. Pages have weight: held, one follows your hand with a little lag; let go, it falls onto
+ * whichever side it is over, unless you threw it hard enough to carry over, and lands with a small bounce. Typing searches every app, and a
  * speech bubble on the left page says what Enter will do: open an app, give a sum, run a command (LauncherSearch).
  *
  * Double-click the space under the last row of apps on a page and a tablet drops down over the book with every
@@ -124,10 +125,10 @@ Item {
     // From the first page, the cover shut. The book is kept between openings, so this resets it.
     function open() {
         closeAnim.stop();
-        turnAnim.stop();
-        finishAnim.stop();
-        cancelAnim.stop();
+        falling = false;
         dragTurning = false;
+        angle = 0;
+        omega = 0;
         tabletShown = false;
         closing = false;
         allApps = host ? host.apps() : [];
@@ -167,7 +168,9 @@ Item {
     property int direction: 1
     // A page held by a drag: it follows the hand, then turns over or falls back on release.
     property bool dragTurning: false
-    readonly property bool turning: turnAnim.running || finishAnim.running || cancelAnim.running || dragTurning
+    // A page let go of (or flipped by a click, a key or the wheel): it moves under its own weight until it lands.
+    property bool falling: false
+    readonly property bool turning: falling || dragTurning
 
     // Put the leaf up for a turn to `target` (a spread): the page under it shows the new side at once.
     function lift(target) {
@@ -182,8 +185,13 @@ Item {
         return true;
     }
     function goToSpread(target) {
-        if (lift(target))
-            turnAnim.start();
+        if (!lift(target))
+            return;
+        turn = 0;
+        // Flicked from its corner: enough to carry it past upright against its own weight, and then it falls over.
+        angle = 0;
+        omega = Math.sqrt(2 * gravity) * 1.28 + airDrag * 0.5;
+        falling = true;
     }
     function goToPage(page) {
         goToSpread(Math.floor(page / 2));
@@ -198,47 +206,78 @@ Item {
         leftPage = spread * 2;
         rightPage = spread * 2 + 1;
         turn = 0;
+        angle = 0;
+        omega = 0;
+        falling = false;
     }
 
     function dragBegin(dir) {
         if (!lift(spread + dir))
             return false;
         turn = 0;
+        angle = 0;
+        omega = 0;
+        handAngle = 0;
         dragTurning = true;
         return true;
     }
     function dragMove(dx) {
-        turn = Math.max(0, Math.min(179, Math.abs(dx) / (pageW * 0.9) * 180));
+        handAngle = Math.max(0, Math.min(Math.PI * 0.995, Math.abs(dx) / (pageW * 0.9) * Math.PI));
     }
     function dragEnd() {
+        // Let go: it keeps the speed the hand gave it, and its weight does the rest. Past upright it falls over;
+        // short of it, it falls back, unless it was thrown hard enough to carry over.
         dragTurning = false;
-        if (turn > 60)
-            finishAnim.start();
-        else
-            cancelAnim.start();
+        falling = true;
     }
 
-    SequentialAnimation {
-        id: turnAnim
-        NumberAnimation { target: book; property: "turn"; from: 0; to: 180; duration: 540; easing.type: Easing.InOutCubic }
-        ScriptAction { script: book.land() }
-    }
-    // Let go past a third of the way: the page finishes turning over.
-    SequentialAnimation {
-        id: finishAnim
-        NumberAnimation { target: book; property: "turn"; to: 180; duration: 240; easing.type: Easing.OutCubic }
-        ScriptAction { script: book.land() }
-    }
-    // Let go early: it falls back, and the book is as it was.
-    SequentialAnimation {
-        id: cancelAnim
-        NumberAnimation { target: book; property: "turn"; to: 0; duration: 220; easing.type: Easing.OutCubic }
-        ScriptAction {
-            script: {
-                book.spread -= book.direction;
-                book.land();
-            }
+    // ── The page's physics ───────────────────────────────────────────────────
+    // A page is a leaf hinged at the spine. Its weight pulls it down onto whichever side it is over (strongest
+    // lying flat, nothing standing upright: −g·cos θ), the air slows it, and it bounces a little as it lands. Held,
+    // it follows the hand on a stiff spring, so it lags a touch behind and keeps the hand's speed when let go.
+    property real angle: 0          // radians, 0 (lying on its first side) to π (turned over)
+    property real omega: 0          // radians a second
+    property real handAngle: 0
+    readonly property real gravity: 42      // rad/s² at the flat
+    readonly property real airDrag: 1.6
+    readonly property real handStiffness: 320
+    readonly property real handDamping: 28
+    readonly property real bounce: 0.22
+    property real lastStep: 0
+    function step() {
+        const now = Date.now();
+        const dt = Math.min(0.033, Math.max(0.001, (now - lastStep) / 1000));
+        lastStep = now;
+        let accel;
+        if (dragTurning)
+            accel = handStiffness * (handAngle - angle) - handDamping * omega;
+        else
+            accel = -gravity * Math.cos(angle) - airDrag * omega;
+        omega += accel * dt;
+        angle += omega * dt;
+        if (angle >= Math.PI) {
+            angle = Math.PI;
+            if (!dragTurning && Math.abs(omega) < 1.2)
+                return settle(true);
+            omega = -Math.abs(omega) * bounce;
+        } else if (angle <= 0) {
+            angle = 0;
+            if (!dragTurning && Math.abs(omega) < 1.2)
+                return settle(false);
+            omega = Math.abs(omega) * bounce;
         }
+        turn = angle * 180 / Math.PI;
+    }
+    // Landed: on the other side, the turn is done; back where it was, the book is as it was.
+    function settle(over) {
+        if (!over)
+            spread -= direction;
+        land();
+    }
+    FrameAnimation {
+        running: book.falling || book.dragTurning
+        onRunningChanged: if (running) book.lastStep = Date.now()
+        onTriggered: book.step()
     }
 
     // ── Keys ─────────────────────────────────────────────────────────────────

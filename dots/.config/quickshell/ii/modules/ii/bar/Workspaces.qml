@@ -54,7 +54,7 @@ ButtonMouseArea {
     }
 
     function switchWorkspaceToHovered() {
-        Hyprland.dispatch(`hl.dsp.focus({workspace = ${wsModel.getWorkspaceIdAt(hoverIndex)}})`);
+        WorkspaceTurn.go(wsModel.getWorkspaceIdAt(hoverIndex));   // a page turn in Manga Ink
     }
 
     function toggleSpecial() {
@@ -71,9 +71,9 @@ ButtonMouseArea {
     }
     onWheel: event => {
         if (event.angleDelta.y < 0)
-            Hyprland.dispatch(`hl.dsp.focus({workspace = "r+1"})`);
+            WorkspaceTurn.step(1);
         else if (event.angleDelta.y > 0)
-            Hyprland.dispatch(`hl.dsp.focus({workspace = "r-1"})`);
+            WorkspaceTurn.step(-1);
     }
 
     // Indications

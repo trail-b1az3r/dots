@@ -33,6 +33,9 @@ Item {
     property color colGlow: "#ff4940"
     /** Manga Ink in negative: an ink panel with paper lines, for places whose text is light (the top bar). */
     property bool inverted: false
+    /** Drawn behind the top bar (BarContent.qml): Manga Ink makes it one clean strip, without the dock's hard shadow
+     *  (a light band under the bar in Manga Ink Dark) and with screentone only at its two ends, clear of the text. */
+    property bool bar: false
 
     readonly property bool negative: inverted || kind === "ink-dark"
     readonly property color ink: negative ? "#f1ece2" : "#141414"
@@ -312,8 +315,9 @@ Item {
     Item {
         anchors.fill: parent
         visible: frame.kind === "ink" || frame.kind === "ink-dark"
-        // A manga panel's hard shadow, straight down and right.
+        // A manga panel's hard shadow, straight down and right (the dock's; the bar is a flat strip).
         Rectangle {
+            visible: !frame.bar
             x: 5
             y: 5
             width: parent.width
@@ -323,7 +327,7 @@ Item {
         }
         Rectangle {
             anchors.fill: parent
-            radius: 6
+            radius: frame.bar ? 2 : 6
             color: frame.paper
             border.width: 3
             border.color: frame.ink
@@ -335,8 +339,8 @@ Item {
             ShapePath {
                 strokeWidth: -1
                 // Light, so the buttons over it still read.
-                fillColor: frame.withAlpha(frame.ink, 0.32)
-                PathSvg { path: frame.tone }
+                fillColor: frame.withAlpha(frame.ink, frame.bar ? 0.5 : 0.32)
+                PathSvg { path: frame.bar ? frame.endTone : frame.tone }
             }
         }
     }
@@ -402,6 +406,27 @@ Item {
                 PauseAnimation { duration: 5000 }
             }
         }
+    }
+
+    // The bar's screentone: a short band of dots at each end, largest at the edge and fading inwards, where no text is.
+    readonly property string endTone: {
+        if ((kind !== "ink" && kind !== "ink-dark") || !bar || width < 200)
+            return "";
+        let d = "";
+        const step = 5, w = width - 8, h = height - 8, band = 26;
+        for (let y = step / 2; y < h; y += step) {
+            const row = Math.round(y / step);
+            for (let x = (row % 2) * step / 2; x < w; x += step) {
+                const fromEdge = Math.min(x, w - x);
+                if (fromEdge > band)
+                    continue;
+                const dot = (1 - fromEdge / band) * step * 0.36;
+                if (dot < 0.35)
+                    continue;
+                d += `M ${x - dot} ${y} A ${dot} ${dot} 0 1 0 ${x + dot} ${y} A ${dot} ${dot} 0 1 0 ${x - dot} ${y} `;
+            }
+        }
+        return d;
     }
 
     // Screentone at the lower right: dots that grow to the right and downwards.
