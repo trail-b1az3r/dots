@@ -121,9 +121,9 @@
       },
       {
         "leaf": "workspaces",
-        "speed": 1.0,
-        "curve": "linear",
-        "style": "fade"
+        "speed": 4.4,
+        "curve": "snap",
+        "style": "slide"
       },
       {
         "leaf": "layersIn",

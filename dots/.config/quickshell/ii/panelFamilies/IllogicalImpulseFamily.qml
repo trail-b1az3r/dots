@@ -17,7 +17,6 @@ import qs.modules.ii.notificationPopup
 import qs.modules.ii.onScreenDisplay
 import qs.modules.ii.onScreenKeyboard
 import qs.modules.ii.overview
-import qs.modules.ii.pageTurn
 import qs.modules.ii.polkit
 import qs.modules.ii.regionSelector
 import qs.modules.ii.screenCorners
@@ -64,8 +63,6 @@ Scope {
     PanelLoader { component: ThemePicker {} }
     PanelLoader { component: ThemedLauncher {} }
     PanelLoader { extraCondition: Quickshell.screens.length > 1; component: MonitorWall {} }
-    // Manga Ink: changing workspace turns a page (it stays loaded, idle, so the keys can count on it).
-    PanelLoader { component: PageTurn {} }
     PanelLoader { extraCondition: Config.options.halcyon.idleTheme.enable; component: IdleTheme {} }
     PanelLoader { extraCondition: Config.options.bar.vertical; component: VerticalBar {} }
     PanelLoader { component: WallpaperSelector {} }
