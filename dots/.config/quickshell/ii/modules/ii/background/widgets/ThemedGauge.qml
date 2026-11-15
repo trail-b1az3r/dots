@@ -124,10 +124,10 @@ ColumnLayout {
                 anchors.fill: face
                 ShapePath {
                     strokeWidth: 1
-                    strokeColor: gauge.look.edge
-                    fillColor: menuTile.index < menuTile.lit - 1 ? Qt.rgba(gauge.accent.r, gauge.accent.g, gauge.accent.b, 0.55)
+                    strokeColor: Qt.rgba(1, 1, 1, 0.45)
+                    fillColor: menuTile.index < menuTile.lit - 1 ? Qt.rgba(gauge.accent.r, gauge.accent.g, gauge.accent.b, 0.6)
                              : menuTile.index === menuTile.lit - 1 ? gauge.accent
-                             : "#FFFFFF"
+                             : Qt.rgba(1, 1, 1, 0.12)
                     joinStyle: ShapePath.RoundJoin
                     PathSvg {
                         path: Styles.band(gauge.size / 2, gauge.size / 2, gauge.size / 2 - 11, gauge.size / 2 - 1,
@@ -195,8 +195,8 @@ ColumnLayout {
             font.weight: gauge.kind === "key" ? Font.Black : Font.Medium
             color: gauge.look.text
             font.letterSpacing: gauge.kind === "tiles" ? 0.5 : 0
-            style: gauge.kind === "glow" ? Text.Raised : gauge.kind === "key" ? Text.Outline : Text.Normal
-            styleColor: gauge.kind === "glow" ? gauge.look.glow : gauge.look.edge
+            style: gauge.kind === "glow" ? Text.Raised : gauge.kind === "key" || gauge.kind === "tiles" ? Text.Outline : Text.Normal
+            styleColor: gauge.kind === "glow" ? gauge.look.glow : gauge.kind === "tiles" ? Qt.rgba(0, 0, 0, 0.35) : gauge.look.edge
         }
     }
     StyledText {

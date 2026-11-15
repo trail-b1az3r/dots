@@ -117,7 +117,7 @@ Item {
             // A soft shadow under solid plates.
             Shape {
                 anchors.fill: parent
-                visible: !drum.redSun && drum.style.drum !== "facets"
+                visible: !drum.redSun && drum.style.drum !== "facets" && !drum.style.bare
                 opacity: 0.32
                 y: 5
                 ShapePath {
@@ -176,7 +176,8 @@ Item {
                         GradientStop { position: 0.55; color: "#150e10" }
                         GradientStop { position: 1.0; color: "#09060a" }
                     }
-                    PathSvg { path: Styles.circle(drum.c, drum.c, 108) }
+                    // A bare drum (Sword Art Online) has only its ring: the wallpaper shows through.
+                    PathSvg { path: drum.style.bare ? "" : Styles.circle(drum.c, drum.c, 108) }
                 }
                 // The glow: two faint bands outside the ring.
                 ShapePath {

@@ -86,8 +86,8 @@ Item {
             anchors.fill: parent
             ShapePath {
                 strokeWidth: 1
-                strokeColor: bar.look.edge
-                fillColor: Qt.rgba(bar.look.text.r, bar.look.text.g, bar.look.text.b, 0.14)
+                strokeColor: Qt.rgba(1, 1, 1, 0.5)
+                fillColor: Qt.rgba(0, 0, 0, 0.25)
                 PathSvg { path: `M 0 0 L ${bar.width} 0 L ${bar.width - hp.slant} ${bar.height} L 0 ${bar.height} Z` }
             }
         }

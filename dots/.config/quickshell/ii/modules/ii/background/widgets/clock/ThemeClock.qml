@@ -17,7 +17,7 @@ import "../revolver/RevolverStyles.js" as Styles
  *          hand, the day above the centre and the time in light digits below it
  *   silence  a black face with a fine red rim that catches light at three and nine, faint dots for the hours,
  *          needle hands, a red hairline for the seconds, an eye with a red iris in the middle, the date below it
- *   sao    Sword Art Online's menu as a dial: a silver disc ringed by twelve menu tiles, the hour's tile lit orange
+ *   sao    Sword Art Online's menu as a dial, on the wallpaper with no face behind it: twelve menu tiles round it, the hour's tile lit orange
  *          and the ones before it filled in, a fine ring that fills with the seconds, an orange diamond riding it,
  *          the time in the middle in the menu's grey, the day above it, and under it the day as a slanted HP bar
  *          that runs green, yellow, then red as the day goes
@@ -521,37 +521,10 @@ Item {
             anchors.fill: parent
             visible: face.kind === "sao"
 
-            readonly property color plate: "#F4F6F8"
-            readonly property color plateEdge: "#C9D0D8"
-            readonly property color ink: "#4A525C"
-            readonly property color inkDim: "#8A939D"
             readonly property color orange: "#F5A43B"
             readonly property int hour12: face.now.getHours() % 12
             // How much of the day is left, for the HP bar.
             readonly property real hp: 1 - (face.now.getHours() * 60 + face.now.getMinutes()) / 1440
-
-            Shape {
-                anchors.fill: parent
-                // A soft shadow, then the silver disc.
-                ShapePath {
-                    strokeWidth: -1
-                    fillColor: face.withAlpha("#000000", 0.22)
-                    PathSvg { path: Styles.circle(face.c, face.c + 4, 110) }
-                }
-                ShapePath {
-                    strokeWidth: 1.4
-                    strokeColor: sao.plateEdge
-                    fillGradient: RadialGradient {
-                        centerX: face.c; centerY: face.c - 30
-                        centerRadius: 150
-                        focalX: face.c; focalY: face.c - 30
-                        GradientStop { position: 0.0; color: "#FFFFFF" }
-                        GradientStop { position: 0.7; color: sao.plate }
-                        GradientStop { position: 1.0; color: "#DCE2E8" }
-                    }
-                    PathSvg { path: Styles.circle(face.c, face.c, 109) }
-                }
-            }
 
             // The twelve menu tiles: the hour's lit orange, the ones before it filled in grey.
             Repeater {
@@ -564,8 +537,8 @@ Item {
                     anchors.fill: parent
                     ShapePath {
                         strokeWidth: 1
-                        strokeColor: tile.now ? Qt.darker(sao.orange, 1.15) : sao.plateEdge
-                        fillColor: tile.now ? sao.orange : tile.past ? "#C3CBD4" : "#FFFFFF"
+                        strokeColor: tile.now ? Qt.darker(sao.orange, 1.15) : face.withAlpha("#FFFFFF", 0.5)
+                        fillColor: tile.now ? sao.orange : tile.past ? face.withAlpha("#FFFFFF", 0.55) : face.withAlpha("#FFFFFF", 0.1)
                         joinStyle: ShapePath.RoundJoin
                         PathSvg { path: Styles.band(face.c, face.c, 86, 104, -90 + tile.index * 30 + 2.4, -90 + (tile.index + 1) * 30 - 2.4) }
                     }
@@ -577,7 +550,7 @@ Item {
                 // The seconds ring: a fine track, filled orange with the seconds (the minutes without them).
                 ShapePath {
                     strokeWidth: 2
-                    strokeColor: face.withAlpha(sao.inkDim, 0.25)
+                    strokeColor: face.withAlpha("#FFFFFF", 0.22)
                     fillColor: "transparent"
                     PathSvg { path: Styles.circle(face.c, face.c, 78) }
                 }
@@ -606,7 +579,9 @@ Item {
                 x: face.c - width / 2
                 y: 70
                 text: Qt.formatDate(face.now, "ddd  d  MMM").toUpperCase()
-                color: sao.inkDim
+                color: "#D5DDE6"
+                style: Text.Outline
+                styleColor: face.withAlpha("#000000", 0.3)
                 font.family: face.fontFamily
                 font.pixelSize: 10
                 font.letterSpacing: 2
@@ -615,7 +590,9 @@ Item {
                 x: face.c - width / 2
                 y: face.c - height / 2 - 2
                 text: face.pad(face.now.getHours()) + ":" + face.pad(face.now.getMinutes())
-                color: sao.ink
+                color: "#FFFFFF"
+                style: Text.Outline
+                styleColor: face.withAlpha("#000000", 0.3)
                 font.family: face.fontFamily
                 font.pixelSize: 40
                 font.weight: Font.Light
@@ -633,8 +610,8 @@ Item {
                     anchors.fill: parent
                     ShapePath {
                         strokeWidth: 1
-                        strokeColor: sao.plateEdge
-                        fillColor: face.withAlpha("#4A525C", 0.18)
+                        strokeColor: face.withAlpha("#FFFFFF", 0.5)
+                        fillColor: face.withAlpha("#000000", 0.25)
                         PathSvg { path: "M 0 0 L 92 0 L 86 9 L 0 9 Z" }
                     }
                 }
@@ -651,7 +628,7 @@ Item {
                 x: face.c + 46 - width
                 y: 152
                 text: Math.round(sao.hp * 100) + " / 100"
-                color: sao.inkDim
+                color: "#D5DDE6"
                 font.family: face.fontFamily
                 font.pixelSize: 8
             }

@@ -10,8 +10,8 @@ import "revolver/RevolverStyles.js" as Styles
  *   kind "disc"   a clock face: a glowing ring (Red Sun), a cut glass octagon (glass themes), a squircle (HyperNeo),
  *                 a gold rail (Star Rail), a keycap (the anime themes; Manga Ink Dark's in negative), a hush (Silence)
  *   kind "card"   a card: a dusk capsule with an ember edge, a cut stone, a squircle card, a gold-framed card, a keycap,
- *                 Silence's near-black card with a red hairline, or a Sword Art Online menu panel (silver, a fine
- *                 grey edge, an orange rule along the top and a white notch)
+ *                 or Silence's near-black card with a red hairline. Sword Art Online has none: its widgets stand on
+ *                 the wallpaper.
  *
  * Drawn with QtQuick.Shapes only, in one multisampled layer, so it is smooth on any Qt 6.
  */
@@ -56,7 +56,7 @@ Item {
 
     Item {
         id: surface
-        visible: !plate.manga
+        visible: !plate.manga && !plate.sao
         x: -plate.pad
         y: -plate.pad
         width: plate.width + 2 * plate.pad
