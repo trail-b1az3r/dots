@@ -49,7 +49,7 @@ AbstractBackgroundWidget {
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.Wrap
         font.pixelSize: Appearance.font.pixelSize.large
-        color: Appearance.colors.colSubtext
+        color: root.look.subtext
         text: Lyrics.state === "loading" ? Translation.tr("Looking for the lyrics…")
             : Lyrics.state === "plain" ? Translation.tr("%1 has lyrics, but not timed ones").arg(Lyrics.title)
             : Lyrics.state === "none" ? Translation.tr("No lyrics found for %1").arg(Lyrics.title)

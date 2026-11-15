@@ -1,11 +1,13 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Shapes
 import qs.modules.common
 
 /**
  * How far along something is (0 to 1), as a line drawn the theme's way (ThemeLook.spec.progress): a plain line, a
- * lit line with its glow, facets, a thick pill, a fine rail with a diamond on it, or a row of keys.
+ * lit line with its glow, facets, a thick pill, a fine rail with a diamond on it, a row of keys, or Sword Art
+ * Online's slanted HP bar.
  */
 Item {
     id: bar
@@ -18,7 +20,7 @@ Item {
     readonly property string kind: look.spec.progress
     readonly property int cells: kind === "segments" ? 16 : 12
 
-    implicitHeight: kind === "pill" ? 8 : kind === "blocks" ? 12 : kind === "segments" ? 7 : kind === "rail" ? 12 : 5
+    implicitHeight: kind === "hp" ? 10 : kind === "pill" ? 8 : kind === "blocks" ? 12 : kind === "segments" ? 7 : kind === "rail" ? 12 : 5
     implicitWidth: 200
 
     function tint(alpha) {
@@ -71,6 +73,31 @@ Item {
                 border.width: bar.kind === "blocks" ? 1.5 : 0
                 border.color: Qt.darker(bar.look.card, 2.4)
             }
+        }
+    }
+
+    // hp: the game's HP bar, square at the start and cut on a slant at the end, a light along the top of its fill
+    Item {
+        id: hp
+        visible: bar.kind === "hp"
+        anchors.fill: parent
+        readonly property real slant: height * 0.7
+        Shape {
+            anchors.fill: parent
+            ShapePath {
+                strokeWidth: 1
+                strokeColor: bar.look.edge
+                fillColor: Qt.rgba(bar.look.text.r, bar.look.text.g, bar.look.text.b, 0.14)
+                PathSvg { path: `M 0 0 L ${bar.width} 0 L ${bar.width - hp.slant} ${bar.height} L 0 ${bar.height} Z` }
+            }
+        }
+        Rectangle {
+            x: 2
+            y: 2
+            width: Math.max(0, (bar.width - hp.slant - 4) * bar.level)
+            height: bar.height - 4
+            color: bar.accent
+            Rectangle { width: parent.width; height: Math.max(1, parent.height / 3); color: Qt.rgba(1, 1, 1, 0.4) }
         }
     }
 

@@ -87,9 +87,9 @@ Item {
     // upstream's cookie.
     readonly property string themeId: Config.options.halcyon.theme
     readonly property bool themedFace: Styles.styleFor(themeId).id !== "default"
-    // After ICEY, Manga Ink (and Dark), Silence and HyperNeo have a face of their own, drawn like their revolvers (ThemeClock.qml): the rest of
+    // After ICEY, Manga Ink (and Dark), Silence, HyperNeo and Sword Art Online have a face of their own, drawn like their revolvers (ThemeClock.qml): the rest of
     // this file is the usual face, hidden under them.
-    readonly property string customFace: ({ "icey": "icey", "ink": "ink", "ink-dark": "ink-dark", "silence": "silence", "neo": "neo", "sao": "neo" })[Styles.revolverStyleFor(themeId).id] ?? ""
+    readonly property string customFace: ({ "icey": "icey", "ink": "ink", "ink-dark": "ink-dark", "silence": "silence", "neo": "neo", "sao": "sao" })[Styles.revolverStyleFor(themeId).id] ?? ""
     Loader {
         anchors.fill: parent
         z: 10

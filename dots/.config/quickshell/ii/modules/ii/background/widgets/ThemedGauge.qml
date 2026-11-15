@@ -5,11 +5,13 @@ import QtQuick.Layouts
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
+import QtQuick.Shapes
+import "revolver/RevolverStyles.js" as Styles
 
 /**
  * One round gauge (0 to 1) with its number in the middle and a label under it, drawn the way the theme draws gauges
  * (ThemeLook.spec.gauge): a plain ring, a lit ring with its glow, a ring of facets, a gold rail with star ticks, or a
- * keycap that fills from the bottom.
+ * keycap that fills from the bottom, or (Sword Art Online) a ring of the game's menu tiles.
  */
 ColumnLayout {
     id: gauge
@@ -112,6 +114,29 @@ ColumnLayout {
             }
         }
 
+        // tiles: twelve menu tiles round a ring, lit up to the value, the last lit one orange and the others its blue
+        Repeater {
+            model: gauge.kind === "tiles" ? 12 : 0
+            delegate: Shape {
+                id: menuTile
+                required property int index
+                readonly property int lit: Math.round(gauge.level * 12)
+                anchors.fill: face
+                ShapePath {
+                    strokeWidth: 1
+                    strokeColor: gauge.look.edge
+                    fillColor: menuTile.index < menuTile.lit - 1 ? Qt.rgba(gauge.accent.r, gauge.accent.g, gauge.accent.b, 0.55)
+                             : menuTile.index === menuTile.lit - 1 ? gauge.accent
+                             : "#FFFFFF"
+                    joinStyle: ShapePath.RoundJoin
+                    PathSvg {
+                        path: Styles.band(gauge.size / 2, gauge.size / 2, gauge.size / 2 - 11, gauge.size / 2 - 1,
+                                          -90 + menuTile.index * 30 + 3, -90 + (menuTile.index + 1) * 30 - 3)
+                    }
+                }
+            }
+        }
+
         // key: a keycap whose fill rises with the value
         Item {
             anchors.fill: parent
@@ -169,6 +194,7 @@ ColumnLayout {
             font.pixelSize: gauge.kind === "key" ? 26 : 24
             font.weight: gauge.kind === "key" ? Font.Black : Font.Medium
             color: gauge.look.text
+            font.letterSpacing: gauge.kind === "tiles" ? 0.5 : 0
             style: gauge.kind === "glow" ? Text.Raised : gauge.kind === "key" ? Text.Outline : Text.Normal
             styleColor: gauge.kind === "glow" ? gauge.look.glow : gauge.look.edge
         }

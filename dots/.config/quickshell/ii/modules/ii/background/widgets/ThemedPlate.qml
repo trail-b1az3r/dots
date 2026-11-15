@@ -10,7 +10,8 @@ import "revolver/RevolverStyles.js" as Styles
  *   kind "disc"   a clock face: a glowing ring (Red Sun), a cut glass octagon (glass themes), a squircle (HyperNeo),
  *                 a gold rail (Star Rail), a keycap (the anime themes; Manga Ink Dark's in negative), a hush (Silence)
  *   kind "card"   a card: a dusk capsule with an ember edge, a cut stone, a squircle card, a gold-framed card, a keycap,
- *                 or Silence's near-black card with a red hairline
+ *                 Silence's near-black card with a red hairline, or a Sword Art Online menu panel (silver, a fine
+ *                 grey edge, an orange rule along the top and a white notch)
  *
  * Drawn with QtQuick.Shapes only, in one multisampled layer, so it is smooth on any Qt 6.
  */
@@ -31,6 +32,7 @@ Item {
     readonly property bool redSun: style.id === "red-sun"
     readonly property bool keycap: style.plate === "keycap"
     readonly property bool hush: style.plate === "hush"
+    readonly property bool sao: style.plate === "sao"
     // Manga Ink: the dock's own manga panel (dock/DockFrame.qml), so the cards and the dock are drawn alike.
     readonly property bool manga: style.plate === "manga"
     // A keycap is solid ink, whatever the shell's transparency: the panel colour it is given is see-through when
@@ -89,7 +91,7 @@ Item {
                 anchors.fill: parent
                 y: 5
                 visible: !plate.keycap
-                opacity: plate.redSun ? 0 : plate.hush ? 0.6 : 0.3
+                opacity: plate.redSun ? 0 : plate.hush ? 0.6 : plate.sao ? 0.22 : 0.3
                 ShapePath {
                     strokeWidth: -1
                     fillColor: "#000000"
@@ -120,6 +122,7 @@ Item {
                 ShapePath {
                     strokeWidth: plate.keycap ? 2.5 : plate.redSun ? 2.4 : plate.hush ? 1 : (plate.style.drum === "rail" ? 2 : 1.2)
                     strokeColor: plate.keycap ? plate.keyEdge
+                               : plate.sao ? plate.keyEdge
                                : plate.hush ? plate.withAlpha(plate.colOn, 0.09)
                                : plate.redSun ? plate.colGlow
                                : plate.style.drum === "rail" ? plate.colAccent
@@ -130,6 +133,7 @@ Item {
                         GradientStop {
                             position: 0.0
                             color: plate.keycap ? Qt.lighter(plate.solidBase, 1.08)
+                                 : plate.sao ? "#FFFFFF"
                                  : plate.hush ? plate.withAlpha("#0a0809", 0.9)
                                  : plate.redSun ? plate.withAlpha("#1c1018", 0.78)
                                  : plate.style.drum === "facets" ? plate.withAlpha("#ffffff", 0.16)
@@ -138,6 +142,7 @@ Item {
                         GradientStop {
                             position: 1.0
                             color: plate.keycap ? Qt.lighter(plate.solidBase, 1.08)
+                                 : plate.sao ? "#E2E7EC"
                                  : plate.hush ? plate.withAlpha("#020102", 0.92)
                                  : plate.redSun ? plate.withAlpha("#09060c", 0.86)
                                  : plate.style.drum === "facets" ? plate.withAlpha(plate.colAccent, 0.07)
@@ -155,6 +160,33 @@ Item {
                     fillColor: "transparent"
                     PathSvg { path: Styles.plateOutline(plate.style, plate.kind, plate.width, plate.height, plate.redSun ? 2 : 5) }
                 }
+            }
+
+            // Sword Art Online: the orange rule along the top, brightest in the middle, and the white notch at its left.
+            Rectangle {
+                visible: plate.sao
+                anchors.top: parent.top
+                anchors.topMargin: 3
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: parent.width * 0.56
+                height: 2
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: plate.withAlpha("#F5A43B", 0) }
+                    GradientStop { position: 0.5; color: "#F5A43B" }
+                    GradientStop { position: 1.0; color: plate.withAlpha("#F5A43B", 0) }
+                }
+            }
+            Rectangle {
+                visible: plate.sao && plate.kind === "card"
+                x: 10
+                y: 10
+                width: 7
+                height: 7
+                rotation: 45
+                color: "#FFFFFF"
+                border.width: 1
+                border.color: plate.keyEdge
             }
 
             // Silence: the red hairline along the bottom, brightest in the middle.

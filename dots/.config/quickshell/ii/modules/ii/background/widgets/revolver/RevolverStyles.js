@@ -39,6 +39,10 @@ var STYLES = {
     // Silence's cards: near-black, a faint edge, and a red hairline along the bottom, brightest in the middle.
     "hush":    { id: "hush", drum: "squircle", plate: "hush", chamber: "squircle", chamberSize: 48, orbit: 79, names: true,
                  hub: "squircle", hammer: "pill", glow: 0.6, waves: 0, statusLabel: true },
+    // Sword Art Online's cards: the game's menu panels, pale silver in a fine grey edge, an orange rule along the top
+    // and a white notch at its left end.
+    "sao-panel": { id: "sao-panel", drum: "panel", plate: "sao", chamber: "squircle", chamberSize: 48, orbit: 79, names: true,
+                   hub: "squircle", hammer: "pill", glow: 0.45, waves: 0, statusLabel: true, base: "#F4F6F8", edge: "#C9D0D8" },
     "hsr":     { id: "hsr", drum: "rail", chamber: "star", chamberSize: 52, orbit: 80, names: true,
                  hub: "sparkle", hammer: "sparkle", glow: 0.6, waves: 0, statusLabel: true },
     // After ICEY, the revolver only: the game's cyan HUD over the dark navy of its wallpaper. A targeting reticle
@@ -77,8 +81,9 @@ function styleFor(themeId) {
     case "manga-ink-dark":
         return STYLES["keycap-dark"];
     case "silence":
-    case "sword-art-online":
         return STYLES["hush"];
+    case "sword-art-online":
+        return STYLES["sao-panel"];
     case "hsr":
         return STYLES["hsr"];
     default:
@@ -201,10 +206,12 @@ function screentone(cx, cy, r, step) {
 //
 //   gauge     ring (a plain ring), glow (a thin lit ring with its light round it), segments (a ring of lit facets),
 //             activity (three rings inside each other, one card), rail (a gold ring with star ticks),
-//             key (a keycap that fills from the bottom)
+//             key (a keycap that fills from the bottom), tiles (Sword Art Online: a ring of menu tiles, lit up to the
+//             value, the last one orange)
 //   bars      round, needle (thin lines with a lit tip), shard (sharp bars with a bright edge), pill,
 //             star (bars topped with a four-point star), blocks (stacked squares, like a console's equaliser)
-//   progress  line, glow, segments, pill, rail (a thin line with a diamond on it), blocks
+//   progress  line, glow, segments, pill, rail (a thin line with a diamond on it), blocks, hp (the game's slanted HP
+//             bar, with a light along its top)
 //   lyric     plain, glow, frost, bold, rail (the line between two stars), key (the line on a keycap)
 var LOOKS = {
     "default":  { id: "default", gauge: "ring", bars: "round", progress: "line", lyric: "plain",
@@ -225,6 +232,9 @@ var LOOKS = {
                   caps: true, spacing: 1.2, colorA: "", colorB: "", text: "#141414", glow: "" },
     "keycap-dark": { id: "keycap-dark", family: "keycap", gauge: "key", bars: "blocks", progress: "blocks", lyric: "key",
                      caps: true, spacing: 0.8, colorA: "", colorB: "", text: "#f1ece2", glow: "" },
+    // Sword Art Online: the menu's grey on silver, orange for what is lit, its blue for the second colour.
+    "sao-panel": { id: "sao-panel", gauge: "tiles", bars: "pill", progress: "hp", lyric: "plain",
+                   caps: true, spacing: 1.6, colorA: "#F5A43B", colorB: "#3B8FE0", text: "#4A525C", glow: "#F5A43B" },
     // Silence: thin and spaced, red light on black.
     "hush":     { id: "hush", gauge: "ring", bars: "needle", progress: "line", lyric: "plain",
                   caps: true, spacing: 2.4, colorA: "", colorB: "", text: "#ede6e6", glow: "" }
@@ -432,6 +442,7 @@ function plateOutline(style, kind, w, h, inset) {
     case "facets": return chamferRect(inset, inset, w - 2 * inset, h - 2 * inset, Math.min(w, h) * 0.18);
     case "squircle": return squircleRect(cx, cy, rx, ry, 5);
     case "rail": return roundRect(inset, inset, w - 2 * inset, h - 2 * inset, 10);
+    case "panel": return roundRect(inset, inset, w - 2 * inset, h - 2 * inset, 8);
     default: return roundRect(inset, inset, w - 2 * inset, h - 2 * inset, Math.min(w, h) / 2);
     }
 }

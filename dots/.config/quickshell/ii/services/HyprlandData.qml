@@ -127,7 +127,8 @@ Singleton {
 
         function onRawEvent(event) {
             // console.log("Hyprland raw event:", event.name);
-            if (["openlayer", "closelayer", "screencast"].includes(event.name)) return;
+            // monitorwall comes with every mouse move while a dragged window pushes on the wall between monitors.
+            if (["openlayer", "closelayer", "screencast", "monitorwall", "monitorwallbreak"].includes(event.name)) return;
             updateAll()
         }
     }

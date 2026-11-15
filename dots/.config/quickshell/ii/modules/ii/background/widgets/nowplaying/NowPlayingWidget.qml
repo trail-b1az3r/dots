@@ -81,7 +81,7 @@ AbstractBackgroundWidget {
                 visible: art.status !== Image.Ready
                 text: "music_note"
                 iconSize: 40
-                color: Appearance.colors.colSubtext
+                color: root.look.subtext
             }
         }
 

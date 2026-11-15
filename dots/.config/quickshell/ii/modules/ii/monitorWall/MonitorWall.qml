@@ -21,8 +21,10 @@ Scope {
     id: root
 
     readonly property real maxDepth: 64
-    // How deep the little bulge is when a window arrives on another monitor, as a share of maxDepth.
-    readonly property real arrivalDepth: 0.35
+    // How deep the bulge is when a window arrives on another monitor, as a share of maxDepth, and how long it holds
+    // before springing back.
+    readonly property real arrivalDepth: 0.55
+    readonly property int arrivalHold: 240
 
     // Which monitor each window was on, to see when one changes monitor (HyprlandData's windows: hyprctl clients).
     property var monitorOf: ({})
@@ -101,7 +103,7 @@ Scope {
                 SpringAnimation { spring: 4; damping: 0.18; epsilon: 0.2 }
             }
             property real ripple: 0
-            readonly property bool shown: depth > 0.5 || target > 0 || ripple > 0
+            readonly property bool shown: depth > 0.5 || target > 0 || ripple > 0 || settle.running
 
             Connections {
                 target: Hyprland
@@ -140,12 +142,13 @@ Scope {
                     perScreen.start = start;
                     perScreen.length = length;
                     perScreen.depth = root.arrivalDepth * root.maxDepth;
+                    rippleAnim.restart();
                     settle.restart();
                 }
             }
             Timer {
                 id: settle
-                interval: 160
+                interval: root.arrivalHold
                 onTriggered: perScreen.depth = 0
             }
 
@@ -159,9 +162,11 @@ Scope {
                 easing.type: Easing.OutCubic
             }
 
+            // Made once and mapped only while something shows: making it on demand took longer than a short bulge.
             Loader {
-                active: perScreen.shown
+                active: Config.options.halcyon.plus.monitorWallBulge
                 sourceComponent: PanelWindow {
+                    visible: perScreen.shown
                     screen: perScreen.modelData
                     color: "transparent"
                     WlrLayershell.namespace: "quickshell:monitorWall"
