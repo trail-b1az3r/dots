@@ -38,7 +38,7 @@ On top of that, Halcyon adds:
 | **Voice assistant** | Press `Super + Shift + Space` and speak. It answers aloud and can run the desktop. [More below.](#voice-assistant) |
 | **Browser themes** | Firefox and Chromium take the desktop's colours, from a theme or the wallpaper. [More below.](#browsers) |
 | **Server mode** | One button in **Settings > Halcyon**: no suspend, no automatic lock or screen blanking, until you stop it. [More below.](#server-mode) |
-| **Settings** | One Settings window at a time: opening it again brings it to the monitor you are on. Every section folds shut with a click on its title, and stays that way. |
+| **Settings** | One Settings window at a time: opening it again brings it to the monitor you are on. **Search** at the top (`Ctrl + F`) finds any setting on any page by its name or what it does, and takes you to it (its section opened, the setting outlined); `qs -p ~/.config/quickshell/ii/settings.qml ipc call settings reveal "wall"` does the same from a script. Every section folds shut with a click on its title, and stays that way. |
 | **Keybinds** | Extra shortcuts, listed below. They only use key combinations upstream leaves free. |
 | **hyprland-plus** | The compositor is [hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus): Hyprland 0.57.0 with mini windows, superposition windows, plustile windows and a drag fix. [More below.](#hyprland-plus) |
 
