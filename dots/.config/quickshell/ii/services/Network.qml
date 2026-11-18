@@ -153,6 +153,7 @@ Singleton {
     function connectToWifiNetwork(accessPoint: WifiAccessPoint): void {
         accessPoint.askingPassword = false;
         accessPoint.lastError = "";
+        root.openRetried = false;
         root.wifiConnectTarget = accessPoint;
         // We use this instead of `nmcli connection up SSID` because this also creates a connection profile
         connectProc.exec([root.cli, "dev", "wifi", "connect", accessPoint.ssid])
@@ -228,6 +229,18 @@ Singleton {
                 if (!root.wifiConnectTarget)
                     return;
                 if (line.includes("Secrets were required")) {
+                    // An open network (a café's or a hotel's, that signs you in on a web page) has no password to
+                    // ask for: the profile saved for that name is stale (it once belonged to a secured network of
+                    // the same name). Forget it and join the network as it is now, once.
+                    if (!root.wifiConnectTarget.isSecure) {
+                        if (!root.openRetried) {
+                            root.openRetried = true
+                            root.retryOpenTarget = root.wifiConnectTarget
+                        } else {
+                            root.wifiConnectTarget.lastError = Translation.tr("This open network could not be joined")
+                        }
+                        return
+                    }
                     root.wifiConnectTarget.askingPassword = true
                 } else if (line.startsWith("Error:")) {
                     root.wifiConnectTarget.lastError = line.replace(/^Error: */, "")
@@ -235,13 +248,60 @@ Singleton {
             }
         }
         onExited: (exitCode, exitStatus) => {
-            if (root.wifiConnectTarget) {
-                // A refused certificate or a DHCP timeout is not fixed by a password: say what it was instead.
-                root.wifiConnectTarget.askingPassword = (exitCode !== 0) && root.wifiConnectTarget.lastError.length === 0
-                    || root.wifiConnectTarget.askingPassword
+            const retry = root.retryOpenTarget
+            root.retryOpenTarget = null
+            if (retry) {
+                root.wifiConnectTarget = null
+                forgetStaleProc.exec([root.cli, "connection", "delete", "id", retry.ssid])
+                root.pendingOpenTarget = retry
+                return
             }
+            if (root.wifiConnectTarget) {
+                // A refused certificate or a DHCP timeout is not fixed by a password: say what it was instead. An
+                // open network never asks for one (its sign-in page does).
+                root.wifiConnectTarget.askingPassword = root.wifiConnectTarget.isSecure
+                    && ((exitCode !== 0) && root.wifiConnectTarget.lastError.length === 0 || root.wifiConnectTarget.askingPassword)
+                if (!root.wifiConnectTarget.isSecure && exitCode !== 0 && root.wifiConnectTarget.lastError.length === 0)
+                    root.wifiConnectTarget.lastError = Translation.tr("Could not join the network")
+            }
+            root.openRetried = false
             root.wifiConnectTarget = null
             getNetworks.running = true
+        }
+    }
+
+    // An open network whose saved profile was stale: forgotten, then joined again as an open network.
+    // nmx's Wi-Fi DNS-blocker bypass (off unless turned on; the daemon keeps the setting).
+    property bool dnsBypass: false
+    function setDnsBypass(on: bool): void {
+        root.dnsBypass = on;
+        dnsBypassSetProc.exec(["nmxcli", "dns-bypass", on ? "on" : "off"]);
+    }
+    Process {
+        id: dnsBypassSetProc
+        onExited: dnsBypassProc.running = true
+    }
+    Process {
+        id: dnsBypassProc
+        running: root.usingNmx
+        command: ["nmxcli", "-t", "dns-bypass"]
+        stdout: SplitParser {
+            onRead: line => root.dnsBypass = line.trim() === "on"
+        }
+    }
+
+    property var retryOpenTarget: null
+    property var pendingOpenTarget: null
+    property bool openRetried: false
+    Process {
+        id: forgetStaleProc
+        onExited: {
+            const target = root.pendingOpenTarget
+            root.pendingOpenTarget = null
+            if (!target)
+                return
+            root.wifiConnectTarget = target
+            connectProc.exec([root.cli, "dev", "wifi", "connect", target.ssid])
         }
     }
 

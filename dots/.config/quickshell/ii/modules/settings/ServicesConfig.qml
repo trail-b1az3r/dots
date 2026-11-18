@@ -65,6 +65,16 @@ ContentPage {
                 Config.options.networking.userAgent = text;
             }
         }
+
+        ConfigSwitch {
+            visible: Network.usingNmx
+            text: Translation.tr("Wi-Fi DNS-blocker bypass")
+            checked: Network.dnsBypass
+            onClicked: Network.setDnsBypass(checked)
+            StyledToolTip {
+                text: Translation.tr("Off by default. Once a Wi-Fi network is fully online, names are looked up through public resolvers\nover encrypted DNS (DNS-over-TLS) instead of the network's DNS, which gets past DNS blocklists.\nNever while a sign-in page (captive portal) is waiting: that needs the network's own DNS.")
+            }
+        }
     }
 
     ContentSection {

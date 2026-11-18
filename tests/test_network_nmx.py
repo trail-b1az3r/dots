@@ -98,3 +98,18 @@ class NetworkToolTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OpenNetworkAndDnsBypassTest(unittest.TestCase):
+    def test_open_network_never_asks_for_a_password(self):
+        # A café's or hotel's network signs in on a web page: "Secrets were required" for one means a stale profile.
+        self.assertIn("if (!root.wifiConnectTarget.isSecure) {", NETWORK)
+        self.assertIn('forgetStaleProc.exec([root.cli, "connection", "delete", "id", retry.ssid])', NETWORK)
+        self.assertIn("root.wifiConnectTarget.askingPassword = root.wifiConnectTarget.isSecure", NETWORK)
+
+    def test_dns_bypass_is_a_setting_off_by_default(self):
+        self.assertIn("property bool dnsBypass: false", NETWORK)
+        self.assertIn('["nmxcli", "dns-bypass", on ? "on" : "off"]', NETWORK)
+        services = (II / "modules/settings/ServicesConfig.qml").read_text()
+        self.assertIn('Translation.tr("Wi-Fi DNS-blocker bypass")', services)
+        self.assertIn("visible: Network.usingNmx", services)
