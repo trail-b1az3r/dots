@@ -16,5 +16,8 @@ RestartSec=2
 # else with it.
 KillMode=process
 OOMPolicy=continue
+# ...but when the session ends (log out, shut down) those apps are asked to quit, rather than left for systemd's
+# two-minute stop timeout: that made shutting down slow.
+ExecStopPost=%h/.config/hypr/hyprland/halcyon/session-end
 
 # Started by Hyprland (halcyon/init.lua), never enabled on its own: see ExecCondition.

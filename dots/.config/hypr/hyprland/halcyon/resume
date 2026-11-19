@@ -10,22 +10,39 @@
 # so no password prompt appears at wake-up.
 set -u
 
-restart_network() {
+network_up() {
+    nmcli -t -f STATE general status 2>/dev/null | grep -qx connected
+}
+
+# The network usually comes back by itself within seconds of waking. Only if it has not after a while is it
+# cycled (off and on: NetworkManager restarts its devices without needing root). Cycling it on every wake,
+# working or not, dropped a good connection each time and made waking up slow.
+restart_network_if_down() {
+    for _ in $(seq 1 10); do
+        network_up && return 0
+        sleep 1
+    done
     nmcli networking off && sleep 2 && nmcli networking on
+}
+
+# A helper that must outlive this watcher (its own unit, not this service's cgroup).
+detach() {
+    systemd-run --user --collect --quiet --unit="halcyon-$(basename "$1")-$(date +%s)" "$@" >/dev/null 2>&1 ||
+        setsid "$@" >/dev/null 2>&1 &
 }
 
 # If the network still isn't up a while after that, reconnect the last Wi-Fi
 # by hand (wifi-reconnect). It runs detached, so the watcher keeps listening.
 reconnect_wifi_if_down() {
     sleep 15
-    nmcli -t -f STATE general status 2>/dev/null | grep -qx connected && return 0
-    setsid "$(dirname "$0")/wifi-reconnect" >/dev/null 2>&1 &
+    network_up && return 0
+    detach "$(dirname "$0")/wifi-reconnect"
 }
 
 restart_razer() {
     systemctl --user restart openrazer-daemon.service 2>/dev/null || true
     if command -v polychromatic-tray-applet >/dev/null && ! pgrep -f polychromatic-tray-applet >/dev/null; then
-        setsid polychromatic-tray-applet >/dev/null 2>&1 &
+        detach polychromatic-tray-applet
     fi
 }
 
@@ -51,9 +68,7 @@ dbus-monitor --system "type='signal',interface='org.freedesktop.login1.Manager',
 while read -r line; do
     case "$line" in
         *"boolean false"*)
-            sleep 3  # give the hardware a moment to come back
-            restart_network
-            ( reconnect_wifi_if_down ) &
+            ( restart_network_if_down; reconnect_wifi_if_down ) &
             restart_razer
             ( restart_bluetooth ) &
             ;;

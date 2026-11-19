@@ -52,7 +52,12 @@ restart_bluetooth_if_off
 # Surface Pro 3-6 devices use the Marvell mwifiex_pcie driver. Its firmware
 # can leave the PCIe function wedged after suspend; a NetworkManager restart
 # alone cannot recover it. Reload the module before testing connectivity.
-if [ -d /sys/module/mwifiex_pcie ]; then
+# A distribution that ships its own mwifiex sleep hook (Nexora: /usr/lib/systemd/system-sleep/*-mwifiex) has
+# already unloaded the driver before sleep and loaded it after: reloading it again here took the Wi-Fi down a
+# second time, seconds after it came back, and made every wake-up slow.
+own_hook=no
+for f in /usr/lib/systemd/system-sleep/*-mwifiex; do [ -e "$f" ] && own_hook=yes; done
+if [ -d /sys/module/mwifiex_pcie ] && [ "$own_hook" = no ]; then
     logger -t halcyon-resume "reloading Marvell mwifiex_pcie after resume"
     systemctl stop NetworkManager.service || true
     modprobe -r mwifiex_pcie || logger -t halcyon-resume "could not unload mwifiex_pcie"

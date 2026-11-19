@@ -234,3 +234,55 @@ class InstallerDetectionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SlowShutdownTest(unittest.TestCase):
+    """Shutting down and logging out took two minutes: processes left in Halcyon's units (KillMode=process) waited
+    for user@.service's stop timeout. And every wake-up dropped the network up to three times."""
+
+    HALCYON = HALCYON
+    UNITS = ROOT / "dots/.config/systemd/user"
+
+    def test_shell_apps_are_asked_to_quit_when_the_session_ends(self):
+        unit = (self.UNITS / "halcyon-quickshell.service").read_text()
+        self.assertIn("KillMode=process", unit, "a shell restart still keeps its apps")
+        self.assertIn("ExecStopPost=%h/.config/hypr/hyprland/halcyon/session-end", unit)
+        import subprocess, tempfile, time
+        script = self.HALCYON / "session-end"
+        with tempfile.TemporaryDirectory() as tmp:
+            polite = subprocess.Popen(["sleep", "60"])
+            stubborn = subprocess.Popen(["sh", "-c", "trap '' TERM; while :; do sleep 0.1; done"])
+            procs = Path(tmp, "procs")
+
+            def write():
+                # Replaced whole, as a cgroup's list never reads empty halfway through a change.
+                tmp_file = procs.with_suffix(".tmp")
+                tmp_file.write_text("".join(f"{p.pid}\n" for p in (polite, stubborn) if p.poll() is None))
+                tmp_file.replace(procs)
+            write()
+            env = {"PATH": "/usr/bin:/bin", "HALCYON_CGROUP_PROCS": str(procs)}
+            subprocess.run(["sh", str(script)], env={**env, "HALCYON_SESSION_STATE": "running"}, check=True)
+            self.assertIsNone(polite.poll(), "not when only the shell restarts")
+            runner = subprocess.Popen(["sh", str(script)], env={**env, "HALCYON_SESSION_STATE": "stopping"})
+            start = time.monotonic()
+            while runner.poll() is None and time.monotonic() - start < 15:
+                write()
+                time.sleep(0.2)
+            self.assertEqual(polite.wait(2), -15, "asked to quit (SIGTERM)")
+            self.assertEqual(stubborn.wait(2), -9, "one that will not is stopped")
+            self.assertLess(time.monotonic() - start, 8, "seconds, not systemd's two minutes")
+
+    def test_resume_watcher_stops_whole(self):
+        unit = (self.UNITS / "halcyon-resume.service").read_text()
+        self.assertNotIn("\nKillMode=process", unit, "its dbus-monitor must not outlive it")
+        resume = (self.HALCYON / "resume").read_text()
+        self.assertIn("systemd-run --user", resume, "helpers that must outlive it get their own units")
+        self.assertNotIn("setsid polychromatic-tray-applet", resume)
+
+    def test_waking_up_does_not_drop_a_working_network(self):
+        resume = (self.HALCYON / "resume").read_text()
+        body = resume.split("restart_network_if_down() {")[1].split("\n}\n")[0]
+        self.assertLess(body.index("network_up && return 0"), body.index("nmcli networking off"),
+                        "cycled only when it did not come back by itself")
+        hook = (self.HALCYON / "sleep-hook").read_text()
+        self.assertIn('[ "$own_hook" = no ]', hook, "no second driver reload where the distribution has its own hook")

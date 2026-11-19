@@ -8,8 +8,9 @@ ExecCondition=/bin/sh -c 'hyprctl version >/dev/null 2>&1 || exit 1'
 ExecStart=%h/.config/hypr/hyprland/halcyon/resume
 Restart=on-failure
 RestartSec=5
-# It starts the Razer tray applet and the Wi-Fi reconnect helper; restarting this service must not kill them.
-KillMode=process
+# The Razer tray applet and the Wi-Fi reconnect helper it starts run as units of their own (systemd-run), so this
+# one stops whole: its dbus-monitor goes with it. (With KillMode=process it outlived the service, and held up
+# every shutdown until systemd's two-minute timeout.)
 OOMPolicy=continue
 
 # Started by Hyprland (halcyon/init.lua), never enabled on its own: see ExecCondition.

@@ -1,0 +1,35 @@
+#!/bin/sh
+# Halcyon: when the session ends (log out, shut down, restart), asks the apps that were opened from the shell to
+# quit, instead of leaving them for systemd to kill after its two-minute stop timeout.
+#
+# The shell's service keeps its apps alive across a shell restart (KillMode=process), since they are its child
+# processes, and so in its cgroup. Run as the service's ExecStopPost, this does nothing then. But when the user's
+# systemd is stopping (the session is over), they would otherwise sit there until user@.service's TimeoutStopSec
+# (120 s) ran out: shutting down and logging out took two minutes. So they get SIGTERM, a few seconds to save and
+# quit, then SIGKILL.
+set -u
+
+state="${HALCYON_SESSION_STATE:-$(systemctl --user is-system-running 2>/dev/null || true)}"
+[ "$state" = stopping ] || exit 0
+
+procs="${HALCYON_CGROUP_PROCS:-/sys/fs/cgroup$(sed -n 's/^0:://p' /proc/self/cgroup)/cgroup.procs}"
+[ -r "$procs" ] || exit 0
+
+others() {
+    while read -r pid; do
+        [ "$pid" = "$$" ] || echo "$pid"
+    done < "$procs"
+}
+
+pids="$(others)"
+[ -n "$pids" ] || exit 0
+# shellcheck disable=SC2086
+kill -TERM $pids 2>/dev/null
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+    sleep 0.5
+    [ -n "$(others)" ] || exit 0
+done
+pids="$(others)"
+# shellcheck disable=SC2086
+[ -z "$pids" ] || kill -KILL $pids 2>/dev/null
+exit 0
