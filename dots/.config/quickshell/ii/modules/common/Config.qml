@@ -406,8 +406,8 @@ Singleton {
                 property bool sunDial: true // Halcyon: the sun's place in today's sky, and the next scheduled theme
                 property bool windowButtons: true // Halcyon: mini, float/tile and close for the focused window, by its name
                 property bool nextEvent: true // Halcyon: the next calendar event this week; a click opens the calendar
-                property int cornerStyle: 0 // 0: Hug | 1: Float | 2: Plain rectangle
-                property bool floatStyleShadow: true // Show shadow behind bar when cornerStyle == 1 (Float)
+                property int cornerStyle: 0 // 0: Hug | 1: Float | 2: Plain rectangle | 3: Islands (floating pills, no strip)
+                property bool floatStyleShadow: true // Show shadow behind bar when cornerStyle == 1 (Float) or under each island (3)
                 property bool borderless: false // true for no grouping of items
                 property string topLeftIcon: "spark" // Options: "distro" or any icon name in ~/.config/quickshell/ii/assets/icons
                 property bool showBackground: true

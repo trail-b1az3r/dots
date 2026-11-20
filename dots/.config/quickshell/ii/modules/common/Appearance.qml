@@ -388,7 +388,9 @@ Singleton {
 
     sizes: QtObject {
         property real baseBarHeight: 40
-        property real barHeight: Config.options.bar.cornerStyle === 1 ? 
+        // Float (1) and Islands (3) leave a gap round the bar; Islands has no strip, only its groups, each a pill.
+        property bool floatingBar: Config.options.bar.cornerStyle === 1 || Config.options.bar.cornerStyle === 3
+        property real barHeight: floatingBar ? 
             (baseBarHeight + root.sizes.hyprlandGapsOut * 2) : baseBarHeight
         property real barCenterSideModuleWidth: Config.options?.bar.verbose ? 360 : 140
         property real barCenterSideModuleWidthShortened: 280
@@ -408,7 +410,7 @@ Singleton {
         property real sidebarWidth: 460
         property real sidebarWidthExtended: 750
         property real baseVerticalBarWidth: 46
-        property real verticalBarWidth: Config.options.bar.cornerStyle === 1 ? 
+        property real verticalBarWidth: floatingBar ? 
             (baseVerticalBarWidth + root.sizes.hyprlandGapsOut * 2) : baseVerticalBarWidth
         property real wallpaperSelectorWidth: 1200
         property real wallpaperSelectorHeight: 690

@@ -27,6 +27,50 @@ Item { // Bar content region
         color: Appearance.squareBar ? Appearance.colors.colOnLayer1 : Appearance.colors.colOutlineVariant
     }
 
+    // Islands (corner style 3): no strip across the screen. The left side, the right side and each centre group float
+    // as pills of their own, with a shadow, over the wallpaper (the centre groups draw theirs: BarGroup.qml).
+    readonly property bool islands: Config.options.bar.cornerStyle === 3 && Config.options.bar.showBackground
+        && !Config.options.bar.vertical && !root.sao
+    readonly property real islandPad: 6
+    // Where a row of items starts and ends, counting only those shown; offset is the row's x in this item.
+    function islandSpan(items, offset) {
+        let a = Infinity, b = -Infinity;
+        for (const item of items) {
+            if (!item || !item.visible || item.width <= 0)
+                continue;
+            a = Math.min(a, item.x);
+            b = Math.max(b, item.x + item.width);
+        }
+        return a === Infinity ? null : { x: offset + a - root.islandPad, w: b - a + 2 * root.islandPad };
+    }
+    component Island: Rectangle {
+        property var span: null
+        visible: root.islands && span !== null
+        x: span ? span.x : 0
+        width: span ? span.w : 0
+        y: (root.height - height) / 2
+        height: Appearance.sizes.baseBarHeight
+        radius: height / 2
+        color: Appearance.colors.colLayer0
+        border.width: 1
+        border.color: Appearance.colors.colLayer0Border
+        Behavior on x { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this) }
+        Behavior on width { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this) }
+    }
+    StyledRectangularShadow { target: leftIsland; visible: leftIsland.visible && Config.options.bar.floatStyleShadow }
+    StyledRectangularShadow { target: rightIsland; visible: rightIsland.visible && Config.options.bar.floatStyleShadow }
+    Island {
+        id: leftIsland
+        // islandSpan reads each item's x, width and visible, so the island follows the row as it changes.
+        span: root.islands ? root.islandSpan([leftSidebarButton, windowButtons, activeWindowItem],
+                                             barLeftSideMouseArea.x) : null
+    }
+    Island {
+        id: rightIsland
+        span: root.islands ? root.islandSpan([nextEventItem, sysTrayItem, updateButton, rightSidebarButton],
+                                             barRightSideMouseArea.x) : null
+    }
+
     // Background shadow
     Loader {
         active: Config.options.bar.showBackground && Config.options.bar.cornerStyle === 1 && Config.options.bar.floatStyleShadow
@@ -53,7 +97,7 @@ Item { // Bar content region
     Loader {
         anchors.fill: barBackground
         z: -1
-        active: root.frameKind !== ""
+        active: root.frameKind !== "" && !root.islands
         source: "../dock/DockFrame.qml"   // by file, so a live reload finds it
         onLoaded: {
             item.kind = Qt.binding(() => root.frameKind);
@@ -72,7 +116,7 @@ Item { // Bar content region
             fill: parent
             margins: Config.options.bar.cornerStyle === 1 ? (Appearance.sizes.hyprlandGapsOut) : 0 // idk why but +1 is needed
         }
-        opacity: root.frameKind !== "" || root.sao ? 0 : 1
+        opacity: root.frameKind !== "" || root.sao || root.islands ? 0 : 1
         color: Config.options.bar.showBackground ? Appearance.colors.colLayer0 : "transparent"
         radius: Config.options.bar.cornerStyle === 1 ? Appearance.rounding.windowRounding : 0
         border.width: Config.options.bar.cornerStyle === 1 ? 1 : 0
@@ -130,9 +174,12 @@ Item { // Bar content region
             }
 
             ActiveWindow {
+                id: activeWindowItem
                 Layout.leftMargin: (windowButtons.visible ? 6 : 10) + (leftSidebarButton.visible || windowButtons.visible ? 0 : Appearance.rounding.screenRounding)
                 Layout.rightMargin: Appearance.rounding.screenRounding
-                Layout.fillWidth: true
+                // On an island the title is as wide as it needs, up to a limit, so the pill hugs it.
+                Layout.fillWidth: !root.islands
+                Layout.maximumWidth: root.islands ? 340 : -1
                 Layout.fillHeight: true
                 visible: root.useShortenedForm === 0
             }
@@ -363,10 +410,12 @@ Item { // Bar content region
             }
 
             HalcyonUpdateButton {
+                id: updateButton
                 Layout.alignment: Qt.AlignVCenter
             }
 
             SysTray {
+                id: sysTrayItem
                 visible: root.useShortenedForm === 0
                 Layout.fillWidth: false
                 Layout.fillHeight: true
@@ -374,6 +423,7 @@ Item { // Bar content region
             }
 
             NextEvent {
+                id: nextEventItem
                 Layout.alignment: Qt.AlignVCenter
                 visible: Config.options.bar.nextEvent && shown && root.useShortenedForm === 0
             }

@@ -72,7 +72,7 @@ Scope {
                 readonly property bool pushing: mustShow && (Config?.options.bar.autoHide.pushWindows || forcedHere || resizedNow)
                 exclusionMode: ExclusionMode.Ignore
                 exclusiveZone: (autoHidden && !pushing) ? 0 :
-                    Appearance.sizes.baseBarHeight + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)
+                    Appearance.sizes.baseBarHeight + (Appearance.sizes.floatingBar ? Appearance.sizes.hyprlandGapsOut : 0)
 
                 onMustShowChanged: {
                     // Only the focused window is resized, so a tiled window is never the one changed.

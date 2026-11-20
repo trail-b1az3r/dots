@@ -1,9 +1,16 @@
 pragma Singleton
 import QtQuick
 
-// The few settings the wallpaper widgets read, with the real defaults.
+// The few settings the wallpaper widgets and the bar's groups read, with the real defaults.
 QtObject {
     property QtObject options: QtObject {
+        property QtObject bar: QtObject {
+            property int cornerStyle: 0
+            property bool floatStyleShadow: true
+            property bool borderless: false
+            property bool showBackground: true
+            property bool vertical: false
+        }
         property QtObject halcyon: QtObject {
             property string theme: ""
             property bool glassTheme: false

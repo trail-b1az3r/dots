@@ -327,6 +327,11 @@ ContentPage {
                             displayName: Translation.tr("Rect"),
                             icon: "toolbar",
                             value: 2
+                        },
+                        {
+                            displayName: Translation.tr("Islands"),
+                            icon: "view_week",
+                            value: 3
                         }
                     ]
                 }

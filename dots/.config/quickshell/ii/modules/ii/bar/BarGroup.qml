@@ -1,4 +1,5 @@
 import qs.modules.common
+import qs.modules.common.widgets
 import QtQuick
 import QtQuick.Layouts
 
@@ -9,24 +10,34 @@ Item {
     implicitWidth: vertical ? Appearance.sizes.baseVerticalBarWidth : (gridLayout.implicitWidth + padding * 2)
     implicitHeight: vertical ? (gridLayout.implicitHeight + padding * 2) : Appearance.sizes.baseBarHeight
     default property alias items: gridLayout.children
+    // Islands (bar corner style 3): each group floats as a pill of its own, with a shadow, since there is no bar
+    // strip behind it.
+    readonly property bool island: (Config.options?.bar.cornerStyle ?? 0) === 3 && !vertical
+        && !(Config.options?.bar.borderless ?? false) && (Config.options?.bar.showBackground ?? true)
+
+    StyledRectangularShadow {
+        target: background
+        visible: root.island && (Config.options?.bar.floatStyleShadow ?? true)
+    }
 
     Rectangle {
         id: background
         anchors {
             fill: parent
-            topMargin: root.vertical ? 0 : 4
-            bottomMargin: root.vertical ? 0 : 4
+            topMargin: root.vertical || root.island ? 0 : 4
+            bottomMargin: root.vertical || root.island ? 0 : 4
             leftMargin: root.vertical ? 4 : 0
             rightMargin: root.vertical ? 4 : 0
         }
         // Manga Ink: no box round each group (a box in a box, on the bar's panel); gutters part them instead.
         readonly property bool manga: Appearance.squareBar && !root.vertical
-        color: Config.options?.bar.borderless || manga ? "transparent" : Appearance.colors.colLayer1
-        radius: Appearance.squareBar ? 0 : Appearance.rounding.small
+        color: root.island ? Appearance.colors.colLayer0
+             : Config.options?.bar.borderless || manga ? "transparent" : Appearance.colors.colLayer1
+        radius: root.island ? height / 2 : Appearance.squareBar ? 0 : Appearance.rounding.small
         // Halcyon themes edge each group in their own light: Red Sun's ember, Star Rail's gold, glass's frost.
         readonly property string theme: Config.options?.halcyon.theme ?? ""
-        border.width: Config.options?.bar.borderless || manga ? 0 : Appearance.squareBar ? 2 : (edgeColour.a > 0 ? 1 : 0)
-        border.color: edgeColour
+        border.width: root.island ? 1 : Config.options?.bar.borderless || manga ? 0 : Appearance.squareBar ? 2 : (edgeColour.a > 0 ? 1 : 0)
+        border.color: root.island && edgeColour.a === 0 ? Appearance.colors.colLayer0Border : edgeColour
         readonly property color edgeColour: {
             switch (theme) {
             case "red-sun": return Qt.rgba(1.0, 0.29, 0.25, 0.42);
