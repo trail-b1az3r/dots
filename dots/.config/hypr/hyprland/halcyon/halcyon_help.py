@@ -61,7 +61,7 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
     ("Fonts", [
         ("fonts [--json]", "the fonts installed with halcyon fonts"),
         ("fonts install FILE...", "font files, or a zip of a family, for your user (~/.local/share/fonts/halcyon-imported)"),
-        ("fonts install right-grotesk", "Right Grotesk from your Downloads; with none there, opens the foundry's page"),
+        ("fonts install right-font [--latest]", "RightFont, the most confusing font possible (shipped; --latest: from its site)"),
         ("fonts remove NAME", "take one away again"),
         ("fonts manager", "open Font Manager: preview, enable and disable, collections"),
     ]),

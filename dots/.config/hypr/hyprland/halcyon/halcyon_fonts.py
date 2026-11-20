@@ -4,19 +4,20 @@
     halcyon fonts                        the fonts installed this way
     halcyon fonts install FILE...        .ttf .otf .ttc .woff .woff2 files, or a .zip of them (a family as the foundry
                                          ships it); each lands in ~/.local/share/fonts/halcyon-imported/NAME
-    halcyon fonts install right-grotesk  Right Grotesk from your Downloads (the newest Right*Grotesk*.zip); with none
-                                         there, opens the foundry's page to get it
+    halcyon fonts install right-font     RightFont, "the most confusing font possible" (Right of the Bell), which
+                                         Halcyon ships; --latest fetches the newest from rightofthebell.com/fonts
     halcyon fonts remove NAME            take an installed one away again
     halcyon fonts manager                open Font Manager (font-manager): preview, enable and disable, collections
 
-Fonts are only ever read from what you give it: nothing is downloaded. Right Grotesk is Pangram Pangram's, free to
-try for personal use (the foundry emails it), and a licence is needed for commercial work: Halcyon cannot ship it.
+Only right-font --latest downloads anything: everything else installs files you give it. RightFont is made from Inter
+and Open Sans, and is under the SIL Open Font License like them (OFL.txt next to it).
 """
 
 from __future__ import annotations
 
 import json
 import os
+import urllib.request
 import re
 import shutil
 import subprocess
@@ -27,24 +28,18 @@ from pathlib import Path
 DATA = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share")
 FONTS = DATA / "fonts/halcyon-imported"
 EXTENSIONS = {".ttf", ".otf", ".ttc", ".woff", ".woff2"}
-# A zip of a family can be large (Right Grotesk's is), but never this large: a bomb, not fonts.
+# A zip of a family can be large, but never this large: that is a bomb, not fonts.
 MAX_UNPACKED = 1024 * 1024 * 1024
-RIGHT_GROTESK_URL = "https://pangrampangram.com/products/right-grotesk"
+# RightFont: shipped in ~/.local/share/fonts/halcyon-rightfont, and published on the site of the channel that made it.
+RIGHT_FONT_DIR = DATA / "fonts/halcyon-rightfont"
+RIGHT_FONT_FILE = "RightFont-Review-v7.ttf"
+RIGHT_FONT_SITE = "https://www.rightofthebell.com"
+# The repository's copy, for a run from a checkout (the installed one is in RIGHT_FONT_DIR).
+BUNDLED_RIGHT_FONT = Path(__file__).resolve().parents[4] / ".local/share/fonts/halcyon-rightfont"
 
 
 class FontError(Exception):
     pass
-
-
-def downloads() -> Path:
-    try:
-        out = subprocess.run(["xdg-user-dir", "DOWNLOAD"], capture_output=True, text=True, timeout=5, check=False)
-        path = out.stdout.strip()
-        if out.returncode == 0 and path and path != str(Path.home()):
-            return Path(path)
-    except (OSError, subprocess.SubprocessError):
-        pass
-    return Path.home() / "Downloads"
 
 
 def safe_name(text: str) -> str:
@@ -109,13 +104,53 @@ def install(paths: list[Path]) -> list[tuple[str, int]]:
     return done
 
 
-def newest_right_grotesk() -> Path | None:
-    folder = downloads()
-    if not folder.is_dir():
-        return None
-    found = [p for p in folder.iterdir()
-             if p.is_file() and p.suffix.lower() == ".zip" and re.search(r"right.?grotesk", p.name, re.I)]
-    return max(found, key=lambda p: p.stat().st_mtime) if found else None
+def fetch(url: str, limit: int = 8 * 1024 * 1024) -> bytes:
+    request = urllib.request.Request(url, headers={"User-Agent": "Halcyon-fonts"})
+    with urllib.request.urlopen(request, timeout=30) as response:
+        data = response.read(limit + 1)
+    if len(data) > limit:
+        raise FontError(f"{url} is larger than expected")
+    return data
+
+
+def latest_right_font_url() -> str:
+    """The site is a script app: its fonts page loads FontLab-*.js, which names the font's current file."""
+    page = fetch(f"{RIGHT_FONT_SITE}/fonts").decode("utf-8", "replace")
+    main = re.search(r'src="(/assets/index-[^"]+\.js)"', page)
+    if not main:
+        raise FontError("the fonts page has changed; get RightFont from https://www.rightofthebell.com/fonts")
+    script = fetch(RIGHT_FONT_SITE + main.group(1)).decode("utf-8", "replace")
+    lab = re.search(r'"\./(FontLab-[A-Za-z0-9_-]+\.js)"', script)
+    if not lab:
+        raise FontError("the fonts page has changed; get RightFont from https://www.rightofthebell.com/fonts")
+    code = fetch(f"{RIGHT_FONT_SITE}/assets/{lab.group(1)}").decode("utf-8", "replace")
+    font = re.search(r'"(/assets/RightFont[A-Za-z0-9_.-]*\.(?:ttf|otf))"', code)
+    if not font:
+        raise FontError("no RightFont file on the fonts page now; see https://www.rightofthebell.com/fonts")
+    return RIGHT_FONT_SITE + font.group(1)
+
+
+def install_right_font(latest: bool = False) -> str:
+    RIGHT_FONT_DIR.mkdir(parents=True, exist_ok=True)
+    if latest:
+        url = latest_right_font_url()
+        data = fetch(url)
+        if data[:4] not in (b"\x00\x01\x00\x00", b"OTTO", b"true"):
+            raise FontError(f"{url} is not a font")
+        (RIGHT_FONT_DIR / RIGHT_FONT_FILE).write_bytes(data)
+        where = url
+    else:
+        source = next((d for d in (RIGHT_FONT_DIR, BUNDLED_RIGHT_FONT) if (d / RIGHT_FONT_FILE).is_file()), None)
+        if source is None:
+            raise FontError("Halcyon's copy of RightFont is missing; try: halcyon fonts install right-font --latest")
+        for name in (RIGHT_FONT_FILE, "OFL.txt", "README.md"):
+            if (source / name).is_file() and source != RIGHT_FONT_DIR:
+                shutil.copyfile(source / name, RIGHT_FONT_DIR / name)
+        where = str(source)
+    if shutil.which("fc-cache"):
+        subprocess.run(["fc-cache", "-f", str(RIGHT_FONT_DIR)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                       check=False, timeout=120)
+    return where
 
 
 def installed() -> dict[str, list[str]]:
@@ -154,17 +189,12 @@ def main(argv: list[str]) -> int:
                     print(f"{name}  ({len(files)} file{'s' if len(files) != 1 else ''})")
             return 0
         if argv[0] == "install":
-            if argv[1:] == ["right-grotesk"]:
-                found = newest_right_grotesk()
-                if found is None:
-                    print(f"No Right Grotesk zip in {downloads()}. It is Pangram Pangram's: free to try for personal "
-                          f"use (the foundry emails it), licensed for commercial work. Opening {RIGHT_GROTESK_URL}; "
-                          "once the zip is in Downloads, run this again.")
-                    open_detached(["xdg-open", RIGHT_GROTESK_URL])
-                    return 1
-                argv = ["install", str(found)]
+            if argv[1:2] == ["right-font"]:
+                where = install_right_font(latest="--latest" in argv[2:])
+                print(f'RightFont ("RightFont Review") is in {RIGHT_FONT_DIR}, from {where}. Good luck reading it.')
+                return 0
             if len(argv) < 2:
-                raise FontError("usage: halcyon fonts install FILE... | right-grotesk")
+                raise FontError("usage: halcyon fonts install FILE... | right-font [--latest]")
             for name, count in install([Path(p).expanduser() for p in argv[1:]]):
                 print(f"installed {name}: {count} file{'s' if count != 1 else ''} in {FONTS / name}")
             return 0
