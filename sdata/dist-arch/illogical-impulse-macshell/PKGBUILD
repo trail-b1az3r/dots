@@ -1,0 +1,23 @@
+groups=(illogical-impulse)
+pkgname=illogical-impulse-macshell
+pkgver=1.0
+pkgrel=1
+pkgdesc='Halcyon: what MacShell, the Liquid Glass theme shell, needs beyond the rest'
+arch=(any)
+license=(None)
+depends=(
+  # The wallpaper (MacShell draws none of its own; its glass refracts what awww shows)
+  awww
+  # Liquid Glass shader compiler and SVG icons
+  qt6-shadertools
+  qt6-svg
+  # Trash watching, folder and picture pickers, settings files
+  inotify-tools
+  zenity
+  jq
+  # Night Shift, brightness
+  hyprsunset
+  brightnessctl
+  # Its default fallback font
+  inter-font
+)

@@ -74,6 +74,8 @@ FLIP_FILE = HALCYON_STATE / "flip-pointer-y"
 EFFECTS_HOLD = HALCYON_STATE / "effects-hold"
 SCREEN_SHADER = HALCYON_STATE / "screen-shader.frag"
 SHELL_RESTORE = HALCYON_STATE / "shell-restore.json"
+# The desktop shell the active theme runs, when it isn't the Halcyon shell (halcyon/desktop-shell reads it).
+DESKTOP_SHELL_FILE = HALCYON_STATE / "desktop-shell"
 BANNERS = DATA / "halcyon/banners"
 
 GENERATED = STATE / "quickshell/user/generated"
@@ -254,11 +256,13 @@ def validate(theme_id, theme):
     if problems:
         return problems
     known_top = {"name", "description", "wallpaper", "seed", "scheme", "shell", "terminal",
-                 "hyprland", "effects", "shell_config", "banner", "wallpaper_invert_of", "mode"}
+                 "hyprland", "effects", "shell_config", "banner", "wallpaper_invert_of", "mode", "desktop_shell"}
     for key in set(theme) - known_top:
         problems.append(f"'{key}' is not a known key")
     if theme.get("mode", "dark") not in ("dark", "light"):
         problems.append("mode must be dark or light")
+    if theme.get("desktop_shell", "ii") not in DESKTOP_SHELLS:
+        problems.append(f"desktop_shell must be one of {', '.join(DESKTOP_SHELLS)}")
     if not HEX.match(str(theme["seed"])):
         problems.append(f"seed {theme['seed']!r} is not #RRGGBB")
     if theme["scheme"] not in SCHEMES:
@@ -490,6 +494,107 @@ def glass_settings(config=None):
 # Themes whose windows stay as they are: no rounder corners or darker edges on floating windows.
 PLAIN_WINDOW_THEMES = ("hyperneo", "hsr")
 
+# A theme's "desktop_shell": the Halcyon shell (ii), or MacShell (github.com/0-ss/MacShell, MIT, bundled in
+# ~/.config/quickshell/MacShell), a macOS Tahoe style menu bar and Dock with a real-time Liquid Glass shader, and
+# MacLock as its lock screen. One runs at a time; their systemd units conflict.
+DESKTOP_SHELLS = {"ii": "halcyon-quickshell.service", "MacShell": "halcyon-macshell.service"}
+MACSHELL_QS = "qs -c MacShell ipc call "
+# MacShell's keys, bound over the Halcyon shell's (which do nothing while that shell is stopped). The rest of
+# Halcyon's binds (windows, workspaces, apps) stay as they are.
+MACSHELL_BINDS = (
+    ("SUPER + Space", "spotlight toggle", "MacShell: Spotlight"),
+    ("SUPER + V", "spotlight clipboard", "MacShell: Clipboard"),
+    ("SUPER + period", "spotlight emoji", "MacShell: Emoji"),
+    ("ALT + TAB", "switcher next", "MacShell: Switch windows"),
+    ("SUPER + ALT + I", "settings toggle", "MacShell: Settings"),
+    ("CTRL + ALT + W", "wallpapers toggle", "MacShell: Wallpapers"),
+    ("SUPER + SHIFT + S", "screenshot region", "MacShell: Screenshot"),
+)
+# Its glass surfaces: Hyprland's blur behind them, and no layer animation of their own (MacShell animates them).
+MACSHELL_LAYERS = (("macdock", 0.2), ("macspot", 0.05), ("macbarbg", 0.05))
+
+
+def macshell_lua():
+    """theme.lua's part for a MacShell theme: its keys and its layers' blur."""
+    out = ["", "-- MacShell runs instead of the Halcyon shell (halcyon/desktop-shell): its keys and its glass layers.",
+           "-- Ctrl+Super+Shift+T still opens the theme menu, to go back to a Halcyon theme."]
+    for key, call, description in MACSHELL_BINDS:
+        out.append(f'pcall(hl.unbind, "{key}")')
+        out.append(f'hl.bind("{key}", hl.dsp.exec_cmd("{MACSHELL_QS}{call}"), {{ description = "{description}" }})')
+    for name, alpha in MACSHELL_LAYERS:
+        out.append(f'hl.layer_rule({{ name = "{name}", match = {{ namespace = "{name}" }}, blur = true, '
+                   f'ignore_alpha = {alpha}, no_anim = true }})')
+    out.append('hl.layer_rule({ name = "macshot", match = { namespace = "macshot" }, no_anim = true })')
+    return out
+
+
+def first_terminal():
+    """The terminal MacShell opens (it runs `terminal -e ...`): the first of Halcyon's that is installed."""
+    for name in ("alacritty", "kitty", "foot", "wezterm", "konsole"):
+        if shutil.which(name):
+            return "wezterm start --" if name == "wezterm" else name
+    return "kitty"
+
+
+def seed_macshell(theme, wallpaper):
+    """MacShell's settings for the theme: the wallpaper its glass refracts and, the first time only, the look.
+    Everything else in ~/.config/macbar and ~/.config/macdock is MacShell's own (its Settings, Super+Z)."""
+    for folder in ("macbar", "macdock"):
+        path = CONFIG / folder / "settings.json"
+        try:
+            data = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+        except (OSError, ValueError):
+            data = {}
+        if not isinstance(data, dict):
+            data = {}
+        first = not data
+        if wallpaper is not None and wallpaper.is_file():
+            data["wallpaperPath"] = str(wallpaper)
+        if first:
+            mode = theme.get("mode", "dark")
+            data.update({"appearanceMode": mode, "darkMode": mode == "dark"})
+            if folder == "macbar":
+                data.update({"terminal": first_terminal(), "filesCmd": 'xdg-open "$HOME"'})
+        write_atomic(path, json.dumps(data, indent=2) + "\n")
+
+
+def set_wallpaper_awww(wallpaper):
+    """MacShell draws no wallpaper (the Halcyon shell did): awww does, and MacShell reads it back from awww."""
+    if wallpaper is None or not wallpaper.is_file() or not shutil.which("awww") or not hyprland_running():
+        return
+    query = subprocess.run(["awww", "query"], capture_output=True, check=False, timeout=5)
+    if query.returncode != 0 and shutil.which("awww-daemon"):
+        subprocess.Popen(["awww-daemon"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
+        for _ in range(20):
+            time.sleep(0.1)
+            if subprocess.run(["awww", "query"], capture_output=True, check=False, timeout=5).returncode == 0:
+                break
+    subprocess.run(["awww", "img", str(wallpaper), "--transition-type", "fade", "--transition-duration", "0.6"],
+                   stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                   check=False, timeout=30)
+
+
+def set_desktop_shell(name, theme=None, wallpaper=None):
+    """Run the desktop shell a theme wants (the Halcyon shell unless it says otherwise). Nothing is restarted when
+    the right one already runs."""
+    name = name if name in DESKTOP_SHELLS else "ii"
+    if name == "ii":
+        remove(DESKTOP_SHELL_FILE)
+    else:
+        write_atomic(DESKTOP_SHELL_FILE, name + "\n")
+        if name == "MacShell":
+            seed_macshell(theme or {}, wallpaper)
+            set_wallpaper_awww(wallpaper)
+    if not hyprland_running() or not shutil.which("systemctl"):
+        return
+    unit = DESKTOP_SHELLS[name]
+    if subprocess.run(["systemctl", "--user", "is-active", "--quiet", unit], check=False).returncode != 0:
+        # The other shell stops: the units conflict. Started without waiting, since this may run inside the shell
+        # that is being stopped (its theme picker).
+        subprocess.run(["systemctl", "--user", "--no-block", "start", unit], stdin=subprocess.DEVNULL,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+
 
 def darker_rgba(colour, amount=0.35):
     """The first rgba(RRGGBBAA) in a border colour, with its colour `amount` darker."""
@@ -572,6 +677,8 @@ def render_lua(theme_id, theme, effects, native_blur, shader_path=None, glass=No
     if translucent:
         out += ["", "-- Translucent windows need blur behind them; upstream turns it off for all.",
                 'hl.window_rule({ match = { class = ".*" }, no_blur = false })']
+    if theme.get("desktop_shell") == "MacShell":
+        out += macshell_lua()
     curves = h.get("curves", {})
     if curves and effects != "off":
         out.append("")
@@ -958,6 +1065,7 @@ def custom_change(args):
     if args[0] == "delete":
         if active() == args[1]:
             leave_theme()
+            set_desktop_shell("ii")
         path.unlink()
         print(f"deleted {args[1]}")
         return 0
@@ -1473,6 +1581,7 @@ def cmd_apply(args):
     set_shell_value("halcyon.theme", theme_id)
     set_shell_value("halcyon.glassTheme", is_glass(theme))
     reload_hyprland()
+    set_desktop_shell(theme.get("desktop_shell", "ii"), theme, wallpaper)
 
     body = theme["description"]
     if effects == "full" and theme.get("effects", {}).get("shader_trigger") == "revolver":
@@ -1710,6 +1819,7 @@ def cmd_detach(_args):
     if had_theme:
         reload_hyprland()
         update_browsers()  # the theme's own touches go with it
+    set_desktop_shell("ii")
     return 0
 
 
@@ -1725,6 +1835,7 @@ def cmd_off(_args):
         # current wallpaper again.
         run([str(SWITCHWALL), "--noswitch", "--color", "clear"])
     reload_hyprland()
+    set_desktop_shell("ii")
     update_browsers()
     notify("Theme off", "Colours follow the wallpaper again.")
     print("theme off")
@@ -1975,10 +2086,11 @@ def cmd_doctor(args):
             subprocess.run(["bash", str(updater), "apply"], check=False, timeout=600)
 
     heading("Revolver")
-    shell_up = subprocess.run(["systemctl", "--user", "is-active", "--quiet", "halcyon-quickshell.service"],
+    shell_unit = DESKTOP_SHELLS.get(read_state(DESKTOP_SHELL_FILE) or "ii", DESKTOP_SHELLS["ii"])
+    shell_up = subprocess.run(["systemctl", "--user", "is-active", "--quiet", shell_unit],
                               stderr=subprocess.DEVNULL, check=False).returncode == 0 or bool(shutil.which("pgrep") and subprocess.run(
                                   ["pgrep", "-x", "qs"], capture_output=True, check=False).returncode == 0)
-    print(f"shell        {'running' if shell_up else 'NOT running (systemctl --user restart halcyon-quickshell)'}")
+    print(f"shell        {'running' if shell_up else f'NOT running (systemctl --user restart {shell_unit})'}")
     revolver_status(revolver)
     if get_nested(read_shell_config(), "background.widgets.revolver.enable") is False:
         todo.append("the revolver is off")

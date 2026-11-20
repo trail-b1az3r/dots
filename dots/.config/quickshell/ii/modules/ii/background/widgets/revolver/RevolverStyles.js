@@ -72,6 +72,7 @@ function styleFor(themeId) {
         return STYLES["red-sun"];
     case "shattered-glass":
     case "fractured-glass":
+    case "liquid-glass":  // runs MacShell; the glass look is for the moments the Halcyon shell is up
         return STYLES["glass"];
     case "hyperneo":
         return STYLES["hyperneo"];

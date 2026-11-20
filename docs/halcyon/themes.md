@@ -10,6 +10,7 @@ style, animations, wallpaper and, for some, shell layout and effects:
 | **Star Rail** | `hsr` | Astral gold and lavender on deep-space navy, over a golden rail curving through a nebula. Can show the current banner character. |
 | **Shattered Glass** | `shattered-glass` | Liquid glass: a glass lens follows the pointer, clicks crack the screen, windows turn to frosted glass. Ice blue and prism violet, sharp corners. |
 | **Fractured Glass** | `fractured-glass` | Refraction only, like Apple's Liquid Glass: a squircle glass lens follows the pointer and bends what's behind its rim. No ripples or cracks. Soft blue, lavender and pink over calm fragments of thick glass. |
+| **Liquid Glass** | `liquid-glass` | A different desktop shell: [MacShell](https://github.com/0-ss/MacShell) (by 0-ss, MIT, bundled) runs in place of the Halcyon shell, with a macOS Tahoe style menu bar, Dock, Control Center, Spotlight, notifications and desktop widgets in real-time Liquid Glass that refracts the wallpaper, and MacLock as the lock screen. Super+Space Spotlight, Super+V clipboard, Alt+Tab switcher, Super+Alt+I its Settings, Ctrl+Alt+W wallpapers. Ctrl+Super+Shift+T opens the theme menu, to go back. Over an original wallpaper of light ribbons. |
 | **Red Sun** | `red-sun` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. The ring is the revolver: spin it and the screen breaks, an eye opens in the sun and finds the car, and the tape rewinds. Wallpaper: *Eclipse* by Alena Aenami (2017), from [wallhaven](https://wallhaven.vip/w/yjl8mk); [buy it here](https://www.artstation.com/marketplace/p/oAol/wallpaper-pack-02). |
 | **After ICEY** | `after-icey` | Silver hair, cyan light and ink-dark navy, over the animated *After ICEY* wallpaper (fan art, by way of [MotionBGs](https://motionbgs.com/after-icey)). `halcyon wallpapers get after-icey` fetches it. |
 | **Sword Art Online** | `sword-art-online` | Aincrad at dusk: slate fog and crimson clouds, the game's orange and white, and its main menu in place of the overview (Super). Over the animated *Twilight Aincrad* wallpaper (fan art, by way of [MotionBGs](https://motionbgs.com/twilight-aincrad)), fetched when the theme is first applied. |
@@ -273,3 +274,24 @@ in the shell, and that shaders compile.
 
 The theme wallpapers are procedural and original. No game assets are
 used. `scripts/make-theme-wallpapers.py` redraws them.
+
+## Liquid Glass and MacShell
+
+Liquid Glass is the one theme that swaps the whole shell. Applying it records `MacShell` in
+`~/.local/state/halcyon/desktop-shell` and starts `halcyon-macshell.service`, which stops `halcyon-quickshell.service`
+(the two units conflict, so only one shell ever runs). Any other theme, `halcyon-theme off`, or a wallpaper change
+from the Halcyon shell, starts the Halcyon shell again. At login, `halcyon/desktop-shell restart` starts whichever
+is recorded.
+
+While MacShell runs:
+
+- The wallpaper is drawn by `awww` (MacShell draws none; the Halcyon shell did). The theme sets it, and MacShell's
+  wallpaper picker (Ctrl+Alt+W) changes it.
+- Locking (Super+L, idle, sleep) goes through `halcyon/lock`, which uses MacLock.
+- Halcyon's own window, workspace and app keys stay. MacShell's keys replace the Halcyon shell's on Super+Space,
+  Super+V, Super+period, Alt+Tab and Super+Shift+S, and Super+Alt+I opens MacShell's Settings.
+- Its settings are its own, in `~/.config/macbar` and `~/.config/macdock`. The theme only fills in the wallpaper
+  each time, and the look and terminal the first time.
+
+MacShell's extra packages are in `illogical-impulse-macshell` (`awww`, `qt6-shadertools`, `inotify-tools`, `zenity`,
+`jq`, `hyprsunset`, `brightnessctl`, `inter-font`).

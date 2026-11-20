@@ -1,0 +1,13 @@
+#!/bin/sh
+# Halcyon: lock the screen with the running shell's lock screen (hypridle's lock_cmd, so Super+L and sleep too).
+#   ii        the shell's own lock (quickshell:lock), or hyprlock when the shell isn't running
+#   MacShell  MacLock, a separate Quickshell process so a shell crash can never take the lock with it
+set -u
+here="$(dirname "$0")"
+if [ "$("$here/desktop-shell")" = MacShell ] && [ -r "$HOME/.config/quickshell/MacLock/lock-via-ipc.sh" ]; then
+    sh "$HOME/.config/quickshell/MacLock/lock-via-ipc.sh" && exit 0
+    pidof hyprlock >/dev/null || exec hyprlock
+    exit 0
+fi
+hyprctl dispatch 'hl.dsp.global("quickshell:lock")' >/dev/null 2>&1 &
+pidof qs quickshell hyprlock >/dev/null || exec hyprlock

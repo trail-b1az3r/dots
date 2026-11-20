@@ -112,7 +112,9 @@ hl.on("hyprland.start", function()
         -- started from here now, so drop those links.
         "w=\"${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/default.target.wants\"; " ..
         "rm -f \"$w/halcyon-quickshell.service\" \"$w/halcyon-gpu-guard.service\" \"$w/halcyon-resume.service\"; " ..
-        "systemctl --user restart halcyon-quickshell.service halcyon-gpu-guard.service halcyon-resume.service; " ..
+        -- The desktop shell: the Halcyon shell, or MacShell under the Liquid Glass theme (halcyon/desktop-shell).
+        "$HOME/.config/hypr/hyprland/halcyon/desktop-shell restart; " ..
+        "systemctl --user restart halcyon-gpu-guard.service halcyon-resume.service; " ..
         -- halcyon.UwU-agent: Wi-Fi passwords for NetworkManager, in place of plasma-nm's agent (halcyon uwu).
         "systemctl --user restart halcyon-uwu-agent.service; " ..
         -- The hourly update check. An install made before it existed, or a timer turned off by mistake, gets it.

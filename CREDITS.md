@@ -32,6 +32,10 @@ The dots are licensed under the GPL-3.0, like upstream. See [LICENSE](LICENSE).
 - **[Quickshell](https://git.outfoxxed.me/quickshell/quickshell)** by outfoxxed, which runs the shell.
 - **Bibata** cursors, the default cursor in illogical-impulse. Its licence is in the upstream project.
 - **Material Symbols**, Google's icon font, used in the shell. Its licence is in Google's distribution.
+- **[MacShell](https://github.com/0-ss/MacShell)** by Rickky (0-ss), MIT: the Liquid Glass theme's desktop shell
+  (menu bar, Dock, Spotlight, Control Center and the Liquid Glass shader) and MacLock, its lock screen. Bundled
+  unchanged in `dots/.config/quickshell/MacShell`, `dots/.config/quickshell/MacLock` and `dots/.config/hypr-macshell`,
+  each with its licence. Its UI font, Open Runde, is under the SIL Open Font License.
 
 ## Licences in this repository
 

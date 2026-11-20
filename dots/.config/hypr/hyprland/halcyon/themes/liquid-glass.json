@@ -1,0 +1,141 @@
+{
+  "name": "Liquid Glass",
+  "description": "MacShell runs the desktop: a macOS Tahoe style menu bar, Dock, Control Center and Spotlight in real-time Liquid Glass that refracts the wallpaper, with MacLock as the lock screen. Ctrl+Super+Shift+T goes back to a Halcyon theme.",
+  "wallpaper": "wallpapers/liquid-glass.jpg",
+  "desktop_shell": "MacShell",
+  "mode": "dark",
+  "seed": "#0A84FF",
+  "scheme": "scheme-tonal-spot",
+  "shell": {
+    "background": "#121212",
+    "on_background": "#F5F5F7",
+    "surface": "#121212",
+    "surface_dim": "#121212",
+    "surface_bright": "#3A3A3C",
+    "surface_container_lowest": "#0B0B0C",
+    "surface_container_low": "#1A1A1C",
+    "surface_container": "#1C1C1E",
+    "surface_container_high": "#26262A",
+    "surface_container_highest": "#2C2C2E",
+    "surface_variant": "#3A3A3C",
+    "on_surface": "#F5F5F7",
+    "on_surface_variant": "#AEAEB2",
+    "outline": "#8E8E93",
+    "outline_variant": "#48484A",
+    "primary": "#64B0FF",
+    "on_primary": "#002A55",
+    "primary_container": "#0A4B8C",
+    "on_primary_container": "#D6E8FF",
+    "secondary": "#BFA8FF",
+    "on_secondary": "#2E1A5C",
+    "secondary_container": "#47337A",
+    "on_secondary_container": "#EADDFF",
+    "tertiary": "#FFADC8",
+    "on_tertiary": "#561333",
+    "tertiary_container": "#73294B",
+    "on_tertiary_container": "#FFD9E5",
+    "error": "#FFB4AB",
+    "on_error": "#690005",
+    "error_container": "#93000A",
+    "on_error_container": "#FFDAD6",
+    "surface_tint": "#64B0FF",
+    "inverse_surface": "#F5F5F7",
+    "inverse_on_surface": "#1D1D1F",
+    "inverse_primary": "#007AFF",
+    "shadow": "#000000",
+    "scrim": "#000000"
+  },
+  "terminal": {
+    "term0": "#1C1C1E",
+    "term1": "#FF6961",
+    "term2": "#7CE38B",
+    "term3": "#FFD60A",
+    "term4": "#64B0FF",
+    "term5": "#BF8CFF",
+    "term6": "#70D7FF",
+    "term7": "#E5E5EA",
+    "term8": "#636366",
+    "term9": "#FF8A84",
+    "term10": "#A0F0AB",
+    "term11": "#FFE45C",
+    "term12": "#8FC7FF",
+    "term13": "#D7B3FF",
+    "term14": "#9BE6FF",
+    "term15": "#F5F5F7"
+  },
+  "hyprland": {
+    "rounding": 24,
+    "rounding_power": 4.0,
+    "gaps_in": 6,
+    "gaps_out": 14,
+    "border_size": 1,
+    "active_border": "rgba(FFFFFF38)",
+    "inactive_border": "rgba(FFFFFF14)",
+    "blur_size": 10,
+    "blur_passes": 3,
+    "blur_vibrancy": 0.8,
+    "blur_popups": true,
+    "shadow_color": "rgba(0000004D)",
+    "shadow_color_inactive": "rgba(00000030)",
+    "shadow_range": 28,
+    "shadow_render_power": 3,
+    "shadow_offset": [
+      0,
+      8
+    ],
+    "dim_inactive": false,
+    "curves": {
+      "liquid": [
+        0.2,
+        0.8,
+        0.2,
+        1.0
+      ],
+      "liquidSpring": [
+        0.3,
+        1.2,
+        0.5,
+        1.0
+      ],
+      "liquidIn": [
+        0.4,
+        0.0,
+        1.0,
+        1.0
+      ]
+    },
+    "animations": [
+      {
+        "leaf": "windowsIn",
+        "speed": 3.6,
+        "curve": "liquidSpring",
+        "style": "popin 92%"
+      },
+      {
+        "leaf": "windowsOut",
+        "speed": 2.4,
+        "curve": "liquidIn",
+        "style": "popin 94%"
+      },
+      {
+        "leaf": "windowsMove",
+        "speed": 3.6,
+        "curve": "liquid"
+      },
+      {
+        "leaf": "fadeIn",
+        "speed": 3.0,
+        "curve": "liquid"
+      },
+      {
+        "leaf": "workspaces",
+        "speed": 4.2,
+        "curve": "liquid",
+        "style": "slide"
+      }
+    ]
+  },
+  "effects": {
+    "default": "light"
+  }
+}

@@ -238,3 +238,16 @@ Extra dependencies.
 ## illogical-impulse-microtex-git
 - [source](https://github.com/NanoMichael/MicroTeX)
 - This package will be installed as `/opt/MicroTeX`.
+
+## illogical-impulse-macshell
+For the Liquid Glass theme, which runs [MacShell](https://github.com/0-ss/MacShell) in place of the Halcyon shell.
+- `awww`
+  - Draws the wallpaper while MacShell runs (the Halcyon shell draws its own). MacShell's glass refracts it.
+- `qt6-shadertools`, `qt6-svg`
+  - `qsb` for the Liquid Glass shader (prebuilt copies ship too), and SVG icons.
+- `inotify-tools`, `zenity`, `jq`
+  - MacShell's Trash watching, file pickers and settings.
+- `hyprsunset`, `brightnessctl`
+  - Night Shift and brightness in its Control Center.
+- `inter-font`
+  - Its fallback UI font (Open Runde ships with it).

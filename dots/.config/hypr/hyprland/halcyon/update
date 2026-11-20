@@ -415,12 +415,16 @@ apply() {
     notify "Halcyon updated" "$body"
     [[ "$what" == all ]] && plus_apply
     # Last, since restarting the shell ends a run that the shell itself started.
-    if command -v systemctl >/dev/null 2>&1 &&
-       systemctl --user is-active --quiet halcyon-quickshell.service 2>/dev/null; then
-        if ! systemctl --user restart halcyon-quickshell.service; then
-            notify "Halcyon update" "Files were updated, but Quickshell could not restart. Run: systemctl --user restart halcyon-quickshell.service" -u normal
+    # The desktop shell that is running: the Halcyon shell, or MacShell under the Liquid Glass theme.
+    local unit
+    for unit in halcyon-quickshell.service halcyon-macshell.service; do
+        if command -v systemctl >/dev/null 2>&1 &&
+           systemctl --user is-active --quiet "$unit" 2>/dev/null; then
+            if ! systemctl --user restart "$unit"; then
+                notify "Halcyon update" "Files were updated, but Quickshell could not restart. Run: systemctl --user restart $unit" -u normal
+            fi
         fi
-    fi
+    done
 }
 
 status() {

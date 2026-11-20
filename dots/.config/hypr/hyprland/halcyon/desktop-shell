@@ -1,0 +1,34 @@
+#!/bin/sh
+# Halcyon: which desktop shell runs. One at a time:
+#   ii        the Halcyon shell (halcyon-quickshell.service), for every theme but...
+#   MacShell  ...the Liquid Glass theme's: a macOS Tahoe style menu bar, Dock and Liquid Glass (halcyon-macshell.service,
+#             github.com/0-ss/MacShell, MIT), with MacLock as its lock screen.
+# halcyon-theme writes the active theme's choice to ~/.local/state/halcyon/desktop-shell (absent: ii).
+#
+#   desktop-shell            print the shell that should run
+#   desktop-shell unit       print its systemd unit
+#   desktop-shell start      start it, unless it is already running (the other one stops: the units conflict)
+#   desktop-shell restart    restart it (Hyprland does this at start-up)
+#   desktop-shell ipc ...    qs ipc call ... on whichever is running
+set -u
+
+state="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon/desktop-shell"
+shell=ii
+if [ -r "$state" ]; then
+    read -r shell < "$state" || true
+fi
+case "$shell" in
+    MacShell) unit=halcyon-macshell.service ;;
+    *) shell=ii; unit=halcyon-quickshell.service ;;
+esac
+
+case "${1:-}" in
+    "") echo "$shell" ;;
+    unit) echo "$unit" ;;
+    start)
+        systemctl --user is-active --quiet "$unit" && exit 0
+        exec systemctl --user start "$unit" ;;
+    restart) exec systemctl --user restart "$unit" ;;
+    ipc) shift; exec qs -c "$shell" ipc call "$@" ;;
+    *) echo "usage: desktop-shell [unit|start|restart|ipc ...]" >&2; exit 2 ;;
+esac
