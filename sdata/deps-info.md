@@ -56,6 +56,8 @@ Tips:
   - Used in install script.
 
 ## illogical-impulse-fonts-themes
+- `font-manager`
+  - GNOME's font manager: preview, install, enable and disable fonts. `halcyon fonts manager` opens it.
 - `adw-gtk-theme-git`
   - [source](https://github.com/lassekongo83/adw-gtk3)
   - Used in Quickshell config.

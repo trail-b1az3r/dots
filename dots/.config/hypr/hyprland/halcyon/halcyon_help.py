@@ -58,6 +58,13 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("text --window|--screen|--clipboard", "the focused window, the whole monitor, or the image in the clipboard"),
         ("text FILE [--print] [--join] [--lang eng+deu]", "read an image or a PDF (scanned or not); print it, rejoin lines, pick languages"),
     ]),
+    ("Fonts", [
+        ("fonts [--json]", "the fonts installed with halcyon fonts"),
+        ("fonts install FILE...", "font files, or a zip of a family, for your user (~/.local/share/fonts/halcyon-imported)"),
+        ("fonts install right-grotesk", "Right Grotesk from your Downloads; with none there, opens the foundry's page"),
+        ("fonts remove NAME", "take one away again"),
+        ("fonts manager", "open Font Manager: preview, enable and disable, collections"),
+    ]),
     ("Animated wallpapers", [
         ("wallpapers [--json]", "the anime themes' video wallpapers and which are on this machine"),
         ("wallpapers get ID [--4k]", "download one (After ICEY) into ~/.local/share/halcyon/wallpapers"),

@@ -2749,6 +2749,9 @@ def main(argv):
     if argv and argv[0] == "terminal":
         tool = HERE / "halcyon_terminal.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
+    if argv and argv[0] == "fonts":
+        tool = HERE / "halcyon_fonts.py"
+        os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and argv[0] == "icons":
         tool = HERE / "halcyon_icons.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
