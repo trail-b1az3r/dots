@@ -1,2 +1,4 @@
 module qs.services
 singleton Translation 1.0 Translation.qml
+# The real service, run against the mocks above.
+singleton Niri 1.0 ../../../../../dots/.config/quickshell/ii/services/Niri.qml

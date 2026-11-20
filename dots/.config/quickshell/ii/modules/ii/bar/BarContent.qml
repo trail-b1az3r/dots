@@ -244,7 +244,10 @@ Item { // Bar content region
 
                     onPressed: event => {
                         if (event.button === Qt.RightButton) {
-                            GlobalStates.overviewOpen = !GlobalStates.overviewOpen;
+                            if (Niri.available)
+                                Niri.action(["toggle-overview"]); // niri's own overview
+                            else
+                                GlobalStates.overviewOpen = !GlobalStates.overviewOpen;
                         }
                     }
                 }

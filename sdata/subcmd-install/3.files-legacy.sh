@@ -4,11 +4,11 @@
 # shellcheck shell=bash
 
 #####################################################################################
-# MISC (For dots/.config/* but not quickshell, not fish, not Hyprland, not fontconfig)
+# MISC (For dots/.config/* but not quickshell, not fish, not Hyprland, not fontconfig, not niri)
 case "${SKIP_MISCCONF}" in
   true) true;;
   *)
-    for i in $(find dots/.config/ -mindepth 1 -maxdepth 1 ! -name 'quickshell' ! -name 'fish' ! -name 'hypr' ! -name 'fontconfig' -exec basename {} \;); do
+    for i in $(find dots/.config/ -mindepth 1 -maxdepth 1 ! -name 'quickshell' ! -name 'fish' ! -name 'hypr' ! -name 'fontconfig' ! -name 'niri' -exec basename {} \;); do
 #      i="dots/.config/$i"
       if [[ "$i" == "fastfetch" && "${HALCYON_FASTFETCH_LOGO_OVERRIDE:-1}" == "0" ]]; then
         echo "[$0]: Keeping the distribution's Fastfetch config (HALCYON_FASTFETCH_LOGO_OVERRIDE=0)"
@@ -22,6 +22,12 @@ case "${SKIP_MISCCONF}" in
     install_dir "dots/.local/share/konsole" "${XDG_DATA_HOME}"/konsole
     ;;
 esac
+
+# niri: config.kdl only. halcyon-theme.kdl (the theme's look) and custom.kdl (yours) live in the same folder, so it
+# is not synced (a sync would delete them).
+if [ -f dots/.config/niri/config.kdl ]; then
+  install_file__auto_backup "dots/.config/niri/config.kdl" "$XDG_CONFIG_HOME/niri/config.kdl"
+fi
 
 case "${SKIP_QUICKSHELL}" in
   true) true;;

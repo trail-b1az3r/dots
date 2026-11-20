@@ -18,6 +18,7 @@ ButtonMouseArea {
     WorkspaceModel {
         id: wsModel
         monitor: root.monitor
+        screenName: root.QsWindow.window?.screen?.name ?? ""
     }
 
     property bool vertical: Config.options.bar.vertical
@@ -30,7 +31,7 @@ ButtonMouseArea {
     property real workspaceIconSizeShrinked: workspaceButtonWidth * 0.55
     property real workspaceIconOpacityShrinked: 1
     property real workspaceIconMarginShrinked: -4
-    property int workspaceIndexInGroup: (monitor?.activeWorkspace?.id - 1) % wsModel.shownCount
+    property int workspaceIndexInGroup: (wsModel.activeWorkspace - 1) % wsModel.shownCount
     property real specialTextSize: workspaceButtonWidth * 0.5
 
     Layout.alignment: vertical ? Qt.AlignHCenter : Qt.AlignVCenter
@@ -54,22 +55,36 @@ ButtonMouseArea {
     }
 
     function switchWorkspaceToHovered() {
+        if (Niri.available)
+            return Niri.focusWorkspace(wsModel.getWorkspaceIdAt(hoverIndex));
         Hyprland.dispatch(`hl.dsp.focus({workspace = ${wsModel.getWorkspaceIdAt(hoverIndex)}})`);
     }
 
     function toggleSpecial() {
+        if (Niri.available)
+            return; // niri has no scratchpad workspace
         Hyprland.dispatch(`hl.dsp.workspace.toggle_special("special")`);
     }
 
     onPressed: mouse => {
         if (mouse.button == Qt.LeftButton)
             switchWorkspaceToHovered();
-        else if (mouse.button == Qt.RightButton)
-            GlobalStates.overviewOpen = !GlobalStates.overviewOpen;
+        else if (mouse.button == Qt.RightButton) {
+            // niri has an overview of its own; the shell's is drawn from Hyprland's windows.
+            if (Niri.available)
+                Niri.action(["toggle-overview"]);
+            else
+                GlobalStates.overviewOpen = !GlobalStates.overviewOpen;
+        }
         else if (mouse.button == Qt.BackButton) 
             toggleSpecial()
     }
     onWheel: event => {
+        if (Niri.available) {
+            if (event.angleDelta.y !== 0)
+                Niri.action([event.angleDelta.y < 0 ? "focus-workspace-down" : "focus-workspace-up"]);
+            return;
+        }
         if (event.angleDelta.y < 0)
             Hyprland.dispatch(`hl.dsp.focus({workspace = "r+1"})`);
         else if (event.angleDelta.y > 0)

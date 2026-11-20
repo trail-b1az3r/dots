@@ -145,12 +145,15 @@ class SetDesktopShellTest(unittest.TestCase):
 
 
 class DesktopShellScriptTest(unittest.TestCase):
-    def run_script(self, state, *args):
+    def run_script(self, state, *args, hyprland=True):
         with tempfile.TemporaryDirectory() as tmp:
             if state is not None:
                 Path(tmp, "halcyon").mkdir()
                 Path(tmp, "halcyon/desktop-shell").write_text(state + "\n")
             env = dict(os.environ, XDG_STATE_HOME=tmp)
+            env.pop("HYPRLAND_INSTANCE_SIGNATURE", None)
+            if hyprland:
+                env["HYPRLAND_INSTANCE_SIGNATURE"] = "test"
             done = subprocess.run([str(HALCYON / "desktop-shell"), *args], capture_output=True, text=True,
                                   env=env, check=False)
         return done.stdout.strip()
@@ -162,6 +165,10 @@ class DesktopShellScriptTest(unittest.TestCase):
     def test_macshell(self):
         self.assertEqual(self.run_script("MacShell"), "MacShell")
         self.assertEqual(self.run_script("MacShell", "unit"), "halcyon-macshell.service")
+
+    def test_macshell_needs_hyprland(self):
+        # Under niri (no Hyprland), the Halcyon shell runs whatever the theme asked for.
+        self.assertEqual(self.run_script("MacShell", "unit", hyprland=False), "halcyon-quickshell.service")
 
     def test_anything_else_is_the_halcyon_shell(self):
         self.assertEqual(self.run_script("rm -rf ~", "unit"), "halcyon-quickshell.service")

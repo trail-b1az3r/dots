@@ -1,0 +1,16 @@
+groups=(illogical-impulse)
+pkgname=illogical-impulse-niri
+pkgver=1.0
+pkgrel=1
+pkgdesc='Halcyon on niri: the compositor and what it needs beside Hyprland (the niri branch)'
+arch=(any)
+license=(None)
+depends=(
+  # The scrollable-tiling compositor (26.04+: config includes from ~, blur), and X11 apps on it
+  niri
+  xwayland-satellite
+  # Idle lock and the clipboard history the shell searches
+  hypridle
+  wl-clipboard
+  cliphist
+)

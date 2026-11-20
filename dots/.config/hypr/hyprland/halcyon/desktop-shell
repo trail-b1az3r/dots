@@ -17,6 +17,10 @@ shell=ii
 if [ -r "$state" ]; then
     read -r shell < "$state" || true
 fi
+# MacShell is Hyprland's only: under niri (or anything else) it is always the Halcyon shell.
+if [ "$shell" = MacShell ] && [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && ! hyprctl version >/dev/null 2>&1; then
+    shell=ii
+fi
 case "$shell" in
     MacShell) unit=halcyon-macshell.service ;;
     *) shell=ii; unit=halcyon-quickshell.service ;;

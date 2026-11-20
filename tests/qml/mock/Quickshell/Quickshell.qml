@@ -10,4 +10,9 @@ QtObject {
     function reset() {
         calls = [];
     }
+    // The environment the shell sees; tests set entries. Unset names read as "".
+    property var environment: ({})
+    function env(name) {
+        return environment[name] ?? "";
+    }
 }

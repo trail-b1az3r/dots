@@ -1,0 +1,237 @@
+// Halcyon on niri (the `niri` branch of the dots).
+//
+// The Halcyon shell (Quickshell, ~/.config/quickshell/ii) runs on niri as it does on Hyprland: the bar, sidebars,
+// search, notifications, OSDs, wallpaper and its widgets, the lock screen, the theme picker. On niri the bar's
+// workspaces and window title come from niri's event stream (services/Niri.qml), right-clicking the workspaces opens
+// niri's own overview, and the Hyprland-only parts stay off (the shell's overview, MacShell, Hyprland Plus).
+//
+// Halcyon themes style niri through halcyon-theme.kdl (included below), which `halcyon-theme apply` writes; with no
+// theme on, the look set in this file stays. Your own changes belong in custom.kdl, included last, so they win.
+// Updates replace this file only: halcyon-theme.kdl and custom.kdl are never touched.
+// Docs: https://github.com/YaLTeR/niri/wiki  ·  check this file with: niri validate
+
+input {
+    keyboard {
+        xkb {
+            // layout "us"
+        }
+        numlock
+    }
+    touchpad {
+        tap
+        natural-scroll
+        dwt
+    }
+    mouse {
+        accel-profile "flat"
+    }
+    focus-follows-mouse max-scroll-amount="0%"
+    warp-mouse-to-focus
+}
+
+// output "eDP-1" {
+//     scale 1.25
+// }
+
+layout {
+    gaps 12
+    center-focused-column "never"
+    preset-column-widths {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+    }
+    default-column-width { proportion 0.5; }
+    focus-ring {
+        width 2
+        active-color "#9CC2FF"
+        inactive-color "#3A3F4B"
+    }
+    border {
+        off
+    }
+    shadow {
+        on
+        softness 30
+        spread 4
+        offset x=0 y=8
+        color "#00000070"
+    }
+    // The bar reserves its own space (an exclusive zone), so no struts are needed.
+}
+
+// The Halcyon shell, through its systemd unit, so it restarts if it exits (halcyon/desktop-shell picks the shell:
+// MacShell needs Hyprland, so on niri it is always the Halcyon shell).
+// The shell's Python tools live in a venv it finds through ILLOGICAL_IMPULSE_VIRTUAL_ENV (set here, since niri's
+// environment {} section does not expand ~).
+spawn-sh-at-startup "systemctl --user set-environment ILLOGICAL_IMPULSE_VIRTUAL_ENV=$HOME/.local/state/quickshell/.venv; systemctl --user import-environment WAYLAND_DISPLAY NIRI_SOCKET DISPLAY XDG_CURRENT_DESKTOP; ~/.config/hypr/hyprland/halcyon/desktop-shell restart"
+// Locks on idle and before sleep (hypridle.conf; its lock goes through halcyon/lock, which knows niri).
+spawn-at-startup "hypridle"
+// Wi-Fi passwords for NetworkManager, as on Hyprland.
+spawn-sh-at-startup "systemctl --user restart halcyon-uwu-agent.service"
+// Clipboard history for the shell's clipboard search (Super+V).
+spawn-sh-at-startup "wl-paste --type text --watch cliphist store"
+spawn-sh-at-startup "wl-paste --type image --watch cliphist store"
+
+environment {
+    ELECTRON_OZONE_PLATFORM_HINT "auto"
+    QT_QPA_PLATFORM "wayland;xcb"
+    QT_QPA_PLATFORMTHEME "kde"
+    XDG_MENU_PREFIX "plasma-"
+    qsConfig "ii"
+}
+
+prefer-no-csd
+screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
+
+hotkey-overlay {
+    skip-at-startup
+}
+
+overview {
+    zoom 0.5
+}
+
+// Rounded windows, clipped to their corners (halcyon-theme.kdl sets the radius per theme).
+window-rule {
+    geometry-corner-radius 14
+    clip-to-geometry true
+}
+
+window-rule {
+    match app-id=r#"^org\.quickshell$"#
+    open-floating true
+}
+
+window-rule {
+    match app-id=r#"^(pavucontrol|pavucontrol-qt|org\.pulseaudio\.pavucontrol|nm-connection-editor|blueman-manager)$"#
+    open-floating true
+}
+
+// The shell's wallpaper stays put behind niri's overview, which zooms out over it.
+layer-rule {
+    match namespace="^quickshell:background$"
+    place-within-backdrop true
+}
+
+binds {
+    // ── The shell (qs ipc: ~/.config/quickshell/ii) ──
+    Mod+Space hotkey-overlay-title="Search" { spawn-sh "qs -c ii ipc call search toggle"; }
+    Mod+V hotkey-overlay-title="Clipboard" { spawn-sh "qs -c ii ipc call search clipboardToggle"; }
+    Mod+A hotkey-overlay-title="Left sidebar" { spawn-sh "qs -c ii ipc call sidebarLeft toggle"; }
+    Mod+N hotkey-overlay-title="Right sidebar" { spawn-sh "qs -c ii ipc call sidebarRight toggle"; }
+    Mod+Slash hotkey-overlay-title="Cheatsheet" { spawn-sh "qs -c ii ipc call cheatsheet toggle"; }
+    Mod+Shift+Slash { show-hotkey-overlay; }
+    Mod+K hotkey-overlay-title="On-screen keyboard" { spawn-sh "qs -c ii ipc call osk toggle"; }
+    Mod+M hotkey-overlay-title="Media controls" { spawn-sh "qs -c ii ipc call mediaControls toggle"; }
+    Mod+G hotkey-overlay-title="Widget overlay" { spawn-sh "qs -c ii ipc call overlay toggle"; }
+    Mod+J hotkey-overlay-title="Toggle bar" { spawn-sh "qs -c ii ipc call bar toggle"; }
+    Mod+Escape hotkey-overlay-title="Session menu" { spawn-sh "qs -c ii ipc call session toggle"; }
+    Ctrl+Alt+Delete hotkey-overlay-title="Session menu" { spawn-sh "qs -c ii ipc call session toggle"; }
+    Mod+Ctrl+T hotkey-overlay-title="Wallpapers" { spawn-sh "qs -c ii ipc call wallpaperSelector toggle"; }
+    Mod+Ctrl+Shift+T hotkey-overlay-title="Themes" { spawn-sh "~/.config/hypr/hyprland/halcyon/halcyon-theme menu"; }
+    Mod+I hotkey-overlay-title="Settings" { spawn-sh "qs -p ~/.config/quickshell/ii/settings.qml"; }
+    Mod+L allow-when-locked=false hotkey-overlay-title="Lock" { spawn-sh "loginctl lock-session"; }
+
+    // ── Overview: niri's own (zoomed-out workspaces), also from the top-left hot corner ──
+    Mod+Tab repeat=false { toggle-overview; }
+
+    // ── Screenshots ──
+    Mod+Shift+S hotkey-overlay-title="Screen snip" { spawn-sh "qs -c ii ipc call region screenshot"; }
+    Mod+Shift+A hotkey-overlay-title="Search the screen" { spawn-sh "qs -c ii ipc call region search"; }
+    Print { screenshot-screen; }
+    Ctrl+Print { screenshot; }
+    Alt+Print { screenshot-window; }
+
+    // ── Apps ──
+    Mod+Return hotkey-overlay-title="Terminal" { spawn-sh "~/.config/hypr/hyprland/scripts/launch_first_available.sh 'alacritty' 'foot' 'kitty -1' 'wezterm' 'konsole' 'kgx' 'xterm'"; }
+    Mod+T hotkey-overlay-title=null { spawn-sh "~/.config/hypr/hyprland/scripts/launch_first_available.sh 'alacritty' 'foot' 'kitty -1' 'wezterm' 'konsole' 'kgx' 'xterm'"; }
+    Mod+E hotkey-overlay-title="Files" { spawn-sh "~/.config/hypr/hyprland/scripts/launch_first_available.sh 'loaf' 'dolphin' 'nautilus' 'nemo' 'thunar'"; }
+    Mod+W hotkey-overlay-title="Browser" { spawn-sh "~/.config/hypr/hyprland/scripts/launch_first_available.sh 'google-chrome-stable' 'zen-browser' 'firefox' 'brave' 'chromium' 'librewolf'"; }
+    Mod+X hotkey-overlay-title="Text editor" { spawn-sh "~/.config/hypr/hyprland/scripts/launch_first_available.sh 'kate' 'gnome-text-editor' 'emacs'"; }
+    Mod+Ctrl+V hotkey-overlay-title="Volume mixer" { spawn-sh "~/.config/hypr/hyprland/scripts/launch_first_available.sh 'pavucontrol-qt' 'pavucontrol'"; }
+    Ctrl+Shift+Escape hotkey-overlay-title="Task manager" { spawn-sh "~/.config/hypr/hyprland/scripts/launch_first_available.sh 'gnome-system-monitor' 'plasma-systemmonitor --page-name Processes'"; }
+
+    // ── Windows ──
+    Mod+Q repeat=false { close-window; }
+    Alt+F4 repeat=false { close-window; }
+    Mod+Alt+Space { toggle-window-floating; }
+    Mod+Shift+Space { switch-focus-between-floating-and-tiling; }
+    Mod+F { maximize-column; }
+    Mod+Shift+F { fullscreen-window; }
+    Mod+D { maximize-window-to-edges; }
+    Mod+C { center-column; }
+    Mod+R { switch-preset-column-width; }
+    Mod+Shift+R { switch-preset-column-width-back; }
+    Mod+Minus { set-column-width "-10%"; }
+    Mod+Equal { set-column-width "+10%"; }
+    Mod+Shift+Minus { set-window-height "-10%"; }
+    Mod+Shift+Equal { set-window-height "+10%"; }
+    Mod+BracketLeft { consume-or-expel-window-left; }
+    Mod+BracketRight { consume-or-expel-window-right; }
+    Mod+Ctrl+W { toggle-column-tabbed-display; }
+
+    Mod+Left { focus-column-left; }
+    Mod+Right { focus-column-right; }
+    Mod+Up { focus-window-or-workspace-up; }
+    Mod+Down { focus-window-or-workspace-down; }
+    Mod+Shift+Left { move-column-left; }
+    Mod+Shift+Right { move-column-right; }
+    Mod+Shift+Up { move-window-up-or-to-workspace-up; }
+    Mod+Shift+Down { move-window-down-or-to-workspace-down; }
+    Mod+Home { focus-column-first; }
+    Mod+End { focus-column-last; }
+
+    Mod+Ctrl+Left { focus-monitor-left; }
+    Mod+Ctrl+Right { focus-monitor-right; }
+    Mod+Ctrl+Shift+Left { move-column-to-monitor-left; }
+    Mod+Ctrl+Shift+Right { move-column-to-monitor-right; }
+
+    Mod+WheelScrollDown cooldown-ms=150 { focus-workspace-down; }
+    Mod+WheelScrollUp cooldown-ms=150 { focus-workspace-up; }
+    Mod+WheelScrollRight { focus-column-right; }
+    Mod+WheelScrollLeft { focus-column-left; }
+
+    // ── Workspaces ──
+    Mod+Page_Down { focus-workspace-down; }
+    Mod+Page_Up { focus-workspace-up; }
+    Mod+1 { focus-workspace 1; }
+    Mod+2 { focus-workspace 2; }
+    Mod+3 { focus-workspace 3; }
+    Mod+4 { focus-workspace 4; }
+    Mod+5 { focus-workspace 5; }
+    Mod+6 { focus-workspace 6; }
+    Mod+7 { focus-workspace 7; }
+    Mod+8 { focus-workspace 8; }
+    Mod+9 { focus-workspace 9; }
+    Mod+Shift+1 { move-column-to-workspace 1; }
+    Mod+Shift+2 { move-column-to-workspace 2; }
+    Mod+Shift+3 { move-column-to-workspace 3; }
+    Mod+Shift+4 { move-column-to-workspace 4; }
+    Mod+Shift+5 { move-column-to-workspace 5; }
+    Mod+Shift+6 { move-column-to-workspace 6; }
+    Mod+Shift+7 { move-column-to-workspace 7; }
+    Mod+Shift+8 { move-column-to-workspace 8; }
+    Mod+Shift+9 { move-column-to-workspace 9; }
+
+    // ── Hardware keys (the shell shows its OSD) ──
+    XF86AudioRaiseVolume allow-when-locked=true { spawn-sh "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"; }
+    XF86AudioMute allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"; }
+    XF86AudioMicMute allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"; }
+    XF86AudioPlay allow-when-locked=true { spawn-sh "playerctl play-pause"; }
+    XF86AudioPause allow-when-locked=true { spawn-sh "playerctl play-pause"; }
+    XF86AudioNext allow-when-locked=true { spawn-sh "playerctl next"; }
+    XF86AudioPrev allow-when-locked=true { spawn-sh "playerctl previous"; }
+    XF86MonBrightnessUp allow-when-locked=true { spawn-sh "qs -c ii ipc call brightness increment || brightnessctl -c backlight set 5%+"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn-sh "qs -c ii ipc call brightness decrement || brightnessctl -c backlight set 5%-"; }
+
+    // ── Session ──
+    Mod+Shift+Escape allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }
+    Mod+Shift+E { quit; }
+    Mod+Shift+P { power-off-monitors; }
+}
+
+// The active Halcyon theme's look (written by halcyon-theme), then your own changes.
+include optional=true "halcyon-theme.kdl"
+include optional=true "custom.kdl"
