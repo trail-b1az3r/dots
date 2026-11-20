@@ -1,5 +1,5 @@
-"""`halcyon fonts`: fonts and zips of them installed for the user, never outside their folder; Right Grotesk found in
-Downloads, never downloaded. Run: python3 -m unittest discover -s tests"""
+"""`halcyon fonts`: fonts and zips of them installed for the user, never outside their folder; RightFont from Halcyon's
+copy, or from its site with --latest. Run: python3 -m unittest discover -s tests"""
 
 import io
 import os
@@ -21,8 +21,7 @@ class FontsTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
         self.patches = [unittest.mock.patch.object(fonts, "FONTS", self.root / "fonts/halcyon-imported"),
-                        unittest.mock.patch.object(fonts, "refresh_cache"),
-                        unittest.mock.patch.object(fonts, "downloads", return_value=self.root / "Downloads")]
+                        unittest.mock.patch.object(fonts, "refresh_cache")]
         for patch in self.patches:
             patch.start()
         (self.root / "Downloads").mkdir()
@@ -40,12 +39,12 @@ class FontsTest(unittest.TestCase):
         return path
 
     def test_a_family_zip_lands_in_one_folder(self):
-        path = self.make_zip("RightGrotesk.zip", {
-            "Right Grotesk/OTF/RightGrotesk-Regular.otf": b"otf", "Right Grotesk/WOFF2/RightGrotesk-Bold.woff2": b"w2",
-            "Right Grotesk/License.pdf": b"pdf", "__MACOSX/._RightGrotesk-Regular.otf": b"junk"})
+        path = self.make_zip("SomeFamily.zip", {
+            "Some Family/OTF/SomeFamily-Regular.otf": b"otf", "Some Family/WOFF2/SomeFamily-Bold.woff2": b"w2",
+            "Some Family/License.pdf": b"pdf", "__MACOSX/._SomeFamily-Regular.otf": b"junk"})
         [(name, count)] = fonts.install([path])
-        self.assertEqual((name, count), ("rightgrotesk", 2))
-        self.assertEqual(sorted(fonts.installed()["rightgrotesk"]), ["RightGrotesk-Bold.woff2", "RightGrotesk-Regular.otf"])
+        self.assertEqual((name, count), ("somefamily", 2))
+        self.assertEqual(sorted(fonts.installed()["somefamily"]), ["SomeFamily-Bold.woff2", "SomeFamily-Regular.otf"])
 
     def test_a_zip_can_never_write_outside_its_folder(self):
         path = self.make_zip("evil.zip", {"../../../escaped.ttf": b"x", "/abs/also.ttf": b"y"})
@@ -75,28 +74,48 @@ class FontsTest(unittest.TestCase):
         with self.assertRaises(fonts.FontError):
             fonts.install([other])
 
-    def test_right_grotesk_is_the_newest_zip_in_downloads(self):
-        old = self.make_zip("Right-Grotesk-old.zip", {"a.otf": b"1"})
-        os.utime(old, (time.time() - 100, time.time() - 100))
-        self.make_zip("right_grotesk_trial.zip", {"b.otf": b"2"})
-        self.make_zip("Other.zip", {"c.otf": b"3"})
-        self.assertEqual(fonts.newest_right_grotesk().name, "right_grotesk_trial.zip")
+    def test_right_font_comes_from_halcyons_copy(self):
+        with unittest.mock.patch.object(fonts, "RIGHT_FONT_DIR", self.root / "fonts/halcyon-rightfont"), \
+                unittest.mock.patch.object(fonts.shutil, "which", return_value=None), \
+                unittest.mock.patch.object(fonts, "fetch") as fetch:
+            fonts.install_right_font()
+            fetch.assert_not_called()
+        installed = self.root / "fonts/halcyon-rightfont"
+        self.assertEqual((installed / fonts.RIGHT_FONT_FILE).read_bytes()[:4], b"\x00\x01\x00\x00")
+        self.assertIn("SIL Open Font License", (installed / "OFL.txt").read_text())
 
-    def test_without_the_zip_it_opens_the_foundry_page_and_downloads_nothing(self):
-        with unittest.mock.patch.object(fonts, "open_detached") as opened, \
-                unittest.mock.patch("sys.stdout", io.StringIO()) as out:
-            self.assertEqual(fonts.main(["install", "right-grotesk"]), 1)
-        opened.assert_called_once_with(["xdg-open", fonts.RIGHT_GROTESK_URL])
-        self.assertIn("personal use", out.getvalue())
+    def test_latest_follows_the_site_to_the_font_file(self):
+        pages = {
+            "https://www.rightofthebell.com/fonts": b'<script type="module" src="/assets/index-AB12.js"></script>',
+            "https://www.rightofthebell.com/assets/index-AB12.js": b'x=()=>import("./FontLab-Z9.js")',
+            "https://www.rightofthebell.com/assets/FontLab-Z9.js": b'a="/assets/RightFont-Review-v8--Q1.ttf",b="x"',
+            "https://www.rightofthebell.com/assets/RightFont-Review-v8--Q1.ttf": b"\x00\x01\x00\x00font",
+        }
+        with unittest.mock.patch.object(fonts, "RIGHT_FONT_DIR", self.root / "fonts/halcyon-rightfont"), \
+                unittest.mock.patch.object(fonts.shutil, "which", return_value=None), \
+                unittest.mock.patch.object(fonts, "fetch", side_effect=lambda url: pages[url]):
+            self.assertEqual(fonts.install_right_font(latest=True),
+                             "https://www.rightofthebell.com/assets/RightFont-Review-v8--Q1.ttf")
+        self.assertEqual((self.root / "fonts/halcyon-rightfont" / fonts.RIGHT_FONT_FILE).read_bytes(), b"\x00\x01\x00\x00font")
 
-    def test_with_the_zip_it_installs_it(self):
-        self.make_zip("RightGrotesk-Trial.zip", {"RightGrotesk-Regular.otf": b"1"})
-        with unittest.mock.patch("sys.stdout", io.StringIO()):
-            self.assertEqual(fonts.main(["install", "right-grotesk"]), 0)
-        self.assertIn("rightgrotesk-trial", fonts.installed())
+    def test_latest_refuses_what_is_not_a_font(self):
+        with unittest.mock.patch.object(fonts, "RIGHT_FONT_DIR", self.root / "fonts/halcyon-rightfont"), \
+                unittest.mock.patch.object(fonts, "latest_right_font_url", return_value="https://x/RightFont.ttf"), \
+                unittest.mock.patch.object(fonts, "fetch", return_value=b"<html>"):
+            with self.assertRaises(fonts.FontError):
+                fonts.install_right_font(latest=True)
 
 
 class PackagingTest(unittest.TestCase):
+    def test_right_font_ships_with_its_licence(self):
+        folder = HALCYON.parents[3] / ".local/share/fonts/halcyon-rightfont"
+        self.assertEqual((folder / "RightFont-Review-v7.ttf").read_bytes()[:4], b"\x00\x01\x00\x00")
+        licence = (folder / "OFL.txt").read_text()
+        self.assertIn("The Inter Project Authors", licence)
+        self.assertIn("SIL OPEN FONT LICENSE Version 1.1", licence)
+        installer = (HALCYON.parents[4] / "sdata/subcmd-install/3.files-legacy.sh").read_text()
+        self.assertIn("fonts/halcyon-rightfont", installer)
+
     def test_font_manager_is_a_dependency(self):
         pkgbuild = (HALCYON.parents[4] / "sdata/dist-arch/illogical-impulse-fonts-themes/PKGBUILD").read_text()
         self.assertIn("  font-manager", pkgbuild)

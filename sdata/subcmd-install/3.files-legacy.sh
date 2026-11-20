@@ -90,6 +90,10 @@ install_file "dots/.local/share/icons/halcyon.svg" "${XDG_DATA_HOME}"/icons/halc
 # Halcyon Glass cursors (XCursor and hyprcursor, one folder; aliases are symlinks)
 install_dir__sync "dots/.local/share/icons/Halcyon-Glass" "${XDG_DATA_HOME}"/icons/Halcyon-Glass
 
+# RightFont, "the most confusing font possible" (Right of the Bell; SIL OFL, licence beside it). `halcyon fonts`.
+install_dir__sync "dots/.local/share/fonts/halcyon-rightfont" "${XDG_DATA_HOME}"/fonts/halcyon-rightfont
+command -v fc-cache >/dev/null && fc-cache -f "${XDG_DATA_HOME}"/fonts/halcyon-rightfont >/dev/null 2>&1
+
 # Halcyon wallpapers, into the folder the wallpaper selector opens.
 # Files already there are never overwritten, so your edits to them stick.
 case "${SKIP_WALLPAPERS}" in

@@ -26,6 +26,7 @@ On top of that, Halcyon adds:
 | **Softer layout** | Wider gaps, rounder corners, deeper blur (popups too), a softer shadow. |
 | **Wallpapers** | The hyperNeo fire wallpaper is the default. It and the three Halcyon wallpapers are copied into `~/Pictures/Wallpapers`, where the wallpaper picker looks. |
 | **niri** | The `niri` branch runs Halcyon on niri too: the shell, themes and lock, with niri's own overview. [More.](niri.md) |
+| **Fonts** | Font Manager, `halcyon fonts` to install fonts and zips of them, and RightFont, the most confusing font possible. [More.](fonts.md) |
 | **Themes** | Hand-made themes: HyperNeo, Star Rail, Shattered Glass, Fractured Glass, Liquid Glass (which runs MacShell), Neumorph, Red Sun and more. [More below.](themes.md) |
 | **Voice assistant** | Press `Super + Shift + Space` and speak. It answers aloud and can run the desktop. [More below.](voice-assistant.md) |
 | **Server mode** | One button in **Settings > Halcyon > Server mode** (or `halcyon server on`): no suspend (idle, lid or suspend key), and the screen never locks or blanks by itself, until you stop it. It survives a restart. It is a systemd-inhibit lock, so `systemd-inhibit --list` shows it. |
