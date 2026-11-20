@@ -153,6 +153,7 @@ ContentPage {
         { id: "fractured-glass", name: "Fractured Glass", icon: "lens_blur" },
         // Runs MacShell instead of this shell (halcyon/desktop-shell); Ctrl+Super+Shift+T comes back.
         { id: "liquid-glass", name: "Liquid Glass", icon: "water_drop" },
+        { id: "neumorph", name: "Neumorph", icon: "bubble_chart" },
         { id: "red-sun", name: "Red Sun", icon: "wb_twilight" },
         { id: "after-icey", name: "After ICEY", icon: "ac_unit" },
         { id: "manga-ink", name: "Manga Ink", icon: "draw" },

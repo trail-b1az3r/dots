@@ -21,6 +21,7 @@ Item {
 
         function cleanup() {
             Config.options.bar.cornerStyle = 0;
+            Config.options.halcyon.theme = "";
         }
 
         function backgroundOf(group) {
@@ -48,6 +49,17 @@ Item {
             compare(bg.height, Appearance.sizes.baseBarHeight);
             compare(bg.radius, bg.height / 2);
             compare(bg.border.width, 1);
+        }
+
+        function test_neumorph_islands_are_pressed_out_of_the_page() {
+            Config.options.bar.cornerStyle = 3;
+            Config.options.halcyon.theme = "neumorph";
+            const group = createTemporaryObject(groupComponent, parent);
+            verify(group.neu);
+            const bg = backgroundOf(group);
+            compare(bg.border.width, 0, "no edge: the shadows shape it");
+            compare(bg.color, Qt.rgba(0, 0, 0, 0));
+            waitForRendering(group);
         }
 
         function test_vertical_bars_keep_their_groups() {

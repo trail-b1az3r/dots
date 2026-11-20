@@ -2,6 +2,7 @@ import qs.modules.common
 import qs.modules.common.widgets
 import QtQuick
 import QtQuick.Layouts
+import "../../common/neu"
 
 Item {
     id: root
@@ -15,9 +16,21 @@ Item {
     readonly property bool island: (Config.options?.bar.cornerStyle ?? 0) === 3 && !vertical
         && !(Config.options?.bar.borderless ?? false) && (Config.options?.bar.showBackground ?? true)
 
+    // Neumorph's islands are pressed out of the page instead: no edge, two soft shadows of its own.
+    readonly property bool neu: island && (Config.options?.halcyon.theme ?? "") === "neumorph"
+
     StyledRectangularShadow {
         target: background
-        visible: root.island && (Config.options?.bar.floatStyleShadow ?? true)
+        visible: root.island && !root.neu && (Config.options?.bar.floatStyleShadow ?? true)
+    }
+    Neu {
+        anchors.fill: background
+        visible: root.neu
+        base: Qt.rgba(Appearance.colors.colLayer0.r, Appearance.colors.colLayer0.g, Appearance.colors.colLayer0.b, 1)
+        radius: height / 2
+        corner: 2.0   // round ends: a pill, not a squircle
+        distance: 3
+        convex: 0.35
     }
 
     Rectangle {
@@ -31,12 +44,12 @@ Item {
         }
         // Manga Ink: no box round each group (a box in a box, on the bar's panel); gutters part them instead.
         readonly property bool manga: Appearance.squareBar && !root.vertical
-        color: root.island ? Appearance.colors.colLayer0
+        color: root.neu ? "transparent" : root.island ? Appearance.colors.colLayer0
              : Config.options?.bar.borderless || manga ? "transparent" : Appearance.colors.colLayer1
         radius: root.island ? height / 2 : Appearance.squareBar ? 0 : Appearance.rounding.small
         // Halcyon themes edge each group in their own light: Red Sun's ember, Star Rail's gold, glass's frost.
         readonly property string theme: Config.options?.halcyon.theme ?? ""
-        border.width: root.island ? 1 : Config.options?.bar.borderless || manga ? 0 : Appearance.squareBar ? 2 : (edgeColour.a > 0 ? 1 : 0)
+        border.width: root.neu ? 0 : root.island ? 1 : Config.options?.bar.borderless || manga ? 0 : Appearance.squareBar ? 2 : (edgeColour.a > 0 ? 1 : 0)
         border.color: root.island && edgeColour.a === 0 ? Appearance.colors.colLayer0Border : edgeColour
         readonly property color edgeColour: {
             switch (theme) {

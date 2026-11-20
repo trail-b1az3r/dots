@@ -1,0 +1,153 @@
+{
+  "name": "Neumorph",
+  "description": "Soft clay: the bar floats as islands, and the dock, the cards and the clock are pressed out of one pale page in its own colour, lit from the top left. Slate text in Open Runde, one blue for what is on, over soft shapes raised from and sunk into the same surface.",
+  "wallpaper": "wallpapers/neumorph.jpg",
+  "mode": "light",
+  "seed": "#3E6FD8",
+  "scheme": "scheme-neutral",
+  "shell": {
+    "background": "#E3E8F0",
+    "on_background": "#2E3A4D",
+    "surface": "#E3E8F0",
+    "surface_dim": "#D3DAE5",
+    "surface_bright": "#F2F5F9",
+    "surface_container_lowest": "#F2F5F9",
+    "surface_container_low": "#EAEEF4",
+    "surface_container": "#E3E8F0",
+    "surface_container_high": "#DCE2EB",
+    "surface_container_highest": "#D5DCE6",
+    "surface_variant": "#D5DCE6",
+    "on_surface": "#2E3A4D",
+    "on_surface_variant": "#4A5568",
+    "outline": "#7A869A",
+    "outline_variant": "#C3CBD8",
+    "primary": "#3463C9",
+    "on_primary": "#FFFFFF",
+    "primary_container": "#CFDDF8",
+    "on_primary_container": "#12306B",
+    "secondary": "#55657F",
+    "on_secondary": "#FFFFFF",
+    "secondary_container": "#D3DBE8",
+    "on_secondary_container": "#243045",
+    "tertiary": "#93466E",
+    "on_tertiary": "#FFFFFF",
+    "tertiary_container": "#F3D8E6",
+    "on_tertiary_container": "#3E0F2A",
+    "error": "#BA1A1A",
+    "on_error": "#FFFFFF",
+    "error_container": "#FFDAD6",
+    "on_error_container": "#410002",
+    "surface_tint": "#3463C9",
+    "inverse_surface": "#2E3440",
+    "inverse_on_surface": "#E8ECF3",
+    "inverse_primary": "#A9C3FF",
+    "shadow": "#A3B1C6",
+    "scrim": "#000000"
+  },
+  "terminal": {
+    "term0": "#2E3A4D",
+    "term1": "#C2455A",
+    "term2": "#3E8E5E",
+    "term3": "#A67618",
+    "term4": "#3463C9",
+    "term5": "#8A4FB8",
+    "term6": "#2D8A96",
+    "term7": "#C3CBD8",
+    "term8": "#5D6B80",
+    "term9": "#D9667A",
+    "term10": "#57A877",
+    "term11": "#C08F2E",
+    "term12": "#5B86E0",
+    "term13": "#A46ED0",
+    "term14": "#46A6B2",
+    "term15": "#E3E8F0"
+  },
+  "hyprland": {
+    "rounding": 20,
+    "rounding_power": 3.0,
+    "gaps_in": 8,
+    "gaps_out": 18,
+    "border_size": 0,
+    "active_border": "rgba(FFFFFF00)",
+    "inactive_border": "rgba(FFFFFF00)",
+    "blur_size": 6,
+    "blur_passes": 2,
+    "shadow_color": "rgba(8C9AB2A6)",
+    "shadow_color_inactive": "rgba(A3B1C670)",
+    "shadow_range": 30,
+    "shadow_render_power": 2,
+    "shadow_offset": [
+      9,
+      9
+    ],
+    "dim_inactive": false,
+    "curves": {
+      "soft": [
+        0.25,
+        0.8,
+        0.25,
+        1.0
+      ],
+      "press": [
+        0.35,
+        1.35,
+        0.55,
+        1.0
+      ],
+      "softIn": [
+        0.5,
+        0.0,
+        0.9,
+        0.6
+      ]
+    },
+    "animations": [
+      {
+        "leaf": "windowsIn",
+        "speed": 3.4,
+        "curve": "press",
+        "style": "popin 94%"
+      },
+      {
+        "leaf": "windowsOut",
+        "speed": 2.4,
+        "curve": "softIn",
+        "style": "popin 96%"
+      },
+      {
+        "leaf": "windowsMove",
+        "speed": 3.4,
+        "curve": "soft"
+      },
+      {
+        "leaf": "layersIn",
+        "speed": 2.8,
+        "curve": "press",
+        "style": "popin 96%"
+      },
+      {
+        "leaf": "layersOut",
+        "speed": 2.0,
+        "curve": "softIn",
+        "style": "popin 97%"
+      },
+      {
+        "leaf": "workspaces",
+        "speed": 4.0,
+        "curve": "soft",
+        "style": "slide"
+      }
+    ]
+  },
+  "effects": {
+    "default": "light"
+  },
+  "shell_config": {
+    "bar.cornerStyle": 3,
+    "bar.floatStyleShadow": true,
+    "appearance.transparency.enable": false,
+    "appearance.fonts.main": "Open Runde",
+    "appearance.fonts.title": "Open Runde",
+    "appearance.fonts.numbers": "Open Runde"
+  }
+}

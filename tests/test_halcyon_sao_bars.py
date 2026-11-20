@@ -22,7 +22,7 @@ class SaoTopBarTest(unittest.TestCase):
         # The stock sections step aside, and neither the plain panel nor the frame is drawn behind the HUD.
         self.assertEqual(BAR.count("visible: !root.sao"), 3)
         self.assertIn('!root.sao ? Styles.frameKindFor', BAR)
-        self.assertIn('opacity: root.frameKind !== "" || root.sao ? 0 : 1', BAR)
+        self.assertIn('opacity: root.frameKind !== "" || root.sao || root.islands ? 0 : 1', BAR)
 
     def test_the_player_floors_and_menu(self):
         self.assertIn("onBattery ? Battery.percentage : 1 - ResourceUsage.memoryUsedPercentage", HUD)

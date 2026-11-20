@@ -61,6 +61,7 @@ PACKS = {
     "shattered-glass": {"theme": "Halcyon-Shattered-Glass", "name": "Halcyon Shattered Glass"},
     "silence": {"theme": "Halcyon-Silence", "name": "Halcyon Silence"},
     "sao": {"theme": "Halcyon-Sword-Art-Online", "name": "Halcyon Sword Art Online"},
+    "neu": {"theme": "Halcyon-Neumorph", "name": "Halcyon Neumorph"},
 }
 # Every built-in Halcyon theme gets its own generated icon pack.
 THEME_PACKS = {
@@ -74,6 +75,7 @@ THEME_PACKS = {
     "shattered-glass": "shattered-glass",
     "silence": "silence",
     "sword-art-online": "sao",
+    "neumorph": "neu",
 }
 
 # These are drawn by Halcyon rather than recoloured from the current icon
@@ -194,6 +196,19 @@ def frame_svg(pack: str) -> str:
   <circle cx="64" cy="63" r="57" fill="url(#p)" stroke="#C9D0D8" stroke-width="2"/>
   <path d="M 26 26 A 54 54 0 0 1 102 26" fill="none" stroke="#F5A43B" stroke-width="4" stroke-linecap="round"/>
 </svg>"""
+    if pack == "neu":
+        # A clay squircle pressed out of the page: a light shadow to the top left, a dark one to the bottom right.
+        return """<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <filter id="s" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="5"/></filter>
+    <linearGradient id="f" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#EEF2F7"/><stop offset="1" stop-color="#DAE0EA"/></linearGradient>
+  </defs>
+  <rect x="19" y="19" width="100" height="100" rx="32" fill="#A3B1C6" fill-opacity=".85" filter="url(#s)"/>
+  <rect x="9" y="9" width="100" height="100" rx="32" fill="#FFFFFF" filter="url(#s)"/>
+  <rect x="14" y="14" width="100" height="100" rx="32" fill="url(#f)"/>
+  <path d="M30 18h68" stroke="#FFFFFF" stroke-opacity=".9" stroke-width="2" stroke-linecap="round"/>
+</svg>"""
     raise IconError(f"no frame design for icon pack '{pack}'")
 
 
@@ -209,6 +224,8 @@ def recolour(pack: str) -> list[str]:
         "silence": ("#FF6B6B", "#B52E3A", "#F3E6E6"),
         # Slate into the menu's orange, to read on the white plate.
         "sao": ("#3A434F", "#F5A43B"),
+        # Slate into a pale blue: soft, and readable on the clay.
+        "neu": ("#3463C9", "#3D4A5C", "#B9CCF2"),
     }
     if pack == "ink-dark":
         dark, light = PAPER, "#202022"
@@ -329,6 +346,7 @@ def special_icon_svg(pack: str, name: str) -> str:
         "shattered-glass": "#9ED8FF",
         "silence": "#FF6B6B",
         "sao": "#F5A43B",
+        "neu": "#3463C9",
     }
     designs = {
         "icey": (
@@ -366,6 +384,10 @@ def special_icon_svg(pack: str, name: str) -> str:
         "silence": (
             "M23 31h82v67H23z M23 47h82 M41 63l15 11-15 11m28 0h19 M42 24h8m28 0h8",
             "M23 31h82v67H23z M23 47h82 M39 60h20v20H39z M68 60h22v6H68z M68 75h17v5H68z M42 24h8m28 0h8",
+        ),
+        "neu": (
+            "M24 32h80v64H24z M24 48h80 M42 63l14 10-14 10m26 0h20",
+            "M24 32h80v64H24z M24 48h80 M40 61h18v18H40z M68 61h22v6H68z M68 75h16v5H68z",
         ),
         "sao": (
             "M20 30h88v68H20z M20 46h88 M40 61l16 12-16 12m29 0h21 M58 14h12 M64 8v12",

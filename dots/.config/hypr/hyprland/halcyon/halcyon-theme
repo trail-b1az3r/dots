@@ -575,6 +575,33 @@ def set_wallpaper_awww(wallpaper):
                    check=False, timeout=30)
 
 
+# Fonts a theme can name that come with Halcyon rather than a package: family -> the files and where they are.
+BUNDLED_FONTS = {
+    # Open Runde (SIL Open Font License), a rounded Inter, shipped with MacShell (~/.config/quickshell/MacShell).
+    "Open Runde": [HERE.parents[2] / "quickshell/MacShell/assets/fonts/OpenRunde-Regular.otf",
+                   HERE.parents[2] / "quickshell/MacShell/assets/fonts/OpenRunde-Semibold.otf"],
+}
+
+
+def ensure_fonts(theme):
+    """Install the bundled fonts a theme's shell uses (appearance.fonts.*), once, in ~/.local/share/fonts/halcyon."""
+    wanted = {value for key, value in (theme.get("shell_config") or {}).items()
+              if key.startswith("appearance.fonts.") and value in BUNDLED_FONTS}
+    target = DATA / "fonts/halcyon"
+    added = False
+    for family in sorted(wanted):
+        for source in BUNDLED_FONTS[family]:
+            dest = target / source.name
+            if source.is_file() and not dest.is_file():
+                target.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, dest)
+                added = True
+    if added and shutil.which("fc-cache"):
+        subprocess.run(["fc-cache", "-f", str(target)], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL, check=False, timeout=60)
+    return added
+
+
 def set_desktop_shell(name, theme=None, wallpaper=None):
     """Run the desktop shell a theme wants (the Halcyon shell unless it says otherwise). Nothing is restarted when
     the right one already runs."""
@@ -1572,6 +1599,7 @@ def cmd_apply(args):
     if APPLYCOLOR.is_file():
         run([str(APPLYCOLOR)])
 
+    ensure_fonts(theme)
     apply_shell_config(theme)
     if previous != theme_id:
         run_switch_rules("to", theme_id)

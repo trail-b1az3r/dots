@@ -18,7 +18,7 @@ Item {
         when: windowShown
 
         function test_every_kind_draws() {
-            for (const kind of ["hyperneo", "hsr", "red-sun", "icey", "ink", "ink-dark", "silence"]) {
+            for (const kind of ["hyperneo", "hsr", "red-sun", "icey", "ink", "ink-dark", "silence", "neu"]) {
                 const frame = createTemporaryObject(frameComponent, parent, { kind: kind });
                 verify(frame !== null, kind);
                 waitForRendering(frame);

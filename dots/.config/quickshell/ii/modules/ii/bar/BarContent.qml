@@ -9,6 +9,7 @@ import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
 import "../background/widgets/revolver/RevolverStyles.js" as Styles
+import "../../common/neu"
 
 Item { // Bar content region
     id: root
@@ -43,6 +44,7 @@ Item { // Bar content region
         }
         return a === Infinity ? null : { x: offset + a - root.islandPad, w: b - a + 2 * root.islandPad };
     }
+    readonly property bool neuIslands: root.islands && Config.options.halcyon.theme === "neumorph"
     component Island: Rectangle {
         property var span: null
         visible: root.islands && span !== null
@@ -51,14 +53,24 @@ Item { // Bar content region
         y: (root.height - height) / 2
         height: Appearance.sizes.baseBarHeight
         radius: height / 2
-        color: Appearance.colors.colLayer0
-        border.width: 1
+        color: root.neuIslands ? "transparent" : Appearance.colors.colLayer0
+        border.width: root.neuIslands ? 0 : 1
         border.color: Appearance.colors.colLayer0Border
+        // Neumorph: pressed out of the page (common/neu/Neu.qml), as the centre groups are.
+        Neu {
+            anchors.fill: parent
+            visible: root.neuIslands
+            base: Qt.rgba(Appearance.colors.colLayer0.r, Appearance.colors.colLayer0.g, Appearance.colors.colLayer0.b, 1)
+            radius: height / 2
+            corner: 2.0   // round ends: a pill, not a squircle
+            distance: 3
+            convex: 0.35
+        }
         Behavior on x { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this) }
         Behavior on width { animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this) }
     }
-    StyledRectangularShadow { target: leftIsland; visible: leftIsland.visible && Config.options.bar.floatStyleShadow }
-    StyledRectangularShadow { target: rightIsland; visible: rightIsland.visible && Config.options.bar.floatStyleShadow }
+    StyledRectangularShadow { target: leftIsland; visible: leftIsland.visible && !root.neuIslands && Config.options.bar.floatStyleShadow }
+    StyledRectangularShadow { target: rightIsland; visible: rightIsland.visible && !root.neuIslands && Config.options.bar.floatStyleShadow }
     Island {
         id: leftIsland
         // islandSpan reads each item's x, width and visible, so the island follows the row as it changes.

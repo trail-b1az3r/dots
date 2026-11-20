@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Shapes
 import "../background/widgets/revolver/RevolverStyles.js" as Styles
+import "../../common/neu"
 
 /**
  * The dock's frame in each Halcyon theme that isn't a glass one (Dock.qml loads it in place of the plain panel):
@@ -19,9 +20,10 @@ import "../background/widgets/revolver/RevolverStyles.js" as Styles
  *             notch at each end, like the game's bars
  *   silence   black, almost nothing: a faint edge, a red hairline that is brightest in the middle, and at the right
  *             end two small red eyes that slowly open and close
+ *   neu       Neumorph: a soft slab pressed out of the page in the page's own colour, lit from the top left
  *
  * The dock and the top bar both use it, so they match.
- * Needs only QtQuick and RevolverStyles.js.
+ * Needs only QtQuick, RevolverStyles.js and (for neu) common/neu.
  */
 Item {
     id: frame
@@ -446,5 +448,18 @@ Item {
             }
         }
         return d;
+    }
+
+    // ── Neumorph ───────────────────────────────────────────────────────────────────
+    // A soft slab pressed out of the page, in the page's own colour: a light shadow towards the top left, a dark one
+    // away from it. Lower on the bar, where there is less room round it for the shadows.
+    Neu {
+        anchors.fill: parent
+        visible: frame.kind === "neu"
+        base: Qt.rgba(frame.colBase.r, frame.colBase.g, frame.colBase.b, 1)
+        radius: frame.bar ? height / 2 : Math.min(height / 2, 22)
+        corner: frame.bar ? 2.0 : 4.0   // round ends on the bar, a squircle on the dock
+        distance: frame.bar ? 3 : 7
+        convex: 0.35
     }
 }

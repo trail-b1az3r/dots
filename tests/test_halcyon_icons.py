@@ -122,7 +122,7 @@ class IconPackTest(unittest.TestCase):
             set(icons.THEME_PACKS),
             {
                 "after-icey", "manga-ink", "manga-ink-dark", "hyperneo",
-                "hsr", "fractured-glass", "red-sun", "shattered-glass", "silence", "sword-art-online",
+                "hsr", "fractured-glass", "red-sun", "shattered-glass", "silence", "sword-art-online", "neumorph",
             },
         )
         frames = [icons.frame_svg(pack) for pack in icons.PACKS]

@@ -3,12 +3,14 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Shapes
 import "revolver/RevolverStyles.js" as Styles
+import "../../../common/neu"
 
 /**
  * The plate behind a wallpaper widget, in the active Halcyon theme's shapes: the same look as the revolver's drum.
  *
  *   kind "disc"   a clock face: a glowing ring (Red Sun), a cut glass octagon (glass themes), a squircle (HyperNeo),
- *                 a gold rail (Star Rail), a keycap (the anime themes; Manga Ink Dark's in negative), a hush (Silence)
+ *                 a gold rail (Star Rail), a keycap (the anime themes; Manga Ink Dark's in negative), a hush (Silence),
+ *                 a soft dome pressed out of the page (Neumorph)
  *   kind "card"   a card: a dusk capsule with an ember edge, a cut stone, a squircle card, a gold-framed card, a keycap,
  *                 or Silence's near-black card with a red hairline. Sword Art Online has none: its widgets stand on
  *                 the wallpaper.
@@ -35,6 +37,8 @@ Item {
     readonly property bool sao: style.plate === "sao"
     // Manga Ink: the dock's own manga panel (dock/DockFrame.qml), so the cards and the dock are drawn alike.
     readonly property bool manga: style.plate === "manga"
+    // Neumorph: no outline or fill of its own, the page's material pressed up (common/neu/Neu.qml).
+    readonly property bool neu: style.plate === "neu"
     // A keycap is solid ink, whatever the shell's transparency: the panel colour it is given is see-through when
     // transparency is on, which washed the cards out on the anime themes' white wallpapers.
     readonly property color solidBase: style.base ? style.base : Qt.rgba(colBase.r, colBase.g, colBase.b, 1)
@@ -54,9 +58,19 @@ Item {
         onLoaded: item.kind = "ink"
     }
 
+    Neu {
+        anchors.fill: parent
+        visible: plate.neu
+        base: plate.solidBase
+        radius: plate.kind === "disc" ? Math.min(width, height) / 2 : Math.min(28, height / 4)
+        corner: plate.kind === "disc" ? 2.0 : 4.0
+        distance: Math.max(8, Math.min(width, height) * 0.06)
+        convex: plate.kind === "disc" ? 0.6 : 0.25
+    }
+
     Item {
         id: surface
-        visible: !plate.manga && !plate.sao
+        visible: !plate.manga && !plate.sao && !plate.neu
         x: -plate.pad
         y: -plate.pad
         width: plate.width + 2 * plate.pad

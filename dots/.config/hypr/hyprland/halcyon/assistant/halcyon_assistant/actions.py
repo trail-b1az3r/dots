@@ -16,7 +16,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 THEME_TOOL = HERE.parent.parent / "halcyon-theme"
-THEMES = ["hyperneo", "hsr", "shattered-glass", "fractured-glass", "liquid-glass", "red-sun", "after-icey", "manga-ink",
+THEMES = ["hyperneo", "hsr", "shattered-glass", "fractured-glass", "liquid-glass", "neumorph", "red-sun", "after-icey", "manga-ink",
           "manga-ink-dark", "sword-art-online", "silence"]
 
 

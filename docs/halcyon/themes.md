@@ -11,6 +11,7 @@ style, animations, wallpaper and, for some, shell layout and effects:
 | **Shattered Glass** | `shattered-glass` | Liquid glass: a glass lens follows the pointer, clicks crack the screen, windows turn to frosted glass. Ice blue and prism violet, sharp corners. |
 | **Fractured Glass** | `fractured-glass` | Refraction only, like Apple's Liquid Glass: a squircle glass lens follows the pointer and bends what's behind its rim. No ripples or cracks. Soft blue, lavender and pink over calm fragments of thick glass. |
 | **Liquid Glass** | `liquid-glass` | A different desktop shell: [MacShell](https://github.com/0-ss/MacShell) (by 0-ss, MIT, bundled) runs in place of the Halcyon shell, with a macOS Tahoe style menu bar, Dock, Control Center, Spotlight, notifications and desktop widgets in real-time Liquid Glass that refracts the wallpaper, and MacLock as the lock screen. Super+Space Spotlight, Super+V clipboard, Alt+Tab switcher, Super+Alt+I its Settings, Ctrl+Alt+W wallpapers. Ctrl+Super+Shift+T opens the theme menu, to go back. Over an original wallpaper of light ribbons. |
+| **Neumorph** | `neumorph` | Soft clay, light: the bar floats as islands, and the dock, the bar's pills, the clock and the cards are pressed out of one pale page in its own colour, lit from the top left (a light shadow towards the light, a dark one away from it). Slate text in Open Runde, one blue for what is on, its own icon pack, over an original wallpaper of soft shapes raised from and sunk into the same surface. |
 | **Red Sun** | `red-sun` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. The ring is the revolver: spin it and the screen breaks, an eye opens in the sun and finds the car, and the tape rewinds. Wallpaper: *Eclipse* by Alena Aenami (2017), from [wallhaven](https://wallhaven.vip/w/yjl8mk); [buy it here](https://www.artstation.com/marketplace/p/oAol/wallpaper-pack-02). |
 | **After ICEY** | `after-icey` | Silver hair, cyan light and ink-dark navy, over the animated *After ICEY* wallpaper (fan art, by way of [MotionBGs](https://motionbgs.com/after-icey)). `halcyon wallpapers get after-icey` fetches it. |
 | **Sword Art Online** | `sword-art-online` | Aincrad at dusk: slate fog and crimson clouds, the game's orange and white, and its main menu in place of the overview (Super). Over the animated *Twilight Aincrad* wallpaper (fan art, by way of [MotionBGs](https://motionbgs.com/twilight-aincrad)), fetched when the theme is first applied. |
@@ -295,3 +296,14 @@ While MacShell runs:
 
 MacShell's extra packages are in `illogical-impulse-macshell` (`awww`, `qt6-shadertools`, `inotify-tools`, `zenity`,
 `jq`, `hyprsunset`, `brightnessctl`, `inter-font`).
+
+## Neumorph
+
+![Neumorph: the bar as islands, a clock and a card pressed out of the page, and the dock](../assets/neumorph-preview.jpg)
+
+Neumorph's surfaces are one shader (`quickshell/ii/modules/common/neu`, `Neu.qml`): a shape pressed out of the page
+(raised) or into it (`inset`, which a press animates), in the page's colour, with a lit edge on the light side and
+`convex` for a domed face. The dock and the top bar use it through `DockFrame.qml` (kind `neu`), the wallpaper
+widgets through `ThemedPlate.qml` (plate `neu`), and the bar's islands through `BarGroup.qml`. The theme turns on the
+Islands bar and installs Open Runde (shipped with MacShell, SIL Open Font License) into
+`~/.local/share/fonts/halcyon` the first time it is applied.

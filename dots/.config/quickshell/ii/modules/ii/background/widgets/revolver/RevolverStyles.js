@@ -37,6 +37,10 @@ var STYLES = {
     "keycap-dark": { id: "keycap-dark", drum: "squircle", plate: "keycap", chamber: "squircle", chamberSize: 48, orbit: 79,
                      names: true, hub: "squircle", hammer: "pill", glow: 0.45, waves: 0, statusLabel: true,
                      base: "#0d0d0e", edge: "#f1ece2" },
+    // Neumorph: soft clay. Squircles pressed out of the page in its own colour (plate "neu": common/neu/Neu.qml),
+    // lit from the top left, a dark shadow thrown to the bottom right.
+    "neu":     { id: "neu", drum: "squircle", plate: "neu", chamber: "squircle", chamberSize: 48, orbit: 79, names: true,
+                 hub: "squircle", hammer: "pill", glow: 0.25, waves: 0, statusLabel: true, base: "#E3E8F0" },
     // Silence's cards: near-black, a faint edge, and a red hairline along the bottom, brightest in the middle.
     "hush":    { id: "hush", drum: "squircle", plate: "hush", chamber: "squircle", chamberSize: 48, orbit: 79, names: true,
                  hub: "squircle", hammer: "pill", glow: 0.6, waves: 0, statusLabel: true },
@@ -88,6 +92,8 @@ function styleFor(themeId) {
         return STYLES["sao-panel"];
     case "hsr":
         return STYLES["hsr"];
+    case "neumorph":
+        return STYLES["neu"];
     default:
         return STYLES["default"];
     }
@@ -150,7 +156,7 @@ function snowflake(cx, cy, r) {
 // panel (no theme, and the glass themes).
 var FRAMES = { "hyperneo": "hyperneo", "hsr": "hsr", "red-sun": "red-sun", "wallpaper-heaven-kenami": "red-sun",
                "after-icey": "icey", "manga-ink": "ink", "manga-ink-dark": "ink-dark", "silence": "silence",
-               "sword-art-online": "sao" };
+               "sword-art-online": "sao", "neumorph": "neu" };
 
 function frameKindFor(themeId) {
     return FRAMES[themeId] || "";
@@ -237,6 +243,9 @@ var LOOKS = {
     // Sword Art Online: the HUD's white on the wallpaper, orange for what is lit, its blue for the second colour.
     "sao-panel": { id: "sao-panel", gauge: "tiles", bars: "pill", progress: "hp", lyric: "plain",
                    caps: true, spacing: 1.6, colorA: "#F5A43B", colorB: "#3B8FE0", text: "#F4F6F8", glow: "#F5A43B" },
+    // Neumorph: soft and round, slate on clay, the accent only where something is lit.
+    "neu":      { id: "neu", gauge: "ring", bars: "pill", progress: "pill", lyric: "bold",
+                  caps: false, spacing: 0.2, colorA: "#5B8DEF", colorB: "#8FA6D6", text: "#3D4A5C", glow: "" },
     // Silence: thin and spaced, red light on black.
     "hush":     { id: "hush", gauge: "ring", bars: "needle", progress: "line", lyric: "plain",
                   caps: true, spacing: 2.4, colorA: "", colorB: "", text: "#ede6e6", glow: "" }
