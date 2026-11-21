@@ -4,6 +4,8 @@ Documentation=file://%h/.config/quickshell/MacShell/shell.qml
 # One desktop shell at a time: starting this stops the Halcyon shell, and starting that stops this.
 # halcyon-theme picks which (a theme's "desktop_shell"); halcyon/desktop-shell starts the right one at login.
 Conflicts=halcyon-quickshell.service
+# The power button's lock (the Halcyon shell holds its own): stopped with this, through its BindsTo=.
+Wants=halcyon-power-key.service
 
 [Service]
 # Only inside a running Hyprland, as for halcyon-quickshell.service.

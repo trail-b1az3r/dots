@@ -1,0 +1,10 @@
+[Unit]
+Description=Halcyon: the power button opens the power menu while MacShell runs
+# The Halcyon shell holds logind's power-key lock itself; MacShell does not, so this holds it for as long as MacShell
+# runs (it starts with halcyon-macshell.service, and stops when that stops or fails). Without it the power button would switch the computer
+# off at once; with it the button reaches Hyprland, which opens the power menu (halcyon/desktop-shell power-menu).
+BindsTo=halcyon-macshell.service
+After=halcyon-macshell.service
+
+[Service]
+ExecStart=/usr/bin/systemd-inhibit --what=handle-power-key --who=Halcyon --mode=block --why="The power button opens the power menu" sleep infinity
