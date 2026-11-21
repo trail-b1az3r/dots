@@ -18,8 +18,11 @@ hl.bind("SUPER + Escape", hl.dsp.exec_cmd(qsIsAlive .. " || pkill wlogout || wlo
 hl.bind("SUPER + Comma", hl.dsp.exec_cmd(settingsApp), { description = "App: Settings app" })
 
 --# Power: the power button opens the power menu (shut down, restart, sleep, log out, and the power levels). The
--- shell holds logind's power-key lock while it runs; without the shell, the button powers off as usual.
+-- Halcyon shell holds logind's power-key lock while it runs. Under MacShell (the Liquid Glass theme) the button opens
+-- the distribution's power menu, or wlogout (desktop-shell power-menu), and halcyon-power-key.service holds the lock.
+-- With no shell at all, the button powers off as usual.
 hl.bind("XF86PowerOff", hl.dsp.global("quickshell:sessionToggle"), { description = "Shell: Power menu (power button)" })
+hl.bind("XF86PowerOff", hl.dsp.exec_cmd(qsIsAlive .. " || $HOME/.config/hypr/hyprland/halcyon/desktop-shell power-menu"))
 
 --# Workspaces
 -- halcyon.UwU-agent: pick a kept web password and copy it; the clipboard is cleared again after 45 seconds.

@@ -10,6 +10,8 @@
 #   desktop-shell start      start it, unless it is already running (the other one stops: the units conflict)
 #   desktop-shell restart    restart it (Hyprland does this at start-up)
 #   desktop-shell ipc ...    qs ipc call ... on whichever is running
+#   desktop-shell power-menu the power menu: the Halcyon shell's, or (under MacShell, which has none) the
+#                            distribution's (<ID>-power-menu, from /etc/os-release), else wlogout
 set -u
 
 state="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon/desktop-shell"
@@ -34,5 +36,14 @@ case "${1:-}" in
         exec systemctl --user start "$unit" ;;
     restart) exec systemctl --user restart "$unit" ;;
     ipc) shift; exec qs -c "$shell" ipc call "$@" ;;
-    *) echo "usage: desktop-shell [unit|start|restart|ipc ...]" >&2; exit 2 ;;
+    power-menu)
+        [ "$shell" = ii ] && exec qs -c ii ipc call session toggle
+        id="$(sed -n 's/^ID=//p' "${OS_RELEASE:-/etc/os-release}" 2>/dev/null | tr -d "\"'" | head -n1)"
+        for menu in ${id:+"$id-power-menu"} wlogout; do
+            command -v "$menu" >/dev/null 2>&1 || continue
+            [ "$menu" = wlogout ] && exec wlogout -p layer-shell
+            exec "$menu"
+        done
+        exit 1 ;;
+    *) echo "usage: desktop-shell [unit|start|restart|ipc ...|power-menu]" >&2; exit 2 ;;
 esac
