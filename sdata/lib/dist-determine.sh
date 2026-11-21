@@ -79,7 +79,7 @@ else
   printf "${STY_RED}/etc/os-release does not exist, aborting...${STY_RST}\n" ; exit 1
 fi
 export OS_DISTRO_ID=$(awk -F'=' '/^ID=/ { gsub(/["\x27]/,"",$2); print tolower($2) }' ${OS_RELEASE_FILE} 2> /dev/null)
-# ID_LIKE may name several parents ("endeavouros arch" on Nexora): like() matches any one of them.
+# ID_LIKE may name several parents ("endeavouros arch" on Frontline Linux): like() matches any one of them.
 like() { [[ " $OS_DISTRO_ID_LIKE " == *" $1 "* ]]; }
 export OS_DISTRO_ID_LIKE=$(awk -F'=' '/^ID_LIKE=/ { gsub(/["\x27]/,"",$2); print tolower($2) }' ${OS_RELEASE_FILE} 2> /dev/null)
 
@@ -91,7 +91,7 @@ if [[ "$OS_DISTRO_ID" == "nixos" ]]; then
   # NixOS: a system module (sdata/dist-nixos), not the home-manager route for other distros.
   OS_GROUP_ID="nixos"
   print_os_group_id_functions=(print_os_group_id)
-elif [[ "$OS_DISTRO_ID" =~ ^(arch|endeavouros|nexora|cachyos)$ ]]; then
+elif [[ "$OS_DISTRO_ID" =~ ^(arch|endeavouros|frontline|nexora|cachyos)$ ]]; then
   OS_GROUP_ID="arch"
   print_os_group_id_functions=(print_os_group_id)
 elif like arch; then

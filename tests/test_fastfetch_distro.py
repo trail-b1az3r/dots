@@ -1,4 +1,4 @@
-"""On Nexora, Halcyon's installer keeps the distribution's fastfetch (its logo and colours in /etc/xdg/fastfetch):
+"""On Frontline Linux (ID frontline, or nexora before it was renamed), Halcyon's installer keeps the distribution's fastfetch (its logo and colours in /etc/xdg/fastfetch):
 ~/.config/fastfetch would take its place. Run: python3 -m unittest discover -s tests"""
 
 import os
@@ -24,15 +24,16 @@ def decide(os_id: str, preset: str | None = None) -> str:
         return subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True, check=True).stdout.strip()
 
 
-class FastfetchOnNexoraTest(unittest.TestCase):
-    def test_nexora_keeps_its_fastfetch(self):
+class FastfetchOnFrontlineTest(unittest.TestCase):
+    def test_frontline_keeps_its_fastfetch(self):
+        self.assertEqual(decide("frontline"), "0")
         self.assertEqual(decide("nexora"), "0")
 
     def test_elsewhere_halcyons_is_installed(self):
         self.assertEqual(decide("arch"), "unset")       # 3.files-legacy.sh and -exp.yaml treat unset as 1
 
     def test_the_variable_still_wins(self):
-        self.assertEqual(decide("nexora", "1"), "1")
+        self.assertEqual(decide("frontline", "1"), "1")
 
     def test_both_installers_honour_it(self):
         legacy = (ROOT / "sdata/subcmd-install/3.files-legacy.sh").read_text()

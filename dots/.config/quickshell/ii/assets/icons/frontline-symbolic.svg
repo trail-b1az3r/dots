@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Frontline Linux's mark, one colour for the shell to tint: the drawn sheet with its snow-capped peak and two ridges,
+     simplified from trail-b1az3r/distro's branding/logo/logo-mark.svg.in (a hand drawing too fine for a bar icon). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <g fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 112 39 L 251 126 L 109 218 L 5 118 Z" stroke-width="11"/>
+    <path d="M 76 114 L 101 87 L 118 62 L 141 96 L 180 146" stroke-width="12"/>
+    <path d="M 36 132 L 63 102 L 84 120" stroke-width="10"/>
+    <path d="M 46 157 L 88 131 L 120 150 L 172 170" stroke-width="10"/>
+  </g>
+  <path d="M 118 62 L 133 85 L 123 81 L 114 88 L 107 79 Z" fill="#000"/>
+</svg>

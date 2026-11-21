@@ -1,8 +1,9 @@
 #!/usr/bin/env sh
-# Which network tool Halcyon talks to: prints "nmxcli" or "nmcli", then "nexora" on Nexora.
+# Which network tool Halcyon talks to: prints "nmxcli" or "nmcli", then "frontline" on Frontline Linux (ID frontline,
+# or nexora, its name before, on a system not upgraded yet).
 #
 # - nmx running (anywhere): nmxcli.
-# - Nexora with nmx chosen (nmx.service enabled, so it is starting or restarting), or with NetworkManager not
+# - Frontline with nmx chosen (nmx.service enabled, so it is starting or restarting), or with NetworkManager not
 #   running: nmxcli, so nothing in Halcyon needs NetworkManager, nmtui or KDE's network settings there.
 # - Otherwise: nmcli (NetworkManager), as before.
 os_release="${OS_RELEASE:-/etc/os-release}"
@@ -12,7 +13,7 @@ tool=nmcli
 if command -v nmxcli >/dev/null 2>&1; then
     if nmxcli -t -f RUNNING general 2>/dev/null | grep -qx running; then
         tool=nmxcli
-    elif [ "$id" = nexora ]; then
+    elif [ "$id" = frontline ] || [ "$id" = nexora ]; then
         if systemctl is-enabled --quiet nmx.service 2>/dev/null \
             || ! systemctl is-active --quiet NetworkManager.service 2>/dev/null; then
             tool=nmxcli
@@ -20,5 +21,5 @@ if command -v nmxcli >/dev/null 2>&1; then
     fi
 fi
 echo "$tool"
-[ "$id" = nexora ] && echo nexora
+{ [ "$id" = frontline ] || [ "$id" = nexora ]; } && echo frontline
 exit 0

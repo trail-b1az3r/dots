@@ -11,7 +11,7 @@ import qs.modules.common.functions
 import qs.services.network
 
 /**
- * Network service. With nmx running (Nexora's network manager) it talks to nmxcli, which answers nmcli's commands
+ * Network service. With nmx running (Frontline's network manager) it talks to nmxcli, which answers nmcli's commands
  * the same way; otherwise to NetworkManager's nmcli.
  */
 Singleton {
@@ -30,9 +30,9 @@ Singleton {
         getNetworks.running = true;
     }
 
-    // On Nexora, nmx whenever it is the network manager there (running, or enabled and on its way back), so nothing
+    // On Frontline, nmx whenever it is the network manager there (running, or enabled and on its way back), so nothing
     // needs NetworkManager, nmtui or KDE's network settings. Elsewhere nmx only while it runs.
-    property bool nexora: false
+    property bool frontline: false
     readonly property string toolScript: FileUtils.trimFileProtocol(`${Directories.scriptPath}/network/network-tool.sh`)
     function redetect(): void {
         if (!detectNmx.running) detectNmx.running = true;
@@ -40,12 +40,12 @@ Singleton {
     Process {
         id: detectNmx
         running: true
-        // Same test as nmxcli -t -f RUNNING general, plus Nexora's rules (scripts/network/network-tool.sh).
+        // Same test as nmxcli -t -f RUNNING general, plus Frontline's rules (scripts/network/network-tool.sh).
         command: ["sh", root.toolScript]
         stdout: StdioCollector {
             onStreamFinished: {
                 const lines = text.trim().split("\n");
-                root.nexora = lines.includes("nexora");
+                root.frontline = lines.includes("frontline");
                 if (lines[0] === "nmxcli" || lines[0] === "nmcli") root.cli = lines[0];
             }
         }

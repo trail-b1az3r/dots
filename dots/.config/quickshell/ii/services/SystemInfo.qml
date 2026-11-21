@@ -62,7 +62,8 @@ Singleton {
                 case "arch": distroIcon = "arch-symbolic"; break;
                 case "manjaro": distroIcon = "manjaro-symbolic"; break;
                 case "endeavouros": distroIcon = "endeavouros-symbolic"; break;
-                case "nexora": distroIcon = "nexora-symbolic"; break;   // Nexora Linux (trail-b1az3r/distro)
+                case "frontline": distroIcon = "frontline-symbolic"; break;   // Frontline Linux (trail-b1az3r/distro)
+                case "nexora": distroIcon = "frontline-symbolic"; break;   // its name before, until the system is upgraded
                 case "cachyos": distroIcon = "cachyos-symbolic"; break;
                 case "nixos": distroIcon = "nixos-symbolic"; break;
                 case "fedora": distroIcon = "fedora-symbolic"; break;

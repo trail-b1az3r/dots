@@ -283,7 +283,7 @@ echo "$*" >> '{reload_log}'
         self.assertEqual(self.home_file(), "three\n")
 
     def test_manual_install_bootstraps_and_first_syncs_without_setup(self):
-        # Nexora/manual installs have no repo marker because ./setup install
+        # Frontline/manual installs have no repo marker because ./setup install
         # was never run. The updater should initialize itself and offer a sync.
         self.commit({"dots/.config/halcyon-test/a.txt": "two\n"}, "Two")
         checked = self.run_update("check")

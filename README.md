@@ -909,7 +909,7 @@ its status bar and help panel use the theme's surfaces. Applying a theme or a wa
 
 ## Wi-Fi at login
 
-**With nmx** (Nexora's network manager, [`apps/nmx`](https://github.com/trail-b1az3r/distro/tree/main/apps/nmx)),
+**With nmx** (Frontline's network manager, [`apps/nmx`](https://github.com/trail-b1az3r/distro/tree/main/apps/nmx)),
 the shell's network menu, the Wi-Fi details and `halcyon wifi` all talk to `nmxcli` instead of `nmcli`: the same
 commands, the same answers. nmx keeps the Wi-Fi up across suspends by itself, works out what each network needs, and
 for enterprise (802.1X) networks the menu asks for a username as well as the password; nmx then picks the EAP method,
