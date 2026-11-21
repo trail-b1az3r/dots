@@ -25,8 +25,9 @@ class PowerMenuTest(unittest.TestCase):
             for name in have:
                 (bin_ / name).write_text(f'#!/bin/sh\necho "{name} $*"\n')
                 (bin_ / name).chmod(0o755)
+            # Inside Hyprland: MacShell runs only there (the niri branch picks the Halcyon shell elsewhere).
             env = {"PATH": f"{bin_}:/usr/bin:/bin", "XDG_STATE_HOME": str(tmp / "state"),
-                   "OS_RELEASE": str(tmp / "os-release"), "HOME": str(tmp)}
+                   "OS_RELEASE": str(tmp / "os-release"), "HOME": str(tmp), "HYPRLAND_INSTANCE_SIGNATURE": "test"}
             res = subprocess.run(["sh", str(HALCYON / "desktop-shell"), "power-menu"], env=env, capture_output=True,
                                  text=True)
             return res.returncode, res.stdout.strip()
