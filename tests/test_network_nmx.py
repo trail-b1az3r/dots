@@ -81,11 +81,13 @@ class NetworkToolTest(unittest.TestCase):
             out = subprocess.run(["sh", str(TOOL)], env=env, capture_output=True, text=True, check=True).stdout
             return out.split()
 
-    def test_nexora(self):
-        self.assertEqual(self.pick("nexora", nmx_running=True), ["nmxcli", "nexora"])
-        self.assertEqual(self.pick("nexora", nmx_enabled=True), ["nmxcli", "nexora"], "nmx on its way back")
-        self.assertEqual(self.pick("nexora", nm_active=False), ["nmxcli", "nexora"], "never NetworkManager by default")
-        self.assertEqual(self.pick("nexora"), ["nmcli", "nexora"], "NetworkManager chosen in the installer")
+    def test_frontline(self):
+        # Frontline Linux, and Nexora (its name before) on a system not upgraded yet.
+        for os_id in ("frontline", "nexora"):
+            self.assertEqual(self.pick(os_id, nmx_running=True), ["nmxcli", "frontline"])
+            self.assertEqual(self.pick(os_id, nmx_enabled=True), ["nmxcli", "frontline"], "nmx on its way back")
+            self.assertEqual(self.pick(os_id, nm_active=False), ["nmxcli", "frontline"], "never NetworkManager by default")
+            self.assertEqual(self.pick(os_id), ["nmcli", "frontline"], "NetworkManager chosen in the installer")
 
     def test_elsewhere_only_while_nmx_runs(self):
         self.assertEqual(self.pick("arch", nmx_running=True), ["nmxcli"])

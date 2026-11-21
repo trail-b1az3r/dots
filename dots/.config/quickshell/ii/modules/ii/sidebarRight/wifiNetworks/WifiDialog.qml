@@ -19,7 +19,7 @@ WindowDialog {
     Process {
         id: detailsProcess
         // nmxcli (nmx) or nmcli (NetworkManager): the same command, the same output. The tool is picked again when
-        // Details is pressed, so a Nexora with nmx never falls back to NetworkManager (network-tool.sh); with nmx,
+        // Details is pressed, so a Frontline with nmx never falls back to NetworkManager (network-tool.sh); with nmx,
         // a captive portal's sign-in page is shown under the devices.
         command: ["sh", "-c", 'tool=$(sh "$0" | head -n1); "${tool:-nmcli}" -f GENERAL,IP4,IP6 device show; status=$?; '
             + 'if [ "$tool" = nmxcli ] && url=$(nmxcli -t portal 2>/dev/null); then printf "\\nCAPTIVE-PORTAL:  %s\\n" "$url"; fi; '

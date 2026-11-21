@@ -27,7 +27,7 @@ above all a Microsoft Surface, whose Marvell card (the mwifiex_pcie driver) is s
 
 `fix` writes /etc/NetworkManager/conf.d/90-halcyon-wifi.conf; delete it (and restart NetworkManager) to undo.
 
-With nmx (Nexora's network manager) running, nmx keeps the Wi-Fi up itself, across suspends too: `boot` only turns
+With nmx (Frontline's network manager) running, nmx keeps the Wi-Fi up itself, across suspends too: `boot` only turns
 the radio on and asks nmx to connect, `status` shows nmx's view, and `fix` has nothing to change (a device nmx does
 not manage was handed back on purpose, with `sudo nmxcli device unmanage`).
 """

@@ -4,10 +4,10 @@ printf "${STY_CYAN}[$0]: 3. Copying config files\n${STY_RST}"
 
 # shellcheck shell=bash
 
-# A distribution with its own fastfetch (Nexora's logo and colours in /etc/xdg/fastfetch) keeps it: Halcyon's
+# A distribution with its own fastfetch (Frontline's logo and colours in /etc/xdg/fastfetch) keeps it: Halcyon's
 # ~/.config/fastfetch would take its place. HALCYON_FASTFETCH_LOGO_OVERRIDE=1 installs Halcyon's anyway.
 if [[ -z "${HALCYON_FASTFETCH_LOGO_OVERRIDE:-}" ]] \
-    && grep -qsxE 'ID="?nexora"?' "${OS_RELEASE_FILE:-/etc/os-release}"; then
+    && grep -qsxE 'ID="?(frontline|nexora)"?' "${OS_RELEASE_FILE:-/etc/os-release}"; then
   export HALCYON_FASTFETCH_LOGO_OVERRIDE=0
 fi
 

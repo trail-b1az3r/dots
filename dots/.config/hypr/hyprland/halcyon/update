@@ -71,7 +71,7 @@ repo() {
     if [[ -r "$REPO_FILE" ]]; then
         REPO="$(cat "$REPO_FILE")"
     else
-        # Nexora/manual installs copy the working dotfiles but don't run setup's
+        # Frontline/manual installs copy the working dotfiles but don't run setup's
         # updater-registration step. Bootstrap a private source checkout instead
         # of making the user reinstall. The first apply safely backs up and syncs
         # the tracked dots/ files into HOME, then records the installed commit.
@@ -299,7 +299,7 @@ apply() {
     ts="$(date +%Y%m%d-%H%M%S)"
 
     if (( first_deploy )); then
-        # No ./setup registration exists (common with Nexora/manual installs).
+        # No ./setup registration exists (common with Frontline/manual installs).
         # Treat every tracked dotfile as needing its first deployment. The copy
         # loop below backs up any differing destination before replacing it.
         before="(not registered)"
@@ -431,7 +431,7 @@ status() {
     MODE=status
     if [[ ! -r "$REPO_FILE" ]]; then
         echo "No repository is recorded. The updater will initialize a checkout on the next check."
-        echo "folder:          not registered (manual/Nexora install)"
+        echo "folder:          not registered (manual/Frontline install)"
         echo "installed:       not registered (first sync required)"
         echo "last check:      never"
         echo "updates waiting: initial sync required (run update check, then update apply)"
@@ -455,7 +455,7 @@ status() {
     if [[ -s "$INSTALLED_FILE" ]]; then
         echo "installed:       $(cut -c1-7 "$INSTALLED_FILE")"
     elif (( BOOTSTRAPPED )) || [[ -f "$FIRST_SYNC_FILE" ]]; then
-        echo "installed:       not registered (manual/Nexora install; first sync required)"
+        echo "installed:       not registered (manual/Frontline install; first sync required)"
     else
         echo "installed:       not recorded yet (the next update records it)"
     fi

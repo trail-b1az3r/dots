@@ -37,7 +37,7 @@ function setup_hyprland_plus(){
   local url="https://github.com/trail-b1az3r/hyprland-plus"
   local state="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon"
 
-  # Installed as a package (the AUR's, or Nexora's): pacman updates it, nothing to build here. An older build of
+  # Installed as a package (the AUR's, or Frontline's): pacman updates it, nothing to build here. An older build of
   # ours in /usr/local would start instead of it (and break when its libraries move on), so it is moved aside.
   if pacman -Q hyprland-plus >/dev/null 2>&1; then
     printf "${STY_BLUE}hyprland-plus $(pacman -Q hyprland-plus | cut -d' ' -f2) is already installed as a package, so it is not built again.${STY_RST}\n"
