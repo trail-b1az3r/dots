@@ -59,6 +59,35 @@ another.
 4. The reply appears in a notification and is spoken, with Piper if you
    set it up, otherwise espeak-ng. If one voice fails the next is tried.
 
+### Jarvis: offline, no AI model
+
+Want a small Siri-style helper that never leaves your computer? Halcyon also sets up
+[Jarvis](https://github.com/DwizSharma/jarvis-linux) (DwizSharma, MIT). It hears with Vosk on your computer (about
+40 MB of speech model, roughly 50 MB of memory while listening), answers with speech-dispatcher, and runs the desktop
+through the accessibility bus. No account, no key, no network once it is installed.
+
+```sh
+halcyon jarvis install      # packages (pacman), Jarvis at the commit Halcyon tested, the English model
+halcyon jarvis on           # starts with every Hyprland login; `off` stops it
+halcyon jarvis wake "hey computer"
+halcyon jarvis log          # what it heard and did
+```
+
+Say **"wake up Jarvis"** (or "hey Jarvis"), wait for "Yes?", then one command:
+
+| Say | It does |
+| --- | --- |
+| "open Firefox" | Opens an installed app by its name |
+| "click Search" | Presses a button or link by its label |
+| "type hello into Search" | Types into a text box |
+| "scroll down", "scroll up" | Scrolls the window |
+| "screenshot" | Saves one to `~/Pictures/Jarvis` |
+| "list controls" | Reads out what it can press |
+| "cancel" | Goes back to sleep |
+| "Jarvis exit" | Stops it until the next login |
+
+It only knows these commands: it does not chat or answer questions. That is the Halcyon assistant above.
+
 ### Local models: LM Studio, HyperNix and T1
 
 The assistant and the AI sidebar both use these. The sidebar lists every

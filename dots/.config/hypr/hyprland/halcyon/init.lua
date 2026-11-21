@@ -34,6 +34,11 @@ if is_file_exists(stateHome .. "/halcyon/oled.json") and is_file_exists(oledShad
     hl.config({ decoration = { screen_shader = oledShader } })
 end
 
+-- Jarvis (halcyon jarvis on) runs apps through the accessibility bus: Qt apps only join it when asked.
+if is_file_exists(stateHome .. "/halcyon/jarvis-on") then
+    hl.env("QT_LINUX_ACCESSIBILITY_ALWAYS_ON", "1")
+end
+
 -- Plus Tiles settings from Settings > Halcyon > Plus Tiles (halcyon-theme plus apply). They override the
 -- defaults in plus.lua; custom/ is loaded later and still wins.
 local plusFile = stateHome .. "/halcyon/plus.lua"
@@ -125,6 +130,8 @@ hl.on("hyprland.start", function()
         -- OLED care, when on: hyproled's shader (its file in /dev/shm is gone after a reboot) and the timer that moves
         -- the dimmed pixels.
         "$HOME/.config/hypr/hyprland/halcyon/halcyon_oled.py apply >/dev/null 2>&1; " ..
+        -- Jarvis, the offline voice assistant, when it is on (halcyon jarvis).
+        "$HOME/.config/hypr/hyprland/halcyon/halcyon_jarvis.py login >/dev/null 2>&1; " ..
         -- halcyon.UwU-agent: Wi-Fi passwords for NetworkManager, in place of plasma-nm's agent (halcyon uwu).
         "systemctl --user restart halcyon-uwu-agent.service; " ..
         -- The hourly update check. An install made before it existed, or a timer turned off by mistake, gets it.
