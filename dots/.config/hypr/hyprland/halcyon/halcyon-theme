@@ -66,6 +66,7 @@ DATA = Path(os.environ.get("XDG_DATA_HOME") or HOME / ".local/share")
 
 HALCYON_STATE = STATE / "halcyon"
 THEME_LUA = HALCYON_STATE / "theme.lua"
+OLED_STATE = HALCYON_STATE / "oled.json"   # halcyon oled on (halcyon_oled.py)
 ACTIVE_FILE = HALCYON_STATE / "active"
 APPLY_LOG = HALCYON_STATE / "apply.log"
 FLIP_FILE = HALCYON_STATE / "flip-pointer-y"
@@ -970,6 +971,9 @@ def write_window_style(theme_id, theme):
         write_atomic(SCREEN_SHADER, shader_text)
         # A triggered shader stays out of theme.lua; `collapse arm` switches it in when it is needed.
         shader_path = None if theme.get("effects", {}).get("shader_trigger") else SCREEN_SHADER
+        # OLED care is on (halcyon oled): its shader has the screen, so the theme's steps aside.
+        if OLED_STATE.exists():
+            shader_path = None
     else:
         remove(SCREEN_SHADER)
     native = hyprland_has_option("decoration:blur:variant")
@@ -2748,6 +2752,9 @@ def main(argv):
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and argv[0] == "terminal":
         tool = HERE / "halcyon_terminal.py"
+        os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
+    if argv and argv[0] == "oled":
+        tool = HERE / "halcyon_oled.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and argv[0] == "fonts":
         tool = HERE / "halcyon_fonts.py"

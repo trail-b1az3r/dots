@@ -28,6 +28,7 @@ On top of that, Halcyon adds:
 | **Fonts** | Font Manager, `halcyon fonts` to install fonts and zips of them, and RightFont, the most confusing font possible. [More.](fonts.md) |
 | **Themes** | Hand-made themes: HyperNeo, Star Rail, Shattered Glass, Fractured Glass, Liquid Glass (which runs MacShell), Neumorph, Red Sun and more. [More below.](themes.md) |
 | **Voice assistant** | Press `Super + Shift + Space` and speak. It answers aloud and can run the desktop. [More below.](voice-assistant.md) |
+| **OLED care** | `halcyon oled on` dims one of every four pixels with [hyproled](https://github.com/mklan/hyproled) and moves it every 15 minutes, so a bar or a dock never burns in. [More.](oled.md) |
 | **Server mode** | One button in **Settings > Halcyon > Server mode** (or `halcyon server on`): no suspend (idle, lid or suspend key), and the screen never locks or blanks by itself, until you stop it. It survives a restart. It is a systemd-inhibit lock, so `systemd-inhibit --list` shows it. |
 | **Keybinds** | Extra shortcuts, listed below. They only use key combinations upstream leaves free. |
 | **hyprland-plus** | The compositor is [hyprland-plus](https://github.com/trail-b1az3r/hyprland-plus): Hyprland 0.57.0 with mini windows, superposition windows, plustile windows and a drag fix. [More below.](hyprland-plus.md) |
@@ -40,6 +41,7 @@ On top of that, Halcyon adds:
 | [hyprland-plus](hyprland-plus.md) | The compositor fork, dot sets, saves, and hyprctl-lite |
 | [Themes](themes.md) | The five themes, effects, cursor, banners, and making your own |
 | [Voice assistant](voice-assistant.md) | Setup, the Claude plan, LM Studio, HyperNix and T1, what it can do |
+| [OLED care](oled.md) | hyproled: burn-in care for OLED screens |
 | [Browsers and USB](browsers.md) | Firefox and Chromium themes that follow Halcyon, and USB devices in the browser |
 | [Keybinds](keybinds.md) | The shortcuts Halcyon adds, and Hypr mode |
 | [Architecture](architecture.md) | How the config is laid out, and taking updates from upstream |

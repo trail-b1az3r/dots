@@ -27,6 +27,13 @@ if is_file_exists(themeFile) then
     dofile(themeFile)
 end
 
+-- OLED care (halcyon oled on): hyproled's shader, set again at every config reload (a reload drops a shader set at
+-- run time). It takes the place of a theme's screen shader: Hyprland runs one at a time.
+local oledShader = "/dev/shm/hyproled_shader.glsl"
+if is_file_exists(stateHome .. "/halcyon/oled.json") and is_file_exists(oledShader) then
+    hl.config({ decoration = { screen_shader = oledShader } })
+end
+
 -- Plus Tiles settings from Settings > Halcyon > Plus Tiles (halcyon-theme plus apply). They override the
 -- defaults in plus.lua; custom/ is loaded later and still wins.
 local plusFile = stateHome .. "/halcyon/plus.lua"
@@ -115,6 +122,9 @@ hl.on("hyprland.start", function()
         -- The desktop shell: the Halcyon shell, or MacShell under the Liquid Glass theme (halcyon/desktop-shell).
         "$HOME/.config/hypr/hyprland/halcyon/desktop-shell restart; " ..
         "systemctl --user restart halcyon-gpu-guard.service halcyon-resume.service; " ..
+        -- OLED care, when on: hyproled's shader (its file in /dev/shm is gone after a reboot) and the timer that moves
+        -- the dimmed pixels.
+        "$HOME/.config/hypr/hyprland/halcyon/halcyon_oled.py apply >/dev/null 2>&1; " ..
         -- halcyon.UwU-agent: Wi-Fi passwords for NetworkManager, in place of plasma-nm's agent (halcyon uwu).
         "systemctl --user restart halcyon-uwu-agent.service; " ..
         -- The hourly update check. An install made before it existed, or a timer turned off by mistake, gets it.

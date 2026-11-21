@@ -58,6 +58,12 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("text --window|--screen|--clipboard", "the focused window, the whole monitor, or the image in the clipboard"),
         ("text FILE [--print] [--join] [--lang eng+deu]", "read an image or a PDF (scanned or not); print it, rejoin lines, pick languages"),
     ]),
+    ("OLED care", [
+        ("oled", "whether OLED burn-in care (hyproled) is on"),
+        ("oled on [--pixels N] [--area x:y:w:h] [--monitor ID]", "dim 1-3 of every 4 pixels, moving every 15 minutes"),
+        ("oled off", "back to normal (a theme's screen shader comes back)"),
+        ("oled shift", "move the dimmed pixels now (the timer does it every 15 minutes)"),
+    ]),
     ("Fonts", [
         ("fonts [--json]", "the fonts installed with halcyon fonts"),
         ("fonts install FILE...", "font files, or a zip of a family, for your user (~/.local/share/fonts/halcyon-imported)"),
