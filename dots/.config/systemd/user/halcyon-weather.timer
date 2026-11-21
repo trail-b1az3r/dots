@@ -1,0 +1,12 @@
+[Unit]
+Description=Halcyon: refresh the weather every half hour
+
+[Timer]
+# Soon after login (Hyprland enables this: halcyon_weather.py login), then every 30 minutes.
+OnStartupSec=20s
+OnUnitActiveSec=30min
+RandomizedDelaySec=60s
+Persistent=false
+
+[Install]
+WantedBy=timers.target

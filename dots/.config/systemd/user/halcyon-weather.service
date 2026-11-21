@@ -1,0 +1,12 @@
+[Unit]
+Description=Halcyon: the weather where you are (found from nearby Wi-Fi), for Summit's bar
+Documentation=file://%h/.config/hypr/hyprland/halcyon/halcyon_weather.py
+After=network-online.target
+
+[Service]
+Type=oneshot
+# Its timer runs while the weather is wanted: on, or auto (the default) while Summit is the desktop shell
+# (halcyon weather on|off|auto; the settings are in ~/.config/halcyon/weather.json).
+ExecStart=/usr/bin/env python3 %h/.config/hypr/hyprland/halcyon/halcyon_weather.py update
+TimeoutStartSec=90
+Nice=10

@@ -2,7 +2,7 @@
 Description=Halcyon desktop shell (Quickshell)
 Documentation=file://%h/.config/quickshell/ii/shell.qml
 # One desktop shell at a time: the Liquid Glass theme runs MacShell instead (halcyon-macshell.service).
-Conflicts=halcyon-macshell.service
+Conflicts=halcyon-macshell.service halcyon-summit.service
 
 [Service]
 # Only inside a running Hyprland. systemd's user manager outlives a session, so without this a restart after

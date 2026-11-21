@@ -97,6 +97,8 @@ metapkgs+=(./sdata/dist-arch/illogical-impulse-quickshell-git)
 metapkgs+=(./sdata/dist-arch/illogical-impulse-bibata-modern-classic-bin)
 # The Liquid Glass theme runs MacShell (halcyon/desktop-shell); all of these are in the official repositories.
 metapkgs+=(./sdata/dist-arch/illogical-impulse-macshell)
+# The HyperNeo v2 theme runs Summit: Rofi for its menus, and its forecast window (built here with cargo).
+metapkgs+=(./sdata/dist-arch/illogical-impulse-summit)
 
 # A hyprland-plus installed outside pacman (hyprctl-lite, or this installer's build in /usr/local) is the Hyprland
 # here. Register it with pacman first, so illogical-impulse-hyprland does not pull in the stock hyprland package.

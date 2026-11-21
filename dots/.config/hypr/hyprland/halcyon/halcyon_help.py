@@ -107,6 +107,11 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("wifi fix [--dry-run]", "the lasting fixes, as root: install and enable NetworkManager, keep the card managed, "
                                  "NetworkManager on iwd when you use iwd, Surface card settings"),
         ("wifi report", "everything about the Wi-Fi in ~/halcyon-wifi-report.txt, to send when it still fails"),
+        ("weather [--json]", "the forecast Summit's bar shows, and where it is for (found from nearby Wi-Fi, else your IP)"),
+        ("weather update", "find where you are and fetch the forecast now (a timer does it every 30 minutes)"),
+        ("weather location wifi|ip|PLACE", "where the weather is for: nearby Wi-Fi (default), your IP only, or a town or \"LAT, LON\""),
+        ("weather units metric|imperial", "°C and km/h, or °F and mph"),
+        ("weather on|off|auto", "fetch it always, never, or while Summit is the desktop shell (auto, the default)"),
     ]),
     ("On the screen", [
         ("osd [avizo|shell|test] [--json]", "which volume and brightness popup is on: Avizo's, or the shell's own"),

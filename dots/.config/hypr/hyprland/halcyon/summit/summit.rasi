@@ -1,0 +1,168 @@
+/*
+ * Summit's Rofi menus (halcyon/summit/rofi-menu): one quiet card in the middle of the screen, a search pill on top,
+ * and rows that light up in the theme's accent. Your own ~/.config/rofi is left alone: this file is passed with
+ * -config, and the active theme's colours come after it (halcyon-theme writes them to
+ * ~/.local/state/halcyon/summit-colors.rasi). To give plain `rofi` the same look, put
+ *     @import "~/.config/hypr/hyprland/halcyon/summit/summit.rasi"
+ * in ~/.config/rofi/config.rasi.
+ */
+
+configuration {
+    modi: "drun,run,window";
+    show-icons: true;
+    drun-display-format: "{name}";
+    window-format: "{c}   {t}";
+    display-drun: "apps";
+    display-run: "terminal";
+    display-window: "select_window";
+    display-combi: "search";
+    hover-select: true;
+    me-select-entry: "MouseSecondary";
+    me-accept-entry: "MousePrimary";
+    scroll-method: 1;
+    matching: "fuzzy";
+    sort: true;
+    sorting-method: "fzf";
+    case-sensitive: false;
+    cycle: true;
+    drun {
+        parse-user: true;
+        parse-system: true;
+    }
+}
+
+* {
+    /* HyperNeo v2's colours, until a theme writes its own. */
+    bg: #0B1322;
+    surface: #101A2C;
+    surface-high: #18243A;
+    fg: #E8EDF6;
+    muted: #93A0B6;
+    accent: #9CC0FF;
+    accent-fg: #0B1A33;
+    warm: #E8C79A;
+    bg-alpha: #101A2CD9;
+
+    font: "Inter 11";
+    background-color: transparent;
+    text-color: @fg;
+    margin: 0;
+    padding: 0;
+    spacing: 0;
+}
+
+window {
+    location: center;
+    anchor: center;
+    width: 560px;
+    padding: 14px;
+    border: 1px solid;
+    border-radius: 20px;
+    border-color: rgba(255, 255, 255, 8%);
+    background-color: @bg-alpha;
+}
+
+mainbox {
+    spacing: 12px;
+    children: [ inputbar, message, listview, mode-switcher ];
+}
+
+inputbar {
+    padding: 10px 14px;
+    spacing: 10px;
+    border-radius: 14px;
+    background-color: @surface-high;
+    children: [ prompt, entry ];
+}
+
+/* The prompt is a Material Symbols name (rofi-menu sets it), drawn as its icon. */
+prompt {
+    font: "Material Symbols Rounded 15";
+    text-color: @accent;
+    vertical-align: 0.5;
+}
+
+entry {
+    placeholder: "Search";
+    placeholder-color: @muted;
+    cursor: text;
+    vertical-align: 0.5;
+}
+
+message {
+    padding: 10px 14px;
+    border-radius: 14px;
+    background-color: @surface-high;
+}
+
+textbox {
+    text-color: @muted;
+    markup: true;
+}
+
+listview {
+    lines: 8;
+    columns: 1;
+    spacing: 4px;
+    fixed-height: false;
+    dynamic: true;
+    scrollbar: false;
+}
+
+element {
+    padding: 8px 12px;
+    spacing: 12px;
+    border-radius: 12px;
+    children: [ element-icon, element-text ];
+}
+
+element normal.normal,
+element alternate.normal,
+element normal.active,
+element alternate.active {
+    background-color: transparent;
+    text-color: @fg;
+}
+
+element normal.urgent,
+element alternate.urgent {
+    background-color: transparent;
+    text-color: @warm;
+}
+
+element selected.normal,
+element selected.active,
+element selected.urgent {
+    background-color: @accent;
+    text-color: @accent-fg;
+}
+
+element-icon {
+    size: 24px;
+    vertical-align: 0.5;
+    background-color: transparent;
+    text-color: inherit;
+}
+
+element-text {
+    vertical-align: 0.5;
+    background-color: transparent;
+    text-color: inherit;
+    highlight: bold;
+}
+
+mode-switcher {
+    spacing: 6px;
+}
+
+button {
+    padding: 7px;
+    border-radius: 12px;
+    background-color: @surface-high;
+    text-color: @muted;
+}
+
+button selected {
+    background-color: @accent;
+    text-color: @accent-fg;
+}

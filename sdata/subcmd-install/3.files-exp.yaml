@@ -24,6 +24,10 @@ patterns:
   - from: "dots/.config/quickshell/ii"
     to: "$XDG_CONFIG_HOME/quickshell/ii"
     mode: "sync"
+  # Summit, the HyperNeo v2 theme's shell (halcyon/desktop-shell)
+  - from: "dots/.config/quickshell/Summit"
+    to: "$XDG_CONFIG_HOME/quickshell/Summit"
+    mode: "sync"
   # Conditionally install these files
   - from: "dots/.config/fish"
     to: "$XDG_CONFIG_HOME/fish"
