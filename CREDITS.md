@@ -34,6 +34,10 @@ The dots are licensed under the GPL-3.0, like upstream. See [LICENSE](LICENSE).
 - **Material Symbols**, Google's icon font, used in the shell. Its licence is in Google's distribution.
 - **RightFont** by Right of the Bell ([video](https://youtu.be/NTY_yunv2To), [rightofthebell.com/fonts](https://www.rightofthebell.com/fonts)),
   made from Inter and Open Sans, SIL Open Font License: in `dots/.local/share/fonts/halcyon-rightfont` with its licence.
+- **[jarvis-linux](https://github.com/DwizSharma/jarvis-linux)** by DwizSharma, MIT: the offline voice assistant
+  (`halcyon jarvis`). Not bundled: `halcyon jarvis install` downloads it at a pinned commit.
+- **[hyproled](https://github.com/mklan/hyproled)** by mklan, BSD-3-Clause: OLED burn-in care (`halcyon oled`). Bundled
+  unchanged in `dots/.config/hypr/hyprland/halcyon/hyproled` with its licence.
 - **[MacShell](https://github.com/0-ss/MacShell)** by Rickky (0-ss), MIT: the Liquid Glass theme's desktop shell
   (menu bar, Dock, Spotlight, Control Center and the Liquid Glass shader) and MacLock, its lock screen. Bundled
   unchanged in `dots/.config/quickshell/MacShell`, `dots/.config/quickshell/MacLock` and `dots/.config/hypr-macshell`,

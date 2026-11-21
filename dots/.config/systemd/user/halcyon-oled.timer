@@ -1,0 +1,10 @@
+[Unit]
+Description=Halcyon: move OLED care's dimmed pixels every 15 minutes
+
+[Timer]
+OnActiveSec=15min
+OnUnitActiveSec=15min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
