@@ -29,10 +29,17 @@ Scope {
     property string current: ""
     property string effects: ""
     property int selected: 0
+    // The first list after opening selects the active theme; later ones (previews made in the background) keep what
+    // you selected. Previews are tried once per opening: one that cannot be made (a video without ffmpeg) used to
+    // list and make previews again and again, putting the selection back on the active theme each time.
+    property bool fresh: true
+    property bool previewsTried: false
     readonly property string tool: `${FileUtils.trimFileProtocol(Directories.config)}/hypr/hyprland/halcyon/halcyon-theme`
     property var focusedScreen: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? Quickshell.screens[0]
 
     function show() {
+        root.fresh = true;
+        root.previewsTried = false;
         listProc.running = true;
         root.open = true;
     }
@@ -57,14 +64,18 @@ Scope {
             onStreamFinished: {
                 try {
                     const data = JSON.parse(this.text);
+                    const kept = root.fresh ? "" : (root.themes[root.selected]?.id ?? "");
                     root.themes = data.themes ?? [];
                     root.current = data.current ?? "";
                     root.effects = data.effects ?? "";
-                    const at = root.themes.findIndex(t => t.active);
+                    const at = kept !== "" ? root.themes.findIndex(t => t.id === kept) : root.themes.findIndex(t => t.active);
                     root.selected = Math.max(0, at);
-                    // Make the missing previews, then list again to show them.
-                    if (root.themes.some(t => t.has_wallpaper && t.preview === "") && !previewProc.running)
+                    root.fresh = false;
+                    // Make the missing previews (once), then list again to show them.
+                    if (!root.previewsTried && root.themes.some(t => t.has_wallpaper && t.preview === "") && !previewProc.running) {
+                        root.previewsTried = true;
                         previewProc.running = true;
+                    }
                 } catch (error) {
                     root.themes = [];
                 }
@@ -485,7 +496,9 @@ Scope {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onEntered: card.hovered()
+            // Real pointer movement only: a card that slides in under a still pointer (a new page) does not take the
+            // selection from the keyboard.
+            onPositionChanged: card.hovered()
             onClicked: card.chosen()
         }
     }

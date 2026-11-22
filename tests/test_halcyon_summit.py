@@ -337,3 +337,28 @@ class FilesTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WallAndPickerTests(unittest.TestCase):
+    def test_tiled_windows_are_held_at_the_wall(self):
+        plus = (HALCYON / "plus.lua").read_text()
+        caps = (HALCYON / "compositor.lua").read_text()
+        self.assertIn('C.holdTiled = hasOption("plus:hold_tiled")', caps)
+        self.assertIn('C.snapGlide = hasOption("plus:snap_glide")', caps)
+        self.assertIn("if caps.holdTiled then\n    hl.config({ plus = { hold_tiled = true } })", plus)
+        self.assertIn("if caps.snapGlide then\n    hl.config({ plus = { snap_glide = 180 } })", plus)
+
+    def test_the_halcyon_theme_picker_keeps_your_selection(self):
+        picker = (ROOT / "dots/.config/quickshell/ii/modules/ii/themePicker/ThemePicker.qml").read_text()
+        # Only the first list after opening selects the active theme; previews are tried once per opening.
+        self.assertIn('const kept = root.fresh ? "" : (root.themes[root.selected]?.id ?? "");', picker)
+        self.assertIn("if (!root.previewsTried && root.themes.some(", picker)
+        self.assertIn("onPositionChanged: card.hovered()", picker)
+        self.assertNotIn("onEntered: card.hovered()", picker)
+
+    def test_summit_moves(self):
+        self.assertIn("Easing.OutBack", (SUMMIT / "common/Pill.qml").read_text())          # the bar drops in
+        self.assertIn("SpringAnimation", (SUMMIT / "bar/Workspaces.qml").read_text())     # dots stretch
+        dock = (SUMMIT / "dock/Dock.qml").read_text()
+        self.assertIn("bounce.restart()", dock)                                            # a launch bounces
+        self.assertIn("onPageChanged", (SUMMIT / "popups/ThemePicker.qml").read_text())   # pages slide

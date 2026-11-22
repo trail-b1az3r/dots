@@ -42,6 +42,10 @@ Singleton {
     readonly property int gap: 10
     readonly property int radius: 14
     readonly property int animMs: 180
+    // Motion: a soft spring for things that move, a quick ease for colours and fades.
+    readonly property real springStiffness: 3.2
+    readonly property real springDamping: 0.26
+    readonly property int enterMs: 420
 
     readonly property string wallpaper: data.wallpaper ?? ""
 

@@ -43,6 +43,17 @@ if caps.monitorWall then
     })
 end
 
+-- Tiled windows (Halcyon's default) are held at the wall too, and at the screen's edges by resistance (hyprland-plus
+-- 0.57.2.p3). Without it a tiled drag only showed the bulge and was never held, so the wall could not be felt.
+if caps.holdTiled then
+    hl.config({ plus = { hold_tiled = true } })
+end
+
+-- When the wall gives or resistance lets go, the window glides to the cursor (its move animation) instead of jumping.
+if caps.snapGlide then
+    hl.config({ plus = { snap_glide = 180 } })
+end
+
 -- Window resistance: a dragged floating window stops at the screen's edges and at other windows' edges until pushed
 -- this many pixels past them. Plain Hyprland has no resistance, so it gets the nearest thing it does have: snapping
 -- to those edges when the window comes within a few pixels of them.

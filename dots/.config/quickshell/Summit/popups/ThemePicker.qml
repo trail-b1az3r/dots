@@ -102,6 +102,13 @@ Scope {
                 readonly property int perPage: cols * 2
                 readonly property int pages: Math.max(1, Math.ceil(root.shown.length / perPage))
                 readonly property int page: Math.min(pages - 1, Math.floor(root.sel / perPage))
+                // A new page slides in from the side it comes from.
+                property int shownPage: 0
+                onPageChanged: {
+                    slide.from = page > shownPage ? 60 : -60;
+                    shownPage = page;
+                    pageIn.restart();
+                }
                 readonly property var selected: root.shown[Math.min(root.sel, root.shown.length - 1)] ?? null
                 function move(by) {
                     if (root.shown.length > 0)
@@ -172,8 +179,15 @@ Scope {
                 }
 
                 // The page of cards.
+                ParallelAnimation {
+                    id: pageIn
+                    NumberAnimation { id: slide; target: gridShift; property: "x"; to: 0; duration: Theme.enterMs; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: grid; property: "opacity"; from: 0.2; to: 1; duration: Theme.animMs + 80; easing.type: Easing.OutCubic }
+                }
+
                 Item {
                     id: grid
+                    transform: Translate { id: gridShift }
                     x: 18; y: 66
                     width: parent.width - 36
                     height: parent.height - 66 - 78
@@ -192,6 +206,9 @@ Scope {
                             y: Math.floor(index / panel.cols) * grid.cellH
                             width: grid.cellW
                             height: grid.cellH
+                            // The selected card lifts toward you; a press pushes it back.
+                            scale: cardArea.pressed ? 0.97 : card.sel ? 1.035 : 1
+                            Behavior on scale { SpringAnimation { spring: Theme.springStiffness * 1.3; damping: Theme.springDamping; epsilon: 0.001 } }
 
                             Item {
                                 id: pic
@@ -283,6 +300,7 @@ Scope {
                                 }
                             }
                             MouseArea {
+                                id: cardArea
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
