@@ -3,6 +3,8 @@
 #   ii        the Halcyon shell (halcyon-quickshell.service), for every theme but...
 #   MacShell  ...the Liquid Glass theme's: a macOS Tahoe style menu bar, Dock and Liquid Glass (halcyon-macshell.service,
 #             github.com/0-ss/MacShell, MIT), with MacLock as its lock screen.
+#   Summit    ...the HyperNeo v2 theme's: a clean top bar and dock (halcyon-summit.service, ~/.config/quickshell/Summit),
+#             with Rofi menus for apps, windows, the clipboard and power (halcyon/summit/rofi-menu).
 # halcyon-theme writes the active theme's choice to ~/.local/state/halcyon/desktop-shell (absent: ii).
 #
 #   desktop-shell            print the shell that should run
@@ -10,8 +12,8 @@
 #   desktop-shell start      start it, unless it is already running (the other one stops: the units conflict)
 #   desktop-shell restart    restart it (Hyprland does this at start-up)
 #   desktop-shell ipc ...    qs ipc call ... on whichever is running
-#   desktop-shell power-menu the power menu: the Halcyon shell's, or (under MacShell, which has none) the
-#                            distribution's (<ID>-power-menu, from /etc/os-release), else wlogout
+#   desktop-shell power-menu the power menu: the Halcyon shell's, Summit's (Rofi), or (under MacShell, which has
+#                            none) the distribution's (<ID>-power-menu, from /etc/os-release), else wlogout
 set -u
 
 state="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon/desktop-shell"
@@ -19,12 +21,13 @@ shell=ii
 if [ -r "$state" ]; then
     read -r shell < "$state" || true
 fi
-# MacShell is Hyprland's only: under niri (or anything else) it is always the Halcyon shell.
-if [ "$shell" = MacShell ] && [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && ! hyprctl version >/dev/null 2>&1; then
+# MacShell and Summit are Hyprland's only: under niri (or anything else) it is always the Halcyon shell.
+if { [ "$shell" = MacShell ] || [ "$shell" = Summit ]; } && [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && ! hyprctl version >/dev/null 2>&1; then
     shell=ii
 fi
 case "$shell" in
     MacShell) unit=halcyon-macshell.service ;;
+    Summit) unit=halcyon-summit.service ;;
     *) shell=ii; unit=halcyon-quickshell.service ;;
 esac
 
@@ -38,6 +41,7 @@ case "${1:-}" in
     ipc) shift; exec qs -c "$shell" ipc call "$@" ;;
     power-menu)
         [ "$shell" = ii ] && exec qs -c ii ipc call session toggle
+        [ "$shell" = Summit ] && exec "$(dirname -- "$0")/summit/rofi-menu" power
         id="$(sed -n 's/^ID=//p' "${OS_RELEASE:-/etc/os-release}" 2>/dev/null | tr -d "\"'" | head -n1)"
         for menu in ${id:+"$id-power-menu"} wlogout; do
             command -v "$menu" >/dev/null 2>&1 || continue

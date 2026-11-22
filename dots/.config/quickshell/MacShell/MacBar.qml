@@ -4833,6 +4833,64 @@ Scope {
         function close(): void { root.wpOpen = false; }
     }
 
+    // ═════════════ THEMES (SUPER + SHIFT + T): Halcyon's themes, in pages ═════════════
+    //   hl.bind("SUPER + SHIFT + T", hl.dsp.exec_cmd("qs -c MacShell ipc call themes toggle"))   (halcyon-theme binds it)
+    // The list comes from `halcyon-theme list --json`; choosing one runs `halcyon-theme apply ID`, detached, since a
+    // theme with another desktop shell stops this one.
+    readonly property string themeTool: Quickshell.env("HOME") + "/.config/hypr/hyprland/halcyon/halcyon-theme"
+    property bool thOpen: false
+    property var thList: []                   // { id, name, description, active, colors{...}, preview, wallpaper, has_wallpaper }
+    property string thQuery: ""
+    property string thStatus: ""
+    property int thSel: 0                     // index in thShown
+    readonly property var thShown: {
+        var q = root.thQuery.trim().toLowerCase(), f = root.thList;
+        if (q === "") return f;
+        var out = [];
+        for (var i = 0; i < f.length; i++)
+            if (f[i].name.toLowerCase().indexOf(q) >= 0 || f[i].description.toLowerCase().indexOf(q) >= 0) out.push(f[i]);
+        return out;
+    }
+    function thToggle() {
+        root.thOpen = !root.thOpen;
+        if (root.thOpen) root.thRefresh();
+    }
+    function thRefresh() {
+        root.thStatus = "";
+        thScan.command = [root.themeTool, "list", "--json"];
+        thScan.running = true;
+    }
+    function thParse(text) {
+        try {
+            var d = JSON.parse(text);
+            root.thList = d.themes || [];
+            var cur = 0;
+            for (var i = 0; i < root.thList.length; i++) if (root.thList[i].active) cur = i;
+            root.thSel = cur;
+        } catch (e) {
+            root.thList = [];
+            root.thStatus = I18n.tr("Couldn't read the themes (halcyon-theme list --json)");
+        }
+    }
+    function thApply(id) {
+        if (!id) return;
+        root.thOpen = false;
+        Quickshell.execDetached([root.themeTool, "apply", id]);
+    }
+    // A theme's picture: its preview, else its wallpaper when that is a picture (an animated one shows its colours).
+    function thPicture(t) {
+        if (t.preview) return root.fileUrl(t.preview);
+        if (t.has_wallpaper && /\.(jpe?g|png|webp|bmp)$/i.test(t.wallpaper)) return root.fileUrl(t.wallpaper);
+        return "";
+    }
+    Process { id: thScan; stdout: StdioCollector { onStreamFinished: root.thParse(text) } }
+    IpcHandler {
+        target: "themes"
+        function toggle(): void { root.thToggle(); }
+        function open(): void { if (!root.thOpen) root.thToggle(); }
+        function close(): void { root.thOpen = false; }
+    }
+
     // ═════════════ WORKSPACES (centre of the bar) ═════════════
     function hlWorkspace(sel) {      // Hyprland 0.55+ (Lua) workspace switch
         Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.focus({ workspace = \"" + sel + "\" })"]);
@@ -5537,7 +5595,7 @@ Scope {
                                     id: sv
                                     anchors.fill: parent
                                     placeholder: root.darkMode ? "#1e1e20" : "#f2f2f7"
-                                    glassOn: ui.anyVisible || root.barGlass || levelOsd.visible || spotWin.openish || swWin.visible || wpWin.visible
+                                    glassOn: ui.anyVisible || root.barGlass || levelOsd.visible || spotWin.openish || swWin.visible || wpWin.visible || thWin.visible
                                     want: gw.tl
                                     // While a screen recording / screen share runs the window captures sit out (root.captureQuiet). `hush` follows it
                                     // with a random 0.6 s spread, so dozens of captures never start or stop in the same instant (that burst, with a
@@ -5554,7 +5612,7 @@ Scope {
                                     // hidden right now (Spotlight, switcher, ...) are only kept warm with slow single captures.
                                     // While recording only the windows behind visible glass stay live (so the glass is real-time exactly where you see it,
                                     // e.g. a video behind the Control Center), every other window sits out.
-                                    wantLive: !gw.gone && !root.captureHeld && bd.hostShown && (!sv.hush || gw.onGlass) && (root.glassRealtime || ui.anyVisible || levelOsd.visible || spotWin.glassGo || swWin.visible || wpWin.visible)
+                                    wantLive: !gw.gone && !root.captureHeld && bd.hostShown && (!sv.hush || gw.onGlass) && (root.glassRealtime || ui.anyVisible || levelOsd.visible || spotWin.glassGo || swWin.visible || wpWin.visible || thWin.visible)
                                     // a panel / menu just opened: every stream behind it starts afresh (a stream that died while the windows were
                                     // re-tiled would otherwise leave the wallpaper behind the glass), and while it stays open the windows behind it
                                     // are re-armed now and then, so the glass keeps following them (opening an app next to them, a resize, ...)
@@ -5581,12 +5639,12 @@ Scope {
                                     // while recording only a backdrop that is actually on screen refreshes, slowly
                                     // Where glass is on screen (a popover, the OSD, Spotlight, the liquid bar strip) the picture refreshes at 4 Hz as
                                     // before; windows that no glass is looking at stay warm at 0.7 Hz (their stream starts the moment glass opens).
-                                    readonly property bool busy: ui.anyVisible || levelOsd.visible || spotWin.openish || swWin.visible || wpWin.visible
+                                    readonly property bool busy: ui.anyVisible || levelOsd.visible || spotWin.openish || swWin.visible || wpWin.visible || thWin.visible
                                                                  || (root.barGlass && gw.y < root.barH + 40)
                                     Timer {
                                         interval: sv.hush ? 1500 : (bd.hostShown ? (sv.busy ? 250 : 1500) : 1000); repeat: true
                                         running: !root.captureHeld && !sv.wantLive && sv.armed
-                                                 && (!sv.hush || (bd.hostShown && (ui.anyVisible || levelOsd.visible || spotWin.openish || swWin.visible || wpWin.visible)))
+                                                 && (!sv.hush || (bd.hostShown && (ui.anyVisible || levelOsd.visible || spotWin.openish || swWin.visible || wpWin.visible || thWin.visible)))
                                         onTriggered: sv.snap()
                                     }
                                 }
@@ -9448,6 +9506,355 @@ Scope {
                               : I18n.tr("No images in ") + root.wpDirEff + I18n.tr("\nDrop some in, or pick another folder with Choose\u2026")
                         color: pal.fg2
                         font.family: root.fontForWeight(Font.Normal, pal.fam); font.pixelSize: 13
+                    }
+                }
+            }
+        }
+
+        // ═════════ Theme picker (SUPER + SHIFT + T) lives in its OWN layer (namespace "macthemes") ═════════
+        PanelWindow {
+            id: thWin
+            screen: perScreen.modelData
+            visible: (root.thOpen && ui.toastScreen) || thPanel.opacity > 0
+            onVisibleChanged: root.popCount += (visible ? 1 : -1)
+            anchors { left: true; right: true; top: true; bottom: true }
+            color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
+
+            WlrLayershell.namespace: "macthemes"
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.keyboardFocus: (root.thOpen && ui.toastScreen) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+
+            Item {
+                id: thRoot
+                anchors.fill: parent
+                focus: true
+
+                Loader {
+                    id: thBackdrop
+                    active: root.liquidActive
+                    sourceComponent: backdropComp
+                    onLoaded: { item.hostShown = Qt.binding(function () { return thWin.visible; });
+                                item.region = Qt.binding(function () { return Qt.rect(thPanel.x - 96, thPanel.y - 96, thPanel.width + 192, thPanel.height + 192); }); }
+                }
+                MouseArea { anchors.fill: parent; onPressed: root.thOpen = false }      // click outside closes
+
+                Item {
+                    id: thPanel
+                    z: 10
+                    width: Math.min(940, thRoot.width - 120)
+                    height: Math.min(600, thRoot.height - 160)
+                    x: Math.round((thRoot.width - width) / 2)
+                    y: Math.round((thRoot.height - height) / 2)
+                    opacity: (root.thOpen && ui.toastScreen) ? 1 : 0
+                    visible: opacity > 0
+                    scale: (root.thOpen && ui.toastScreen) ? 1 : 0.96
+                    transformOrigin: Item.Center
+                    Behavior on opacity { NumberAnimation { duration: 120 } }
+                    Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+
+                    // pages: 3 x 2 cards (2 x 2 on a narrow screen)
+                    readonly property int cols: width >= 720 ? 3 : 2
+                    readonly property int rows: 2
+                    readonly property int perPage: cols * rows
+                    readonly property int pages: Math.max(1, Math.ceil(root.thShown.length / perPage))
+                    readonly property int page: Math.min(pages - 1, Math.floor(Math.max(0, root.thSel) / perPage))
+                    readonly property var pageItems: root.thShown.slice(page * perPage, (page + 1) * perPage)
+                    readonly property var selected: root.thShown.length > 0 ? root.thShown[Math.min(root.thSel, root.thShown.length - 1)] : null
+                    function move(by) {
+                        var n = root.thShown.length;
+                        if (n === 0) return;
+                        root.thSel = Math.max(0, Math.min(n - 1, root.thSel + by));
+                    }
+                    function toPage(p) {
+                        if (root.thShown.length === 0) return;
+                        p = Math.max(0, Math.min(pages - 1, p));
+                        root.thSel = Math.min(root.thShown.length - 1, p * perPage + (root.thSel % perPage));
+                    }
+
+                    // the keyboard: arrows move, PgUp/PgDn (or [ ]) turn the page, Enter applies, typing searches
+                    Item {
+                        id: thKeys
+                        focus: true
+                        Keys.onPressed: event => {
+                            var k = event.key;
+                            if (k === Qt.Key_Escape) { if (root.thQuery !== "") root.thQuery = ""; else root.thOpen = false; }
+                            else if (k === Qt.Key_Left) thPanel.move(-1);
+                            else if (k === Qt.Key_Right) thPanel.move(1);
+                            else if (k === Qt.Key_Up) thPanel.move(-thPanel.cols);
+                            else if (k === Qt.Key_Down) thPanel.move(thPanel.cols);
+                            else if (k === Qt.Key_PageUp || k === Qt.Key_BracketLeft) thPanel.toPage(thPanel.page - 1);
+                            else if (k === Qt.Key_PageDown || k === Qt.Key_BracketRight) thPanel.toPage(thPanel.page + 1);
+                            else if ((k === Qt.Key_Return || k === Qt.Key_Enter) && thPanel.selected) root.thApply(thPanel.selected.id);
+                            else if (event.text.length === 1 && event.text > " " && event.text !== "\u007f"
+                                     && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
+                                thSearch.forceActiveFocus();
+                                root.thQuery += event.text;
+                                thSearch.cursorPosition = thSearch.length;
+                            } else return;
+                            event.accepted = true;
+                        }
+                        Connections {
+                            target: root
+                            function onThOpenChanged() { if (root.thOpen) { root.thQuery = ""; thKeys.forceActiveFocus(); } }
+                            function onThQueryChanged() {
+                                if (thSearch.text !== root.thQuery) thSearch.text = root.thQuery;
+                                root.thSel = 0;
+                            }
+                        }
+                    }
+
+                    LGlass {
+                        anchors.fill: parent
+                        backdrop: thBackdrop.item
+                        shaderUrl: root.glassShaderUrl
+                        liquid: root.liquidActive
+                        dark: root.effDark
+                        bx: thPanel.x; by: thPanel.y
+                        cornerR: 28
+                        tint: root.glassOpacity
+                        thickness: 22
+                        strength: 0.75 * root.glassLiquid
+                        rim: root.glassRim
+                        grain: root.glassGrain
+                        blur: root.wpBlur
+                        debug: root.glassDebug
+                        onShaderError: root.glassState = "failed"
+                        rimTint: 1
+                        ringW: 1.4
+                    }
+                    MenuBorder {
+                        z: 2
+                        anchors.fill: parent
+                        cornerR: 28
+                        dark: root.effDark
+                        tint: root.menuBorderColor
+                    }
+
+                    // ── header: title and search ──
+                    Text {
+                        id: thTitle
+                        x: 24; y: 18; height: 30
+                        verticalAlignment: Text.AlignVCenter
+                        text: I18n.tr("Themes")
+                        color: pal.fg
+                        font.family: root.fontForWeight(Font.DemiBold, pal.fam); font.pixelSize: 15; font.weight: Font.DemiBold
+                    }
+                    Rectangle {
+                        id: thSearchBox
+                        anchors.right: parent.right; anchors.rightMargin: 24
+                        y: 18
+                        width: Math.min(240, parent.width * 0.36); height: 30; radius: 10
+                        color: pal.tile
+                        border.width: 1
+                        border.color: thSearch.activeFocus ? pal.accent : pal.tileBorder
+                        Glyph { x: 10; anchors.verticalCenter: parent.verticalCenter; width: 13; height: 13; kind: "search"; color: pal.fg2 }
+                        TextInput {
+                            id: thSearch
+                            anchors.fill: parent
+                            anchors.leftMargin: 31; anchors.rightMargin: 10
+                            verticalAlignment: TextInput.AlignVCenter
+                            clip: true
+                            selectByMouse: true
+                            color: pal.fg
+                            selectionColor: pal.accent
+                            font.family: root.fontForWeight(Font.Normal, pal.fam); font.pixelSize: 12
+                            onTextChanged: if (root.thQuery !== text) root.thQuery = text
+                            Keys.onDownPressed: thKeys.forceActiveFocus()
+                            Keys.onEscapePressed: { root.thQuery = ""; thKeys.forceActiveFocus(); }
+                            Keys.onReturnPressed: if (thPanel.selected) root.thApply(thPanel.selected.id)
+                            Text {
+                                visible: thSearch.text === "" && !thSearch.activeFocus
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: I18n.tr("Search")
+                                color: pal.fg3
+                                font.family: root.fontForWeight(Font.Normal, pal.fam); font.pixelSize: 12
+                            }
+                        }
+                    }
+
+                    // ── the page of cards ──
+                    Item {
+                        id: thGridArea
+                        x: 18; y: 62
+                        width: parent.width - 36
+                        height: parent.height - 62 - 74
+                        readonly property real cellW: width / thPanel.cols
+                        readonly property real cellH: height / thPanel.rows
+                        WheelHandler {
+                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                            onWheel: event => {
+                                var d = event.angleDelta.y !== 0 ? event.angleDelta.y : -event.angleDelta.x;
+                                if (Math.abs(d) >= 60) thPanel.toPage(thPanel.page + (d < 0 ? 1 : -1));
+                            }
+                        }
+                        Repeater {
+                            model: thPanel.pageItems
+                            delegate: Item {
+                                id: tc
+                                required property int index
+                                required property var modelData
+                                readonly property int absIndex: thPanel.page * thPanel.perPage + index
+                                readonly property bool sel: root.thSel === absIndex
+                                readonly property bool cur: modelData.active === true
+                                x: (index % thPanel.cols) * thGridArea.cellW
+                                y: Math.floor(index / thPanel.cols) * thGridArea.cellH
+                                width: thGridArea.cellW; height: thGridArea.cellH
+
+                                Item {
+                                    id: tcBox
+                                    anchors.fill: parent
+                                    anchors.margins: 6
+                                    // the picture, rounded
+                                    Item {
+                                        id: tcPic
+                                        width: parent.width
+                                        height: parent.height - 34
+                                        Item {
+                                            id: tcMask
+                                            anchors.fill: parent
+                                            visible: false
+                                            layer.enabled: true
+                                            Rectangle { anchors.fill: parent; radius: 14; color: "black" }
+                                        }
+                                        Item {
+                                            anchors.fill: parent
+                                            layer.enabled: true
+                                            layer.smooth: true
+                                            layer.effect: MultiEffect {
+                                                maskEnabled: true
+                                                maskSource: tcMask
+                                                maskThresholdMin: 0.5
+                                                maskSpreadAtMin: 1.0
+                                            }
+                                            // its colours, under the picture (and instead of it, for an animated wallpaper)
+                                            Rectangle {
+                                                anchors.fill: parent
+                                                gradient: Gradient {
+                                                    GradientStop { position: 0.0; color: tc.modelData.colors.surface_container }
+                                                    GradientStop { position: 1.0; color: tc.modelData.colors.background }
+                                                }
+                                            }
+                                            Image {
+                                                anchors.fill: parent
+                                                source: root.thPicture(tc.modelData)
+                                                sourceSize.width: 480
+                                                fillMode: Image.PreserveAspectCrop
+                                                asynchronous: true
+                                                cache: true
+                                                smooth: true
+                                            }
+                                            // the palette, as a quiet strip along the bottom
+                                            Row {
+                                                anchors.left: parent.left; anchors.bottom: parent.bottom
+                                                anchors.margins: 10
+                                                spacing: 4
+                                                Repeater {
+                                                    model: ["primary", "secondary", "tertiary"]
+                                                    Rectangle {
+                                                        required property string modelData
+                                                        width: 12; height: 12; radius: 6
+                                                        color: tc.modelData.colors[modelData]
+                                                        border.width: 1
+                                                        border.color: Qt.rgba(1, 1, 1, 0.55)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        // selection / current-theme ring
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            radius: 14
+                                            color: "transparent"
+                                            border.width: tc.sel ? 3 : (tc.cur ? 2 : 0)
+                                            border.color: tc.sel ? pal.accent : Qt.rgba(1, 1, 1, 0.85)
+                                        }
+                                    }
+                                    // the name, and "Current" on the running theme
+                                    Row {
+                                        anchors.left: parent.left; anchors.leftMargin: 4
+                                        anchors.right: parent.right
+                                        y: tcPic.height + 9
+                                        spacing: 8
+                                        Text {
+                                            width: Math.min(implicitWidth, parent.width - (tcCur.visible ? tcCur.width + 8 : 0))
+                                            elide: Text.ElideRight
+                                            text: tc.modelData.name
+                                            color: pal.fg
+                                            font.family: root.fontForWeight(Font.Medium, pal.fam); font.pixelSize: 13; font.weight: Font.Medium
+                                        }
+                                        Rectangle {
+                                            id: tcCur
+                                            visible: tc.cur
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            width: tcCurText.implicitWidth + 14; height: 18; radius: 9
+                                            color: pal.btnOff
+                                            Text {
+                                                id: tcCurText
+                                                anchors.centerIn: parent
+                                                text: I18n.tr("Current")
+                                                color: pal.fg2
+                                                font.family: root.fontForWeight(Font.Medium, pal.fam); font.pixelSize: 10; font.weight: Font.Medium
+                                            }
+                                        }
+                                    }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onPositionChanged: root.thSel = tc.absIndex
+                                        onClicked: root.thApply(tc.modelData.id)
+                                    }
+                                }
+                            }
+                        }
+                        Text {
+                            visible: root.thShown.length === 0
+                            anchors.centerIn: parent
+                            width: parent.width - 80
+                            horizontalAlignment: Text.AlignHCenter
+                            wrapMode: Text.WordWrap
+                            text: root.thStatus !== "" ? root.thStatus
+                                  : root.thQuery !== "" ? I18n.tr("No themes match “") + root.thQuery + "”"
+                                  : I18n.tr("Loading…")
+                            color: pal.fg2
+                            font.family: root.fontForWeight(Font.Normal, pal.fam); font.pixelSize: 13
+                        }
+                    }
+
+                    // ── footer: what the selected theme is, and the pages ──
+                    Text {
+                        x: 24
+                        anchors.bottom: parent.bottom; anchors.bottomMargin: 40
+                        width: parent.width - 48
+                        elide: Text.ElideRight
+                        maximumLineCount: 1
+                        text: thPanel.selected ? thPanel.selected.description : ""
+                        color: pal.fg2
+                        font.family: root.fontForWeight(Font.Normal, pal.fam); font.pixelSize: 12
+                    }
+                    Row {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.bottom; anchors.bottomMargin: 16
+                        spacing: 8
+                        visible: thPanel.pages > 1
+                        Repeater {
+                            model: thPanel.pages
+                            Rectangle {
+                                required property int index
+                                width: index === thPanel.page ? 22 : 7; height: 7; radius: 3.5
+                                color: index === thPanel.page ? pal.accent : pal.track
+                                Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+                                MouseArea { anchors.fill: parent; anchors.margins: -5; onClicked: thPanel.toPage(parent.index) }
+                            }
+                        }
+                    }
+                    Text {
+                        anchors.right: parent.right; anchors.rightMargin: 24
+                        anchors.bottom: parent.bottom; anchors.bottomMargin: 12
+                        text: I18n.tr("Enter applies  ·  PgUp PgDn pages")
+                        color: pal.fg3
+                        font.family: root.fontForWeight(Font.Normal, pal.fam); font.pixelSize: 11
                     }
                 }
             }

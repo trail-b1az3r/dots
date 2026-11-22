@@ -59,6 +59,11 @@ hl = {
     curve = function(name, spec) emit("curve", name, encode(spec)) end,
     animation = function(spec) emit("animation", encode(spec)) end,
     window_rule = function(spec) emit("window_rule", encode(spec)) end,
+    layer_rule = function(spec) emit("layer_rule", encode(spec)) end,
+    bind = function(keys, action, opts) emit("bind", keys, encode(action), encode(opts or {})) end,
+    unbind = function(keys) emit("unbind", keys) end,
+    -- A theme whose desktop shell is not the Halcyon shell (MacShell, Summit) binds its own keys to commands.
+    dsp = { exec_cmd = function(cmd) return { exec_cmd = cmd } end },
 }
 dofile(arg[1])
 print(table.concat(out, "\n"))
@@ -134,6 +139,19 @@ def check(path):
             # Hyprland rejects a window rule rounding above 20 (the config fails to load).
             if isinstance(spec.get("rounding"), (int, float)) and spec["rounding"] > 20:
                 problems.append(f"{path}: window rule rounding {spec['rounding']} is over Hyprland's maximum of 20")
+        elif kind == "layer_rule":
+            spec = lua_json(rest[0])
+            if not isinstance(spec.get("match"), dict) or not isinstance(spec["match"].get("namespace"), str):
+                problems.append(f"{path}: layer rule without a namespace to match")
+        elif kind in ("bind", "unbind"):
+            keys = rest[0]
+            # "SUPER + SHIFT + T": modifiers and one key, joined by " + ".
+            if not re.fullmatch(r"([A-Z]+ \+ )*[A-Za-z0-9_]+", keys):
+                problems.append(f"{path}: {kind} key '{keys}' is not 'MOD + MOD + KEY'")
+            if kind == "bind":
+                action = lua_json(rest[1])
+                if not (isinstance(action, dict) and isinstance(action.get("exec_cmd"), str) and action["exec_cmd"]):
+                    problems.append(f"{path}: bind {keys} runs nothing")
     return problems
 
 

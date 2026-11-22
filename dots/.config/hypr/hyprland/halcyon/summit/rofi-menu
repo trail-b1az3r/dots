@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# Summit's menus, in Rofi with Summit's look (summit.rasi, here) and the active theme's colours.
+#
+#   rofi-menu apps        the app launcher (Super+Space, the bar's mountain button)
+#   rofi-menu windows     the open windows (Alt+Tab)
+#   rofi-menu clipboard   the clipboard history, from cliphist (Super+V)
+#   rofi-menu power       lock, log out, sleep, restart, shut down (the power button, Super+Escape)
+#   rofi-menu forecast    the week's weather: halcyon-forecast's window when it is built, else a list here
+#
+# A second press closes the open menu. Your own ~/.config/rofi is not read or changed.
+set -u
+
+here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+halcyon="$(dirname -- "$here")"
+state="${XDG_STATE_HOME:-$HOME/.local/state}/halcyon"
+cache="${XDG_CACHE_HOME:-$HOME/.cache}/halcyon"
+mode="${1:-apps}"
+
+if ! command -v rofi >/dev/null 2>&1; then
+    command -v notify-send >/dev/null 2>&1 && notify-send -a Summit "Rofi is not installed" \
+        "Summit's menus use it: sudo pacman -S rofi"
+    exit 1
+fi
+# A second press of the same key closes the menu.
+if pkill -x rofi 2>/dev/null; then
+    exit 0
+fi
+
+theme_args=(-config "${SUMMIT_ROFI_CONFIG:-$here/summit.rasi}")
+if [[ -r "$state/summit-colors.rasi" ]]; then
+    theme_args+=(-theme-str "$(cat -- "$state/summit-colors.rasi")")
+fi
+
+r() { rofi "${theme_args[@]}" "$@"; }
+
+# One row: its text, then the icon name rofi shows next to it.
+row() { printf '%s\0icon\x1f%s\n' "$1" "$2"; }
+
+power_menu() {
+    local choice
+    choice="$({
+        row "Lock" system-lock-screen
+        row "Log out" system-log-out
+        row "Sleep" system-suspend
+        row "Restart" system-reboot
+        row "Shut down" system-shutdown
+    } | r -dmenu -i -p power_settings_new -mesg "Goodbye for now, ${USER:-you}" -selected-row 4 \
+        -theme-str 'listview { lines: 5; } window { width: 380px; }')" || exit 0
+    case "$choice" in
+        "Lock") exec "$halcyon/lock" ;;
+        "Log out")
+            hyprctl dispatch 'hl.dsp.exit()' >/dev/null 2>&1 || hyprctl dispatch exit >/dev/null 2>&1 \
+                || loginctl terminate-session "${XDG_SESSION_ID:-}" ;;
+        "Sleep") exec systemctl suspend ;;
+        "Restart") exec systemctl reboot ;;
+        "Shut down") exec systemctl poweroff ;;
+    esac
+}
+
+clipboard_menu() {
+    if ! command -v cliphist >/dev/null 2>&1; then
+        notify-send -a Summit "Clipboard history is off" "Install cliphist for it" 2>/dev/null
+        exit 1
+    fi
+    local choice
+    choice="$(cliphist list | r -dmenu -i -p content_paste -display-columns 2 \
+        -mesg "Enter copies it again · Shift+Delete forgets it" -kb-custom-1 "Shift+Delete")"
+    local code=$?
+    [[ -n "$choice" ]] || exit 0
+    case "$code" in
+        0) printf '%s' "$choice" | cliphist decode | wl-copy ;;
+        10) printf '%s' "$choice" | cliphist delete; exec "$0" clipboard ;;
+    esac
+}
+
+forecast_menu() {
+    for app in "${HALCYON_FORECAST:-}" "$HOME/.local/bin/halcyon-forecast" halcyon-forecast; do
+        [[ -n "$app" ]] && command -v "$app" >/dev/null 2>&1 && exec "$app"
+    done
+    # No window built: the same forecast as a list (halcyon_weather.py writes it).
+    local text
+    text="$(python3 "$halcyon/halcyon_weather.py" rows 2>/dev/null)" || text=""
+    if [[ -z "$text" ]]; then
+        text="$(row "No forecast yet: right-click the weather in the bar to fetch it" weather-few-clouds)"
+    fi
+    local place
+    place="$(python3 "$halcyon/halcyon_weather.py" place 2>/dev/null)" || place=""
+    printf '%s\n' "$text" | r -dmenu -i -p partly_cloudy_day -mesg "${place:-Weather}" -no-custom \
+        -theme-str 'listview { lines: 7; } window { width: 460px; } entry { enabled: false; }' >/dev/null
+}
+
+case "$mode" in
+    apps) r -show drun -p apps ;;
+    windows) r -show window -p select_window ;;
+    clipboard) clipboard_menu ;;
+    power) power_menu ;;
+    forecast) forecast_menu ;;
+    *) echo "usage: rofi-menu [apps|windows|clipboard|power|forecast]" >&2; exit 2 ;;
+esac

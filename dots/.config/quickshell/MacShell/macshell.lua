@@ -18,6 +18,8 @@ hl.bind("SUPER + period",     hl.dsp.exec_cmd(qs .. "spotlight emoji"))
 hl.bind("SUPER + Space",      hl.dsp.exec_cmd(qs .. "spotlight toggle"))
 hl.bind("ALT + TAB",          hl.dsp.exec_cmd(qs .. "switcher next"))
 hl.bind("CTRL + ALT + W",     hl.dsp.exec_cmd(qs .. "wallpapers toggle"))
+-- Halcyon: its themes, in pages (the picker does nothing without ~/.config/hypr/hyprland/halcyon/halcyon-theme)
+hl.bind("SUPER + SHIFT + T",  hl.dsp.exec_cmd(qs .. "themes toggle"))
 hl.bind("PRINT",              hl.dsp.exec_cmd(qs .. "screenshot region"))
 
 -- Hardware keys (laptop buttons too): volume, mute, brightness, media. MacShell handles them itself and shows its

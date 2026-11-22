@@ -2,6 +2,7 @@
 # Halcyon: lock the screen with the running shell's lock screen (hypridle's lock_cmd, so Super+L and sleep too).
 #   ii        the shell's own lock (quickshell:lock on Hyprland, its IPC on niri), or hyprlock when it isn't running
 #   MacShell  MacLock, a separate Quickshell process so a shell crash can never take the lock with it
+#   Summit    hyprlock (Summit has no lock screen of its own)
 set -u
 here="$(dirname "$0")"
 if [ "$("$here/desktop-shell")" = MacShell ] && [ -r "$HOME/.config/quickshell/MacLock/lock-via-ipc.sh" ]; then
@@ -12,6 +13,10 @@ fi
 # niri: the shell's lock through its IPC (Hyprland's global shortcuts do not exist there).
 if [ -n "${NIRI_SOCKET:-}" ]; then
     qs -c ii ipc call lock activate >/dev/null 2>&1 && exit 0
+    pidof hyprlock >/dev/null || exec hyprlock
+    exit 0
+fi
+if [ "$("$here/desktop-shell")" = Summit ]; then
     pidof hyprlock >/dev/null || exec hyprlock
     exit 0
 fi

@@ -1,0 +1,21 @@
+[Unit]
+Description=Summit desktop shell (Quickshell), the HyperNeo v2 theme's shell
+Documentation=file://%h/.config/quickshell/Summit/shell.qml
+# One desktop shell at a time: starting this stops the others, and starting one of them stops this.
+# halcyon-theme picks which (a theme's "desktop_shell"); halcyon/desktop-shell starts the right one at login.
+Conflicts=halcyon-quickshell.service halcyon-macshell.service
+
+[Service]
+# Only inside a running Hyprland, as for halcyon-quickshell.service.
+ExecCondition=/bin/sh -c 'hyprctl version >/dev/null 2>&1 || exit 1'
+# Summit holds logind's power-key lock itself while it runs (shell.qml), so the power button opens its power menu.
+ExecStart=/usr/bin/env qs -c Summit
+Restart=on-failure
+RestartSec=2
+# Apps opened from the dock are children of the shell: only the shell is stopped on a restart, and they are asked to
+# quit when the session ends.
+KillMode=process
+OOMPolicy=continue
+ExecStopPost=%h/.config/hypr/hyprland/halcyon/session-end
+
+# Started by halcyon/desktop-shell (from Hyprland) or halcyon-theme, never enabled on its own.

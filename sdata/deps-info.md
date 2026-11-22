@@ -253,3 +253,14 @@ For the Liquid Glass theme, which runs [MacShell](https://github.com/0-ss/MacShe
   - Night Shift and brightness in its Control Center.
 - `inter-font`
   - Its fallback UI font (Open Runde ships with it).
+
+## illogical-impulse-summit
+For the HyperNeo v2 theme, which runs Summit (`dots/.config/quickshell/Summit`) in place of the Halcyon shell.
+- `rofi`, `cliphist`, `wl-clipboard`
+  - Summit's menus: the app launcher, window switcher, clipboard history and power menu (`halcyon/summit/rofi-menu`).
+- `hyprlock`
+  - The lock screen while Summit runs.
+- `inter-font`, `ttf-material-symbols-variable-git`
+  - Its type and icons.
+- `halcyon-forecast` (built in this package from `tools/halcyon-forecast` with `cargo`)
+  - The forecast window the bar's weather opens, an [Iced](https://iced.rs) app. Without it the forecast is a Rofi list.

@@ -39,9 +39,17 @@ The dots are licensed under the GPL-3.0, like upstream. See [LICENSE](LICENSE).
 - **[hyproled](https://github.com/mklan/hyproled)** by mklan, BSD-3-Clause: OLED burn-in care (`halcyon oled`). Bundled
   unchanged in `dots/.config/hypr/hyprland/halcyon/hyproled` with its licence.
 - **[MacShell](https://github.com/0-ss/MacShell)** by Rickky (0-ss), MIT: the Liquid Glass theme's desktop shell
-  (menu bar, Dock, Spotlight, Control Center and the Liquid Glass shader) and MacLock, its lock screen. Bundled
-  unchanged in `dots/.config/quickshell/MacShell`, `dots/.config/quickshell/MacLock` and `dots/.config/hypr-macshell`,
-  each with its licence. Its UI font, Open Runde, is under the SIL Open Font License.
+  (menu bar, Dock, Spotlight, Control Center and the Liquid Glass shader) and MacLock, its lock screen. Bundled in
+  `dots/.config/quickshell/MacShell`, `dots/.config/quickshell/MacLock` and `dots/.config/hypr-macshell`, each with
+  its licence; Halcyon adds a theme picker to `MacBar.qml` (Super+Shift+T). Its UI font, Open Runde, is under the SIL
+  Open Font License.
+- **[Iced](https://iced.rs)**, MIT: the GUI library of Summit's forecast window (`tools/halcyon-forecast`).
+- **Weather and location services** the forecast uses, all without an account: [BeaconDB](https://beacondb.net)
+  (where you are, from nearby Wi-Fi), [ipapi.co](https://ipapi.co) (from your IP address, when that fails),
+  [Nominatim](https://nominatim.org) with © OpenStreetMap contributors' data (the place's name), and
+  [Open-Meteo](https://open-meteo.com) (the forecast, CC BY 4.0).
+- **Material Symbols Rounded**, Apache License 2.0: ten of its icons, cut to the Regular weight, are embedded in the
+  forecast window (`tools/halcyon-forecast/assets`).
 
 ## Licences in this repository
 
@@ -50,6 +58,10 @@ Files from other projects keep their own licence notice. Copies of those licence
 
 
 # Art Work
+Wallpaper: "HyperNeo v2" (*Craggy peaks of Grand Teton National Park, Jackson, Wyoming*, Carol M. Highsmith,
+Carol M. Highsmith Archive, Library of Congress, LCCN 2011633676), public domain; cropped to 2560×1440.
+Source: [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Craggy_peaks_of_Grand_Teton_National_Park,_Jackson,_Wyoming_LCCN2011633676.tif)
+
 Wallpaper: "red sun" (*Eclipse* by Alena Aenami, 2017)
 Source: [wallhaven](https://wallhaven.vip/w/yjl8mk)
 

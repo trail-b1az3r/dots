@@ -14,7 +14,9 @@ import Quickshell.Hyprland
 /**
  * The theme picker (Ctrl + Super + Shift + T, or `halcyon theme menu`): every Halcyon theme as a card with its
  * wallpaper, its colours and its own dock frame, over the dimmed screen. Arrows or the mouse to choose, Enter or a
- * click to apply, Esc to close. Below the cards: "follow the wallpaper" and the effects level.
+ * click to apply, Esc to close. Below the cards: "follow the wallpaper" and the effects level. The themes come in
+ * pages, as many rows as the screen has room for: PgUp/PgDn, the mouse wheel or the dots turn them, and the arrows
+ * cross from one page to the next.
  *
  * The list comes from `halcyon-theme list --json`; the pictures are small previews `halcyon-theme previews` makes
  * from each wallpaper (a video's first frame), made in the background the first time.
@@ -130,6 +132,8 @@ Scope {
 
                 Keys.onPressed: event => {
                     const n = root.themes.length;
+                    if (n === 0 && event.key !== Qt.Key_Escape)
+                        return;
                     if (event.key === Qt.Key_Escape) {
                         root.open = false;
                     } else if (event.key === Qt.Key_Right || event.key === Qt.Key_Tab) {
@@ -140,6 +144,14 @@ Scope {
                         root.selected = Math.min(n - 1, root.selected + grid.columns);
                     } else if (event.key === Qt.Key_Up) {
                         root.selected = Math.max(0, root.selected - grid.columns);
+                    } else if (event.key === Qt.Key_PageDown || event.key === Qt.Key_BracketRight) {
+                        content.turn(1);
+                    } else if (event.key === Qt.Key_PageUp || event.key === Qt.Key_BracketLeft) {
+                        content.turn(-1);
+                    } else if (event.key === Qt.Key_Home) {
+                        root.selected = 0;
+                    } else if (event.key === Qt.Key_End) {
+                        root.selected = n - 1;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         if (root.themes[root.selected])
                             root.apply(root.themes[root.selected].id);
@@ -149,8 +161,24 @@ Scope {
                     event.accepted = true;
                 }
 
+                // Pages: as many rows of cards as fit on the screen (two or three), the page the selected card is on.
+                readonly property int rows: Math.max(1, Math.min(3, Math.floor((panel.height - 300) / 212)))
+                readonly property int perPage: Math.max(1, grid.columns * rows)
+                readonly property int pages: Math.max(1, Math.ceil(root.themes.length / perPage))
+                readonly property int page: Math.min(pages - 1, Math.floor(root.selected / perPage))
+                function turn(by) {
+                    const p = Math.max(0, Math.min(pages - 1, page + by));
+                    if (p !== page)
+                        root.selected = Math.min(root.themes.length - 1, p * perPage + root.selected % perPage);
+                }
+
                 MouseArea {
                     anchors.fill: parent    // keeps clicks between the cards from closing it
+                    onWheel: wheel => {
+                        const d = wheel.angleDelta.y !== 0 ? wheel.angleDelta.y : -wheel.angleDelta.x;
+                        if (Math.abs(d) >= 60)
+                            content.turn(d < 0 ? 1 : -1);
+                    }
                 }
 
                 Rectangle {
@@ -178,7 +206,9 @@ Scope {
                         StyledText {
                             Layout.fillWidth: true
                             Layout.leftMargin: 12
-                            text: Translation.tr("← → ↑ ↓ to choose, Enter to apply, Esc to close")
+                            text: content.pages > 1
+                                ? Translation.tr("← → ↑ ↓ to choose, PgUp PgDn for pages, Enter to apply, Esc to close")
+                                : Translation.tr("← → ↑ ↓ to choose, Enter to apply, Esc to close")
                             font.pixelSize: Appearance.font.pixelSize.small
                             color: Appearance.colors.colSubtext
                         }
@@ -192,14 +222,78 @@ Scope {
                         rowSpacing: 16
 
                         Repeater {
-                            model: root.themes
+                            model: root.themes.slice(content.page * content.perPage, (content.page + 1) * content.perPage)
                             delegate: ThemeCard {
                                 required property var modelData
                                 required property int index
+                                readonly property int absIndex: content.page * content.perPage + index
                                 theme: modelData
-                                selected: index === root.selected
-                                onHovered: root.selected = index
+                                selected: absIndex === root.selected
+                                onHovered: root.selected = absIndex
                                 onChosen: root.apply(modelData.id)
+                            }
+                        }
+                        // Keep the last page as tall as the others, so the window doesn't jump between pages.
+                        Repeater {
+                            model: content.pages > 1 ? Math.max(0, content.perPage - Math.min(content.perPage, root.themes.length - content.page * content.perPage)) : 0
+                            delegate: Item {
+                                Layout.preferredWidth: 300
+                                Layout.preferredHeight: 196
+                            }
+                        }
+                    }
+
+                    // The pages: back, a dot each (the current one long), forward.
+                    RowLayout {
+                        Layout.alignment: Qt.AlignHCenter
+                        visible: content.pages > 1
+                        spacing: 10
+                        RippleButton {
+                            implicitWidth: 32
+                            implicitHeight: 32
+                            buttonRadius: 16
+                            enabled: content.page > 0
+                            opacity: enabled ? 1 : 0.35
+                            onClicked: content.turn(-1)
+                            contentItem: MaterialSymbol {
+                                horizontalAlignment: Text.AlignHCenter
+                                text: "chevron_left"
+                                iconSize: Appearance.font.pixelSize.larger
+                                color: Appearance.colors.colOnLayer0
+                            }
+                        }
+                        Repeater {
+                            model: content.pages
+                            delegate: Rectangle {
+                                required property int index
+                                Layout.preferredWidth: index === content.page ? 24 : 8
+                                Layout.preferredHeight: 8
+                                radius: 4
+                                color: index === content.page ? Appearance.colors.colPrimary
+                                                              : ColorUtils.applyAlpha(Appearance.colors.colOnLayer0, 0.25)
+                                Behavior on Layout.preferredWidth {
+                                    NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    anchors.margins: -6
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: content.turn(parent.index - content.page)
+                                }
+                            }
+                        }
+                        RippleButton {
+                            implicitWidth: 32
+                            implicitHeight: 32
+                            buttonRadius: 16
+                            enabled: content.page < content.pages - 1
+                            opacity: enabled ? 1 : 0.35
+                            onClicked: content.turn(1)
+                            contentItem: MaterialSymbol {
+                                horizontalAlignment: Text.AlignHCenter
+                                text: "chevron_right"
+                                iconSize: Appearance.font.pixelSize.larger
+                                color: Appearance.colors.colOnLayer0
                             }
                         }
                     }

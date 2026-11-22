@@ -500,10 +500,12 @@ def glass_settings(config=None):
 # Themes whose windows stay as they are: no rounder corners or darker edges on floating windows.
 PLAIN_WINDOW_THEMES = ("hyperneo", "hsr")
 
-# A theme's "desktop_shell": the Halcyon shell (ii), or MacShell (github.com/0-ss/MacShell, MIT, bundled in
+# A theme's "desktop_shell": the Halcyon shell (ii), MacShell (github.com/0-ss/MacShell, MIT, bundled in
 # ~/.config/quickshell/MacShell), a macOS Tahoe style menu bar and Dock with a real-time Liquid Glass shader, and
-# MacLock as its lock screen. One runs at a time; their systemd units conflict.
-DESKTOP_SHELLS = {"ii": "halcyon-quickshell.service", "MacShell": "halcyon-macshell.service"}
+# MacLock as its lock screen, or Summit (~/.config/quickshell/Summit), a clean top bar and dock with Rofi menus. One
+# runs at a time; their systemd units conflict.
+DESKTOP_SHELLS = {"ii": "halcyon-quickshell.service", "MacShell": "halcyon-macshell.service",
+                  "Summit": "halcyon-summit.service"}
 MACSHELL_QS = "qs -c MacShell ipc call "
 # MacShell's keys, bound over the Halcyon shell's (which do nothing while that shell is stopped). The rest of
 # Halcyon's binds (windows, workspaces, apps) stay as they are.
@@ -515,6 +517,8 @@ MACSHELL_BINDS = (
     ("SUPER + ALT + I", "settings toggle", "MacShell: Settings"),
     ("CTRL + ALT + W", "wallpapers toggle", "MacShell: Wallpapers"),
     ("SUPER + SHIFT + S", "screenshot region", "MacShell: Screenshot"),
+    # Upstream's Super+Shift+T is the Halcyon shell's screen translator, which does nothing while that shell is stopped.
+    ("SUPER + SHIFT + T", "themes toggle", "MacShell: Themes"),
 )
 # Its glass surfaces: Hyprland's blur behind them, and no layer animation of their own (MacShell animates them).
 MACSHELL_LAYERS = (("macdock", 0.2), ("macspot", 0.05), ("macbarbg", 0.05))
@@ -523,7 +527,7 @@ MACSHELL_LAYERS = (("macdock", 0.2), ("macspot", 0.05), ("macbarbg", 0.05))
 def macshell_lua():
     """theme.lua's part for a MacShell theme: its keys and its layers' blur."""
     out = ["", "-- MacShell runs instead of the Halcyon shell (halcyon/desktop-shell): its keys and its glass layers.",
-           "-- Ctrl+Super+Shift+T still opens the theme menu, to go back to a Halcyon theme."]
+           "-- Super+Shift+T opens MacShell's theme picker (Ctrl+Super+Shift+T, the plain menu, works too)."]
     for key, call, description in MACSHELL_BINDS:
         out.append(f'pcall(hl.unbind, "{key}")')
         out.append(f'hl.bind("{key}", hl.dsp.exec_cmd("{MACSHELL_QS}{call}"), {{ description = "{description}" }})')
@@ -532,6 +536,94 @@ def macshell_lua():
                    f'ignore_alpha = {alpha}, no_anim = true }})')
     out.append('hl.layer_rule({ name = "macshot", match = { namespace = "macshot" }, no_anim = true })')
     return out
+
+
+# Summit (~/.config/quickshell/Summit): a clean top bar and dock, with Rofi menus (halcyon/summit/rofi-menu) for the
+# apps, windows, clipboard and power. halcyon-theme gives it the theme's colours and wallpaper (SUMMIT_FILE), and Rofi
+# the same colours (SUMMIT_ROFI, which rofi-menu passes on).
+SUMMIT_FILE = HALCYON_STATE / "summit.json"
+SUMMIT_ROFI = HALCYON_STATE / "summit-colors.rasi"
+SUMMIT_MENU = "$HOME/.config/hypr/hyprland/halcyon/summit/rofi-menu "
+SUMMIT_BINDS = (
+    ("SUPER + Space", "apps", "Summit: Apps"),
+    ("ALT + TAB", "windows", "Summit: Switch windows"),
+    ("SUPER + V", "clipboard", "Summit: Clipboard"),
+    ("SUPER + Escape", "power", "Summit: Power menu"),
+)
+# Its bars are translucent: Hyprland's blur behind them, ignoring the empty space around them.
+SUMMIT_LAYERS = (("summit-top", 0.25), ("summit-bottom", 0.25), ("rofi", 0.25))
+SUMMIT_PINNED = ["firefox", "org.kde.dolphin", "kitty", "org.kde.kate", "code"]
+
+
+def summit_lua():
+    """theme.lua's part for a Summit theme: its keys and its bars' blur."""
+    out = ["", "-- Summit runs instead of the Halcyon shell (halcyon/desktop-shell): Rofi menus and its bars' blur.",
+           "-- Ctrl+Super+Shift+T still opens the theme menu, to go back to another theme."]
+    for key, mode, description in SUMMIT_BINDS:
+        out.append(f'pcall(hl.unbind, "{key}")')
+        out.append(f'hl.bind("{key}", hl.dsp.exec_cmd("{SUMMIT_MENU}{mode}"), {{ description = "{description}" }})')
+    for name, alpha in SUMMIT_LAYERS:
+        out.append(f'hl.layer_rule({{ name = "{name}", match = {{ namespace = "{name}" }}, blur = true, '
+                   f'ignore_alpha = {alpha} }})')
+    return out
+
+
+def summit_colours(theme):
+    """Summit's colours from a theme's shell palette (Material names)."""
+    shell = theme.get("shell") or {}
+
+    def pick(*keys, default):
+        for key in keys:
+            if HEX.match(str(shell.get(key, ""))):
+                return shell[key].upper()
+        return default
+
+    return {
+        "background": pick("background", default="#0B1322"),
+        "surface": pick("surface_container", "surface", default="#101A2C"),
+        "surface_high": pick("surface_container_high", "surface_variant", default="#18243A"),
+        "text": pick("on_surface", default="#E8EDF6"),
+        "muted": pick("on_surface_variant", default="#93A0B6"),
+        "accent": pick("primary", default="#9CC0FF"),
+        "accent_text": pick("on_primary", default="#0B1A33"),
+        "warm": pick("tertiary", default="#E8C79A"),
+        "outline": pick("on_surface", default="#FFFFFF"),
+    }
+
+
+def summit_rofi(colours):
+    """Rofi's colours for Summit's menus (~/.config/rofi/summit.rasi names them)."""
+    names = {"background": "bg", "surface": "surface", "surface_high": "surface-high", "text": "fg",
+             "muted": "muted", "accent": "accent", "accent_text": "accent-fg", "warm": "warm"}
+    lines = ["/* Written by halcyon-theme for Summit's Rofi menus: the active theme's colours. */", "* {"]
+    for key, name in names.items():
+        lines.append(f"    {name}: {colours[key]};")
+    lines.append(f"    bg-alpha: {colours['surface']}D9;")
+    lines.append("}")
+    return "\n".join(lines) + "\n"
+
+
+def seed_summit(theme, wallpaper):
+    """Summit's settings for the theme: its colours and wallpaper. Pinned apps and anything else you set stay."""
+    try:
+        data = json.loads(SUMMIT_FILE.read_text(encoding="utf-8")) if SUMMIT_FILE.is_file() else {}
+    except (OSError, ValueError):
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    colours = summit_colours(theme)
+    data["colors"] = colours
+    data["theme"] = theme.get("name", "")
+    data["mode"] = theme.get("mode", "dark")
+    if wallpaper is not None and wallpaper.is_file():
+        data["wallpaper"] = str(wallpaper)
+    if not isinstance(data.get("pinned"), list):
+        data["pinned"] = list(SUMMIT_PINNED)
+    fonts = theme.get("shell_config") or {}
+    if isinstance(fonts.get("appearance.fonts.main"), str):
+        data["font"] = fonts["appearance.fonts.main"]
+    write_atomic(SUMMIT_FILE, json.dumps(data, indent=2) + "\n")
+    write_atomic(SUMMIT_ROFI, summit_rofi(colours))
 
 
 def first_terminal():
@@ -612,6 +704,7 @@ def set_desktop_shell(name, theme=None, wallpaper=None):
     """Run the desktop shell a theme wants (the Halcyon shell unless it says otherwise). Nothing is restarted when
     the right one already runs."""
     name = name if name in DESKTOP_SHELLS else "ii"
+    before = read_state(DESKTOP_SHELL_FILE) or "ii"
     if name == "ii":
         remove(DESKTOP_SHELL_FILE)
     else:
@@ -619,13 +712,21 @@ def set_desktop_shell(name, theme=None, wallpaper=None):
         if name == "MacShell":
             seed_macshell(theme or {}, wallpaper)
             set_wallpaper_awww(wallpaper)
+        elif name == "Summit":
+            seed_summit(theme or {}, wallpaper)
     on_niri = niri_running() and not hyprland_running()
     if not (hyprland_running() or on_niri) or not shutil.which("systemctl"):
         return
     if on_niri and name != "ii":
-        # MacShell needs Hyprland: on niri the theme keeps the Halcyon shell (halcyon/desktop-shell agrees).
+        # MacShell and Summit need Hyprland: on niri the theme keeps the Halcyon shell (halcyon/desktop-shell agrees).
         notify(f"{name} needs Hyprland", "The theme's colours and look apply; the Halcyon shell stays on niri.")
         name = "ii"
+    # The weather (Summit's bar shows it) is fetched while Summit runs, unless you said otherwise: its timer starts
+    # or stops when Summit comes or goes.
+    weather = HERE / "halcyon_weather.py"
+    if "Summit" in (name, before) and before != name and weather.is_file():
+        subprocess.run([sys.executable, str(weather), "login"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL, check=False, timeout=30)
     unit = DESKTOP_SHELLS[name]
     if subprocess.run(["systemctl", "--user", "is-active", "--quiet", unit], check=False).returncode != 0:
         # The other shell stops: the units conflict. Started without waiting, since this may run inside the shell
@@ -717,6 +818,8 @@ def render_lua(theme_id, theme, effects, native_blur, shader_path=None, glass=No
                 'hl.window_rule({ match = { class = ".*" }, no_blur = false })']
     if theme.get("desktop_shell") == "MacShell":
         out += macshell_lua()
+    elif theme.get("desktop_shell") == "Summit":
+        out += summit_lua()
     curves = h.get("curves", {})
     if curves and effects != "off":
         out.append("")
@@ -2835,6 +2938,9 @@ def main(argv):
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and argv[0] == "wifi":
         tool = HERE / "halcyon_wifi.py"
+        os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
+    if argv and argv[0] == "weather":
+        tool = HERE / "halcyon_weather.py"
         os.execv(sys.executable, [sys.executable, str(tool), *argv[1:]])
     if argv and (argv[0] == "osd" or argv[0] == "annotate" or argv[0] == "overlays"):
         tool = HERE / "halcyon_overlays.py"

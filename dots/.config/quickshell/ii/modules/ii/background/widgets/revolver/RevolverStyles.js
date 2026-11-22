@@ -79,6 +79,7 @@ function styleFor(themeId) {
     case "liquid-glass":  // runs MacShell; the glass look is for the moments the Halcyon shell is up
         return STYLES["glass"];
     case "hyperneo":
+    case "hyperneo-v2":   // runs Summit; HyperNeo's look for the moments the Halcyon shell is up
         return STYLES["hyperneo"];
     case "after-icey":
         return STYLES["keycap"];

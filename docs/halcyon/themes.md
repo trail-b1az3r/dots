@@ -10,7 +10,8 @@ style, animations, wallpaper and, for some, shell layout and effects:
 | **Star Rail** | `hsr` | Astral gold and lavender on deep-space navy, over a golden rail curving through a nebula. Can show the current banner character. |
 | **Shattered Glass** | `shattered-glass` | Liquid glass: a glass lens follows the pointer, clicks crack the screen, windows turn to frosted glass. Ice blue and prism violet, sharp corners. |
 | **Fractured Glass** | `fractured-glass` | Refraction only, like Apple's Liquid Glass: a squircle glass lens follows the pointer and bends what's behind its rim. No ripples or cracks. Soft blue, lavender and pink over calm fragments of thick glass. |
-| **Liquid Glass** | `liquid-glass` | A different desktop shell: [MacShell](https://github.com/0-ss/MacShell) (by 0-ss, MIT, bundled) runs in place of the Halcyon shell, with a macOS Tahoe style menu bar, Dock, Control Center, Spotlight, notifications and desktop widgets in real-time Liquid Glass that refracts the wallpaper, and MacLock as the lock screen. Super+Space Spotlight, Super+V clipboard, Alt+Tab switcher, Super+Alt+I its Settings, Ctrl+Alt+W wallpapers. Ctrl+Super+Shift+T opens the theme menu, to go back. Over an original wallpaper of light ribbons. |
+| **Liquid Glass** | `liquid-glass` | A different desktop shell: [MacShell](https://github.com/0-ss/MacShell) (by 0-ss, MIT, bundled) runs in place of the Halcyon shell, with a macOS Tahoe style menu bar, Dock, Control Center, Spotlight, notifications and desktop widgets in real-time Liquid Glass that refracts the wallpaper, and MacLock as the lock screen. Super+Space Spotlight, Super+V clipboard, Alt+Tab switcher, Super+Alt+I its Settings, Ctrl+Alt+W wallpapers, Super+Shift+T its theme picker, to go back. Over an original wallpaper of light ribbons. |
+| **HyperNeo v2** | `hyperneo-v2` | Clean and quiet: Summit, a shell of its own, runs in place of the Halcyon shell. One slim top bar in three floating pills (the menu and workspaces, the clock and the weather, the tray and status), a dock at the bottom, and Rofi menus for apps, windows, the clipboard and power. The weather is where you are, found from nearby Wi-Fi. Over the Tetons at noon (Carol M. Highsmith, public domain). |
 | **Neumorph** | `neumorph` | Soft clay, light: the bar floats as islands, and the dock, the bar's pills, the clock and the cards are pressed out of one pale page in its own colour, lit from the top left (a light shadow towards the light, a dark one away from it). Slate text in Open Runde, one blue for what is on, its own icon pack, over an original wallpaper of soft shapes raised from and sunk into the same surface. |
 | **Red Sun** | `red-sun` | A road at sunset under a red ring. Rose and ember accents over deep dusk violet, rounded windows with warm shadows. The ring is the revolver: spin it and the screen breaks, an eye opens in the sun and finds the car, and the tape rewinds. Wallpaper: *Eclipse* by Alena Aenami (2017), from [wallhaven](https://wallhaven.vip/w/yjl8mk); [buy it here](https://www.artstation.com/marketplace/p/oAol/wallpaper-pack-02). |
 | **After ICEY** | `after-icey` | Silver hair, cyan light and ink-dark navy, over the animated *After ICEY* wallpaper (fan art, by way of [MotionBGs](https://motionbgs.com/after-icey)). `halcyon wallpapers get after-icey` fetches it. |
@@ -291,11 +292,55 @@ While MacShell runs:
 - Locking (Super+L, idle, sleep) goes through `halcyon/lock`, which uses MacLock.
 - Halcyon's own window, workspace and app keys stay. MacShell's keys replace the Halcyon shell's on Super+Space,
   Super+V, Super+period, Alt+Tab and Super+Shift+S, and Super+Alt+I opens MacShell's Settings.
+- Super+Shift+T opens the theme picker, in MacShell's own glass: every Halcyon theme as a card with its wallpaper
+  and colours, six to a page. Arrows choose (and cross pages), PgUp/PgDn, `[` `]` or the mouse wheel turn the page,
+  typing searches, Enter applies. Choosing a theme with another shell switches back to it.
 - Its settings are its own, in `~/.config/macbar` and `~/.config/macdock`. The theme only fills in the wallpaper
   each time, and the look and terminal the first time.
 
 MacShell's extra packages are in `illogical-impulse-macshell` (`awww`, `qt6-shadertools`, `inotify-tools`, `zenity`,
 `jq`, `hyprsunset`, `brightnessctl`, `inter-font`).
+
+## HyperNeo v2 and Summit
+
+HyperNeo v2 runs Summit (`~/.config/quickshell/Summit`), the way Liquid Glass runs MacShell: applying it records
+`Summit` in `~/.local/state/halcyon/desktop-shell` and starts `halcyon-summit.service`, which conflicts with the
+other two shells' units.
+
+- **Top bar**, three pills floating over the wallpaper. Left: the mountain (the app launcher; right-click for the
+  theme picker) and the workspaces as dots, the current one long. Middle: the date and time (a click opens the
+  calendar) and the weather (a click opens the forecast; right-click fetches it again). Right: the tray, the
+  network, the volume (scroll changes it, a click mutes), the battery and the power button.
+- **Dock** at the bottom: your pinned apps, then the open windows, a dot under each running one. A click focuses or
+  starts it; pinned apps are `pinned` in `~/.local/state/halcyon/summit.json` (the theme keeps them).
+- **Menus** are Rofi, in Summit's own config (`halcyon/summit/summit.rasi`, passed with `-config`, so your
+  `~/.config/rofi` is not touched) and the theme's colours (`~/.local/state/halcyon/summit-colors.rasi`):
+  Super+Space apps, Alt+Tab windows, Super+V the clipboard (cliphist), Super+Escape and the power button the power
+  menu. `halcyon/summit/rofi-menu apps|windows|clipboard|power|forecast` opens them from anywhere.
+- **Locking** uses hyprlock.
+
+### The weather, from nearby Wi-Fi
+
+While Summit runs, `halcyon-weather.timer` fetches the forecast every 30 minutes (`halcyon weather update` does it
+now). Where you are comes from the Wi-Fi around you, with no GPS and no account:
+
+1. NetworkManager lists the access points in range (`nmcli device wifi list`; you need not be connected to any).
+   Networks named `..._nomap` (their owners' opt-out) and phone hotspots are left out.
+2. Their addresses and signal strengths go to [BeaconDB](https://beacondb.net), a community location service in
+   Mozilla Location Service's place, which answers with a position, usually to a few hundred metres.
+3. With fewer than two networks, or none BeaconDB knows, your IP address gives the town instead.
+4. [OpenStreetMap's Nominatim](https://nominatim.org) names the place (only when you have moved), and
+   [Open-Meteo](https://open-meteo.com) gives the forecast.
+
+`halcyon weather location ip` stops sending anything about the networks around you; `halcyon weather location
+"Oslo"` (or `"LAT, LON"`) fixes the place; `halcyon weather off` stops the weather altogether, and `auto` (the
+default) fetches it only while Summit is the shell. The forecast is in `~/.cache/halcyon/weather.json`.
+
+The forecast window is `halcyon-forecast`, a small [Iced](https://iced.rs) app (`tools/halcyon-forecast`), built by
+the `illogical-impulse-summit` package. Without it the bar's weather opens the same forecast as a Rofi list.
+
+Summit's packages are in `illogical-impulse-summit` (`rofi`, `cliphist`, `wl-clipboard`, `hyprlock`, `inter-font`,
+`ttf-material-symbols-variable-git`, and `cargo` to build the forecast window).
 
 ## Neumorph
 

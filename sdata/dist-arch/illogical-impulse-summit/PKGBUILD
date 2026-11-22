@@ -1,0 +1,46 @@
+groups=(illogical-impulse)
+pkgname=illogical-impulse-summit
+pkgver=1.0
+pkgrel=1
+pkgdesc='Halcyon: what Summit, the HyperNeo v2 theme shell, needs, and its forecast window (halcyon-forecast)'
+arch=(x86_64 aarch64)
+license=('GPL-3.0-only' 'Apache-2.0')
+depends=(
+  # Summit's menus: apps, windows, clipboard, power, forecast list (halcyon/summit/rofi-menu)
+  rofi
+  cliphist
+  wl-clipboard
+  # Its lock screen (Summit has none of its own)
+  hyprlock
+  # Its type and icons
+  inter-font
+  ttf-material-symbols-variable-git
+  # The forecast window is an Iced app
+  gcc-libs
+  libxkbcommon
+  wayland
+  vulkan-icd-loader
+)
+makedepends=(cargo)
+
+# The source is this repository's tools/halcyon-forecast, next to this folder.
+_src="$startdir/../../../tools/halcyon-forecast"
+
+prepare() {
+  cp -a "$_src" "$srcdir/halcyon-forecast"
+  cd "$srcdir/halcyon-forecast"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "$srcdir/halcyon-forecast"
+  export RUSTUP_TOOLCHAIN=stable CARGO_TARGET_DIR=target
+  cargo build --frozen --release
+}
+
+package() {
+  cd "$srcdir/halcyon-forecast"
+  install -Dm755 target/release/halcyon-forecast "$pkgdir/usr/bin/halcyon-forecast"
+  install -Dm644 assets/README.md "$pkgdir/usr/share/licenses/$pkgname/weather-icons.md"
+}
