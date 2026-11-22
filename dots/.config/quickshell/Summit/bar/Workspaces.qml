@@ -34,11 +34,16 @@ Row {
             height: 8
             radius: 4
             color: active ? Theme.accent : used ? Theme.alpha(Theme.text, 0.55) : Theme.alpha(Theme.text, 0.2)
-            Behavior on width { NumberAnimation { duration: Theme.animMs; easing.type: Easing.OutCubic } }
+            // The active dot stretches with a spring; a hovered one swells.
+            Behavior on width { SpringAnimation { spring: Theme.springStiffness; damping: Theme.springDamping; epsilon: 0.2 } }
             Behavior on color { ColorAnimation { duration: Theme.animMs } }
+            scale: hover.containsMouse && !active ? 1.35 : 1
+            Behavior on scale { NumberAnimation { duration: Theme.animMs; easing.type: Easing.OutBack } }
             MouseArea {
+                id: hover
                 anchors.fill: parent
                 anchors.margins: -6
+                hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: Hyprland.dispatch(`hl.dsp.focus({ workspace = ${dot.modelData} })`)
             }

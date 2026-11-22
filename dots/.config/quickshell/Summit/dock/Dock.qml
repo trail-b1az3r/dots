@@ -43,7 +43,16 @@ PanelWindow {
         height: 54
         width: row.implicitWidth + 16
         radius: Theme.radius + 4
-        Behavior on width { NumberAnimation { duration: Theme.animMs; easing.type: Easing.OutCubic } }
+        Behavior on width { SpringAnimation { spring: Theme.springStiffness; damping: Theme.springDamping * 1.4; epsilon: 0.3 } }
+        // Rises into place when the shell starts.
+        opacity: 0
+        transform: Translate { id: rise; y: 30 }
+        Component.onCompleted: enter.start()
+        ParallelAnimation {
+            id: enter
+            NumberAnimation { target: strip; property: "opacity"; to: 1; duration: Theme.enterMs; easing.type: Easing.OutCubic }
+            NumberAnimation { target: rise; property: "y"; to: 0; duration: Theme.enterMs + 80; easing.type: Easing.OutBack; easing.overshoot: 1.4 }
+        }
 
         Row {
             id: row
@@ -67,6 +76,14 @@ PanelWindow {
                     readonly property var windows: dock.running(modelData)
                     readonly property bool focused: windows.some(t => t.activated)
                     width: 42; height: 42
+                    // Under the pointer the icon lifts and grows; launched, it bounces.
+                    transform: Translate { id: lift; y: area.containsMouse ? -5 : 0
+                        Behavior on y { SpringAnimation { spring: Theme.springStiffness; damping: Theme.springDamping; epsilon: 0.1 } } }
+                    SequentialAnimation {
+                        id: bounce
+                        NumberAnimation { target: icon; property: "anchors.verticalCenterOffset"; to: -14; duration: 160; easing.type: Easing.OutQuad }
+                        NumberAnimation { target: icon; property: "anchors.verticalCenterOffset"; to: 0; duration: 420; easing.type: Easing.OutBounce }
+                    }
 
                     Rectangle {
                         anchors.fill: parent
@@ -75,10 +92,11 @@ PanelWindow {
                         Behavior on color { ColorAnimation { duration: Theme.animMs } }
                     }
                     IconImage {
+                        id: icon
                         anchors.centerIn: parent
-                        implicitSize: area.pressed ? 26 : 30
+                        implicitSize: area.pressed ? 26 : area.containsMouse ? 34 : 30
                         source: Quickshell.iconPath(app.entry?.icon ?? app.modelData, "application-x-executable")
-                        Behavior on implicitSize { NumberAnimation { duration: 90 } }
+                        Behavior on implicitSize { SpringAnimation { spring: Theme.springStiffness * 1.4; damping: Theme.springDamping; epsilon: 0.1 } }
                     }
                     Rectangle {
                         visible: app.windows.length > 0
@@ -102,6 +120,7 @@ PanelWindow {
                                 app.windows[(i + 1) % app.windows.length].activate();
                             } else if (app.entry) {
                                 app.entry.execute();
+                                bounce.restart();
                             }
                         }
                     }

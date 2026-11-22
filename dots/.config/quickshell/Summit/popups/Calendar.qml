@@ -15,10 +15,24 @@ PopupWindow {
     implicitWidth: 300
     implicitHeight: body.implicitHeight
 
-    onVisibleChanged: if (visible) offset = 0
+    onVisibleChanged: {
+        if (!visible)
+            return;
+        offset = 0;
+        body.opacity = 0;
+        grow.y = -8;
+        open.restart();
+    }
+    // Opens with a fade and a small drop from under the clock.
+    ParallelAnimation {
+        id: open
+        NumberAnimation { target: body; property: "opacity"; to: 1; duration: Theme.animMs + 60; easing.type: Easing.OutCubic }
+        NumberAnimation { target: grow; property: "y"; to: 0; duration: Theme.enterMs; easing.type: Easing.OutBack; easing.overshoot: 1.5 }
+    }
 
     Glass {
         id: body
+        transform: Translate { id: grow }
         width: parent.width
         implicitHeight: col.implicitHeight + 28
         radius: Theme.radius + 4

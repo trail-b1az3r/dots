@@ -17,6 +17,9 @@ Rectangle {
     radius: Theme.radius - 4
     color: active ? Theme.alpha(Theme.accent, 0.22) : area.containsMouse ? Theme.alpha(Theme.text, 0.08) : "transparent"
     Behavior on color { ColorAnimation { duration: Theme.animMs } }
+    // Pressed in a little, and springs back.
+    scale: area.pressed ? 0.9 : 1
+    Behavior on scale { SpringAnimation { spring: Theme.springStiffness * 1.6; damping: Theme.springDamping; epsilon: 0.002 } }
 
     Row {
         id: content

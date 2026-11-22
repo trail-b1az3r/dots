@@ -6,7 +6,12 @@ Glass {
     id: root
     required property var target
     property string text
-    visible: target.containsMouse
+    // Fades in and rises a little; fades out.
+    visible: opacity > 0
+    opacity: target.containsMouse ? 1 : 0
+    Behavior on opacity { NumberAnimation { duration: Theme.animMs; easing.type: Easing.OutCubic } }
+    transform: Translate { y: root.target.containsMouse ? 0 : 6
+        Behavior on y { NumberAnimation { duration: Theme.animMs; easing.type: Easing.OutCubic } } }
     anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.top; bottomMargin: 8 }
     width: label.implicitWidth + 20
     height: label.implicitHeight + 10

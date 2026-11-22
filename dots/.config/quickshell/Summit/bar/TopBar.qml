@@ -26,6 +26,7 @@ PanelWindow {
 
     Pill {
         id: left
+        enterDelay: 0
         anchors { left: parent.left; leftMargin: Theme.gap; top: parent.top; topMargin: Theme.gap }
         BarButton {
             icon: "landscape"
@@ -41,6 +42,7 @@ PanelWindow {
 
     Pill {
         id: centre
+        enterDelay: 70
         anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: Theme.gap }
         Clock {
             id: clock
@@ -51,6 +53,7 @@ PanelWindow {
 
     Pill {
         id: right
+        enterDelay: 140
         anchors { right: parent.right; rightMargin: Theme.gap; top: parent.top; topMargin: Theme.gap }
         Tray { anchors.verticalCenter: parent.verticalCenter }
         Status { anchors.verticalCenter: parent.verticalCenter }
