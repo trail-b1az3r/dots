@@ -26,7 +26,9 @@ Singleton {
     readonly property color accentText: c.accent_text ?? "#0B1A33"
     readonly property color warm: c.warm ?? "#E8C79A"
     readonly property color outline: c.outline ?? "#FFFFFF"
-    readonly property real barOpacity: data.bar_opacity ?? 0.78
+    // Frosted glass: how much of the surface colour tints the blurred wallpaper behind the bars, menus and popups.
+    readonly property real glassTint: data.glass_tint ?? data.bar_opacity ?? 0.42
+    readonly property real barOpacity: glassTint
 
     function alpha(colour, a) {
         return Qt.rgba(colour.r, colour.g, colour.b, a);

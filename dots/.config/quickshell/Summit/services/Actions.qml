@@ -17,7 +17,10 @@ Singleton {
     function windows() { Quickshell.execDetached([root.rofiScript, "windows"]); }
     function clipboard() { Quickshell.execDetached([root.rofiScript, "clipboard"]); }
     function power() { Quickshell.execDetached([root.rofiScript, "power"]); }
-    function themes() { Quickshell.execDetached([root.halcyon + "/halcyon-theme", "menu"]); }
+    // The theme picker is Summit's own (popups/ThemePicker.qml), listening for this.
+    signal themesRequested
+    function themes() { root.themesRequested(); }
+    function keys() { Quickshell.execDetached([root.rofiScript, "keys"]); }
     function forecast() { Quickshell.execDetached([root.rofiScript, "forecast"]); }
     function run(command) { Quickshell.execDetached(["sh", "-c", command]); }
 }

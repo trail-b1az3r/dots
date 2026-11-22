@@ -7,8 +7,9 @@ import Quickshell.Widgets
 import qs.common
 import qs.services
 
-// The bottom bar: a centred strip of apps. Pinned apps first, then whatever else is open; a dot under the running
-// ones, a longer one under the focused. Click to focus or open, middle-click for a new window.
+// The bottom bar: a centred strip of apps on frosted glass. Pinned apps first, then whatever else is open; a dot
+// under the running ones, a longer one under the focused. Click to focus or open. The window is taller than the
+// strip so the app's name can show above it (only the strip takes the pointer: the mask).
 PanelWindow {
     id: dock
     required property var modelData
@@ -16,7 +17,7 @@ PanelWindow {
     WlrLayershell.namespace: "summit-bottom"
     color: "transparent"
     anchors { bottom: true; left: true; right: true }
-    implicitHeight: 64 + Theme.gap
+    implicitHeight: 64 + Theme.gap + 44
     exclusiveZone: 64 + Theme.gap
     mask: Region { item: strip }
 
@@ -36,15 +37,12 @@ PanelWindow {
         return ids;
     }
 
-    Rectangle {
+    Glass {
         id: strip
         anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: Theme.gap }
         height: 54
         width: row.implicitWidth + 16
         radius: Theme.radius + 4
-        color: Theme.alpha(Theme.surface, Theme.barOpacity)
-        border.width: 1
-        border.color: Theme.alpha(Theme.outline, 0.07)
         Behavior on width { NumberAnimation { duration: Theme.animMs; easing.type: Easing.OutCubic } }
 
         Row {

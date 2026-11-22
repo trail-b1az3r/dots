@@ -277,11 +277,12 @@ impl App {
             .size(11)
             .font(Font { weight: Weight::Semibold, ..UI })
             .color(self.palette.muted);
+        // A pane of frosted glass on the frosted window: a little more of the surface, no edge.
         container(column![label, content.into()].spacing(14))
             .padding([16, 18])
             .width(Length::Fill)
             .style(move |_| container::Style {
-                background: Some(surface.into()),
+                background: Some(Color { a: 0.45, ..surface }.into()),
                 border: Border { radius: 18.0.into(), ..Border::default() },
                 ..container::Style::default()
             })
@@ -302,12 +303,17 @@ impl App {
             .width(Length::Fill)
             .into(),
         };
+        // Frosted glass: the window is see-through and the compositor blurs what is behind it (Summit's theme turns
+        // Hyprland's blur back on for this window); the theme's background only tints it.
         let background = p.background;
         container(body)
             .padding([22, 20])
             .center_x(Length::Fill)
             .height(Length::Fill)
-            .style(move |_| container::Style { background: Some(background.into()), ..container::Style::default() })
+            .style(move |_| container::Style {
+                background: Some(Color { a: 0.55, ..background }.into()),
+                ..container::Style::default()
+            })
             .into()
     }
 
@@ -444,6 +450,7 @@ fn main() -> iced::Result {
         .window(window::Settings {
             size: Size::new(400.0, 720.0),
             min_size: Some(Size::new(360.0, 680.0)),
+            transparent: true,
             platform_specific: window::settings::PlatformSpecific {
                 application_id: "halcyon-forecast".into(),
                 ..Default::default()

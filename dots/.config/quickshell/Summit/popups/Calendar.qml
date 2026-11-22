@@ -17,14 +17,12 @@ PopupWindow {
 
     onVisibleChanged: if (visible) offset = 0
 
-    Rectangle {
+    Glass {
         id: body
         width: parent.width
         implicitHeight: col.implicitHeight + 28
         radius: Theme.radius + 4
-        color: Theme.alpha(Theme.surface, 0.96)
-        border.width: 1
-        border.color: Theme.alpha(Theme.outline, 0.08)
+        tint: Theme.glassTint + 0.18
 
         Column {
             id: col

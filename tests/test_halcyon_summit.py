@@ -211,6 +211,35 @@ class ThemeTests(unittest.TestCase):
         rendered = theme.render_lua("hyperneo-v2", theme.load("hyperneo-v2"), "light", True)
         self.assertIn("rofi-menu clipboard", rendered if isinstance(rendered, str) else "\n".join(rendered))
 
+    def test_summit_keys_work_without_the_halcyon_shell(self):
+        lua = "\n".join(theme.summit_lua())
+        # Super alone opens the apps on release (upstream's press bind opened fuzzel and ate Super+W and the rest).
+        self.assertIn('pcall(hl.unbind, "SUPER + SUPER_L")', lua)
+        self.assertIn('hl.bind("SUPER + SUPER_L", hl.dsp.exec_cmd("$HOME/.config/hypr/hyprland/halcyon/summit/'
+                      'rofi-menu apps"), { release = true })', lua)
+        self.assertIn('hl.bind("SUPER + SHIFT + T", hl.dsp.exec_cmd("qs -c Summit ipc call summit themes")', lua)
+        self.assertIn('hl.bind("CTRL + SUPER + SHIFT + T", hl.dsp.exec_cmd("qs -c Summit ipc call summit themes")', lua)
+        self.assertIn("rofi-menu keys", lua)
+        self.assertNotIn('"SUPER + W"', lua)        # the browser stays Halcyon's
+        self.assertIn('namespace = "summit-themes" }, blur = true', lua)
+        self.assertIn('match = { class = "halcyon-forecast" }', lua)
+        mac = "\n".join(theme.macshell_lua())
+        self.assertIn('hl.bind("SUPER + SUPER_L", hl.dsp.exec_cmd("qs -c MacShell ipc call spotlight toggle"), '
+                      '{ release = true })', mac)
+
+    def test_the_theme_menu_opens_the_running_shells_picker(self):
+        calls = []
+
+        def run(cmd, **_k):
+            calls.append(cmd)
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+        (self.root / "desktop-shell").write_text("Summit\n")
+        with unittest.mock.patch.object(theme.subprocess, "run", run), \
+                unittest.mock.patch.object(theme.shutil, "which", return_value="/usr/bin/qs"):
+            self.assertEqual(theme.cmd_menu([]), 0)
+        self.assertEqual(calls, [["qs", "-c", "Summit", "ipc", "call", "summit", "themes"]])
+
     def test_macshell_opens_its_theme_picker(self):
         lua = "\n".join(theme.macshell_lua())
         self.assertIn('hl.bind("SUPER + SHIFT + T", hl.dsp.exec_cmd("qs -c MacShell ipc call themes toggle")', lua)
@@ -276,6 +305,17 @@ class ShellTests(unittest.TestCase):
 
 
 class FilesTests(unittest.TestCase):
+    def test_glass_everywhere_without_edges(self):
+        glass = (SUMMIT / "common/Glass.qml").read_text()
+        self.assertNotIn("border.width", glass)               # no hairline edge
+        for name in ("common/Pill.qml", "dock/Dock.qml", "dock/ToolTipLabel.qml", "popups/Calendar.qml",
+                     "popups/ThemePicker.qml"):
+            self.assertIn("Glass {", (SUMMIT / name).read_text(), name)
+        dock = (SUMMIT / "dock/Dock.qml").read_text()
+        self.assertIn("implicitHeight: 64 + Theme.gap + 44", dock)   # room for the app's name above the strip
+        rasi = (HALCYON / "summit/summit.rasi").read_text()
+        self.assertIn("border: 0;", rasi)
+
     def test_summit_files(self):
         for name in ("shell.qml", "common/Theme.qml", "bar/TopBar.qml", "dock/Dock.qml", "services/Weather.qml"):
             self.assertTrue((SUMMIT / name).is_file(), name)
