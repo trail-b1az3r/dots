@@ -6,6 +6,7 @@
 #   rofi-menu clipboard   the clipboard history, from cliphist (Super+V)
 #   rofi-menu power       lock, log out, sleep, restart, shut down (the power button, Super+Escape)
 #   rofi-menu forecast    the week's weather: halcyon-forecast's window when it is built, else a list here
+#   rofi-menu keys        every keybind with a description (Super+/), searchable; Enter runs the chosen one
 #
 # A second press closes the open menu. Your own ~/.config/rofi is not read or changed.
 set -u
@@ -89,11 +90,55 @@ forecast_menu() {
         -theme-str 'listview { lines: 7; } window { width: 460px; } entry { enabled: false; }' >/dev/null
 }
 
+keys_menu() {
+    # Hyprland's binds with a description, as "Super + Shift + T    Shell: ..." (modmask bits: Shift 1, Ctrl 4,
+    # Alt 8, Super 64). The chosen line's number picks the bind to run (hyprctl dispatch DISPATCHER ARG).
+    local binds lines choice
+    binds="$(hyprctl binds -j 2>/dev/null)" || exit 1
+    lines="$(printf '%s' "$binds" | python3 -c '
+import json, sys
+mods = ((64, "Super"), (4, "Ctrl"), (8, "Alt"), (1, "Shift"))
+seen = set()
+for b in json.load(sys.stdin):
+    desc = (b.get("description") or "").strip()
+    if not desc:
+        continue
+    keys = [name for bit, name in mods if b.get("modmask", 0) & bit] + [b.get("key", "").replace("_", " ").title()]
+    chord = " + ".join(k for k in keys if k)
+    if (chord, desc) in seen:
+        continue
+    seen.add((chord, desc))
+    print(json.dumps([chord, desc, b.get("dispatcher", ""), b.get("arg", "")]))
+')" || exit 1
+    [[ -n "$lines" ]] || exit 0
+    choice="$(printf '%s\n' "$lines" | python3 -c '
+import json, sys
+for line in sys.stdin:
+    chord, desc = json.loads(line)[:2]
+    print(f"{chord:<26}{desc}")
+' | r -dmenu -i -p keyboard -format i -mesg "Halcyon's keys · Enter runs one" \
+        -theme-str 'window { width: 760px; } listview { lines: 12; } element-icon { enabled: false; }
+                    element-text { font: "JetBrainsMono Nerd Font 10"; }')" || exit 0
+    [[ "$choice" =~ ^[0-9]+$ ]] || exit 0
+    printf '%s\n' "$lines" | sed -n "$((choice + 1))p" | python3 -c '
+import json, subprocess, sys
+_, _, dispatcher, arg = json.loads(sys.stdin.read())
+def dispatch(*args):
+    return subprocess.run(["hyprctl", "dispatch", *args], capture_output=True, text=True).stdout.strip() == "ok"
+# Hyprland 0.55+ takes Lua (hl.dsp.exec_cmd("...")); older ones the plain dispatcher.
+if dispatcher == "exec" and arg:
+    dispatch("hl.dsp.exec_cmd(" + json.dumps(arg) + ")") or dispatch("exec", arg)
+elif dispatcher:
+    dispatch(dispatcher, arg) if arg else dispatch(dispatcher)
+'
+}
+
 case "$mode" in
     apps) r -show drun -p apps ;;
     windows) r -show window -p select_window ;;
     clipboard) clipboard_menu ;;
     power) power_menu ;;
     forecast) forecast_menu ;;
-    *) echo "usage: rofi-menu [apps|windows|clipboard|power|forecast]" >&2; exit 2 ;;
+    keys) keys_menu ;;
+    *) echo "usage: rofi-menu [apps|windows|clipboard|power|forecast|keys]" >&2; exit 2 ;;
 esac

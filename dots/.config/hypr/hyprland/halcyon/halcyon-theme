@@ -531,6 +531,11 @@ def macshell_lua():
     for key, call, description in MACSHELL_BINDS:
         out.append(f'pcall(hl.unbind, "{key}")')
         out.append(f'hl.bind("{key}", hl.dsp.exec_cmd("{MACSHELL_QS}{call}"), {{ description = "{description}" }})')
+    # Super on its own: Spotlight, on release. Upstream's press bind falls back to fuzzel while the Halcyon shell is
+    # stopped, which opened on every Super press and took the key of Super+W and the rest.
+    for key in SUPER_TAP:
+        out.append(f'pcall(hl.unbind, "{key}")')
+        out.append(f'hl.bind("{key}", hl.dsp.exec_cmd("{MACSHELL_QS}spotlight toggle"), {{ release = true }})')
     for name, alpha in MACSHELL_LAYERS:
         out.append(f'hl.layer_rule({{ name = "{name}", match = {{ namespace = "{name}" }}, blur = true, '
                    f'ignore_alpha = {alpha}, no_anim = true }})')
@@ -544,27 +549,45 @@ def macshell_lua():
 SUMMIT_FILE = HALCYON_STATE / "summit.json"
 SUMMIT_ROFI = HALCYON_STATE / "summit-colors.rasi"
 SUMMIT_MENU = "$HOME/.config/hypr/hyprland/halcyon/summit/rofi-menu "
+SUMMIT_QS = "qs -c Summit ipc call summit "
+# Summit's keys, over the Halcyon shell's (which do nothing while that shell is stopped). Halcyon's own keys (apps
+# like Super+W the browser, windows, workspaces, modes) stay as they are.
 SUMMIT_BINDS = (
-    ("SUPER + Space", "apps", "Summit: Apps"),
-    ("ALT + TAB", "windows", "Summit: Switch windows"),
-    ("SUPER + V", "clipboard", "Summit: Clipboard"),
-    ("SUPER + Escape", "power", "Summit: Power menu"),
+    ("SUPER + Space", SUMMIT_MENU + "apps", "Summit: Apps"),
+    ("ALT + TAB", SUMMIT_MENU + "windows", "Summit: Switch windows"),
+    ("SUPER + Tab", SUMMIT_MENU + "windows", "Summit: Windows"),
+    ("SUPER + V", SUMMIT_MENU + "clipboard", "Summit: Clipboard"),
+    ("SUPER + Escape", SUMMIT_MENU + "power", "Summit: Power menu"),
+    ("SUPER + Slash", SUMMIT_MENU + "keys", "Summit: Keybinds"),
+    ("SUPER + SHIFT + T", SUMMIT_QS + "themes", "Summit: Themes"),
+    ("CTRL + SUPER + SHIFT + T", SUMMIT_QS + "themes", "Summit: Themes"),
+    ("SUPER + SHIFT + S", "pidof slurp || hyprshot --freeze --clipboard-only --mode region --silent",
+     "Summit: Screenshot a region"),
 )
-# Its bars are translucent: Hyprland's blur behind them, ignoring the empty space around them.
-SUMMIT_LAYERS = (("summit-top", 0.25), ("summit-bottom", 0.25), ("rofi", 0.25))
+# Super on its own, released, opens the apps. Upstream binds it on press to the Halcyon shell's search, falling back to
+# fuzzel while that shell is stopped: fuzzel then opened on every Super press and took the W of Super+W (the browser)
+# and every other Super key. A release bind fires only when no other key was pressed with Super.
+SUPER_TAP = ("SUPER + SUPER_L", "SUPER + SUPER_R")
+# Everything is frosted glass: Hyprland's blur behind each of its layers, ignoring the clear space around them.
+SUMMIT_LAYERS = (("summit-top", 0.05), ("summit-bottom", 0.05), ("summit-themes", 0.05), ("rofi", 0.05))
 SUMMIT_PINNED = ["firefox", "org.kde.dolphin", "kitty", "org.kde.kate", "code"]
 
 
 def summit_lua():
     """theme.lua's part for a Summit theme: its keys and its bars' blur."""
-    out = ["", "-- Summit runs instead of the Halcyon shell (halcyon/desktop-shell): Rofi menus and its bars' blur.",
-           "-- Ctrl+Super+Shift+T still opens the theme menu, to go back to another theme."]
-    for key, mode, description in SUMMIT_BINDS:
+    out = ["", "-- Summit runs instead of the Halcyon shell (halcyon/desktop-shell): Rofi menus, its theme picker, and",
+           "-- frosted glass. Super+Shift+T (or Ctrl+Super+Shift+T) opens the themes, Super+/ every key."]
+    for key, command, description in SUMMIT_BINDS:
         out.append(f'pcall(hl.unbind, "{key}")')
-        out.append(f'hl.bind("{key}", hl.dsp.exec_cmd("{SUMMIT_MENU}{mode}"), {{ description = "{description}" }})')
+        out.append(f'hl.bind("{key}", hl.dsp.exec_cmd("{command}"), {{ description = "{description}" }})')
+    for key in SUPER_TAP:
+        out.append(f'pcall(hl.unbind, "{key}")')
+        out.append(f'hl.bind("{key}", hl.dsp.exec_cmd("{SUMMIT_MENU}apps"), {{ release = true }})')
     for name, alpha in SUMMIT_LAYERS:
         out.append(f'hl.layer_rule({{ name = "{name}", match = {{ namespace = "{name}" }}, blur = true, '
                    f'ignore_alpha = {alpha} }})')
+    # The forecast window is glass too: upstream turns blur off for every window, so it is turned back on for it.
+    out.append('hl.window_rule({ match = { class = "halcyon-forecast" }, float = true, no_blur = false })')
     return out
 
 
@@ -598,7 +621,9 @@ def summit_rofi(colours):
     lines = ["/* Written by halcyon-theme for Summit's Rofi menus: the active theme's colours. */", "* {"]
     for key, name in names.items():
         lines.append(f"    {name}: {colours[key]};")
-    lines.append(f"    bg-alpha: {colours['surface']}D9;")
+    # Frosted glass: the window and its panes are translucent, and Hyprland blurs behind them.
+    lines.append(f"    bg-alpha: {colours['surface']}8C;")
+    lines.append(f"    pane: {colours['surface_high']}99;")
     lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -2043,8 +2068,15 @@ def cmd_off(_args):
 
 
 def cmd_menu(args):
-    # The shell's theme picker (cards with each theme's wallpaper, colours and frame); fuzzel when the shell isn't
-    # running, or with --fuzzel.
+    # The running shell's theme picker (cards with each theme's wallpaper and colours, in pages): Summit's,
+    # MacShell's or the Halcyon shell's; fuzzel when none answers, or with --fuzzel.
+    shell = read_state(DESKTOP_SHELL_FILE) or "ii"
+    own = {"Summit": ["qs", "-c", "Summit", "ipc", "call", "summit", "themes"],
+           "MacShell": ["qs", "-c", "MacShell", "ipc", "call", "themes", "toggle"]}.get(shell)
+    if "--fuzzel" not in args and own and shutil.which("qs"):
+        done = subprocess.run(own, capture_output=True, text=True, check=False, timeout=10)
+        if done.returncode == 0 and "error" not in (done.stdout + done.stderr).lower():
+            return 0
     if "--fuzzel" not in args and shutil.which("qs"):
         done = subprocess.run(["qs", "-c", "ii", "ipc", "call", "themePicker", "toggle"], capture_output=True,
                               text=True, check=False, timeout=10)
