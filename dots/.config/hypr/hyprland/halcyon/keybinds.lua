@@ -77,6 +77,8 @@ hl.bind("SUPER + SHIFT + 6", hl.dsp.exec_cmd(
 ), { description = "Utilities: Screenshot window >> clipboard & file" })
 
 --# Themes
+hl.bind("CTRL + SUPER + SHIFT + G", hl.dsp.exec_cmd("$HOME/.config/hypr/hyprland/halcyon/halcyon-theme shell menu"),
+    { description = "Shell: Choose the desktop shell (Halcyon, Glass, Summit, MacShell, Noctalia)" })
 hl.bind("CTRL + SUPER + SHIFT + T", hl.dsp.exec_cmd("$HOME/.config/hypr/hyprland/halcyon/halcyon-theme menu"),
     { description = "Shell: Pick a Halcyon theme" })
 

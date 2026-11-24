@@ -64,17 +64,16 @@ class ThemeTest(unittest.TestCase):
         data["desktop_shell"] = "waybar"
         self.assertTrue(any("desktop_shell" in p for p in theme.validate("x", data)))
 
-    def test_theme_lua_binds_macshell_keys_over_the_halcyon_shell(self):
-        data = theme.load("liquid-glass")
-        lua = theme.render_lua("liquid-glass", data, "light", False)
+    def test_shell_lua_binds_macshell_keys_over_the_halcyon_shell(self):
+        lua = theme.shell_lua("MacShell")
         self.assertIn('pcall(hl.unbind, "SUPER + Space")', lua)
         self.assertIn('hl.bind("SUPER + Space", hl.dsp.exec_cmd("qs -c MacShell ipc call spotlight toggle")', lua)
         self.assertIn('namespace = "macdock"', lua)
         # The theme menu stays reachable, to come back.
         self.assertNotIn("CTRL + SUPER + SHIFT + T", lua)
-        # A Halcyon-shell theme has none of it.
-        other = theme.render_lua("fractured-glass", theme.load("fractured-glass"), "light", False)
-        self.assertNotIn("MacShell", other)
+        # The theme's own lua has none of it: the shell you run may not be the theme's.
+        self.assertNotIn("MacShell", theme.render_lua("liquid-glass", theme.load("liquid-glass"), "light", False))
+        self.assertEqual(theme.shell_lua("ii"), "")
 
 
 class SetDesktopShellTest(unittest.TestCase):
@@ -176,3 +175,73 @@ class DesktopShellScriptTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ShellChoiceTest(unittest.TestCase):
+    """halcyon shell NAME: the desktop shell you pick, whatever the theme."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.state = self.root / "state/desktop-shell"
+        self.patches = [
+            unittest.mock.patch.object(theme, "DESKTOP_SHELL_FILE", self.state),
+            unittest.mock.patch.object(theme, "CONFIG", self.root / "config"),
+            unittest.mock.patch.object(theme, "hyprland_running", return_value=False),
+            unittest.mock.patch.object(theme, "notify"),
+            unittest.mock.patch.object(theme, "set_shell_value"),
+            unittest.mock.patch.object(theme, "active", return_value=None),
+        ]
+        for patch in self.patches:
+            patch.start()
+
+    def tearDown(self):
+        for patch in self.patches:
+            patch.stop()
+        self.tmp.cleanup()
+
+    def test_your_choice_wins_over_the_theme(self):
+        theme.cmd_shell(["glass"])
+        self.assertEqual((self.root / "state/shell-choice").read_text().strip(), "Glass")
+        self.assertEqual(self.state.read_text().strip(), "Glass")
+        theme.set_desktop_shell("Summit", {}, None)   # a Summit theme applied afterwards
+        self.assertEqual(self.state.read_text().strip(), "Glass")
+
+    def test_auto_follows_the_theme_again(self):
+        theme.cmd_shell(["glass"])
+        theme.cmd_shell(["auto"])
+        self.assertFalse((self.root / "state/shell-choice").exists())
+        self.assertFalse(self.state.exists())
+
+    def test_glass_writes_liquid_blur_and_glass_panels(self):
+        theme.cmd_shell(["glass"])
+        lua = (self.root / "state/shell.lua").read_text()
+        self.assertIn("variant = 11", lua)
+        self.assertIn('pcall(hl.get_config, "decoration:blur:liquid:refraction")', lua)
+        self.assertIn('namespace = "bar[0-9]*" }, blur = true', lua)
+        theme.set_shell_value.assert_called_with("halcyon.liquidGlass", True)
+        theme.cmd_shell(["halcyon"])
+        self.assertFalse((self.root / "state/shell.lua").exists())
+        theme.set_shell_value.assert_called_with("halcyon.liquidGlass", False)
+
+    def test_noctalia_needs_its_package(self):
+        with unittest.mock.patch.object(theme.shutil, "which", return_value=None):
+            with self.assertRaises(theme.ThemeError):
+                theme.cmd_shell(["noctalia"])
+        with unittest.mock.patch.object(theme.shutil, "which", return_value="/usr/bin/noctalia"):
+            theme.cmd_shell(["noctalia"])
+        lua = (self.root / "state/shell.lua").read_text()
+        self.assertIn('hl.dsp.exec_cmd("noctalia msg panel-toggle launcher")', lua)
+        self.assertIn('namespace = "noctalia-bar-.*"', lua)
+        self.assertEqual(theme.DESKTOP_SHELLS["Noctalia"], "halcyon-noctalia.service")
+
+    def test_scripts_know_every_shell(self):
+        script = (HALCYON / "desktop-shell").read_text()
+        for name in ("Noctalia) unit=halcyon-noctalia.service", "Glass) unit=halcyon-quickshell.service"):
+            self.assertIn(name, script)
+        self.assertIn("noctalia msg lock", (HALCYON / "lock").read_text())
+        self.assertIn('stateHome .. "/halcyon/shell.lua"', (HALCYON / "init.lua").read_text())
+        unit = (HALCYON.parents[2] / "systemd/user/halcyon-noctalia.service").read_text()
+        self.assertIn("ExecStart=/usr/bin/env noctalia", unit)
+        for other in ("halcyon-quickshell", "halcyon-macshell", "halcyon-summit"):
+            self.assertIn("halcyon-noctalia.service", (HALCYON.parents[2] / f"systemd/user/{other}.service").read_text())

@@ -26,6 +26,12 @@ local themeFile = stateHome .. "/halcyon/theme.lua"
 if is_file_exists(themeFile) then
     dofile(themeFile)
 end
+-- The desktop shell's keys and glass (Summit, MacShell, Noctalia or Halcyon Glass), written by halcyon-theme for the
+-- shell that runs: the one you picked (`halcyon shell`), else the theme's. After theme.lua, so they win.
+local shellFile = stateHome .. "/halcyon/shell.lua"
+if is_file_exists(shellFile) then
+    dofile(shellFile)
+end
 
 -- OLED care (halcyon oled on): hyproled's shader, set again at every config reload (a reload drops a shader set at
 -- run time). It takes the place of a theme's screen shader: Hyprland runs one at a time.

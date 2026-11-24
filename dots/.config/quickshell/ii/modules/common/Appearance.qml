@@ -33,7 +33,10 @@ Singleton {
         return Math.max(0, Math.min(0.22, y)) - 0.12 * (m3colors.darkmode ? 0 : 1)
     }
     property real autoContentTransparency: 0.9
-    property real backgroundTransparency: Config?.options.appearance.transparency.enable ? Config?.options.appearance.transparency.automatic ? autoBackgroundTransparency : Config?.options.appearance.transparency.backgroundTransparency : 0
+    // Halcyon Glass (halcyon shell glass): the panels let the liquid glass behind them show (hyprland-plus's liquid
+    // blur bends the wallpaper at their rims); your own transparency settings are kept for the plain shell.
+    readonly property bool liquidGlass: Config?.options.halcyon?.liquidGlass ?? false
+    property real backgroundTransparency: liquidGlass ? (m3colors.darkmode ? 0.46 : 0.38) : Config?.options.appearance.transparency.enable ? Config?.options.appearance.transparency.automatic ? autoBackgroundTransparency : Config?.options.appearance.transparency.backgroundTransparency : 0
     property real contentTransparency: Config?.options.appearance.transparency.automatic ? autoContentTransparency : Config?.options.appearance.transparency.contentTransparency
 
     m3colors: QtObject {

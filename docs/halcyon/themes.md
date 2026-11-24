@@ -301,6 +301,23 @@ While MacShell runs:
 MacShell's extra packages are in `illogical-impulse-macshell` (`awww`, `qt6-shadertools`, `inotify-tools`, `zenity`,
 `jq`, `hyprsunset`, `brightnessctl`, `inter-font`).
 
+## Choosing the desktop shell
+
+Each theme brings its shell (Liquid Glass runs MacShell, HyperNeo v2 Summit, the rest the Halcyon shell) unless you
+pick one yourself: **Settings > Halcyon > Desktop shell**, `halcyon shell NAME`, or Ctrl+Super+Shift+G from any of
+them. `halcyon shell auto` lets the themes choose again.
+
+| Name | Shell |
+| --- | --- |
+| `halcyon` | The Halcyon shell (illogical-impulse) |
+| `glass` | **Halcyon Glass**: the Halcyon shell with see-through panels over liquid glass. hyprland-plus 0.57.2.p4's `liquid` blur, after [MyGlass](https://github.com/Sidharth7082/myglass) (BSD-3-Clause), bends the wallpaper at each panel's rim, dims what is bright behind it and lights the top edge. With an older Hyprland the panels keep plain frosted glass. |
+| `summit` | Summit: a clean top bar and dock with Rofi menus |
+| `macshell` | MacShell: a macOS Tahoe style menu bar and Dock |
+| `noctalia` | [Noctalia Shell](https://github.com/noctalia-dev/noctalia) v5 (MIT), once `sudo pacman -S noctalia` has installed it: its bar, launcher (Super), control center (Super+N), clipboard (Super+V), power menu (Super+Escape), settings (Super+Comma) and lock screen. It runs as `halcyon-noctalia.service`. |
+
+Your pick is kept in `~/.local/state/halcyon/shell-choice`; the shell's keys and glass are written to
+`~/.local/state/halcyon/shell.lua`, which Hyprland loads after the theme's.
+
 ## HyperNeo v2 and Summit
 
 HyperNeo v2 runs Summit (`~/.config/quickshell/Summit`), the way Liquid Glass runs MacShell: applying it records

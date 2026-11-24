@@ -5,7 +5,10 @@
 #             github.com/0-ss/MacShell, MIT), with MacLock as its lock screen.
 #   Summit    ...the HyperNeo v2 theme's: a clean top bar and dock (halcyon-summit.service, ~/.config/quickshell/Summit),
 #             with Rofi menus for apps, windows, the clipboard and power (halcyon/summit/rofi-menu).
-# halcyon-theme writes the active theme's choice to ~/.local/state/halcyon/desktop-shell (absent: ii).
+#   Glass     the Halcyon shell over liquid glass (halcyon-quickshell.service; hyprland-plus's liquid blur)
+#   Noctalia  Noctalia Shell v5 (halcyon-noctalia.service, the noctalia package, github.com/noctalia-dev/noctalia)
+# halcyon-theme writes the shell to run to ~/.local/state/halcyon/desktop-shell (absent: ii): the one you picked with
+# `halcyon shell`, else the active theme's.
 #
 #   desktop-shell            print the shell that should run
 #   desktop-shell unit       print its systemd unit
@@ -21,13 +24,16 @@ shell=ii
 if [ -r "$state" ]; then
     read -r shell < "$state" || true
 fi
-# MacShell and Summit are Hyprland's only: under niri (or anything else) it is always the Halcyon shell.
-if { [ "$shell" = MacShell ] || [ "$shell" = Summit ]; } && [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && ! hyprctl version >/dev/null 2>&1; then
+# MacShell, Summit, Noctalia and Glass are Hyprland's only here: under niri (or anything else) it is always the
+# Halcyon shell.
+if [ "$shell" != ii ] && [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && ! hyprctl version >/dev/null 2>&1; then
     shell=ii
 fi
 case "$shell" in
     MacShell) unit=halcyon-macshell.service ;;
     Summit) unit=halcyon-summit.service ;;
+    Noctalia) unit=halcyon-noctalia.service ;;
+    Glass) unit=halcyon-quickshell.service ;;
     *) shell=ii; unit=halcyon-quickshell.service ;;
 esac
 
@@ -38,9 +44,14 @@ case "${1:-}" in
         systemctl --user is-active --quiet "$unit" && exit 0
         exec systemctl --user start "$unit" ;;
     restart) exec systemctl --user restart "$unit" ;;
-    ipc) shift; exec qs -c "$shell" ipc call "$@" ;;
+    ipc)
+        shift
+        [ "$shell" = Noctalia ] && exec noctalia msg "$@"
+        [ "$shell" = Glass ] && shell=ii
+        exec qs -c "$shell" ipc call "$@" ;;
     power-menu)
-        [ "$shell" = ii ] && exec qs -c ii ipc call session toggle
+        case "$shell" in ii|Glass) exec qs -c ii ipc call session toggle ;; esac
+        [ "$shell" = Noctalia ] && exec noctalia msg panel-toggle session
         [ "$shell" = Summit ] && exec "$(dirname -- "$0")/summit/rofi-menu" power
         id="$(sed -n 's/^ID=//p' "${OS_RELEASE:-/etc/os-release}" 2>/dev/null | tr -d "\"'" | head -n1)"
         for menu in ${id:+"$id-power-menu"} wlogout; do
