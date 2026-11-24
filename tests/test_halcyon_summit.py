@@ -208,8 +208,7 @@ class ThemeTests(unittest.TestCase):
                       'rofi-menu apps")', lua)
         self.assertIn('pcall(hl.unbind, "ALT + TAB")', lua)
         self.assertIn('namespace = "summit-top"', lua)
-        rendered = theme.render_lua("hyperneo-v2", theme.load("hyperneo-v2"), "light", True)
-        self.assertIn("rofi-menu clipboard", rendered if isinstance(rendered, str) else "\n".join(rendered))
+        self.assertIn("rofi-menu clipboard", theme.shell_lua("Summit"))
 
     def test_summit_keys_work_without_the_halcyon_shell(self):
         lua = "\n".join(theme.summit_lua())

@@ -3,8 +3,14 @@
 #   ii        the shell's own lock (quickshell:lock), or hyprlock when the shell isn't running
 #   MacShell  MacLock, a separate Quickshell process so a shell crash can never take the lock with it
 #   Summit    hyprlock (Summit has no lock screen of its own)
+#   Noctalia  its own lock screen (noctalia msg lock), or hyprlock if it doesn't answer
 set -u
 here="$(dirname "$0")"
+if [ "$("$here/desktop-shell")" = Noctalia ]; then
+    noctalia msg lock >/dev/null 2>&1 && exit 0
+    pidof hyprlock >/dev/null || exec hyprlock
+    exit 0
+fi
 if [ "$("$here/desktop-shell")" = MacShell ] && [ -r "$HOME/.config/quickshell/MacLock/lock-via-ipc.sh" ]; then
     sh "$HOME/.config/quickshell/MacLock/lock-via-ipc.sh" && exit 0
     pidof hyprlock >/dev/null || exec hyprlock

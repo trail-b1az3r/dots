@@ -3,7 +3,7 @@ Description=Summit desktop shell (Quickshell), the HyperNeo v2 theme's shell
 Documentation=file://%h/.config/quickshell/Summit/shell.qml
 # One desktop shell at a time: starting this stops the others, and starting one of them stops this.
 # halcyon-theme picks which (a theme's "desktop_shell"); halcyon/desktop-shell starts the right one at login.
-Conflicts=halcyon-quickshell.service halcyon-macshell.service
+Conflicts=halcyon-quickshell.service halcyon-macshell.service halcyon-noctalia.service
 
 [Service]
 # Only inside a running Hyprland, as for halcyon-quickshell.service.

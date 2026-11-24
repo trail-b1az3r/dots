@@ -322,8 +322,8 @@ def validate(theme_id, theme):
     native = effects.get("native_blur")
     if native is not None:
         if not (isinstance(native, dict) and is_int(native.get("variant"))
-                and 0 <= native["variant"] <= 10):
-            problems.append("effects.native_blur.variant must be an integer in 0..10")
+                and 0 <= native["variant"] <= 11):
+            problems.append("effects.native_blur.variant must be an integer in 0..11")
         options = native.get("options", {}) if isinstance(native, dict) else {}
         for key, value in (options.items() if isinstance(options, dict) else []):
             if not re.match(r"^[a-z_]+:[a-z_]+$", key):
@@ -499,8 +499,16 @@ PLAIN_WINDOW_THEMES = ("hyperneo", "hsr")
 # ~/.config/quickshell/MacShell), a macOS Tahoe style menu bar and Dock with a real-time Liquid Glass shader, and
 # MacLock as its lock screen, or Summit (~/.config/quickshell/Summit), a clean top bar and dock with Rofi menus. One
 # runs at a time; their systemd units conflict.
-DESKTOP_SHELLS = {"ii": "halcyon-quickshell.service", "MacShell": "halcyon-macshell.service",
-                  "Summit": "halcyon-summit.service"}
+# Glass is the Halcyon shell over liquid glass (hyprland-plus's liquid blur, after MyGlass), and Noctalia is
+# Noctalia Shell v5 (github.com/noctalia-dev/noctalia, MIT; the noctalia package).
+DESKTOP_SHELLS = {"ii": "halcyon-quickshell.service", "Glass": "halcyon-quickshell.service",
+                  "MacShell": "halcyon-macshell.service", "Summit": "halcyon-summit.service",
+                  "Noctalia": "halcyon-noctalia.service"}
+# Which shell runs is yours to pick too (`halcyon shell NAME`, Settings > Halcyon > Desktop shell); without a choice
+# each theme brings its own. These are the names you pick by.
+SHELL_CHOICES = {"halcyon": "ii", "glass": "Glass", "summit": "Summit", "macshell": "MacShell", "noctalia": "Noctalia"}
+SHELL_LABELS = {"ii": "Halcyon", "Glass": "Halcyon Glass", "Summit": "Summit", "MacShell": "MacShell",
+                "Noctalia": "Noctalia"}
 MACSHELL_QS = "qs -c MacShell ipc call "
 # MacShell's keys, bound over the Halcyon shell's (which do nothing while that shell is stopped). The rest of
 # Halcyon's binds (windows, workspaces, apps) stay as they are.
@@ -535,6 +543,57 @@ def macshell_lua():
         out.append(f'hl.layer_rule({{ name = "{name}", match = {{ namespace = "{name}" }}, blur = true, '
                    f'ignore_alpha = {alpha}, no_anim = true }})')
     out.append('hl.layer_rule({ name = "macshot", match = { namespace = "macshot" }, no_anim = true })')
+    return out
+
+
+# Halcyon Glass: the Halcyon shell, its panels see-through over liquid glass. hyprland-plus 0.57.2.p4's liquid blur
+# (decoration:blur:variant 11, after MyGlass, github.com/Sidharth7082/myglass, BSD-3-Clause) bends the wallpaper at
+# each panel's rim, dims what is bright behind it and catches the light on its top edge. An older Hyprland without it
+# keeps its own blur: the panels are frosted glass all the same.
+GLASS_LIQUID = {"refraction": 26, "aberration": 0.45, "edge": 0.07, "lens": 0.35, "fresnel": 0.7, "specular": 0.9,
+                "adaptive_dim": 0.35, "adaptive_boost": 0.1, "saturation": 0.9}
+GLASS_LAYERS = ("bar[0-9]*", "barcorner.*", "dock[0-9]*", "sideleft[0-9]*", "sideright[0-9]*", "overview[0-9]*",
+                "session[0-9]*", "cheatsheet[0-9]*", "indicator.*", "osk[0-9]*", "notifications", "launcher")
+
+
+def glass_lua():
+    liquid = ", ".join(f"{key} = {value}" for key, value in GLASS_LIQUID.items())
+    out = ["", "-- Halcyon Glass: liquid glass behind the shell's panels (hyprland-plus's liquid blur).",
+           'if pcall(hl.get_config, "decoration:blur:liquid:refraction") then',
+           f"    hl.config({{ decoration = {{ blur = {{ enabled = true, variant = 11, passes = 3, liquid = {{ {liquid} }} }} }} }})",
+           "end"]
+    for namespace in GLASS_LAYERS:
+        out.append(f'hl.layer_rule({{ match = {{ namespace = "{namespace}" }}, blur = true, ignore_alpha = 0.02 }})')
+    return out
+
+
+# Noctalia Shell v5 (github.com/noctalia-dev/noctalia, MIT), from the noctalia package: its bar, panels, launcher,
+# notifications and lock screen, run by halcyon-noctalia.service. Its keys over the Halcyon shell's; Halcyon's own
+# (apps, windows, workspaces) stay.
+NOCTALIA_MSG = "noctalia msg "
+NOCTALIA_BINDS = (
+    ("SUPER + Space", "panel-toggle launcher", "Noctalia: Launcher"),
+    ("SUPER + V", "panel-toggle clipboard", "Noctalia: Clipboard"),
+    ("SUPER + Escape", "panel-toggle session", "Noctalia: Power menu"),
+    ("SUPER + N", "panel-toggle control-center", "Noctalia: Control center"),
+    ("SUPER + Comma", "settings-toggle", "Noctalia: Settings"),
+    ("ALT + TAB", "window-switcher", "Noctalia: Switch windows"),
+    ("CTRL + ALT + W", "panel-toggle wallpaper", "Noctalia: Wallpapers"),
+)
+NOCTALIA_LAYERS = ("noctalia-bar-.*", "noctalia-dock", "noctalia-panel", "noctalia-attached-panel",
+                   "noctalia-notification", "noctalia-osd")
+
+
+def noctalia_lua():
+    out = ["", "-- Noctalia runs instead of the Halcyon shell (halcyon/desktop-shell): its keys and its panels' blur."]
+    for key, call, description in NOCTALIA_BINDS:
+        out.append(f'pcall(hl.unbind, "{key}")')
+        out.append(f'hl.bind("{key}", hl.dsp.exec_cmd("{NOCTALIA_MSG}{call}"), {{ description = "{description}" }})')
+    for key in SUPER_TAP:
+        out.append(f'pcall(hl.unbind, "{key}")')
+        out.append(f'hl.bind("{key}", hl.dsp.exec_cmd("{NOCTALIA_MSG}panel-toggle launcher"), {{ release = true }})')
+    for namespace in NOCTALIA_LAYERS:
+        out.append(f'hl.layer_rule({{ match = {{ namespace = "{namespace}" }}, blur = true, ignore_alpha = 0.05 }})')
     return out
 
 
@@ -728,10 +787,38 @@ def ensure_fonts(theme):
     return added
 
 
+def shell_choice_file():
+    # Next to desktop-shell (which the tests move), not a fixed path.
+    return DESKTOP_SHELL_FILE.with_name("shell-choice")
+
+
+def shell_lua_file():
+    return DESKTOP_SHELL_FILE.with_name("shell.lua")
+
+
+def chosen_shell():
+    """The shell you picked (`halcyon shell`), or None: the theme's."""
+    choice = read_state(shell_choice_file())
+    return choice if choice in DESKTOP_SHELLS else None
+
+
+def shell_lua(name):
+    """shell.lua (init.lua loads it after theme.lua): the running shell's keys and its layers' glass."""
+    parts = {"MacShell": macshell_lua, "Summit": summit_lua, "Noctalia": noctalia_lua, "Glass": glass_lua}
+    if name not in parts:
+        return ""
+    return "\n".join(["-- Generated by halcyon-theme for the " + SHELL_LABELS[name] + " shell. Do not edit."]
+                     + parts[name]()) + "\n"
+
+
 def set_desktop_shell(name, theme=None, wallpaper=None):
-    """Run the desktop shell a theme wants (the Halcyon shell unless it says otherwise). Nothing is restarted when
-    the right one already runs."""
+    """Run the desktop shell you picked, else the one a theme wants (the Halcyon shell unless it says otherwise).
+    Nothing is restarted when the right one already runs."""
+    name = chosen_shell() or name
     name = name if name in DESKTOP_SHELLS else "ii"
+    if name == "Noctalia" and not shutil.which("noctalia"):
+        notify("Noctalia is not installed", "The Halcyon shell runs instead: sudo pacman -S noctalia")
+        name = "ii"
     before = read_state(DESKTOP_SHELL_FILE) or "ii"
     if name == "ii":
         remove(DESKTOP_SHELL_FILE)
@@ -742,6 +829,17 @@ def set_desktop_shell(name, theme=None, wallpaper=None):
             set_wallpaper_awww(wallpaper)
         elif name == "Summit":
             seed_summit(theme or {}, wallpaper)
+    # The shell's keys and glass: rewritten, and Hyprland reloaded, only when they change.
+    lua, path = shell_lua(name), shell_lua_file()
+    old = path.read_text(encoding="utf-8") if path.is_file() else ""
+    if lua != old:
+        if lua:
+            write_atomic(path, lua)
+        else:
+            remove(path)
+        reload_hyprland()
+    if "Glass" in (name, before) and name != before:
+        set_shell_value("halcyon.liquidGlass", name == "Glass")
     if not hyprland_running() or not shutil.which("systemctl"):
         return
     # The weather (Summit's bar shows it) is fetched while Summit runs, unless you said otherwise: its timer starts
@@ -839,10 +937,8 @@ def render_lua(theme_id, theme, effects, native_blur, shader_path=None, glass=No
     if translucent:
         out += ["", "-- Translucent windows need blur behind them; upstream turns it off for all.",
                 'hl.window_rule({ match = { class = ".*" }, no_blur = false })']
-    if theme.get("desktop_shell") == "MacShell":
-        out += macshell_lua()
-    elif theme.get("desktop_shell") == "Summit":
-        out += summit_lua()
+    # The desktop shell's keys and layers are in shell.lua (shell_lua), so the shell you pick keeps them whatever the
+    # theme.
     curves = h.get("curves", {})
     if curves and effects != "off":
         out.append("")
@@ -2010,6 +2106,48 @@ def cmd_off(_args):
     return 0
 
 
+def cmd_shell(args):
+    """halcyon shell [NAME|auto|menu|--json]: the desktop shell that runs."""
+    current = read_state(DESKTOP_SHELL_FILE) or "ii"
+    choice = chosen_shell()
+    if not args or args[0] == "--json":
+        installed = {name: name != "Noctalia" or bool(shutil.which("noctalia")) for name in DESKTOP_SHELLS}
+        if args:
+            print(json.dumps({"running": current, "choice": choice or "auto", "installed": installed,
+                              "choices": {key: SHELL_LABELS[value] for key, value in SHELL_CHOICES.items()}}))
+        else:
+            print(f"{SHELL_LABELS[current]}" + ("" if choice else " (the theme's)"))
+        return 0
+    if args[0] == "menu":
+        options = {"Follow the theme" + ("  (current)" if not choice else ""): "auto"}
+        for key, value in SHELL_CHOICES.items():
+            options[SHELL_LABELS[value] + ("  (current)" if choice == value else "")] = key
+        menu = (["rofi", "-dmenu", "-i", "-p", "Desktop shell"] if shutil.which("rofi")
+                else ["fuzzel", "--dmenu", "--prompt", "Desktop shell  "] if shutil.which("fuzzel") else None)
+        if menu is None:
+            raise ThemeError("rofi or fuzzel is needed for the menu: halcyon shell NAME works without")
+        picked = subprocess.run(menu, input="\n".join(options), capture_output=True, text=True, check=False).stdout.strip()
+        if picked not in options:
+            return 0
+        args = [options[picked]]
+    name = args[0].lower()
+    if name == "auto":
+        remove(shell_choice_file())
+    elif name in SHELL_CHOICES:
+        if SHELL_CHOICES[name] == "Noctalia" and not shutil.which("noctalia"):
+            raise ThemeError("Noctalia is not installed: sudo pacman -S noctalia")
+        write_atomic(shell_choice_file(), SHELL_CHOICES[name] + "\n")
+    else:
+        raise ThemeError("usage: halcyon shell [auto|" + "|".join(SHELL_CHOICES) + "|menu|--json]")
+    theme_id = active()
+    theme = load(theme_id) if theme_id else {}
+    set_desktop_shell(theme.get("desktop_shell", "ii"), theme, resolve_wallpaper(theme) if theme_id else None)
+    running = read_state(DESKTOP_SHELL_FILE) or "ii"
+    notify(f"{SHELL_LABELS[running]} shell", "Your desktop shell" if chosen_shell() else "The theme's desktop shell")
+    print(SHELL_LABELS[running])
+    return 0
+
+
 def cmd_menu(args):
     # The running shell's theme picker (cards with each theme's wallpaper and colours, in pages): Summit's,
     # MacShell's or the Halcyon shell's; fuzzel when none answers, or with --fuzzel.
@@ -2847,7 +2985,7 @@ COMMANDS = {
     "list": cmd_list, "previews": cmd_previews, "current": cmd_current, "apply": cmd_apply, "off": cmd_off,
     "menu": cmd_menu, "check": cmd_check, "render": cmd_render, "detach": cmd_detach,
     "effects": cmd_effects, "banner": cmd_banner, "refresh": cmd_refresh,
-    "settings": cmd_settings, "cursor": cmd_cursor,
+    "settings": cmd_settings, "cursor": cmd_cursor, "shell": cmd_shell,
 }
 
 

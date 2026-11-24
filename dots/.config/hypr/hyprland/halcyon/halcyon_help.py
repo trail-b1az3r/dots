@@ -95,6 +95,7 @@ GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("files", "which file manager opens folders; Loaf is Halcyon's (yay -S loaf-fm)"),
         ("uwu", "halcyon.UwU-agent: Wi-Fi and web passwords; `uwu web pick` (Super + Alt + P) copies one for 45 s"),
         ("lost", "windows that ended up off every screen; `lost bring` (or Super + Shift + W) brings them back"),
+        ("shell [halcyon|glass|summit|macshell|noctalia|auto]", "the desktop shell that runs, whatever the theme (auto: the theme's); Ctrl+Super+Shift+G picks from a menu"),
         ("saver on|off|toggle", "super battery saver: 12 fps, 20% brightness, power saver, Wi-Fi only reconnects on wake/lock/unlock"),
         ("terminal", "which terminal Super + Return opens; Alacritty is Halcyon's (Ctrl+C interrupts, Ctrl+Shift+C copies)"),
         ("files use loaf|dolphin|APP", "open folders in that app from now on"),

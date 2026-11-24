@@ -800,6 +800,63 @@ ContentPage {
         }
     }
 
+    // ── Desktop shell: which one runs (halcyon shell); "Follow the theme" lets each theme bring its own ──
+    property string shellChoice: "auto"
+    property string shellRunning: "ii"
+    property bool noctaliaInstalled: false
+
+    Process {
+        id: shellState
+        running: true
+        command: [page.tool, "shell", "--json"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const state = JSON.parse(this.text);
+                    page.shellChoice = state.choice ?? "auto";
+                    page.shellRunning = state.running ?? "ii";
+                    page.noctaliaInstalled = state.installed?.Noctalia ?? false;
+                } catch (error) {}
+            }
+        }
+    }
+    Process {
+        id: shellSet
+        onExited: shellState.running = true
+    }
+    readonly property var shellKeys: ({ "ii": "halcyon", "Glass": "glass", "Summit": "summit", "MacShell": "macshell", "Noctalia": "noctalia" })
+
+    ContentSection {
+        icon: "dashboard"
+        title: Translation.tr("Desktop shell")
+
+        ConfigSelectionArray {
+            currentValue: page.shellChoice === "auto" ? "auto" : (page.shellKeys[page.shellChoice] ?? "auto")
+            onSelected: newValue => {
+                page.shellChoice = newValue;
+                shellSet.command = [page.tool, "shell", newValue];
+                shellSet.running = true;
+            }
+            options: [
+                { displayName: Translation.tr("Follow the theme"), icon: "palette", value: "auto" },
+                { displayName: Translation.tr("Halcyon"), icon: "space_dashboard", value: "halcyon" },
+                { displayName: Translation.tr("Halcyon Glass"), icon: "water_drop", value: "glass" },
+                { displayName: Translation.tr("Summit"), icon: "landscape", value: "summit" },
+                { displayName: Translation.tr("MacShell"), icon: "desktop_mac", value: "macshell" },
+                ...(page.noctaliaInstalled ? [{ displayName: Translation.tr("Noctalia"), icon: "dark_mode", value: "noctalia" }] : [])
+            ]
+        }
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.leftMargin: 10
+            wrapMode: Text.Wrap
+            color: Appearance.colors.colSubtext
+            font.pixelSize: Appearance.font.pixelSize.smallie
+            text: Translation.tr("Halcyon Glass is this shell with see-through panels over liquid glass (hyprland-plus's liquid blur, after MyGlass): the wallpaper bends at each panel's rim. Summit is a clean bar and dock with Rofi menus. Noctalia appears once the noctalia package is installed. Ctrl+Super+Shift+G picks from any shell; Settings here belongs to the Halcyon shell.")
+        }
+    }
+
     ContentSection {
         icon: "auto_awesome"
         title: Translation.tr("Effects")

@@ -85,6 +85,7 @@ Singleton {
             property JsonObject halcyon: JsonObject {
                 property string theme: "" // Active theme id, "" for none
                 property bool glassTheme: false // Written by halcyon-theme: the active theme has glass windows or a glass shader
+                property bool liquidGlass: false // Written by halcyon-theme: the Halcyon Glass shell (`halcyon shell glass`): panels see-through over liquid glass
                 property list<string> themeOrder: [] // Built-in theme ids in the order Settings lists them; the rest follow in the default order
                 property bool powerButtonMenu: true // The power button opens the power menu (shut down, restart, sleep, log out) instead of powering off
                 property bool themedLauncher: true // Manga Ink (and Dark) open apps from a book, After ICEY from a phone, instead of the overview
