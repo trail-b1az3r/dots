@@ -30,13 +30,24 @@ Singleton {
     readonly property real glassTint: data.glass_tint ?? data.bar_opacity ?? 0.42
     readonly property real barOpacity: glassTint
 
+    // The frost's own colour: the theme's surface with its hue taken out, as light or dark as it is. Glass tinted with
+    // the surface itself took on the theme's colour (HyperNeo v2's navy turned every pane blue); the accent is kept for
+    // what is active.
+    readonly property color glass: Qt.hsla(0, 0, surface.hslLightness, 1)
+
     function alpha(colour, a) {
         return Qt.rgba(colour.r, colour.g, colour.b, a);
     }
 
     // Type and shape ---------------------------------------------------------------------------------------------
     readonly property string font: data.font ?? "Inter"
-    readonly property string iconFont: "Material Symbols Rounded"
+    // The icons: Summit's own cut of Material Symbols Rounded (assets/fonts, Apache-2.0), with every icon it draws and
+    // the font's fill and weight axes, so it never depends on the full font being installed (it is an AUR package).
+    readonly property string iconFont: symbols.status === FontLoader.Ready ? symbols.name : "Material Symbols Rounded"
+    FontLoader {
+        id: symbols
+        source: Qt.resolvedUrl("../assets/fonts/SummitSymbols.ttf")
+    }
     readonly property int fontSize: 13
     readonly property int barHeight: 38
     readonly property int gap: 10

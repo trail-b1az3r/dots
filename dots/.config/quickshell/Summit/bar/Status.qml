@@ -12,6 +12,8 @@ import qs.services
 Row {
     id: root
     spacing: 2
+    // The battery button opens the battery popup (TopBar has it, under the bar).
+    signal batteryClicked
 
     // Network: the active connection's kind and Wi-Fi strength (nmcli; nmxcli answers the same on Frontline).
     property string netKind: "none"
@@ -77,6 +79,7 @@ Row {
             : root.level > 0.2 ? "battery_3_bar" : "battery_1_bar"
         tint: !root.charging && root.level <= 0.15 ? "#FF8A80" : Theme.text
         label: Math.round(root.level * 100) + "%"
+        onClicked: root.batteryClicked()
     }
 
     BarButton {

@@ -362,3 +362,39 @@ class WallAndPickerTests(unittest.TestCase):
         dock = (SUMMIT / "dock/Dock.qml").read_text()
         self.assertIn("bounce.restart()", dock)                                            # a launch bounces
         self.assertIn("onPageChanged", (SUMMIT / "popups/ThemePicker.qml").read_text())   # pages slide
+
+
+class SummitFixesTests(unittest.TestCase):
+    def test_moving_parts_keep_their_input_region(self):
+        # A Translate on a masked item left the window's input region behind: only part of it took clicks.
+        self.assertNotIn("transform: Translate", (SUMMIT / "common/Pill.qml").read_text())
+        dock = (SUMMIT / "dock/Dock.qml").read_text()
+        self.assertIn("bottomMargin: Theme.gap - rise", dock)
+        strip = dock.split("id: strip")[1].split("Row {")[0]
+        self.assertNotIn("transform:", strip)
+        self.assertEqual((SUMMIT / "bar/TopBar.qml").read_text().count("topMargin: Theme.gap + "), 3)
+
+    def test_icons_come_with_summit(self):
+        font = SUMMIT / "assets/fonts/SummitSymbols.ttf"
+        self.assertTrue(100_000 < font.stat().st_size < 400_000)
+        theme = (SUMMIT / "common/Theme.qml").read_text()
+        self.assertIn('source: Qt.resolvedUrl("../assets/fonts/SummitSymbols.ttf")', theme)
+        self.assertIn('font: "Summit Symbols 15";', (HALCYON / "summit/summit.rasi").read_text())
+        self.assertIn("fc-cache -f", (HALCYON / "summit/rofi-menu").read_text())
+
+    def test_rofi_does_not_follow_the_pointer(self):
+        rasi = (HALCYON / "summit/summit.rasi").read_text()
+        self.assertIn("hover-select: false;", rasi)
+        self.assertIn("scroll-method: 0;", rasi)
+
+    def test_glass_is_neutral(self):
+        self.assertIn("Theme.alpha(Theme.glass, root.tint)", (SUMMIT / "common/Glass.qml").read_text())
+        self.assertEqual(theme.neutral("#101A2C"), "#1E1E1E")
+        self.assertIn("bg-alpha: #1E1E1E8C;", theme.summit_rofi(theme.summit_colours(theme.load("hyperneo-v2"))))
+
+    def test_battery_opens_its_popup(self):
+        status = (SUMMIT / "bar/Status.qml").read_text()
+        self.assertIn("onClicked: root.batteryClicked()", status)
+        popup = (SUMMIT / "popups/BatteryPopup.qml").read_text()
+        self.assertIn("PowerProfiles.profile = mode.modelData.profile", popup)
+        self.assertIn('"/halcyon_saver.py", "toggle"', popup)

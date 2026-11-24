@@ -27,7 +27,7 @@ PanelWindow {
     Pill {
         id: left
         enterDelay: 0
-        anchors { left: parent.left; leftMargin: Theme.gap; top: parent.top; topMargin: Theme.gap }
+        anchors { left: parent.left; leftMargin: Theme.gap; top: parent.top; topMargin: Theme.gap + left.offset }
         BarButton {
             icon: "landscape"
             tint: Theme.accent
@@ -43,7 +43,7 @@ PanelWindow {
     Pill {
         id: centre
         enterDelay: 70
-        anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: Theme.gap }
+        anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: Theme.gap + centre.offset }
         Clock {
             id: clock
             onToggled: calendar.visible = !calendar.visible
@@ -54,9 +54,12 @@ PanelWindow {
     Pill {
         id: right
         enterDelay: 140
-        anchors { right: parent.right; rightMargin: Theme.gap; top: parent.top; topMargin: Theme.gap }
+        anchors { right: parent.right; rightMargin: Theme.gap; top: parent.top; topMargin: Theme.gap + right.offset }
         Tray { anchors.verticalCenter: parent.verticalCenter }
-        Status { anchors.verticalCenter: parent.verticalCenter }
+        Status {
+            anchors.verticalCenter: parent.verticalCenter
+            onBatteryClicked: batteryPopup.visible = !batteryPopup.visible
+        }
     }
 
     Calendar {
@@ -65,5 +68,12 @@ PanelWindow {
         anchor.rect.x: centre.x + centre.width / 2 - implicitWidth / 2
         anchor.rect.y: centre.y + centre.height + 8
         date: clock.date
+    }
+
+    BatteryPopup {
+        id: batteryPopup
+        anchor.window: bar
+        anchor.rect.x: right.x + right.width - implicitWidth
+        anchor.rect.y: right.y + right.height + 8
     }
 }

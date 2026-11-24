@@ -614,6 +614,13 @@ def summit_colours(theme):
     }
 
 
+def neutral(colour):
+    """#RRGGBB as the grey of the same lightness (HSL), for frost that takes no colour from the theme."""
+    r, g, b = (int(colour[i:i + 2], 16) for i in (1, 3, 5))
+    level = round((max(r, g, b) + min(r, g, b)) / 2)
+    return "#%02X%02X%02X" % (level, level, level)
+
+
 def summit_rofi(colours):
     """Rofi's colours for Summit's menus (~/.config/rofi/summit.rasi names them)."""
     names = {"background": "bg", "surface": "surface", "surface_high": "surface-high", "text": "fg",
@@ -621,9 +628,10 @@ def summit_rofi(colours):
     lines = ["/* Written by halcyon-theme for Summit's Rofi menus: the active theme's colours. */", "* {"]
     for key, name in names.items():
         lines.append(f"    {name}: {colours[key]};")
-    # Frosted glass: the window and its panes are translucent, and Hyprland blurs behind them.
-    lines.append(f"    bg-alpha: {colours['surface']}8C;")
-    lines.append(f"    pane: {colours['surface_high']}99;")
+    # Frosted glass: the window and its panes are translucent, and Hyprland blurs behind them. The frost is neutral (the
+    # surface's lightness without its hue), as in Summit: tinted with the surface, the menus took on the theme's colour.
+    lines.append(f"    bg-alpha: {neutral(colours['surface'])}8C;")
+    lines.append(f"    pane: {neutral(colours['surface_high'])}99;")
     lines.append("}")
     return "\n".join(lines) + "\n"
 
