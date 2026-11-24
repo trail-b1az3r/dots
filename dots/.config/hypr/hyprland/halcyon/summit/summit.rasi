@@ -16,10 +16,13 @@ configuration {
     display-run: "terminal";
     display-window: "select_window";
     display-combi: "search";
-    hover-select: true;
-    me-select-entry: "MouseSecondary";
+    /* The pointer does not select: with hover-select on, moving it over the list selected the row under it, and the
+       continuous scrolling (scroll-method 1) then ran the list along after it. A click opens the row it is on; the
+       list moves a page at a time, by keys or the wheel. */
+    hover-select: false;
+    me-select-entry: "";
     me-accept-entry: "MousePrimary";
-    scroll-method: 1;
+    scroll-method: 0;
     matching: "fuzzy";
     sort: true;
     sorting-method: "fzf";
@@ -42,8 +45,8 @@ configuration {
     accent-fg: #0B1A33;
     warm: #E8C79A;
     /* Frosted glass: translucent, and Hyprland blurs behind the "rofi" layer (halcyon-theme's layer rule). */
-    bg-alpha: #101A2C8C;
-    pane: #18243A99;
+    bg-alpha: #1E1E1E8C;
+    pane: #2B2B2B99;
 
     font: "Inter 11";
     background-color: transparent;
@@ -76,9 +79,10 @@ inputbar {
     children: [ prompt, entry ];
 }
 
-/* The prompt is a Material Symbols name (rofi-menu sets it), drawn as its icon. */
+/* The prompt is a Material Symbols name (rofi-menu sets it), drawn as its icon with Summit's bundled cut of the font
+   (rofi-menu installs it for fontconfig the first time). */
 prompt {
-    font: "Material Symbols Rounded 15";
+    font: "Summit Symbols 15";
     text-color: @accent;
     vertical-align: 0.5;
 }

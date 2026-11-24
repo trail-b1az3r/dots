@@ -27,6 +27,13 @@ if pkill -x rofi 2>/dev/null; then
     exit 0
 fi
 
+# The prompts' icons are Summit's cut of Material Symbols (Summit Symbols): fontconfig needs it once for Rofi to find it.
+fonts="${XDG_DATA_HOME:-$HOME/.local/share}/fonts/halcyon"
+symbols="$HOME/.config/quickshell/Summit/assets/fonts/SummitSymbols.ttf"
+if [[ -r "$symbols" ]] && ! cmp -s "$symbols" "$fonts/SummitSymbols.ttf"; then
+    mkdir -p "$fonts" && cp -f "$symbols" "$fonts/SummitSymbols.ttf" && fc-cache -f "$fonts" >/dev/null 2>&1
+fi
+
 theme_args=(-config "${SUMMIT_ROFI_CONFIG:-$here/summit.rasi}")
 if [[ -r "$state/summit-colors.rasi" ]]; then
     theme_args+=(-theme-str "$(cat -- "$state/summit-colors.rasi")")

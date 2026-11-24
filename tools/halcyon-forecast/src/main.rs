@@ -83,9 +83,9 @@ impl Default for Palette {
     // HyperNeo v2's, as in Summit's Theme.qml.
     fn default() -> Self {
         Palette {
-            background: rgb(0x0B1322),
-            surface: rgb(0x101A2C),
-            track: rgb(0x18243A),
+            background: rgb(0x161616),
+            surface: rgb(0x1E1E1E),
+            track: rgb(0x2B2B2B),
             text: rgb(0xE8EDF6),
             muted: rgb(0x93A0B6),
             accent: rgb(0x9CC0FF),
@@ -121,7 +121,18 @@ fn read_palette(path: &PathBuf) -> Palette {
             *slot = c;
         }
     }
+    // The frost (the window, its panes, the bars' tracks) is neutral: the theme's lightness without its hue, as in
+    // Summit, so the window takes no tint from the theme; the accent and warm colours stay for what they mark.
+    palette.background = neutral(palette.background);
+    palette.surface = neutral(palette.surface);
+    palette.track = neutral(palette.track);
     palette
+}
+
+/// The grey of the same lightness (HSL) as `c`.
+fn neutral(c: Color) -> Color {
+    let level = (c.r.max(c.g).max(c.b) + c.r.min(c.g).min(c.b)) / 2.0;
+    Color { r: level, g: level, b: level, a: c.a }
 }
 
 // WMO weather codes (Open-Meteo's) as words and icons ----------------------------------------------------------------

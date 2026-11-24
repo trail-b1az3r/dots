@@ -39,19 +39,20 @@ PanelWindow {
 
     Glass {
         id: strip
-        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: Theme.gap }
+        // Rises into place when the shell starts: by its margin, so the dock's input region (the mask) moves with
+        // it. A Translate left the region where the strip began, and only the bottom of each icon took clicks.
+        property real rise: 30
+        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: Theme.gap - rise }
         height: 54
         width: row.implicitWidth + 16
         radius: Theme.radius + 4
         Behavior on width { SpringAnimation { spring: Theme.springStiffness; damping: Theme.springDamping * 1.4; epsilon: 0.3 } }
-        // Rises into place when the shell starts.
         opacity: 0
-        transform: Translate { id: rise; y: 30 }
         Component.onCompleted: enter.start()
         ParallelAnimation {
             id: enter
             NumberAnimation { target: strip; property: "opacity"; to: 1; duration: Theme.enterMs; easing.type: Easing.OutCubic }
-            NumberAnimation { target: rise; property: "y"; to: 0; duration: Theme.enterMs + 80; easing.type: Easing.OutBack; easing.overshoot: 1.4 }
+            NumberAnimation { target: strip; property: "rise"; to: 0; duration: Theme.enterMs + 80; easing.type: Easing.OutBack; easing.overshoot: 1.4 }
         }
 
         Row {
@@ -76,9 +77,8 @@ PanelWindow {
                     readonly property var windows: dock.running(modelData)
                     readonly property bool focused: windows.some(t => t.activated)
                     width: 42; height: 42
-                    // Under the pointer the icon lifts and grows; launched, it bounces.
-                    transform: Translate { id: lift; y: area.containsMouse ? -5 : 0
-                        Behavior on y { SpringAnimation { spring: Theme.springStiffness; damping: Theme.springDamping; epsilon: 0.1 } } }
+                    // Under the pointer the icon lifts and grows; launched, it bounces. Only the picture moves: the click
+                    // area stays put, so a pointer on the icon's lower edge doesn't fall out of it as it lifts.
                     SequentialAnimation {
                         id: bounce
                         NumberAnimation { target: icon; property: "anchors.verticalCenterOffset"; to: -14; duration: 160; easing.type: Easing.OutQuad }
@@ -96,6 +96,8 @@ PanelWindow {
                         anchors.centerIn: parent
                         implicitSize: area.pressed ? 26 : area.containsMouse ? 34 : 30
                         source: Quickshell.iconPath(app.entry?.icon ?? app.modelData, "application-x-executable")
+                        transform: Translate { y: area.containsMouse ? -5 : 0
+                            Behavior on y { SpringAnimation { spring: Theme.springStiffness; damping: Theme.springDamping; epsilon: 0.1 } } }
                         Behavior on implicitSize { SpringAnimation { spring: Theme.springStiffness * 1.4; damping: Theme.springDamping; epsilon: 0.1 } }
                     }
                     Rectangle {

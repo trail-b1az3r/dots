@@ -1,14 +1,14 @@
 import QtQuick
 import qs.common
 
-// Frosted glass: every Summit surface. A thin tint of the theme's surface (Hyprland blurs what is behind it: the
-// layer rules halcyon-theme writes) and a soft light from the top. No edge line.
+// Frosted glass: every Summit surface. A thin neutral tint, as light or dark as the theme's surface but without its hue
+// (Hyprland blurs what is behind it: the layer rules halcyon-theme writes), and a soft light from the top. No edge.
 Rectangle {
     id: root
     property real tint: Theme.glassTint
     property real highlight: 0.10
     radius: Theme.radius
-    color: Theme.alpha(Theme.surface, root.tint)
+    color: Theme.alpha(Theme.glass, root.tint)
 
     // The light from above: a whisper of white fading out halfway down.
     Rectangle {

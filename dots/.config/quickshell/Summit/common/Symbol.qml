@@ -1,7 +1,8 @@
 import QtQuick
 import qs.common
 
-// A Material Symbols Rounded glyph (the icon font Halcyon installs), by its name: "wifi", "volume_up", ...
+// A Material Symbols Rounded glyph, by its name: "wifi", "volume_up", ... (Summit's bundled cut of the font: Theme.iconFont).
+// A name that is not in it shows as text, so a new icon is added to assets/fonts/SummitSymbols.ttf (assets/README.md).
 Text {
     id: root
     property string name

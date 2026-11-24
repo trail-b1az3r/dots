@@ -3,18 +3,22 @@ import qs.common
 
 // A group on a bar: a pane of frosted glass, its children in a row. It drops in when the shell starts (enterDelay
 // staggers the groups) and settles with a little spring.
+//
+// The drop is `offset`, which the bar adds to the group's top margin: a real move of its geometry. A Translate would
+// leave the bar's input region (its mask, made from the groups' geometry) where the group started, so the part of it
+// that had moved would not take clicks.
 Glass {
     id: root
     property int enterDelay: 0
+    property real offset: -14
     opacity: 0
-    transform: Translate { id: drop; y: -14 }
     Component.onCompleted: enter.start()
     SequentialAnimation {
         id: enter
         PauseAnimation { duration: root.enterDelay }
         ParallelAnimation {
             NumberAnimation { target: root; property: "opacity"; to: 1; duration: Theme.enterMs; easing.type: Easing.OutCubic }
-            NumberAnimation { target: drop; property: "y"; to: 0; duration: Theme.enterMs; easing.type: Easing.OutBack; easing.overshoot: 1.6 }
+            NumberAnimation { target: root; property: "offset"; to: 0; duration: Theme.enterMs; easing.type: Easing.OutBack; easing.overshoot: 1.6 }
         }
     }
     default property alias content: row.data
