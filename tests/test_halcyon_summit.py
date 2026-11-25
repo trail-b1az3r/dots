@@ -397,3 +397,46 @@ class SummitFixesTests(unittest.TestCase):
         popup = (SUMMIT / "popups/BatteryPopup.qml").read_text()
         self.assertIn("PowerProfiles.profile = mode.modelData.profile", popup)
         self.assertIn('"/halcyon_saver.py", "toggle"', popup)
+
+
+class SummitDocumentsTests(unittest.TestCase):
+    """Summit's Documents tab: Rofi's script mode over `frontline docs`."""
+
+    def run_docs(self, retv, *args, info="", results="[]", files=3):
+        with tempfile.TemporaryDirectory() as tmp:
+            bin_dir = Path(tmp)
+            fake = bin_dir / "frontline"
+            fake.write_text("#!/bin/sh\n"
+                            f"if [ \"$2\" = status ]; then echo '{{\"files\": {files}}}'; exit 0; fi\n"
+                            f"cat <<'JSON'\n{results}\nJSON\n")
+            fake.chmod(0o755)
+            env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}", ROFI_RETV=str(retv), ROFI_INFO=info,
+                       FRONTLINE_CLI="frontline")
+            return subprocess.run([str(HALCYON / "summit/rofi-docs"), *args], env=env, capture_output=True,
+                                  text=True, check=False).stdout
+
+    def test_it_asks_for_words_first(self):
+        out = self.run_docs(0)
+        self.assertIn("\0prompt\x1fsearch", out)
+        self.assertIn("Type words and press Enter", out)
+
+    def test_results_open_their_file(self):
+        hit = [{"path": "/home/me/Documents/Taxes/receipts.docx", "title": "Tax <receipts>", "kind": "docx",
+                "snippet": "Deductible\nreceipts", "mtime": 0, "rank": -1}]
+        out = self.run_docs(2, "deductible", results=json.dumps(hit))
+        row = [line for line in out.splitlines() if "receipts.docx" in line][0]
+        self.assertIn("<b>Tax &lt;receipts&gt;</b>", row)
+        self.assertIn("Deductible receipts", row)
+        self.assertIn("\0info\x1f/home/me/Documents/Taxes/receipts.docx\x1ficon\x1fx-office-document", row)
+        # Picking one prints nothing (so Rofi closes) and opens it.
+        self.assertEqual(self.run_docs(1, "x", info="/nonexistent"), "")
+
+    def test_an_empty_index_says_how_to_fill_it(self):
+        self.assertIn("Nothing is indexed yet", self.run_docs(2, "zebra", files=0))
+        self.assertIn("Nothing found for zebra", self.run_docs(2, "zebra", files=4))
+
+    def test_the_launcher_has_a_documents_tab(self):
+        menu = (HALCYON / "summit/rofi-menu").read_text()
+        self.assertIn('-modi "drun,docs:$here/rofi-docs" -display-drun Apps -display-docs Documents', menu)
+        self.assertIn('docs) r -modi "docs:$here/rofi-docs"', menu)
+        self.assertTrue(os.access(HALCYON / "summit/rofi-docs", os.X_OK))
