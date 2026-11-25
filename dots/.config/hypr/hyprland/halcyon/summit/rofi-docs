@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Summit's Documents tab: Rofi's script mode over the distribution's document index (`frontline docs`, local only).
+# Type words and press Enter: the documents that say them, best first, with the passage that matched. Pick one and it
+# opens in its app. Rofi runs this with what was chosen or typed ($1) and tells how (ROFI_RETV: 0 first run,
+# 1 an entry picked, 2 typed text entered); ROFI_INFO carries the picked document's path.
+set -u
+
+cli=""
+for name in "${FRONTLINE_CLI:-}" frontline nexora; do
+    [[ -n "$name" ]] && command -v "$name" >/dev/null 2>&1 && { cli="$name"; break; }
+done
+
+say() { printf '\0message\x1f%s\n' "$1"; }
+# Rofi's options for the list (everything but opening a document prints them first).
+head() {
+    printf '\0prompt\x1fsearch\n'
+    printf '\0no-custom\x1ffalse\n'
+    printf '\0markup-rows\x1ftrue\n'
+}
+
+if [[ -z "$cli" ]]; then
+    head
+    say "Document search comes with Frontline Linux (frontline docs)."
+    exit 0
+fi
+
+case "${ROFI_RETV:-0}" in
+    1)
+        # A document: open it, detached, so Rofi can close.
+        if [[ -n "${ROFI_INFO:-}" && -e "$ROFI_INFO" ]]; then
+            setsid -f xdg-open "$ROFI_INFO" >/dev/null 2>&1
+        fi
+        exit 0 ;;
+    2)
+        head
+        query="$*" ;;
+    *)
+        head
+        say "Type words and press Enter to search your documents (\"a phrase\", NOT word)."
+        exit 0 ;;
+esac
+
+[[ -n "${query// /}" ]] || { say "Type words to search for."; exit 0; }
+results="$("$cli" docs search --json -n 30 $query 2>/dev/null)" || results=""
+if [[ -z "$results" || "$results" == "[]" ]]; then
+    files="$("$cli" docs status --json 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["files"])' 2>/dev/null)"
+    if [[ "${files:-0}" == 0 ]]; then
+        say "Nothing is indexed yet: run $cli docs index once (a timer keeps it current)."
+    else
+        say "Nothing found for ${query}"
+    fi
+    exit 0
+fi
+say "Results for ${query} · Enter opens"
+printf '%s' "$results" | python3 -c '
+import html, json, os, sys
+icons = {"pdf": "application-pdf", "docx": "x-office-document", "odt": "x-office-document", "md": "text-markdown",
+         "mdxl": "text-markdown", "html": "text-html", "htm": "text-html", "epub": "application-epub+zip",
+         "pptx": "x-office-presentation", "odp": "x-office-presentation", "xlsx": "x-office-spreadsheet",
+         "ods": "x-office-spreadsheet"}
+for hit in json.load(sys.stdin):
+    path = hit["path"]
+    where = os.path.basename(os.path.dirname(path))
+    snippet = " ".join(hit.get("snippet", "").split())[:140]
+    title = html.escape(hit.get("title") or os.path.basename(path))
+    place = html.escape(where + "/" + os.path.basename(path))
+    row = "<b>" + title + "</b>  <span alpha=\"60%\">" + place + "</span>"
+    if snippet:
+        row += "  <span alpha=\"75%\" size=\"small\">" + html.escape(snippet) + "</span>"
+    icon = icons.get(hit.get("kind", ""), "text-x-generic")
+    sys.stdout.write(f"{row}\0info\x1f{path}\x1ficon\x1f{icon}\x1fmeta\x1f{path}\n")
+'

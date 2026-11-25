@@ -7,6 +7,7 @@
 #   rofi-menu power       lock, log out, sleep, restart, shut down (the power button, Super+Escape)
 #   rofi-menu forecast    the week's weather: halcyon-forecast's window when it is built, else a list here
 #   rofi-menu keys        every keybind with a description (Super+/), searchable; Enter runs the chosen one
+#   rofi-menu docs        your documents, searched by what they say (`frontline docs`, local only); also a tab in apps
 #
 # A second press closes the open menu. Your own ~/.config/rofi is not read or changed.
 set -u
@@ -141,11 +142,18 @@ elif dispatcher:
 }
 
 case "$mode" in
-    apps) r -show drun -p apps ;;
+    apps)
+        # Documents is the second tab (Tab or Shift+→ moves to it) where the document index exists.
+        if [[ -x "$here/rofi-docs" ]] && command -v "${FRONTLINE_CLI:-frontline}" >/dev/null 2>&1; then
+            r -modi "drun,docs:$here/rofi-docs" -display-drun Apps -display-docs Documents -show drun -p apps
+        else
+            r -show drun -p apps
+        fi ;;
+    docs) r -modi "docs:$here/rofi-docs" -display-docs Documents -show docs ;;
     windows) r -show window -p select_window ;;
     clipboard) clipboard_menu ;;
     power) power_menu ;;
     forecast) forecast_menu ;;
     keys) keys_menu ;;
-    *) echo "usage: rofi-menu [apps|windows|clipboard|power|forecast|keys]" >&2; exit 2 ;;
+    *) echo "usage: rofi-menu [apps|windows|clipboard|power|forecast|keys|docs]" >&2; exit 2 ;;
 esac

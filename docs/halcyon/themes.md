@@ -334,6 +334,9 @@ other two shells' units.
   `~/.config/rofi` is not touched) and the theme's colours (`~/.local/state/halcyon/summit-colors.rasi`):
   Super+Space apps, Alt+Tab windows, Super+V the clipboard (cliphist), Super+Escape and the power button the power
   menu. `halcyon/summit/rofi-menu apps|windows|clipboard|power|forecast` opens them from anywhere.
+- **Documents** is a tab in the app launcher (Super, then Tab), and `rofi-menu docs` on its own: type words and press
+  Enter to find your documents by what they say, through Frontline's local document index (`frontline docs`);
+  Enter on one opens it.
 - **Locking** uses hyprlock.
 
 ### The weather, from nearby Wi-Fi
