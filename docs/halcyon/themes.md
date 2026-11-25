@@ -333,7 +333,15 @@ other two shells' units.
 - **Menus** are Rofi, in Summit's own config (`halcyon/summit/summit.rasi`, passed with `-config`, so your
   `~/.config/rofi` is not touched) and the theme's colours (`~/.local/state/halcyon/summit-colors.rasi`):
   Super+Space apps, Alt+Tab windows, Super+V the clipboard (cliphist), Super+Escape and the power button the power
-  menu. `halcyon/summit/rofi-menu apps|windows|clipboard|power|forecast` opens them from anywhere.
+  menu, Super+/ the keys and Super+Shift+/ the hypr keys (Hyper chords and hypr mode's keys; Alt+H switches
+  between the two). `halcyon/summit/rofi-menu apps|windows|clipboard|power|forecast|keys|hyprkeys|docs` opens them
+  from anywhere.
+- **Windows** (Alt+Tab): Enter goes to one; Alt+1 to Alt+9 sends it to that workspace and Shift+Enter to any other
+  (or a new one, or one you name), and you stay where you are.
+- **Hypr mode** (Super+Ctrl+H) shows its keys on a card of glass above the dock while it is on, as the Halcyon shell
+  does.
+- **Icons** in the bar and the menus come from Summit Symbols, which Summit's package installs for every user. If
+  fontconfig cannot find it, the menus say what they are in words rather than showing an icon's name.
 - **Documents** is a tab in the app launcher (Super, then Tab), and `rofi-menu docs` on its own: type words and press
   Enter to find your documents by what they say, through Frontline's local document index (`frontline docs`);
   Enter on one opens it.

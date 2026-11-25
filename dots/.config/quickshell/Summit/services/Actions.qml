@@ -21,6 +21,7 @@ Singleton {
     signal themesRequested
     function themes() { root.themesRequested(); }
     function keys() { Quickshell.execDetached([root.rofiScript, "keys"]); }
+    function hyprKeys() { Quickshell.execDetached([root.rofiScript, "hyprkeys"]); }
     function forecast() { Quickshell.execDetached([root.rofiScript, "forecast"]); }
     function run(command) { Quickshell.execDetached(["sh", "-c", command]); }
 }

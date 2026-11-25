@@ -613,6 +613,7 @@ SUMMIT_BINDS = (
     ("SUPER + V", SUMMIT_MENU + "clipboard", "Summit: Clipboard"),
     ("SUPER + Escape", SUMMIT_MENU + "power", "Summit: Power menu"),
     ("SUPER + Slash", SUMMIT_MENU + "keys", "Summit: Keybinds"),
+    ("SUPER + SHIFT + Slash", SUMMIT_MENU + "hyprkeys", "Summit: Hypr keys"),
     ("SUPER + SHIFT + T", SUMMIT_QS + "themes", "Summit: Themes"),
     ("CTRL + SUPER + SHIFT + T", SUMMIT_QS + "themes", "Summit: Themes"),
     ("SUPER + SHIFT + S", "pidof slurp || hyprshot --freeze --clipboard-only --mode region --silent",
@@ -623,7 +624,8 @@ SUMMIT_BINDS = (
 # and every other Super key. A release bind fires only when no other key was pressed with Super.
 SUPER_TAP = ("SUPER + SUPER_L", "SUPER + SUPER_R")
 # Everything is frosted glass: Hyprland's blur behind each of its layers, ignoring the clear space around them.
-SUMMIT_LAYERS = (("summit-top", 0.05), ("summit-bottom", 0.05), ("summit-themes", 0.05), ("rofi", 0.05))
+SUMMIT_LAYERS = (("summit-top", 0.05), ("summit-bottom", 0.05), ("summit-themes", 0.05), ("summit-hyprmode", 0.05),
+                 ("rofi", 0.05))
 SUMMIT_PINNED = ["firefox", "org.kde.dolphin", "kitty", "org.kde.kate", "code"]
 
 

@@ -32,6 +32,9 @@ ShellRoot {
         id: themePicker
     }
 
+    // Hypr mode's keys, while it is on (Super+Ctrl+H).
+    HyprMode {}
+
     // The power button opens the power menu instead of switching off: hold logind's power-key lock while Summit
     // runs (Hyprland binds the key to `desktop-shell power-menu`). It goes with Summit.
     Process {
@@ -47,5 +50,6 @@ ShellRoot {
         function windows(): void { Actions.windows(); }
         function themes(): void { themePicker.toggle(); }
         function keys(): void { Actions.keys(); }
+        function hyprkeys(): void { Actions.hyprKeys(); }
     }
 }

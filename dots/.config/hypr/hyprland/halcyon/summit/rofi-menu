@@ -2,11 +2,13 @@
 # Summit's menus, in Rofi with Summit's look (summit.rasi, here) and the active theme's colours.
 #
 #   rofi-menu apps        the app launcher (Super+Space, the bar's mountain button)
-#   rofi-menu windows     the open windows (Alt+Tab)
+#   rofi-menu windows     the open windows (Alt+Tab): Enter goes to one, Alt+1…9 sends it to that workspace,
+#                         Shift+Enter to any workspace (or a new one)
 #   rofi-menu clipboard   the clipboard history, from cliphist (Super+V)
 #   rofi-menu power       lock, log out, sleep, restart, shut down (the power button, Super+Escape)
 #   rofi-menu forecast    the week's weather: halcyon-forecast's window when it is built, else a list here
 #   rofi-menu keys        every keybind with a description (Super+/), searchable; Enter runs the chosen one
+#   rofi-menu hyprkeys    the hypr keys (Super+Shift+/): Hyper chords and hypr mode's keys; Alt+H switches the two
 #   rofi-menu docs        your documents, searched by what they say (`frontline docs`, local only); also a tab in apps
 #
 # A second press closes the open menu. Your own ~/.config/rofi is not read or changed.
@@ -36,6 +38,17 @@ if [[ -r "$symbols" ]] && ! cmp -s "$symbols" "$fonts/SummitSymbols.ttf"; then
 fi
 
 theme_args=(-config "${SUMMIT_ROFI_CONFIG:-$here/summit.rasi}")
+
+# The prompts are icons from Summit Symbols, drawn from their names. Without the font in fontconfig they would show as
+# those names ("partly_cloudy_day"), so then the prompts are plain words in the text font.
+if command -v fc-list >/dev/null 2>&1 && [[ -n "$(fc-list "Summit Symbols" family 2>/dev/null)" ]]; then
+    export HAVE_SUMMIT_SYMBOLS=1
+else
+    export HAVE_SUMMIT_SYMBOLS=0
+    theme_args+=(-theme-str 'prompt { font: "Inter Medium 11"; }')
+fi
+# icon NAME WORD: the icon when the font is there, else the word.
+icon() { if ((HAVE_SUMMIT_SYMBOLS)); then printf '%s' "$1"; else printf '%s' "$2"; fi; }
 if [[ -r "$state/summit-colors.rasi" ]]; then
     theme_args+=(-theme-str "$(cat -- "$state/summit-colors.rasi")")
 fi
@@ -53,7 +66,7 @@ power_menu() {
         row "Sleep" system-suspend
         row "Restart" system-reboot
         row "Shut down" system-shutdown
-    } | r -dmenu -i -p power_settings_new -mesg "Goodbye for now, ${USER:-you}" -selected-row 4 \
+    } | r -dmenu -i -p "$(icon power_settings_new Power)" -mesg "Goodbye for now, ${USER:-you}" -selected-row 4 \
         -theme-str 'listview { lines: 5; } window { width: 380px; }')" || exit 0
     case "$choice" in
         "Lock") exec "$halcyon/lock" ;;
@@ -72,7 +85,7 @@ clipboard_menu() {
         exit 1
     fi
     local choice
-    choice="$(cliphist list | r -dmenu -i -p content_paste -display-columns 2 \
+    choice="$(cliphist list | r -dmenu -i -p "$(icon content_paste Clipboard)" -display-columns 2 \
         -mesg "Enter copies it again · Shift+Delete forgets it" -kb-custom-1 "Shift+Delete")"
     local code=$?
     [[ -n "$choice" ]] || exit 0
@@ -94,66 +107,177 @@ forecast_menu() {
     fi
     local place
     place="$(python3 "$halcyon/halcyon_weather.py" place 2>/dev/null)" || place=""
-    printf '%s\n' "$text" | r -dmenu -i -p partly_cloudy_day -mesg "${place:-Weather}" -no-custom \
+    printf '%s\n' "$text" | r -dmenu -i -p "$(icon partly_cloudy_day Weather)" -mesg "${place:-Weather}" -no-custom \
         -theme-str 'listview { lines: 7; } window { width: 460px; } entry { enabled: false; }' >/dev/null
 }
 
 keys_menu() {
     # Hyprland's binds with a description, as "Super + Shift + T    Shell: ..." (modmask bits: Shift 1, Ctrl 4,
-    # Alt 8, Super 64). The chosen line's number picks the bind to run (hyprctl dispatch DISPATCHER ARG).
-    local binds lines choice
+    # Alt 8, Mod3 32, Super 64). The chosen line's number picks the bind to run (hyprctl dispatch DISPATCHER ARG).
+    #   keys_menu        the usual keys; Alt+H shows the hypr keys
+    #   keys_menu hypr   the hypr keys: the Hyper chords (Super + Ctrl + Alt + Shift, or a Mod3 key) and hypr mode's
+    #                    keys (its submap, halcyon/hypr_mode.lua), which work without Super while the mode is on
+    local which="${1:-all}" binds lines choice code
     binds="$(hyprctl binds -j 2>/dev/null)" || exit 1
-    lines="$(printf '%s' "$binds" | python3 -c '
-import json, sys
-mods = ((64, "Super"), (4, "Ctrl"), (8, "Alt"), (1, "Shift"))
+    lines="$(printf '%s' "$binds" | WHICH="$which" python3 -c '
+import json, os, sys
+mods = ((64, "Super"), (4, "Ctrl"), (8, "Alt"), (1, "Shift"), (32, "Mod3"))
+hyper = 1 | 4 | 8 | 64
+hypr_page = os.environ["WHICH"] == "hypr"
 seen = set()
+rows = []
 for b in json.load(sys.stdin):
     desc = (b.get("description") or "").strip()
     if not desc:
         continue
-    keys = [name for bit, name in mods if b.get("modmask", 0) & bit] + [b.get("key", "").replace("_", " ").title()]
+    mask = b.get("modmask", 0)
+    in_mode = b.get("submap") == "hypr" or desc.startswith("Hypr mode:")
+    is_hypr = in_mode or (mask & hyper) == hyper or bool(mask & 32)
+    toggle = "hypr mode" in desc.lower() and not in_mode
+    if hypr_page and not (is_hypr or toggle):
+        continue
+    if not hypr_page and in_mode:
+        continue
+    if hypr_page and (mask & hyper) == hyper:
+        keys = ["Hyper"] + [b.get("key", "").replace("_", " ").title()]
+    else:
+        keys = [name for bit, name in mods if mask & bit] + [b.get("key", "").replace("_", " ").title()]
     chord = " + ".join(k for k in keys if k)
+    if in_mode:
+        chord = "Mode: " + chord
     if (chord, desc) in seen:
         continue
     seen.add((chord, desc))
-    print(json.dumps([chord, desc, b.get("dispatcher", ""), b.get("arg", "")]))
+    rows.append((0 if toggle else 1 if not in_mode else 2, json.dumps([chord, desc, b.get("dispatcher", ""), b.get("arg", ""), in_mode])))
+# On the hypr page: how to turn the mode on first, then the Hyper chords, then the mode keys.
+for _, row in sorted(rows, key=lambda r: r[0]) if hypr_page else rows:
+    print(row)
 ')" || exit 1
-    [[ -n "$lines" ]] || exit 0
+    if [[ -z "$lines" ]]; then
+        notify-send -a Summit "No keys to show" "Hyprland gave no binds with a description" 2>/dev/null
+        exit 0
+    fi
+    local mesg="Halcyon's keys · Enter runs one · Alt+H the hypr keys" prompt="$(icon keyboard Keys)"
+    if [[ "$which" == hypr ]]; then
+        mesg="Hyper is Super + Ctrl + Alt + Shift (or one key mapped to them) · Mode keys work while hypr mode is on (Super + Ctrl + H, Esc leaves) · Enter runs one"
+        prompt="$(icon keyboard "Hypr keys")"
+    fi
     choice="$(printf '%s\n' "$lines" | python3 -c '
 import json, sys
 for line in sys.stdin:
     chord, desc = json.loads(line)[:2]
-    print(f"{chord:<26}{desc}")
-' | r -dmenu -i -p keyboard -format i -mesg "Halcyon's keys · Enter runs one" \
-        -theme-str 'window { width: 760px; } listview { lines: 12; } element-icon { enabled: false; }
-                    element-text { font: "JetBrainsMono Nerd Font 10"; }')" || exit 0
-    [[ "$choice" =~ ^[0-9]+$ ]] || exit 0
+    print(f"{chord:<30}{desc}")
+' | r -dmenu -i -p "$prompt" -format i -mesg "$mesg" -kb-custom-1 Alt+h \
+        -theme-str 'window { width: 820px; } listview { lines: 12; } element-icon { enabled: false; }
+                    element-text { font: "JetBrainsMono Nerd Font 10"; } message { padding: 6px 10px; }')"
+    code=$?
+    if [[ "$code" == 10 ]]; then
+        [[ "$which" == hypr ]] && keys_menu all || keys_menu hypr
+        return
+    fi
+    [[ "$code" == 0 && "$choice" =~ ^[0-9]+$ ]] || exit 0
     printf '%s\n' "$lines" | sed -n "$((choice + 1))p" | python3 -c '
 import json, subprocess, sys
-_, _, dispatcher, arg = json.loads(sys.stdin.read())
+_, _, dispatcher, arg, in_mode = json.loads(sys.stdin.read())
 def dispatch(*args):
     return subprocess.run(["hyprctl", "dispatch", *args], capture_output=True, text=True).stdout.strip() == "ok"
+if in_mode:
+    # A key of hypr mode only works in the mode: turn it on (its keys keep it on; Esc leaves).
+    dispatch("hl.dsp.submap(\"hypr\")") or dispatch("submap", "hypr")
 # Hyprland 0.55+ takes Lua (hl.dsp.exec_cmd("...")); older ones the plain dispatcher.
-if dispatcher == "exec" and arg:
+elif dispatcher == "exec" and arg:
     dispatch("hl.dsp.exec_cmd(" + json.dumps(arg) + ")") or dispatch("exec", arg)
 elif dispatcher:
     dispatch(dispatcher, arg) if arg else dispatch(dispatcher)
 '
 }
 
+# Hyprland 0.55+ takes Lua (hl.dsp...); older ones the plain dispatcher, tried second.
+dispatch() {
+    local lua="$1"; shift
+    [[ "$(hyprctl dispatch "$lua" 2>/dev/null)" == ok ]] || hyprctl dispatch "$@" >/dev/null 2>&1
+}
+
+windows_menu() {
+    local clients choice code
+    clients="$(hyprctl clients -j 2>/dev/null)" || exit 1
+    # One window a line, as JSON: most recently used first, so Enter (or Alt+Tab, Enter) goes back to the last one.
+    local list
+    list="$(printf '%s' "$clients" | python3 -c '
+import json, sys
+wins = [c for c in json.load(sys.stdin) if c.get("mapped", True) and c.get("workspace", {}).get("id", -1) != -1]
+wins.sort(key=lambda c: c.get("focusHistoryID", 999))
+for c in wins:
+    print(json.dumps({"address": c["address"], "title": c.get("title") or c.get("class") or "Window",
+                      "class": c.get("class") or "", "workspace": c["workspace"].get("name") or str(c["workspace"]["id"])}))
+')"
+    [[ -n "$list" ]] || { notify-send -a Summit "No windows open" 2>/dev/null; exit 0; }
+    choice="$(printf '%s\n' "$list" | python3 -c '
+import json, sys
+for line in sys.stdin:
+    w = json.loads(line)
+    title = " ".join(w["title"].split())[:90]
+    print(title + "   · " + w["workspace"] + "\0icon\x1f" + w["class"].lower())
+' | r -dmenu -i -p "$(icon select_window Windows)" -format i -no-custom \
+        -mesg "Enter goes to it · Alt+1…9 sends it to that workspace · Shift+Enter to another" \
+        -kb-accept-alt "" -kb-custom-1 Alt+1 -kb-custom-2 Alt+2 -kb-custom-3 Alt+3 -kb-custom-4 Alt+4 \
+        -kb-custom-5 Alt+5 -kb-custom-6 Alt+6 -kb-custom-7 Alt+7 -kb-custom-8 Alt+8 -kb-custom-9 Alt+9 \
+        -kb-custom-10 Shift+Return)"
+    code=$?
+    [[ "$choice" =~ ^[0-9]+$ ]] || exit 0
+    local address
+    address="$(printf '%s\n' "$list" | sed -n "$((choice + 1))p" | python3 -c 'import json,sys; print(json.loads(sys.stdin.read())["address"])')"
+    [[ -n "$address" ]] || exit 0
+    local target=""
+    case "$code" in
+        0) dispatch "hl.dsp.focus({ window = \"address:$address\" })" focuswindow "address:$address"; exit 0 ;;
+        1[0-8]) target="$((code - 9))" ;;
+        19) target="$(pick_workspace)" || exit 0 ;;
+        *) exit 0 ;;
+    esac
+    [[ -n "$target" ]] || exit 0
+    # Sent there without following it: you stay where you are.
+    dispatch "hl.dsp.window.move({ workspace = \"$target\", follow = false, window = \"address:$address\" })" \
+        movetoworkspacesilent "$target,address:$address"
+}
+
+# Which workspace: the ones there are (with how many windows each), or a number or name typed in; "New" is the
+# first free number.
+pick_workspace() {
+    local rows
+    rows="$(hyprctl workspaces -j 2>/dev/null | python3 -c '
+import json, sys
+spaces = sorted((w for w in json.load(sys.stdin) if w["id"] > 0), key=lambda w: w["id"])
+used = {w["id"] for w in spaces}
+for w in spaces:
+    n = w.get("windows", 0)
+    print(w["name"] + "\t" + str(n) + (" window" if n == 1 else " windows"))
+free = next(i for i in range(1, 100) if i not in used)
+print(str(free) + "\tNew workspace")
+')" || return 1
+    local picked
+    picked="$(printf '%s\n' "$rows" | r -dmenu -i -p "$(icon apps Workspace)" -display-columns 1,2 -display-column-separator '\t' \
+        -mesg "Send it to a workspace · or type a number or a name")" || return 1
+    picked="${picked%%$'\t'*}"
+    [[ -n "$picked" ]] || return 1
+    # A name that is not a number is a named workspace.
+    [[ "$picked" =~ ^[0-9]+$ ]] && printf '%s' "$picked" || printf 'name:%s' "$picked"
+}
+
 case "$mode" in
     apps)
         # Documents is the second tab (Tab or Shift+→ moves to it) where the document index exists.
         if [[ -x "$here/rofi-docs" ]] && command -v "${FRONTLINE_CLI:-frontline}" >/dev/null 2>&1; then
-            r -modi "drun,docs:$here/rofi-docs" -display-drun Apps -display-docs Documents -show drun -p apps
+            r -modi "drun,docs:$here/rofi-docs" -display-drun Apps -display-docs Documents -show drun -p "$(icon apps Apps)"
         else
-            r -show drun -p apps
+            r -show drun -p "$(icon apps Apps)"
         fi ;;
     docs) r -modi "docs:$here/rofi-docs" -display-docs Documents -show docs ;;
-    windows) r -show window -p select_window ;;
+    windows) windows_menu ;;
     clipboard) clipboard_menu ;;
     power) power_menu ;;
     forecast) forecast_menu ;;
     keys) keys_menu ;;
-    *) echo "usage: rofi-menu [apps|windows|clipboard|power|forecast|keys|docs]" >&2; exit 2 ;;
+    hyprkeys) keys_menu hypr ;;
+    *) echo "usage: rofi-menu [apps|windows|clipboard|power|forecast|keys|hyprkeys|docs]" >&2; exit 2 ;;
 esac
