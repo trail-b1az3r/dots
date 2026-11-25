@@ -99,16 +99,19 @@ forecast_menu() {
     for app in "${HALCYON_FORECAST:-}" "$HOME/.local/bin/halcyon-forecast" halcyon-forecast; do
         [[ -n "$app" ]] && command -v "$app" >/dev/null 2>&1 && exec "$app"
     done
-    # No window built: the same forecast as a list (halcyon_weather.py writes it).
-    local text
-    text="$(python3 "$halcyon/halcyon_weather.py" rows 2>/dev/null)" || text=""
-    if [[ -z "$text" ]]; then
-        text="$(row "No forecast yet: right-click the weather in the bar to fetch it" weather-few-clouds)"
+    # No window built: the same forecast as a list (halcyon_weather.py writes it). Its rows carry their icon after a
+    # NUL ("text\0icon\x1fname"), which a $(...) would drop, leaving "iconweather-overcast" in the text: the rows go
+    # through a file instead, byte for byte.
+    # Not local: the trap removes it when the script ends, after this function has returned.
+    rows="$(mktemp "${TMPDIR:-/tmp}/summit-forecast.XXXXXX")" || exit 1
+    trap 'rm -f -- "$rows"' EXIT
+    if ! python3 "$halcyon/halcyon_weather.py" rows > "$rows" 2>/dev/null || [[ ! -s "$rows" ]]; then
+        row "No forecast yet: right-click the weather in the bar to fetch it" weather-few-clouds > "$rows"
     fi
     local place
     place="$(python3 "$halcyon/halcyon_weather.py" place 2>/dev/null)" || place=""
-    printf '%s\n' "$text" | r -dmenu -i -p "$(icon partly_cloudy_day Weather)" -mesg "${place:-Weather}" -no-custom \
-        -theme-str 'listview { lines: 7; } window { width: 460px; } entry { enabled: false; }' >/dev/null
+    r -dmenu -i -show-icons -p "$(icon partly_cloudy_day Weather)" -mesg "${place:-Weather}" -no-custom \
+        -theme-str 'listview { lines: 7; } window { width: 460px; } entry { enabled: false; }' < "$rows" >/dev/null
 }
 
 keys_menu() {
