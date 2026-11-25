@@ -13,7 +13,8 @@ done
 say() { printf '\0message\x1f%s\n' "$1"; }
 # Rofi's options for the list (everything but opening a document prints them first).
 head() {
-    printf '\0prompt\x1fsearch\n'
+    # rofi-menu says whether Summit Symbols is there; without it the icon's name would show, so a word instead.
+    if [[ "${HAVE_SUMMIT_SYMBOLS:-1}" == 1 ]]; then printf '\0prompt\x1fsearch\n'; else printf '\0prompt\x1fDocuments\n'; fi
     printf '\0no-custom\x1ffalse\n'
     printf '\0markup-rows\x1ftrue\n'
 }

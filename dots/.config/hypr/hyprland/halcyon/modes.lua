@@ -19,9 +19,9 @@ local MODE     = { name = "hypr", exit = SETTINGS.exit }
 -- toggle is one chord or a list of them.
 MODE.toggles   = type(SETTINGS.toggle) == "table" and SETTINGS.toggle or { SETTINGS.toggle }
 
--- The shell shows the mode (a swipe, then the mode's binds) when the submap changes. Without the shell running,
--- a notification says it instead.
-local QS_ALIVE = "qs -c $qsConfig ipc call TEST_ALIVE >/dev/null 2>&1"
+-- The shell shows the mode (the Halcyon shell: a swipe, then the mode's binds; Summit: a card of them) when the submap
+-- changes. Under another shell, or none, a notification says it instead.
+local QS_ALIVE = "$HOME/.config/hypr/hyprland/halcyon/desktop-shell shows-hypr-mode"
 
 -- The mode turns itself off when none of its keys has been used for a while (hypr_mode.lua: idle_exit).
 local IDLE_EXIT = tonumber(SETTINGS.idle_exit or 10) or 10

@@ -15,6 +15,8 @@
 #   desktop-shell start      start it, unless it is already running (the other one stops: the units conflict)
 #   desktop-shell restart    restart it (Hyprland does this at start-up)
 #   desktop-shell ipc ...    qs ipc call ... on whichever is running
+#   desktop-shell shows-hypr-mode   true when the running shell shows hypr mode itself (the Halcyon shell and Summit
+#                            do); otherwise Hyprland says it with a notification
 #   desktop-shell power-menu the power menu: the Halcyon shell's, Summit's (Rofi), or (under MacShell, which has
 #                            none) the distribution's (<ID>-power-menu, from /etc/os-release), else wlogout
 set -u
@@ -49,6 +51,12 @@ case "${1:-}" in
         [ "$shell" = Noctalia ] && exec noctalia msg "$@"
         [ "$shell" = Glass ] && shell=ii
         exec qs -c "$shell" ipc call "$@" ;;
+    shows-hypr-mode)
+        case "$shell" in
+            ii|Glass) exec qs -c ii ipc call TEST_ALIVE >/dev/null 2>&1 ;;
+            Summit) exec systemctl --user is-active --quiet halcyon-summit.service ;;
+            *) exit 1 ;;
+        esac ;;
     power-menu)
         case "$shell" in ii|Glass) exec qs -c ii ipc call session toggle ;; esac
         [ "$shell" = Noctalia ] && exec noctalia msg panel-toggle session
@@ -60,5 +68,5 @@ case "${1:-}" in
             exec "$menu"
         done
         exit 1 ;;
-    *) echo "usage: desktop-shell [unit|start|restart|ipc ...|power-menu]" >&2; exit 2 ;;
+    *) echo "usage: desktop-shell [unit|start|restart|ipc ...|shows-hypr-mode|power-menu]" >&2; exit 2 ;;
 esac

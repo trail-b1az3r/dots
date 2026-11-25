@@ -289,6 +289,8 @@ class ShellTests(unittest.TestCase):
             bin_ = Path(tmp)
             (bin_ / "rofi").write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "$LOG"\n')
             (bin_ / "pkill").write_text("#!/bin/sh\nexit 1\n")
+            # Summit Symbols is installed, so the prompt is its icon (without it, the word: SummitMenusAndModeTests).
+            (bin_ / "fc-list").write_text("#!/bin/sh\necho 'Summit Symbols'\n")
             for f in bin_.iterdir():
                 f.chmod(0o755)
             log = bin_ / "log"
@@ -440,3 +442,95 @@ class SummitDocumentsTests(unittest.TestCase):
         self.assertIn('-modi "drun,docs:$here/rofi-docs" -display-drun Apps -display-docs Documents', menu)
         self.assertIn('docs) r -modi "docs:$here/rofi-docs"', menu)
         self.assertTrue(os.access(HALCYON / "summit/rofi-docs", os.X_OK))
+
+
+class SummitMenusAndModeTests(unittest.TestCase):
+    """The windows menu sends windows to workspaces, the keys menus include the hypr keys, hypr mode shows in Summit,
+    and the menus never show an icon's name for want of its font."""
+
+    CLIENTS = [
+        {"address": "0xaaa", "title": "Notes - Write", "class": "frontline-write", "mapped": True,
+         "workspace": {"id": 1, "name": "1"}, "focusHistoryID": 1},
+        {"address": "0xbbb", "title": "Firefox", "class": "firefox", "mapped": True,
+         "workspace": {"id": 2, "name": "2"}, "focusHistoryID": 0},
+    ]
+    BINDS = [
+        {"modmask": 64, "key": "W", "description": "App: Browser", "dispatcher": "exec", "arg": "firefox", "submap": ""},
+        {"modmask": 77, "key": "Tab", "description": "Window: Next floating window on top", "dispatcher": "", "arg": "",
+         "submap": ""},
+        {"modmask": 68, "key": "H", "description": "Shell: Toggle hypr mode", "dispatcher": "", "arg": "", "submap": ""},
+        {"modmask": 0, "key": "Left", "description": "Hypr mode: Move window left", "dispatcher": "", "arg": "",
+         "submap": "hypr"},
+    ]
+
+    def run_menu(self, mode, rofi_out="0", rofi_code=0, fonts="Summit Symbols"):
+        with tempfile.TemporaryDirectory() as tmp:
+            bin_dir = Path(tmp)
+            log = bin_dir / "log"
+            (bin_dir / "hyprctl").write_text(
+                "#!/bin/sh\n"
+                f"echo \"hyprctl $*\" >> {log}\n"
+                f"case \"$1 $2\" in 'clients -j') cat <<'J'\n{json.dumps(self.CLIENTS)}\nJ\n;;\n"
+                f"'binds -j') cat <<'J'\n{json.dumps(self.BINDS)}\nJ\n;;\n"
+                "'workspaces -j') echo '[{\"id\": 1, \"name\": \"1\", \"windows\": 1}]' ;;\n"
+                "dispatch*) echo ok ;;\nesac\n")
+            (bin_dir / "rofi").write_text(
+                "#!/bin/sh\n"
+                f"printf '%s\\n' \"$*\" >> {log}.args\ncat > {log}.rows\n"
+                f"echo '{rofi_out}'\nexit {rofi_code}\n")
+            (bin_dir / "fc-list").write_text(f"#!/bin/sh\necho '{fonts}'\n" if fonts else "#!/bin/sh\n")
+            (bin_dir / "notify-send").write_text("#!/bin/sh\n")
+            for f in bin_dir.iterdir():
+                f.chmod(0o755)
+            env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}", HOME=tmp, XDG_STATE_HOME=tmp)
+            subprocess.run([str(HALCYON / "summit/rofi-menu"), mode], env=env, capture_output=True, text=True,
+                           timeout=30, check=False)
+            read = lambda p: p.read_text() if p.exists() else ""
+            return read(log), read(Path(f"{log}.args")), read(Path(f"{log}.rows"))
+
+    def test_enter_goes_to_the_window(self):
+        calls, args, rows = self.run_menu("windows", "0", 0)
+        self.assertIn("Firefox   · 2\0icon\x1ffirefox", rows.splitlines()[0])   # most recently used first
+        self.assertIn('hyprctl dispatch hl.dsp.focus({ window = "address:0xbbb" })', calls)
+
+    def test_alt_number_sends_it_to_that_workspace(self):
+        calls, args, _ = self.run_menu("windows", "1", 12)    # Alt+3 on the second row
+        self.assertIn("-kb-custom-3 Alt+3", args)
+        self.assertIn('hl.dsp.window.move({ workspace = "3", follow = false, window = "address:0xaaa" })', calls)
+
+    def test_keys_and_hypr_keys(self):
+        _, args, rows = self.run_menu("keys", "x", 1)
+        self.assertIn("App: Browser", rows)
+        self.assertNotIn("Move window left", rows)          # mode keys only work in the mode
+        self.assertIn("Alt+H the hypr keys", args)
+        _, args, rows = self.run_menu("hyprkeys", "x", 1)
+        lines = rows.splitlines()
+        self.assertIn("Toggle hypr mode", lines[0])           # how to turn it on, first
+        self.assertTrue(any(l.startswith("Hyper + Tab") for l in lines))
+        self.assertTrue(any(l.startswith("Mode: Left") and "Move window left" in l for l in lines))
+        self.assertNotIn("App: Browser", rows)
+
+    def test_a_missing_font_shows_words_not_icon_names(self):
+        _, args, _ = self.run_menu("forecast", "x", 1, fonts="")
+        self.assertIn("-p Weather", args)
+        self.assertNotIn("partly_cloudy_day", args)
+        _, args, _ = self.run_menu("forecast", "x", 1)
+        self.assertIn("-p partly_cloudy_day", args)
+
+    def test_the_font_is_installed_for_everyone(self):
+        packaged = (ROOT / "sdata/dist-arch/illogical-impulse-summit/SummitSymbols.ttf").read_bytes()
+        self.assertEqual(packaged, (SUMMIT / "assets/fonts/SummitSymbols.ttf").read_bytes())
+        pkgbuild = (ROOT / "sdata/dist-arch/illogical-impulse-summit/PKGBUILD").read_text()
+        self.assertIn('"$pkgdir/usr/share/fonts/halcyon/SummitSymbols.ttf"', pkgbuild)
+
+    def test_hypr_mode_shows_in_summit(self):
+        self.assertIn("HyprMode {}", (SUMMIT / "shell.qml").read_text())
+        card = (SUMMIT / "popups/HyprMode.qml").read_text()
+        self.assertIn('event.name !== "submap"', card)
+        self.assertIn('WlrLayershell.namespace: "summit-hyprmode"', card)
+        self.assertIn("desktop-shell shows-hypr-mode", (HALCYON / "modes.lua").read_text())
+        shell = (HALCYON / "desktop-shell").read_text()
+        self.assertIn("Summit) exec systemctl --user is-active --quiet halcyon-summit.service", shell)
+        lua = "\n".join(theme.summit_lua())
+        self.assertIn('hl.bind("SUPER + SHIFT + Slash"', lua)
+        self.assertIn('namespace = "summit-hyprmode"', lua)
