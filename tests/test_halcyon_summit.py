@@ -482,7 +482,11 @@ class SummitMenusAndModeTests(unittest.TestCase):
             (bin_dir / "notify-send").write_text("#!/bin/sh\n")
             for f in bin_dir.iterdir():
                 f.chmod(0o755)
-            env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}", HOME=tmp, XDG_STATE_HOME=tmp)
+            env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}", HOME=tmp, XDG_STATE_HOME=tmp,
+                       XDG_CACHE_HOME=tmp, XDG_CONFIG_HOME=tmp)
+            if getattr(self, "weather", None):
+                (Path(tmp) / "halcyon").mkdir(exist_ok=True)
+                (Path(tmp) / "halcyon/weather.json").write_text(json.dumps(self.weather))
             subprocess.run([str(HALCYON / "summit/rofi-menu"), mode], env=env, capture_output=True, text=True,
                            timeout=30, check=False)
             read = lambda p: p.read_text() if p.exists() else ""
@@ -509,6 +513,25 @@ class SummitMenusAndModeTests(unittest.TestCase):
         self.assertTrue(any(l.startswith("Hyper + Tab") for l in lines))
         self.assertTrue(any(l.startswith("Mode: Left") and "Move window left" in l for l in lines))
         self.assertNotIn("App: Browser", rows)
+
+    def test_the_forecast_list_keeps_its_icons(self):
+        # Each row's icon follows a NUL ("text\0icon\x1fname"); a $(...) dropped it and Rofi showed
+        # "Overcasticon\x1fweather-overcast" as text.
+        weather = {"updated": "2026-11-25T16:00:00+00:00", "units": {"temperature": "°C"},
+                   "place": {"name": "Kern County", "source": "ip"},
+                   "current": {"temperature": 9, "feels_like": 6, "weather_code": 3},
+                   "daily": [{"date": "2026-11-25", "max": 21, "min": 6, "weather_code": 3, "rain": 0},
+                             {"date": "2026-11-26", "max": 14, "min": 6, "weather_code": 45, "rain": 0}],
+                   "hourly": []}
+        self.weather = weather
+        _, args, rows = self.run_menu("forecast", "x", 1)
+        self.assertIn("\0icon\x1fweather-overcast", rows)
+        self.assertIn("\0icon\x1fweather-fog", rows)
+        for line in rows.splitlines():
+            text = line.split("\0", 1)[0]
+            self.assertNotIn("icon", text)
+            self.assertNotIn("weather-", text)
+        self.assertIn("-show-icons", args)
 
     def test_a_missing_font_shows_words_not_icon_names(self):
         _, args, _ = self.run_menu("forecast", "x", 1, fonts="")
