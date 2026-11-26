@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
-"""Cut Material Symbols Rounded (the variable font from Google Fonts) to the icons Summit uses: subset.py VARIABLE.ttf OUT.ttf.
+"""Cut Material Symbols Rounded (the variable font) to the icons Summit uses: subset.py VARIABLE.ttf SummitSymbols-vN.ttf.
 Keeps the icons' name ligatures and all four axes; see dots/.config/quickshell/Summit/assets/README.md."""
 import sys
 from fontTools.ttLib import TTFont
 from fontTools import subset
 src, out = sys.argv[1], sys.argv[2]
-# The family, with the cut's version: every cut with new icons gets the next one. An older cut stays installed
-# system-wide until its package updates (and in ~/.local/share/fonts), and Qt and fontconfig take an installed font of
-# the same family over the one Summit loads itself, so with one name for every cut the new icons showed as their names.
-# Summit asks for this name (FontLoader); halcyon/summit/summit.rasi and rofi-menu name it too.
-FAMILY = "Summit Symbols v3"
+# The family and the file both carry the cut's version: every cut with new icons gets the next one.
+#  - The family: an older cut stays installed (the package's, ~/.local/share/fonts) until it is updated, and Qt and
+#    fontconfig take an installed font of the same family over the one Summit loads: the new icons showed as their
+#    names.
+#  - The file: Quickshell reloads Summit in the same process when its files change, and Qt keeps a font it has loaded
+#    by its path, so a new cut under the old file name was shaped with the new font and drawn with the old one: the
+#    icons came out as other icons.
+# Summit loads assets/fonts/SummitSymbols-vN.ttf (common/Theme.qml); halcyon/summit/summit.rasi and rofi-menu name the
+# family, and the package installs the file. Raise N in all of them together (tests/test_summit_side.py checks).
+FAMILY = "Summit Symbols v4"
 NAMES = """apps bedtime chevron_left chevron_right clear_day cloud foggy landscape partly_cloudy_day
 partly_cloudy_night power_settings_new rainy search thunderstorm weather_snowy wifi wifi_2_bar wifi_1_bar lan wifi_off
 volume_off volume_up volume_down volume_mute battery_charging_full battery_full battery_5_bar battery_3_bar

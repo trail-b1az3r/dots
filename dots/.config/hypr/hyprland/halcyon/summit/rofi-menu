@@ -33,7 +33,11 @@ fi
 # The prompts' icons are Summit's cut of Material Symbols (Summit Symbols), and the text is Summit Sans: fontconfig
 # needs them once for Rofi to find them (Summit's package installs both for everyone; this covers a copy of the dots).
 fonts="${XDG_DATA_HOME:-$HOME/.local/share}/fonts/halcyon"
-for font in SummitSymbols SummitSans; do
+# Older cuts of the icons (SummitSymbols.ttf, SummitSymbols-v3.ttf...) are taken away: one icon font in there.
+for old in "$fonts"/SummitSymbols*.ttf; do
+    [[ -e "$old" && "${old##*/}" != SummitSymbols-v4.ttf ]] && rm -f -- "$old"
+done
+for font in SummitSymbols-v4 SummitSans; do
     file="$HOME/.config/quickshell/Summit/assets/fonts/$font.ttf"
     if [[ -r "$file" ]] && ! cmp -s "$file" "$fonts/$font.ttf"; then
         mkdir -p "$fonts" && cp -f "$file" "$fonts/$font.ttf" && fc-cache -f "$fonts" >/dev/null 2>&1
@@ -44,7 +48,7 @@ theme_args=(-config "${SUMMIT_ROFI_CONFIG:-$here/summit.rasi}")
 
 # The prompts are icons from Summit Symbols, drawn from their names. Without the font in fontconfig they would show as
 # those names ("partly_cloudy_day"), so then the prompts are plain words in the text font.
-if command -v fc-list >/dev/null 2>&1 && [[ -n "$(fc-list "Summit Symbols v3" family 2>/dev/null)" ]]; then
+if command -v fc-list >/dev/null 2>&1 && [[ -n "$(fc-list "Summit Symbols v4" family 2>/dev/null)" ]]; then
     export HAVE_SUMMIT_SYMBOLS=1
 else
     export HAVE_SUMMIT_SYMBOLS=0

@@ -104,7 +104,7 @@ Singleton {
     readonly property string iconFont: symbols.status === FontLoader.Ready ? symbols.name : "Material Symbols Rounded"
     FontLoader {
         id: symbols
-        source: Qt.resolvedUrl("../assets/fonts/SummitSymbols.ttf")
+        source: Qt.resolvedUrl("../assets/fonts/SummitSymbols-v4.ttf")
     }
     readonly property int fontSize: 13
     readonly property int barHeight: 38

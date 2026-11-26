@@ -240,7 +240,7 @@ class FontTests(unittest.TestCase):
     def test_the_package_carries_the_fonts(self):
         pkg = ROOT / "sdata/dist-arch/illogical-impulse-summit"
         pkgbuild = (pkg / "PKGBUILD").read_text()
-        for name in ("SummitSymbols.ttf", "SummitSans.ttf", "SummitSans-OFL.txt"):
+        for name in ("SummitSymbols-v4.ttf", "SummitSans.ttf", "SummitSans-OFL.txt"):
             self.assertEqual((pkg / name).read_bytes(), (SUMMIT / "assets/fonts" / name).read_bytes(), name)
             self.assertIn(hashlib.sha256((pkg / name).read_bytes()).hexdigest(), pkgbuild, name)
         for dep in ("ttf-iosevka-nerd", "hyprsunset", "brightnessctl", "hyprpicker", "hyprshot"):
@@ -252,11 +252,20 @@ class FontTests(unittest.TestCase):
         import re
         family = re.search(r'FAMILY = "([^"]+)"', (ROOT / "tools/summit-symbols/subset.py").read_text()).group(1)
         self.assertNotEqual(family, "Summit Symbols")
+        # ...and so is its file: Quickshell reloads Summit in one process, and Qt keeps a loaded font by its path, so
+        # a new cut under an old file name was drawn with the old one (other icons, or none).
+        version = family.rsplit(" v", 1)[1]
+        file = f"SummitSymbols-v{version}.ttf"
+        self.assertEqual([p.name for p in (SUMMIT / "assets/fonts").glob("SummitSymbols*.ttf")], [file])
+        self.assertIn(f'Qt.resolvedUrl("../assets/fonts/{file}")', read("common/Theme.qml"))
+        self.assertIn(f'"$pkgdir/usr/share/fonts/halcyon/{file}"',
+                      (ROOT / "sdata/dist-arch/illogical-impulse-summit/PKGBUILD").read_text())
+        self.assertIn(f'"${{old##*/}}" != {file}', (HALCYON / "summit/rofi-menu").read_text())   # older copies go
         self.assertIn(f'font: "{family} 15";', (HALCYON / "summit/summit.rasi").read_text())
         self.assertIn(f'fc-list "{family}" family', (HALCYON / "summit/rofi-menu").read_text())
         if importlib.util.find_spec("fontTools"):
             from fontTools.ttLib import TTFont
-            self.assertEqual(TTFont(SUMMIT / "assets/fonts/SummitSymbols.ttf")["name"].getDebugName(1), family)
+            self.assertEqual(TTFont(SUMMIT / "assets/fonts" / file)["name"].getDebugName(1), family)
         # And a name the font has no icon for draws nothing rather than the word.
         self.assertIn("text: known ? name : \"\"", read("common/Symbol.qml"))
 

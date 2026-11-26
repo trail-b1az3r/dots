@@ -2,7 +2,7 @@ import QtQuick
 import qs.common
 
 // A Material Symbols Rounded glyph, by its name: "wifi", "volume_up", ... (Summit's bundled cut of the font: Theme.iconFont).
-// A new icon is added to assets/fonts/SummitSymbols.ttf (assets/README.md). A name the font has no icon for would be
+// A new icon is added to assets/fonts/SummitSymbols-vN.ttf (assets/README.md). A name the font has no icon for would be
 // drawn as the word itself, in whatever font stands in, spilling over everything round it: then it draws nothing.
 Text {
     id: root
