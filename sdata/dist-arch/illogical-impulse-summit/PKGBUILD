@@ -1,7 +1,7 @@
 groups=(illogical-impulse)
 pkgname=illogical-impulse-summit
 pkgver=1.0
-pkgrel=3
+pkgrel=4
 pkgdesc='Halcyon: what Summit, the HyperNeo v2 theme shell, needs, and its forecast window (halcyon-forecast)'
 arch=(x86_64 aarch64)
 license=('GPL-3.0-only' 'Apache-2.0' 'OFL-1.1')
@@ -34,7 +34,7 @@ makedepends=(cargo)
 # modified, OFL-1.1), for fontconfig, so Rofi draws them too: copies of dots/.config/quickshell/Summit/assets/fonts
 # (tests/test_halcyon_summit.py keeps them equal).
 source=(SummitSymbols.ttf SummitSans.ttf SummitSans-OFL.txt)
-sha256sums=('c5da265671a0021dd52ab560968b7878f512247a517c0b3d4a7b7e576480c84a'
+sha256sums=('dbe9c84dec7fe407e118bbe3f4bf3cb2fe8ab7e1a4295997e680dc51c7295edf'
             'a5944fed6f35c148985da1163786b39905ad8e187847ea2d2d786f5ddd312a2c'
             'fc13d69f63e36d284b6e383d4d1463d8ad404f0aa065e57cf961252d51063137')
 

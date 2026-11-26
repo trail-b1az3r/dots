@@ -290,7 +290,7 @@ class ShellTests(unittest.TestCase):
             (bin_ / "rofi").write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "$LOG"\n')
             (bin_ / "pkill").write_text("#!/bin/sh\nexit 1\n")
             # Summit Symbols is installed, so the prompt is its icon (without it, the word: SummitMenusAndModeTests).
-            (bin_ / "fc-list").write_text("#!/bin/sh\necho 'Summit Symbols'\n")
+            (bin_ / "fc-list").write_text("#!/bin/sh\necho 'Summit Symbols v3'\n")
             for f in bin_.iterdir():
                 f.chmod(0o755)
             log = bin_ / "log"
@@ -380,7 +380,7 @@ class SummitFixesTests(unittest.TestCase):
         self.assertTrue(100_000 < font.stat().st_size < 400_000)
         theme = (SUMMIT / "common/Theme.qml").read_text()
         self.assertIn('source: Qt.resolvedUrl("../assets/fonts/SummitSymbols.ttf")', theme)
-        self.assertIn('font: "Summit Symbols 15";', (HALCYON / "summit/summit.rasi").read_text())
+        self.assertIn('font: "Summit Symbols v3 15";', (HALCYON / "summit/summit.rasi").read_text())
         self.assertIn("fc-cache -f", (HALCYON / "summit/rofi-menu").read_text())
 
     def test_rofi_does_not_follow_the_pointer(self):
@@ -463,7 +463,7 @@ class SummitMenusAndModeTests(unittest.TestCase):
          "submap": "hypr"},
     ]
 
-    def run_menu(self, mode, rofi_out="0", rofi_code=0, fonts="Summit Symbols"):
+    def run_menu(self, mode, rofi_out="0", rofi_code=0, fonts="Summit Symbols v3"):
         with tempfile.TemporaryDirectory() as tmp:
             bin_dir = Path(tmp)
             log = bin_dir / "log"

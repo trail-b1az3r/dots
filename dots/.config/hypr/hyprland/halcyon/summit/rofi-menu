@@ -44,7 +44,7 @@ theme_args=(-config "${SUMMIT_ROFI_CONFIG:-$here/summit.rasi}")
 
 # The prompts are icons from Summit Symbols, drawn from their names. Without the font in fontconfig they would show as
 # those names ("partly_cloudy_day"), so then the prompts are plain words in the text font.
-if command -v fc-list >/dev/null 2>&1 && [[ -n "$(fc-list "Summit Symbols" family 2>/dev/null)" ]]; then
+if command -v fc-list >/dev/null 2>&1 && [[ -n "$(fc-list "Summit Symbols v3" family 2>/dev/null)" ]]; then
     export HAVE_SUMMIT_SYMBOLS=1
 else
     export HAVE_SUMMIT_SYMBOLS=0

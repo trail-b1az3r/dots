@@ -82,7 +82,7 @@ inputbar {
 /* The prompt is a Material Symbols name (rofi-menu sets it), drawn as its icon with Summit's bundled cut of the font
    (rofi-menu installs it for fontconfig the first time). */
 prompt {
-    font: "Summit Symbols 15";
+    font: "Summit Symbols v3 15";
     text-color: @accent;
     vertical-align: 0.5;
 }
