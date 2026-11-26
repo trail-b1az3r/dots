@@ -7,6 +7,7 @@ import Quickshell.Wayland
 import Quickshell.Hyprland
 import qs.common
 import qs.services
+import "../services/keys.js" as KeyList
 
 // Hypr mode (halcyon/modes.lua, keys in halcyon/hypr_mode.lua): while Hyprland's "hypr" submap is on, a card of frosted
 // glass above the dock shows the mode's keys, which then work without Super. It springs up when the mode starts, its
@@ -20,17 +21,9 @@ Scope {
     property bool shown: false
     property var binds: []
 
-    // "Hypr mode: Move window left" -> "Move window left"; the keys as chips.
+    // The keys as keycaps (Super, Ctrl, Shift, Alt with Summit's icons): services/keys.js, as the cheat sheet has them.
     function keysOf(bind) {
-        const keys = [];
-        const mask = bind.modmask ?? 0;
-        if (mask & (1 << 6)) keys.push("Super");
-        if (mask & (1 << 2)) keys.push("Ctrl");
-        if (mask & (1 << 3)) keys.push("Alt");
-        if (mask & (1 << 0)) keys.push("Shift");
-        const symbols = { "Left": "←", "Right": "→", "Up": "↑", "Down": "↓", "Return": "Enter", "Escape": "Esc" };
-        keys.push(symbols[bind.key] ?? bind.key);
-        return keys;
+        return KeyList.modCaps(bind.modmask ?? 0, false).concat(KeyList.keyCaps(bind.key));
     }
 
     onActiveChanged: {
@@ -186,21 +179,11 @@ Scope {
                                 anchors.verticalCenter: parent.verticalCenter
                                 Repeater {
                                     model: root.keysOf(entry.modelData)
-                                    delegate: Rectangle {
-                                        required property string modelData
-                                        width: Math.max(24, label.implicitWidth + 12)
-                                        height: 24
-                                        radius: 7
-                                        color: Theme.alpha(Theme.text, 0.10)
-                                        Text {
-                                            id: label
-                                            anchors.centerIn: parent
-                                            text: parent.modelData
-                                            color: Theme.text
-                                            font.family: Theme.mono
-                                            font.pixelSize: 12
-                                            font.weight: Font.Medium
-                                        }
+                                    delegate: KeyCap {
+                                        required property var modelData
+                                        kind: modelData.kind
+                                        label: modelData.label
+                                        size: 26
                                     }
                                 }
                             }
