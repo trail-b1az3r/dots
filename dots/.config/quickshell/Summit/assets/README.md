@@ -1,11 +1,11 @@
 # Summit's assets
 
-## fonts/SummitSymbols.ttf
+## fonts/SummitSymbols-v4.ttf
 
 [Material Symbols Rounded](https://github.com/google/material-design-icons) by Google, Apache License 2.0
 (`/licenses/Apache-2.0.txt` in this repository). Cut with fontTools to the icons Summit and its Rofi menus use, with
 their name ligatures and all four of the variable font's axes (FILL, GRAD, opsz, wght). It is named "Summit Symbols
-v3": the family carries the cut's version, so it never stands in for the full font, and an older cut still installed
+v4", in a file named for its version too: the family carries the cut's version, so it never stands in for the full font, and an older cut still installed
 (the package's, or a copy in ~/.local/share/fonts) never stands in for it: Qt and fontconfig took an installed font
 of the same family over the file Summit loads, and the new icons showed as their names. Summit loads it itself
 (common/Theme.qml); `halcyon/summit/rofi-menu` copies it to `~/.local/share/fonts/halcyon` for Rofi.

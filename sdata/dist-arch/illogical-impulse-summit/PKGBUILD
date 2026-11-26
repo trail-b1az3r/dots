@@ -1,7 +1,7 @@
 groups=(illogical-impulse)
 pkgname=illogical-impulse-summit
 pkgver=1.0
-pkgrel=4
+pkgrel=5
 pkgdesc='Halcyon: what Summit, the HyperNeo v2 theme shell, needs, and its forecast window (halcyon-forecast)'
 arch=(x86_64 aarch64)
 license=('GPL-3.0-only' 'Apache-2.0' 'OFL-1.1')
@@ -33,8 +33,8 @@ makedepends=(cargo)
 # Summit's icons (a cut of Material Symbols Rounded, Apache-2.0) and its text font (Summit Sans: Google Sans Flex
 # modified, OFL-1.1), for fontconfig, so Rofi draws them too: copies of dots/.config/quickshell/Summit/assets/fonts
 # (tests/test_halcyon_summit.py keeps them equal).
-source=(SummitSymbols.ttf SummitSans.ttf SummitSans-OFL.txt)
-sha256sums=('dbe9c84dec7fe407e118bbe3f4bf3cb2fe8ab7e1a4295997e680dc51c7295edf'
+source=(SummitSymbols-v4.ttf SummitSans.ttf SummitSans-OFL.txt)
+sha256sums=('5355930bebdadc7a341f211b3bc56eac8a19684b2b1243c10c49a535b1c60207'
             'a5944fed6f35c148985da1163786b39905ad8e187847ea2d2d786f5ddd312a2c'
             'fc13d69f63e36d284b6e383d4d1463d8ad404f0aa065e57cf961252d51063137')
 
@@ -58,7 +58,7 @@ package() {
   cd "$srcdir/halcyon-forecast"
   install -Dm755 target/release/halcyon-forecast "$pkgdir/usr/bin/halcyon-forecast"
   install -Dm644 assets/README.md "$pkgdir/usr/share/licenses/$pkgname/weather-icons.md"
-  install -Dm644 "$srcdir/SummitSymbols.ttf" "$pkgdir/usr/share/fonts/halcyon/SummitSymbols.ttf"
+  install -Dm644 "$srcdir/SummitSymbols-v4.ttf" "$pkgdir/usr/share/fonts/halcyon/SummitSymbols-v4.ttf"
   install -Dm644 "$srcdir/SummitSans.ttf" "$pkgdir/usr/share/fonts/halcyon/SummitSans.ttf"
   install -Dm644 "$srcdir/SummitSans-OFL.txt" "$pkgdir/usr/share/licenses/$pkgname/SummitSans-OFL.txt"
 }

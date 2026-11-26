@@ -290,7 +290,7 @@ class ShellTests(unittest.TestCase):
             (bin_ / "rofi").write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "$LOG"\n')
             (bin_ / "pkill").write_text("#!/bin/sh\nexit 1\n")
             # Summit Symbols is installed, so the prompt is its icon (without it, the word: SummitMenusAndModeTests).
-            (bin_ / "fc-list").write_text("#!/bin/sh\necho 'Summit Symbols v3'\n")
+            (bin_ / "fc-list").write_text("#!/bin/sh\necho 'Summit Symbols v4'\n")
             for f in bin_.iterdir():
                 f.chmod(0o755)
             log = bin_ / "log"
@@ -376,11 +376,11 @@ class SummitFixesTests(unittest.TestCase):
         self.assertEqual((SUMMIT / "bar/TopBar.qml").read_text().count("topMargin: Theme.gap + "), 3)
 
     def test_icons_come_with_summit(self):
-        font = SUMMIT / "assets/fonts/SummitSymbols.ttf"
+        font = SUMMIT / "assets/fonts/SummitSymbols-v4.ttf"
         self.assertTrue(100_000 < font.stat().st_size < 400_000)
         theme = (SUMMIT / "common/Theme.qml").read_text()
-        self.assertIn('source: Qt.resolvedUrl("../assets/fonts/SummitSymbols.ttf")', theme)
-        self.assertIn('font: "Summit Symbols v3 15";', (HALCYON / "summit/summit.rasi").read_text())
+        self.assertIn('source: Qt.resolvedUrl("../assets/fonts/SummitSymbols-v4.ttf")', theme)
+        self.assertIn('font: "Summit Symbols v4 15";', (HALCYON / "summit/summit.rasi").read_text())
         self.assertIn("fc-cache -f", (HALCYON / "summit/rofi-menu").read_text())
 
     def test_rofi_does_not_follow_the_pointer(self):
@@ -463,7 +463,7 @@ class SummitMenusAndModeTests(unittest.TestCase):
          "submap": "hypr"},
     ]
 
-    def run_menu(self, mode, rofi_out="0", rofi_code=0, fonts="Summit Symbols v3"):
+    def run_menu(self, mode, rofi_out="0", rofi_code=0, fonts="Summit Symbols v4"):
         with tempfile.TemporaryDirectory() as tmp:
             bin_dir = Path(tmp)
             log = bin_dir / "log"
@@ -541,10 +541,10 @@ class SummitMenusAndModeTests(unittest.TestCase):
         self.assertIn("-p partly_cloudy_day", args)
 
     def test_the_font_is_installed_for_everyone(self):
-        packaged = (ROOT / "sdata/dist-arch/illogical-impulse-summit/SummitSymbols.ttf").read_bytes()
-        self.assertEqual(packaged, (SUMMIT / "assets/fonts/SummitSymbols.ttf").read_bytes())
+        packaged = (ROOT / "sdata/dist-arch/illogical-impulse-summit/SummitSymbols-v4.ttf").read_bytes()
+        self.assertEqual(packaged, (SUMMIT / "assets/fonts/SummitSymbols-v4.ttf").read_bytes())
         pkgbuild = (ROOT / "sdata/dist-arch/illogical-impulse-summit/PKGBUILD").read_text()
-        self.assertIn('"$pkgdir/usr/share/fonts/halcyon/SummitSymbols.ttf"', pkgbuild)
+        self.assertIn('"$pkgdir/usr/share/fonts/halcyon/SummitSymbols-v4.ttf"', pkgbuild)
 
     def test_hypr_mode_shows_in_summit(self):
         self.assertIn("HyprMode {}", (SUMMIT / "shell.qml").read_text())
