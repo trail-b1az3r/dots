@@ -853,7 +853,7 @@ ContentPage {
             wrapMode: Text.Wrap
             color: Appearance.colors.colSubtext
             font.pixelSize: Appearance.font.pixelSize.smallie
-            text: Translation.tr("Halcyon Glass is this shell with see-through panels over liquid glass (hyprland-plus's liquid blur, after MyGlass): the wallpaper bends at each panel's rim. Summit is a clean bar and dock with Rofi menus. Noctalia appears once the noctalia package is installed. Ctrl+Super+Shift+G picks from any shell; Settings here belongs to the Halcyon shell.")
+            text: Translation.tr("Halcyon Glass is this shell with see-through panels over liquid glass (hyprland-plus's liquid blur, after MyGlass): the wallpaper bends at each panel's rim. Summit is a clean bar and dock with Rofi menus. Noctalia appears once the noctalia package is installed. Ctrl+Super+Shift+G picks from any shell. Under Summit, Settings shows Summit's own page and only what applies to it.")
         }
     }
 
@@ -1269,6 +1269,8 @@ ContentPage {
         ConfigSwitch {
             buttonIcon: "menu_book"
             text: Translation.tr("The theme's own app picker (Manga Ink, After ICEY)")
+            // The Halcyon shell's own launchers.
+            visible: !RunningShell.summit
             checked: Config.options.halcyon.themedLauncher
             onCheckedChanged: Config.options.halcyon.themedLauncher = checked
             StyledToolTip {
@@ -1288,8 +1290,9 @@ ContentPage {
                     Config.options.osd.provider = newValue;
                     Quickshell.execDetached([page.tool, "osd", newValue]);
                 }
+                // Summit has no popup for the keys: there "the shell's" is none at all.
                 options: [
-                    { displayName: Translation.tr("The shell's"), icon: "dashboard", value: "shell" },
+                    { displayName: RunningShell.summit ? Translation.tr("None") : Translation.tr("The shell's"), icon: RunningShell.summit ? "block" : "dashboard", value: "shell" },
                     { displayName: Translation.tr("Avizo"), icon: "volume_up", value: "avizo" }
                 ]
             }
@@ -2069,6 +2072,8 @@ ContentPage {
     ContentSection {
         icon: "auto_awesome"
         title: Translation.tr("Star Rail characters")
+        // The Halcyon shell draws them on its wallpaper: nothing to show under Summit.
+        visible: !RunningShell.summit
 
         ConfigSwitch {
             buttonIcon: "auto_awesome"

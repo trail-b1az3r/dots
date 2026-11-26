@@ -327,7 +327,25 @@ other two shells' units.
 - **Top bar**, three pills floating over the wallpaper. Left: the mountain (the app launcher; right-click for the
   theme picker) and the workspaces as dots, the current one long. Middle: the date and time (a click opens the
   calendar) and the weather (a click opens the forecast; right-click fetches it again). Right: the tray, the
-  network, the volume (scroll changes it, a click mutes), the battery and the power button.
+  network, the volume (scroll changes it, a click mutes), the battery, the power button and the bell, which opens
+  the side menu (so does a click anywhere on that pill) and counts the notifications waiting in it.
+- **Brightness** on the left: scroll the sun beside the mountain (or the mountain itself) to change it, click the
+  sun for the Halcyon shell's brightness slider. Above the little sunset mark on the slider is the backlight
+  (brightnessctl for a laptop's panel, ddcutil for a monitor that speaks DDC/CI); below it the picture itself is
+  dimmed further with hyprsunset's gamma.
+- **Side menu**, down the right: what the Halcyon shell's sidebar has. Uptime with reload, Settings and the power
+  menu; the brightness, volume and microphone sliders; quick toggles (Wi-Fi, Bluetooth, sound, the microphone,
+  Silent for do not disturb, night light, keep awake, game mode, the power profile, the super battery saver, the
+  colour picker and a screenshot); the notifications; and the calendar, your to-do list (the same one as the Halcyon
+  shell's) and a focus timer. Wi-Fi (join a network, with its password), Bluetooth (pair and connect) and sound (the
+  output, the input and each app's volume) open pages of their own from their tiles' arrows or a right click. It
+  opens from the bar, or by pushing the pointer against the right edge of the rightmost screen for a moment (never
+  over a fullscreen window); a click outside or Esc closes it. Game mode turns off animations, blur, shadows, gaps
+  and rounding and allows tearing (`halcyon/gamemode.lua`, while `~/.local/state/halcyon/gamemode.json` exists).
+- **Notifications**: Summit is the notification server while it runs. New ones show in the top right corner, and
+  all of them wait in the side menu until dismissed. An **important** one opens under the clock instead: a small
+  pill that spreads sideways into one line with its app and a summary, stays three seconds and fades (never over a
+  fullscreen window). Whether one is important is decided on the computer by a tiny model (below).
 - **Dock** at the bottom: your pinned apps, then the open windows, a dot under each running one. A click focuses or
   starts it; pinned apps are `pinned` in `~/.local/state/halcyon/summit.json` (the theme keeps them).
 - **Menus** are Rofi, in Summit's own config (`halcyon/summit/summit.rasi`, passed with `-config`, so your
@@ -338,14 +356,38 @@ other two shells' units.
   from anywhere.
 - **Windows** (Alt+Tab): Enter goes to one; Alt+1 to Alt+9 sends it to that workspace and Shift+Enter to any other
   (or a new one, or one you name), and you stay where you are.
-- **Hypr mode** (Super+Ctrl+H) shows its keys on a card of glass above the dock while it is on, as the Halcyon shell
-  does.
+- **Hypr mode** (Super+Ctrl+H): a glow traces round every screen as it starts (out from the top, down the sides,
+  closing at the bottom) and breathes while it is on; HYPR grows out of the bar's left pill; and its keys spring up
+  on a card of glass above the dock, one after another. They all draw back when it ends.
+- **Fonts**: text is Summit Sans, Google Sans Flex modified for Summit (its rounded ends, upright and normal width
+  fixed in, renamed as the font's trademark terms ask; SIL Open Font License; `tools/summit-fonts/make_sans.py`), and
+  code (keys, codes, the timer, the clipboard) is Iosevka Nerd Font when it is installed. `halcyon fonts
+  right-font` puts all of Summit and its menus in RightFont, "the most confusing font possible", until you restart
+  (`halcyon fonts right-font off` sooner); so does installing it with `halcyon fonts install right-font`.
+- **Settings** (Super+I) opens on a Summit page while Summit is the shell: popups, do not disturb, the important
+  notifications and how sure the model must be, the side menu's edge, the brightness button, hypr mode's glow and
+  the fonts (`~/.config/halcyon/summit.json`). The Halcyon shell's own pages (its bar, background, interface,
+  services) are left out, and so is what only it can do on the Halcyon page.
 - **Icons** in the bar and the menus come from Summit Symbols, which Summit's package installs for every user. If
   fontconfig cannot find it, the menus say what they are in words rather than showing an icon's name.
 - **Documents** is a tab in the app launcher (Super, then Tab), and `rofi-menu docs` on its own: type words and press
   Enter to find your documents by what they say, through Frontline's local document index (`frontline docs`);
   Enter on one opens it.
 - **Locking** uses hyprlock.
+
+### The importance model
+
+Each notification's app, title and text go through a logistic regression over hashed words and word pairs, plus a
+few signals (its urgency, whether it has buttons, a code like 482913, a time like "in 5 minutes"): about 22 KB of
+weights in `Summit/assets/model/importance.json`, run inside Summit (`services/importance.js`), so nothing is sent
+anywhere. Critical urgency is always important and low urgency never is. The same weights pick the body's most
+telling sentence for the banner's one-line summary.
+
+It is trained by `tools/summit-importance/train.py` on 2,000 example notifications that `make_data.py` writes from
+templates (codes, sign-ins, calls, people who need you, meetings, failures; and likes, sales, now playing,
+connected, saved, group chat), and checked on 32 written by hand that it never trains on: 31 right at Summit's
+setting. It is small and will be wrong now and then; what it passes over still shows as an ordinary popup. Settings
+> Summit turns it off or makes it stricter.
 
 ### The weather, from nearby Wi-Fi
 
@@ -368,7 +410,9 @@ The forecast window is `halcyon-forecast`, a small [Iced](https://iced.rs) app (
 the `illogical-impulse-summit` package. Without it the bar's weather opens the same forecast as a Rofi list.
 
 Summit's packages are in `illogical-impulse-summit` (`rofi`, `cliphist`, `wl-clipboard`, `hyprlock`, `inter-font`,
-`ttf-material-symbols-variable-git`, and `cargo` to build the forecast window).
+`ttf-material-symbols-variable-git`, `ttf-iosevka-nerd`, `brightnessctl`, `hyprsunset`, `hyprpicker`, `hyprshot`,
+`libnotify`, `ddcutil` if you want it for monitors, and `cargo` to build the forecast window). It installs Summit
+Symbols and Summit Sans for every user.
 
 ## Neumorph
 

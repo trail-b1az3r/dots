@@ -24,7 +24,8 @@ ApplicationWindow {
     property string firstRunFileContent: "This file is just here to confirm you've been greeted :>"
     property real contentPadding: 8
     property bool showNextTime: false
-    property var pages: [
+    // Every page, under the Halcyon shell (and MacShell, Noctalia: Settings is the Halcyon shell's).
+    readonly property var allPages: [
         {
             name: Translation.tr("Quick"),
             icon: "instant_mix",
@@ -77,6 +78,19 @@ ApplicationWindow {
             component: "modules/settings/About.qml"
         }
     ]
+    // While Summit is the shell: its own page first, then what of Halcyon's applies to it (its page leaves out what only
+    // the Halcyon shell does), and About. The Halcyon shell's bar, background, interface and services pages do nothing
+    // under Summit, so they are not shown.
+    readonly property var summitPages: [
+        {
+            name: Translation.tr("Summit"),
+            icon: "landscape",
+            component: "modules/settings/SummitConfig.qml"
+        },
+        allPages.find(p => p.component === "modules/settings/HalcyonConfig.qml"),
+        allPages.find(p => p.component === "modules/settings/About.qml")
+    ]
+    readonly property var pages: RunningShell.summit ? summitPages : allPages
     property int currentPage: 0
 
     // ── Search ──────────────────────────────────────────────────────────────────────────────────────────────

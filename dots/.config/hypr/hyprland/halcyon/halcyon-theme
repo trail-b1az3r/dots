@@ -624,8 +624,9 @@ SUMMIT_BINDS = (
 # and every other Super key. A release bind fires only when no other key was pressed with Super.
 SUPER_TAP = ("SUPER + SUPER_L", "SUPER + SUPER_R")
 # Everything is frosted glass: Hyprland's blur behind each of its layers, ignoring the clear space around them.
+# Summit's layers of frosted glass, blurred behind. (Its hypr mode glow and the side menu's edge strip are not glass.)
 SUMMIT_LAYERS = (("summit-top", 0.05), ("summit-bottom", 0.05), ("summit-themes", 0.05), ("summit-hyprmode", 0.05),
-                 ("rofi", 0.05))
+                 ("summit-sidemenu", 0.05), ("summit-notifications", 0.05), ("summit-banner", 0.05), ("rofi", 0.05))
 SUMMIT_PINNED = ["firefox", "org.kde.dolphin", "kitty", "org.kde.kate", "code"]
 
 

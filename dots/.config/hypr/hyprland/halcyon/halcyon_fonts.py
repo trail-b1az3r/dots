@@ -5,7 +5,10 @@
     halcyon fonts install FILE...        .ttf .otf .ttc .woff .woff2 files, or a .zip of them (a family as the foundry
                                          ships it); each lands in ~/.local/share/fonts/halcyon-imported/NAME
     halcyon fonts install right-font     RightFont, "the most confusing font possible" (Right of the Bell), which
-                                         Halcyon ships; --latest fetches the newest from rightofthebell.com/fonts
+                                         Halcyon ships; --latest fetches the newest from rightofthebell.com/fonts.
+                                         Then everything in Summit (its bar, menus, Rofi) is in it until you restart
+    halcyon fonts right-font [on|off]    switch Summit to RightFont (installing it first) or back; it is hard to
+                                         read, so it never outlasts a restart
     halcyon fonts remove NAME            take an installed one away again
     halcyon fonts manager                open Font Manager (font-manager): preview, enable and disable, collections
 
@@ -153,6 +156,30 @@ def install_right_font(latest: bool = False) -> str:
     return where
 
 
+# The switch to RightFont: a file in $XDG_RUNTIME_DIR, which every boot starts empty, so it ends with the session.
+# Summit watches for it (common/Theme.qml) and is also told at once; Summit's Rofi menus read it when they open.
+def right_font_flag() -> Path:
+    return Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp") / "halcyon/right-font"
+
+
+def tell_summit(on: bool) -> None:
+    if shutil.which("qs"):
+        subprocess.run(["qs", "-c", "Summit", "ipc", "call", "summit", "rightFont", "true" if on else "false"],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=10)
+
+
+def switch_right_font(on: bool) -> None:
+    flag = right_font_flag()
+    if on:
+        if not (RIGHT_FONT_DIR / RIGHT_FONT_FILE).is_file():
+            install_right_font()
+        flag.parent.mkdir(parents=True, exist_ok=True)
+        flag.write_text(str(RIGHT_FONT_DIR / RIGHT_FONT_FILE) + "\n", encoding="utf-8")
+    else:
+        flag.unlink(missing_ok=True)
+    tell_summit(on)
+
+
 def installed() -> dict[str, list[str]]:
     if not FONTS.is_dir():
         return {}
@@ -191,12 +218,20 @@ def main(argv: list[str]) -> int:
         if argv[0] == "install":
             if argv[1:2] == ["right-font"]:
                 where = install_right_font(latest="--latest" in argv[2:])
-                print(f'RightFont ("RightFont Review") is in {RIGHT_FONT_DIR}, from {where}. Good luck reading it.')
+                switch_right_font(True)
+                print(f'RightFont ("RightFont Review") is in {RIGHT_FONT_DIR}, from {where}. Summit is in it until you '
+                      'restart (halcyon fonts right-font off sooner). Good luck reading it.')
                 return 0
             if len(argv) < 2:
                 raise FontError("usage: halcyon fonts install FILE... | right-font [--latest]")
             for name, count in install([Path(p).expanduser() for p in argv[1:]]):
                 print(f"installed {name}: {count} file{'s' if count != 1 else ''} in {FONTS / name}")
+            return 0
+        if argv[0] == "right-font" and argv[1:2] in ([], ["on"], ["off"]):
+            on = argv[1:2] != ["off"]
+            switch_right_font(on)
+            print("Summit is in RightFont until you restart (halcyon fonts right-font off sooner)." if on
+                  else "Summit is back in its own fonts.")
             return 0
         if argv[0] == "remove" and len(argv) == 2:
             remove(argv[1])

@@ -549,7 +549,9 @@ class SummitMenusAndModeTests(unittest.TestCase):
     def test_hypr_mode_shows_in_summit(self):
         self.assertIn("HyprMode {}", (SUMMIT / "shell.qml").read_text())
         card = (SUMMIT / "popups/HyprMode.qml").read_text()
-        self.assertIn('event.name !== "submap"', card)
+        # Whether the mode is on is Hyprland's submap, followed in one place for the card, the glow and the bar.
+        self.assertIn('event.name === "submap"', (SUMMIT / "services/HyprModeState.qml").read_text())
+        self.assertIn("readonly property bool active: HyprModeState.active", card)
         self.assertIn('WlrLayershell.namespace: "summit-hyprmode"', card)
         self.assertIn("desktop-shell shows-hypr-mode", (HALCYON / "modes.lua").read_text())
         shell = (HALCYON / "desktop-shell").read_text()

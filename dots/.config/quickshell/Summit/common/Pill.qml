@@ -28,6 +28,16 @@ Glass {
     implicitHeight: Theme.barHeight
     radius: Theme.radius
 
+    // A click on the group itself, between its buttons (the right group's opens the side menu).
+    property bool clickable: false
+    signal clicked
+    MouseArea {
+        anchors.fill: parent
+        enabled: root.clickable
+        cursorShape: Qt.PointingHandCursor
+        onClicked: root.clicked()
+    }
+
     Row {
         id: row
         anchors.verticalCenter: parent.verticalCenter

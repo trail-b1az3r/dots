@@ -70,6 +70,8 @@ if is_file_exists(overlaysFile) then
 end
 require("hyprland.halcyon.overlays")
 require("hyprland.halcyon.desk")
+-- Game mode (Summit's side menu): no effects, gaps or rounding, and tearing allowed, while it is on.
+require("hyprland.halcyon.gamemode")
 -- The super battery saver, last, so its animations, blur and shadows win (halcyon saver).
 require("hyprland.halcyon.saver")
 
