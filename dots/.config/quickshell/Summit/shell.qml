@@ -44,6 +44,15 @@ ShellRoot {
         delegate: HyprFrame {}
     }
 
+    // The keys cheat sheet (Super+/, Super+Shift+/ the hypr keys).
+    Cheatsheet {
+        id: cheatsheet
+    }
+    Connections {
+        target: Actions
+        function onKeysRequested(page) { cheatsheet.toggle(page); }
+    }
+
     // The side menu, and the right edge of the rightmost screen that opens it.
     SideMenu {}
     EdgeTrigger {}
@@ -67,8 +76,8 @@ ShellRoot {
         function power(): void { Actions.power(); }
         function windows(): void { Actions.windows(); }
         function themes(): void { themePicker.toggle(); }
-        function keys(): void { Actions.keys(); }
-        function hyprkeys(): void { Actions.hyprKeys(); }
+        function keys(): void { cheatsheet.toggle("all"); }
+        function hyprkeys(): void { cheatsheet.toggle("hypr"); }
         // The side menu on the focused screen.
         function sideMenu(): void { SummitState.toggleSideMenu(Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? Quickshell.screens[0]); }
         // RightFont everywhere, until Summit restarts (halcyon fonts right-font).

@@ -287,6 +287,63 @@ class FontTests(unittest.TestCase):
         self.assertIn('${XDG_RUNTIME_DIR:-/tmp}/halcyon/right-font', (HALCYON / "summit/rofi-menu").read_text())
 
 
+KEYS = r"""
+const fs = require("fs"), vm = require("vm");
+const m = { exports: {} };
+vm.runInNewContext(fs.readFileSync(process.argv[1], "utf8").replace(/^\.pragma library\s*$/m, ""), { module: m, JSON, Object, String });
+const binds = JSON.parse(fs.readFileSync(0, "utf8"));
+const out = {};
+for (const page of ["all", "hypr"])
+  out[page] = m.exports.rows(binds, page).map(r => [r.category, r.caps.map(c => c.kind + ":" + c.label), r.text, r.runnable]);
+out.groups = m.exports.groups(m.exports.rows(binds, "all")).map(g => g.name);
+out.found = m.exports.rows(binds, "all").filter(r => m.exports.matches(r, "fn louder")).map(r => r.text);
+process.stdout.write(JSON.stringify(out));
+"""
+
+
+@unittest.skipUnless(shutil.which("node"), "needs node")
+class CheatsheetTests(unittest.TestCase):
+    def keys(self, binds):
+        done = subprocess.run(["node", "-e", KEYS, str(SUMMIT / "services/keys.js")], input=json.dumps(binds),
+                              capture_output=True, text=True, check=True)
+        return json.loads(done.stdout)
+
+    def test_binds_become_keycaps_in_cards(self):
+        out = self.keys([
+            {"modmask": 64, "key": "Slash", "description": "Summit: Keybinds", "dispatcher": "exec", "arg": "x"},
+            {"modmask": 69, "key": "Left", "description": "Window: Move left", "dispatcher": "movewindow", "arg": "l"},
+            {"modmask": 0, "key": "XF86AudioRaiseVolume", "description": "Sound: Louder", "dispatcher": "exec", "arg": "y"},
+            {"modmask": 77, "key": "W", "description": "Hyper: Weather", "dispatcher": "exec", "arg": "z"},
+            {"modmask": 72, "key": "mouse:272", "description": "Window: Drag", "dispatcher": "movewindow", "arg": ""},
+            {"submap": "hypr", "modmask": 0, "key": "F", "description": "Hypr mode: Fullscreen", "dispatcher": "__lua"},
+            {"modmask": 64, "key": "X", "description": "", "dispatcher": "exec", "arg": "hidden"},
+        ])
+        self.assertEqual(out["all"][0], ["Summit", ["super:Super", ":/"], "Keybinds", True])
+        self.assertEqual(out["all"][1][1], ["super:Super", "ctrl:Ctrl", "shift:Shift", ":\u2190"])
+        self.assertEqual(out["all"][2][1], ["fn:Fn", ":Volume +"])                     # the media keys are Fn's
+        self.assertEqual(out["all"][4][1], ["super:Super", "alt:Alt", ":Left click"])
+        self.assertNotIn("Fullscreen", [r[2] for r in out["all"]])                   # hypr mode's keys: their page
+        self.assertEqual(out["hypr"], [["Hyper", ["hyper:Hyper", ":W"], "Weather", True],
+                                       ["Hypr mode", [":F"], "Fullscreen", True]])
+        self.assertEqual(out["groups"], ["Summit", "Window", "Sound", "Hyper"])
+        self.assertEqual(out["found"], ["Louder"])
+
+    def test_the_pane_is_large_and_has_its_own_key_icons(self):
+        sheet = read("popups/Cheatsheet.qml")
+        self.assertIn("width: Math.min(parent.width - 96, 1640)", sheet)
+        self.assertIn("WlrKeyboardFocus.Exclusive", sheet)
+        self.assertIn('import "../services/keys.js" as KeyList', sheet)   # not "Keys": QtQuick's Keys handlers
+        icon = read("common/KeyIcon.qml")
+        for kind in ('"super"', '"ctrl"', '"shift"', '"alt"', '"fn"', '"hyper"'):
+            self.assertIn(kind + ": [", icon)
+        self.assertIn("KeyIcon {", read("common/KeyCap.qml"))
+        self.assertIn("delegate: KeyCap {", read("popups/HyprMode.qml"))
+        lua = "\n".join(theme.summit_lua())
+        # Summit's pane, or Rofi's list when Summit is not running.
+        self.assertIn('qs -c Summit ipc call summit keys || $HOME/.config/hypr/hyprland/halcyon/summit/rofi-menu keys', lua)
+        self.assertIn('namespace = "summit-cheatsheet"', lua)
+
+
 class GameModeTests(unittest.TestCase):
     def test_game_mode_is_a_state_file_hyprland_reads(self):
         lua = (HALCYON / "gamemode.lua").read_text()

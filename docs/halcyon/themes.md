@@ -352,7 +352,9 @@ other two shells' units.
   `~/.config/rofi` is not touched) and the theme's colours (`~/.local/state/halcyon/summit-colors.rasi`):
   Super+Space apps, Alt+Tab windows, Super+V the clipboard (cliphist), Super+Escape and the power button the power
   menu, Super+/ the keys and Super+Shift+/ the hypr keys (Hyper chords and hypr mode's keys; Alt+H switches
-  between the two). `halcyon/summit/rofi-menu apps|windows|clipboard|power|forecast|keys|hyprkeys|docs` opens them
+  between the two). The keys are Summit's own cheat sheet: a large pane with every key in cards by what it is for,
+  each chord as keycaps with Summit's icons for Super (its mountain), Ctrl, Shift, Alt, Fn (the media and
+  brightness keys) and Hyper; type to find one, Enter or a click runs it. Without Summit running they open in Rofi. `halcyon/summit/rofi-menu apps|windows|clipboard|power|forecast|keys|hyprkeys|docs` opens them
   from anywhere.
 - **Windows** (Alt+Tab): Enter goes to one; Alt+1 to Alt+9 sends it to that workspace and Shift+Enter to any other
   (or a new one, or one you name), and you stay where you are.

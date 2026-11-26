@@ -20,8 +20,10 @@ Singleton {
     // The theme picker is Summit's own (popups/ThemePicker.qml), listening for this.
     signal themesRequested
     function themes() { root.themesRequested(); }
-    function keys() { Quickshell.execDetached([root.rofiScript, "keys"]); }
-    function hyprKeys() { Quickshell.execDetached([root.rofiScript, "hyprkeys"]); }
+    // The keys cheat sheet is Summit's own (popups/Cheatsheet.qml), listening for this: "all" or "hypr".
+    signal keysRequested(string page)
+    function keys() { root.keysRequested("all"); }
+    function hyprKeys() { root.keysRequested("hypr"); }
     function forecast() { Quickshell.execDetached([root.rofiScript, "forecast"]); }
     // Settings (Super+I): Halcyon's Settings app, which shows Summit's own page while Summit is the shell.
     function settings() { Quickshell.execDetached([root.halcyon + "/halcyon-theme", "settings"]); }
