@@ -5,6 +5,11 @@ import sys
 from fontTools.ttLib import TTFont
 from fontTools import subset
 src, out = sys.argv[1], sys.argv[2]
+# The family, with the cut's version: every cut with new icons gets the next one. An older cut stays installed
+# system-wide until its package updates (and in ~/.local/share/fonts), and Qt and fontconfig take an installed font of
+# the same family over the one Summit loads itself, so with one name for every cut the new icons showed as their names.
+# Summit asks for this name (FontLoader); halcyon/summit/summit.rasi and rofi-menu name it too.
+FAMILY = "Summit Symbols v3"
 NAMES = """apps bedtime chevron_left chevron_right clear_day cloud foggy landscape partly_cloudy_day
 partly_cloudy_night power_settings_new rainy search thunderstorm weather_snowy wifi wifi_2_bar wifi_1_bar lan wifi_off
 volume_off volume_up volume_down volume_mute battery_charging_full battery_full battery_5_bar battery_3_bar
@@ -38,9 +43,9 @@ sub.populate(glyphs=keep_glyphs, unicodes=[ord(c) for c in letters] + [by_name[g
 sub.subset(f)
 for rec in f["name"].names:
     if rec.nameID in (1, 4, 16):
-        rec.string = "Summit Symbols"
+        rec.string = FAMILY
     elif rec.nameID == 6:
-        rec.string = "SummitSymbols"
+        rec.string = FAMILY.replace(" ", "")
 f.save(out)
 g = TTFont(out)
 print("glyphs", len(g.getGlyphOrder()), "axes", [a.axisTag for a in g["fvar"].axes])

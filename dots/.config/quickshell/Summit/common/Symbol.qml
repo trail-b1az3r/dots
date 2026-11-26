@@ -2,14 +2,17 @@ import QtQuick
 import qs.common
 
 // A Material Symbols Rounded glyph, by its name: "wifi", "volume_up", ... (Summit's bundled cut of the font: Theme.iconFont).
-// A name that is not in it shows as text, so a new icon is added to assets/fonts/SummitSymbols.ttf (assets/README.md).
+// A new icon is added to assets/fonts/SummitSymbols.ttf (assets/README.md). A name the font has no icon for would be
+// drawn as the word itself, in whatever font stands in, spilling over everything round it: then it draws nothing.
 Text {
     id: root
     property string name
     property real fill: 0
     property int size: 19
     property int weight: 500
-    text: name
+    // An icon is one glyph about as wide as it is tall; a name without one is a row of letters.
+    readonly property bool known: metrics.advanceWidth > 0 && metrics.advanceWidth <= root.size * 1.6
+    text: known ? name : ""
     font.family: Theme.iconFont
     font.pixelSize: size
     // Both: the weight picks the font's instance where the axes are not applied (the Thin default otherwise).
@@ -19,4 +22,11 @@ Text {
     verticalAlignment: Text.AlignVCenter
     horizontalAlignment: Text.AlignHCenter
     renderType: Text.QtRendering
+
+    TextMetrics {
+        id: metrics
+        font.family: Theme.iconFont
+        font.pixelSize: root.size
+        text: root.name
+    }
 }

@@ -246,6 +246,20 @@ class FontTests(unittest.TestCase):
         for dep in ("ttf-iosevka-nerd", "hyprsunset", "brightnessctl", "hyprpicker", "hyprshot"):
             self.assertIn(f"  {dep}\n", pkgbuild)
 
+    def test_each_cut_of_the_icons_has_its_own_family(self):
+        # An older cut stays installed (the package's, ~/.local/share/fonts) under its family, and Qt and fontconfig
+        # took it over the file Summit loads: the new icons showed as their names. Every cut is named for itself.
+        import re
+        family = re.search(r'FAMILY = "([^"]+)"', (ROOT / "tools/summit-symbols/subset.py").read_text()).group(1)
+        self.assertNotEqual(family, "Summit Symbols")
+        self.assertIn(f'font: "{family} 15";', (HALCYON / "summit/summit.rasi").read_text())
+        self.assertIn(f'fc-list "{family}" family', (HALCYON / "summit/rofi-menu").read_text())
+        if importlib.util.find_spec("fontTools"):
+            from fontTools.ttLib import TTFont
+            self.assertEqual(TTFont(SUMMIT / "assets/fonts/SummitSymbols.ttf")["name"].getDebugName(1), family)
+        # And a name the font has no icon for draws nothing rather than the word.
+        self.assertIn("text: known ? name : \"\"", read("common/Symbol.qml"))
+
     def test_the_new_icons_are_in_summits_font(self):
         names = (ROOT / "tools/summit-symbols/subset.py").read_text()
         for icon in ("notifications_unread", "wb_twilight", "do_not_disturb_on", "priority_high", "bluetooth"):

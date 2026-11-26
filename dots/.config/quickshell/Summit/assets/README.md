@@ -4,13 +4,15 @@
 
 [Material Symbols Rounded](https://github.com/google/material-design-icons) by Google, Apache License 2.0
 (`/licenses/Apache-2.0.txt` in this repository). Cut with fontTools to the icons Summit and its Rofi menus use, with
-their name ligatures and all four of the variable font's axes (FILL, GRAD, opsz, wght), and named "Summit Symbols" so
-it never stands in for the full font. Summit loads it itself (common/Theme.qml); `halcyon/summit/rofi-menu` copies it
-to `~/.local/share/fonts/halcyon` for Rofi.
+their name ligatures and all four of the variable font's axes (FILL, GRAD, opsz, wght). It is named "Summit Symbols
+v3": the family carries the cut's version, so it never stands in for the full font, and an older cut still installed
+(the package's, or a copy in ~/.local/share/fonts) never stands in for it: Qt and fontconfig took an installed font
+of the same family over the file Summit loads, and the new icons showed as their names. Summit loads it itself
+(common/Theme.qml); `halcyon/summit/rofi-menu` copies it to `~/.local/share/fonts/halcyon` for Rofi.
 
-To add an icon: take the variable font from Google Fonts, add the icon's name to the list in the subsetting script
-(subset with `layout_closure = False` and the `liga` feature, keeping the letters a-z, 0-9 and `_`), and replace the
-file.
+To add an icon: add its name to `NAMES` in `tools/summit-symbols/subset.py`, raise the version in its `FAMILY` (and
+in `halcyon/summit/summit.rasi` and `rofi-menu`, which name it), and cut it from the variable font
+(`variablefont/` in github.com/google/material-design-icons): `subset.py VARIABLE.ttf OUT.ttf`.
 
 ## fonts/SummitSans.ttf
 
