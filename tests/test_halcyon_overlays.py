@@ -121,6 +121,7 @@ class SyncTest(Env):
         self.install("wayscriber")
         self.run_tool("overlays", "sync", "--quiet")
         text = (self.config / "wayscriber/config.toml").read_text()
+        self.assertIn("config_revision = 3", text)
         self.assertTrue(text.startswith("# halcyon-managed"))
         data = tomllib.loads(text)
         self.assertEqual(data["drawing"]["default_color"], "#FF8A7A")
@@ -249,6 +250,31 @@ class AnnotateTest(Env):
         (self.running / "wayscriber").touch()
         self.run_tool("annotate", "toggle")
         self.assertEqual([c for c in self.calls().splitlines() if c.startswith("wayscriber")], ["wayscriber --daemon-toggle"])
+
+    def test_a_daemon_that_is_still_starting_is_asked_again(self):
+        # Wayscriber refuses requests until its daemon has published its runtime record: the first key press after
+        # it started used to land in that gap and do nothing.
+        count = self.tmp / "toggles"
+        self.fake("wayscriber", f'echo "wayscriber $*" >> "{self.log}"; '
+                                f'case "$1" in --daemon) touch "{self.running}/wayscriber"; sleep 30;; '
+                                f'--daemon-toggle) n=$(cat "{count}" 2>/dev/null || echo 0); echo $((n+1)) > "{count}"; '
+                                f'[ "$n" -ge 2 ] && exit 0; '
+                                f'echo "Error: wayscriber daemon is starting and not ready yet; try again" >&2; exit 1;; esac')
+        done = self.run_tool("annotate", "toggle")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        toggles = [c for c in self.calls().splitlines() if c == "wayscriber --daemon-toggle"]
+        self.assertEqual(len(toggles), 3)
+        self.assertNotIn("notify", self.calls())
+
+    def test_an_indeterminate_toggle_is_never_repeated(self):
+        self.fake("wayscriber", f'echo "wayscriber $*" >> "{self.log}"; '
+                                f'case "$1" in --daemon) touch "{self.running}/wayscriber"; sleep 30;; '
+                                f'--daemon-toggle) echo "Error: daemon command outcome is indeterminate: x" >&2; exit 1;; esac')
+        (self.running / "wayscriber").touch()
+        done = self.run_tool("annotate", "toggle")
+        self.assertEqual(done.returncode, 1)
+        self.assertEqual([c for c in self.calls().splitlines() if c.startswith("wayscriber")], ["wayscriber --daemon-toggle"])
+        self.assertIn("Wayscriber did not open", self.calls())
 
     def test_a_key_press_without_wayscriber_says_so_on_screen(self):
         done = self.run_tool("annotate", "toggle")

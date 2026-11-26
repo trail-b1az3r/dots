@@ -9,13 +9,14 @@ import qs.common
 import qs.services
 
 // Hypr mode (halcyon/modes.lua, keys in halcyon/hypr_mode.lua): while Hyprland's "hypr" submap is on, a card of frosted
-// glass above the dock shows the mode's keys, which then work without Super. It rises in when the mode starts and
-// sinks away when it ends (Esc, the toggle again, or a few idle seconds). Clicks go through to the windows.
+// glass above the dock shows the mode's keys, which then work without Super. It springs up when the mode starts, its
+// keys arriving one after another, and sinks away when it ends (Esc, the toggle again, or a few idle seconds). Clicks
+// go through to the windows. The glow round the screens is HyprFrame.qml; the chip on the bar, bar/HyprChip.qml.
 Scope {
     id: root
 
-    readonly property string modeName: "hypr"
-    property bool active: false
+    readonly property string modeName: HyprModeState.name
+    readonly property bool active: HyprModeState.active
     property bool shown: false
     property var binds: []
 
@@ -32,22 +33,13 @@ Scope {
         return keys;
     }
 
-    Connections {
-        target: Hyprland
-        function onRawEvent(event) {
-            if (event.name !== "submap")
-                return;
-            const entered = event.data === root.modeName;
-            if (entered === root.active)
-                return;
-            root.active = entered;
-            if (entered) {
-                hide.stop();
-                bindsProc.running = true;   // the keys as they are now (hypr_mode.lua may have changed)
-                root.shown = true;
-            } else {
-                hide.restart();
-            }
+    onActiveChanged: {
+        if (active) {
+            hide.stop();
+            bindsProc.running = true;   // the keys as they are now (hypr_mode.lua may have changed)
+            root.shown = true;
+        } else {
+            hide.restart();
         }
     }
 
@@ -110,11 +102,29 @@ Scope {
                     y: 16
                     spacing: 10
                     Symbol {
+                        id: modeIcon
                         anchors.verticalCenter: parent.verticalCenter
                         name: "keyboard"
                         size: 22
                         color: Theme.accent
                         fill: 1
+                        // A pop and a wiggle each time the mode starts.
+                        Connections {
+                            target: HyprModeState
+                            function onEntriesChanged() { pop.restart(); }
+                        }
+                        SequentialAnimation {
+                            id: pop
+                            running: true
+                            ParallelAnimation {
+                                NumberAnimation { target: modeIcon; property: "scale"; from: 0.4; to: 1.25; duration: 260; easing.type: Easing.OutBack }
+                                NumberAnimation { target: modeIcon; property: "rotation"; from: -25; to: 12; duration: 260; easing.type: Easing.OutCubic }
+                            }
+                            ParallelAnimation {
+                                NumberAnimation { target: modeIcon; property: "scale"; to: 1; duration: 220; easing.type: Easing.OutCubic }
+                                NumberAnimation { target: modeIcon; property: "rotation"; to: 0; duration: 380; easing.type: Easing.OutElastic }
+                            }
+                        }
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
@@ -157,7 +167,20 @@ Scope {
                         delegate: Row {
                             id: entry
                             required property var modelData
+                            required property int index
                             spacing: 10
+                            // Each key arrives a moment after the one before: up and in.
+                            opacity: 0
+                            transform: Translate { id: rise; y: 10 }
+                            Component.onCompleted: arrive.start()
+                            SequentialAnimation {
+                                id: arrive
+                                PauseAnimation { duration: 90 + entry.index * 32 }
+                                ParallelAnimation {
+                                    NumberAnimation { target: entry; property: "opacity"; to: 1; duration: 220; easing.type: Easing.OutCubic }
+                                    NumberAnimation { target: rise; property: "y"; to: 0; duration: 320; easing.type: Easing.OutBack; easing.overshoot: 2 }
+                                }
+                            }
                             Row {
                                 spacing: 4
                                 anchors.verticalCenter: parent.verticalCenter
@@ -174,7 +197,7 @@ Scope {
                                             anchors.centerIn: parent
                                             text: parent.modelData
                                             color: Theme.text
-                                            font.family: Theme.font
+                                            font.family: Theme.mono
                                             font.pixelSize: 12
                                             font.weight: Font.Medium
                                         }

@@ -45,6 +45,7 @@ LUA = STATE_DIR / "overlays.lua"
 AVIZO_FLAG = STATE_DIR / "osd-avizo"          # halcyon-osd shows a popup only while this exists
 AVIZO_CONFIG = CONFIG / "avizo/config.ini"
 WAYSCRIBER_CONFIG = CONFIG / "wayscriber/config.toml"
+WAYSCRIBER_LOG = Path(os.environ.get("XDG_CACHE_HOME") or HOME / ".cache") / "halcyon/wayscriber.log"
 USER_THEMES = CONFIG / "halcyon/themes"
 
 MARK = "halcyon-managed"
@@ -166,6 +167,10 @@ def pen_palette(c: dict[str, str]) -> list[tuple[str, str]]:
 def wayscriber_config(c: dict[str, str]) -> str:
     lines = [
         TOML_MARK,
+        # The format this file is written in (Wayscriber 0.9's revision 3): without it Wayscriber treats the file as
+        # older and offers to migrate it.
+        "config_revision = 3",
+        "",
         "[drawing]",
         f'default_color = "{c["primary"]}"',
         "",
@@ -268,12 +273,40 @@ def ensure_wayscriber() -> bool:
         return True
     if not shutil.which("wayscriber"):
         return False
-    started = start_detached(["wayscriber", "--daemon"])
-    for _ in range(20):  # the daemon takes a moment to listen
+    # Its output goes to a log, so a daemon that will not start can say why (`halcyon annotate` names the file).
+    WAYSCRIBER_LOG.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with open(WAYSCRIBER_LOG, "ab") as log:
+            subprocess.Popen(["wayscriber", "--daemon"], stdin=subprocess.DEVNULL, stdout=log, stderr=log,
+                             start_new_session=True)
+    except OSError:
+        return False
+    for _ in range(20):  # the process; toggle_wayscriber waits for it to take requests
         if running("wayscriber"):
             break
         time.sleep(0.1)
-    return started
+    return True
+
+
+def toggle_wayscriber(tries: int = 40) -> int:
+    """Show or hide the drawing overlay. A daemon that has only just started refuses requests until it has published
+    its runtime record ("wayscriber daemon is starting and not ready yet; try again", or "not running" before it holds
+    its lock), and the first key press after login or after `ensure_wayscriber` started it used to land in that gap and
+    do nothing. Those two answers change nothing, so they are asked again for a few seconds; any other failure is final,
+    and one Wayscriber calls indeterminate is never repeated (it may already have toggled). A failure is said on the
+    screen: from a key there is no terminal to read it on."""
+    last = ""
+    for _ in range(tries):
+        result = subprocess.run(["wayscriber", "--daemon-toggle"], capture_output=True, text=True, check=False)
+        if result.returncode == 0:
+            return 0
+        last = (result.stderr or result.stdout or "").strip()
+        if "indeterminate" in last or not ("not ready" in last or "not running" in last):
+            break
+        time.sleep(0.15)
+    reason = last.splitlines()[-1] if last else "its daemon did not answer"
+    tell(f"Wayscriber did not open: {reason}. Its log: {WAYSCRIBER_LOG}")
+    return 1
 
 
 # --- commands -------------------------------------------------------------------------------------------------------
@@ -359,7 +392,7 @@ def cmd_annotate(args: argparse.Namespace) -> int:
         if not ensure_wayscriber():
             tell("Wayscriber is not installed (Arch: yay -S wayscriber-bin).")
             return 1
-        return subprocess.run(["wayscriber", "--daemon-toggle"], check=False).returncode
+        return toggle_wayscriber()
     status = annotate_status()
     if args.json:
         print(json.dumps(status, indent=2))
@@ -368,6 +401,7 @@ def cmd_annotate(args: argparse.Namespace) -> int:
           + (", running" if status["running"] else ""))
     print(f"at login    {'on' if status['at_login'] else 'off'}")
     print(f"config      {status['config']}")
+    print(f"log         {WAYSCRIBER_LOG}")
     return 0
 
 

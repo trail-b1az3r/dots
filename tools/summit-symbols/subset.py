@@ -5,12 +5,16 @@ import sys
 from fontTools.ttLib import TTFont
 from fontTools import subset
 src, out = sys.argv[1], sys.argv[2]
-NAMES = """apps bedtime chevron_left chevron_right clear_day clear_night cloud foggy landscape partly_cloudy_day
+NAMES = """apps bedtime chevron_left chevron_right clear_day cloud foggy landscape partly_cloudy_day
 partly_cloudy_night power_settings_new rainy search thunderstorm weather_snowy wifi wifi_2_bar wifi_1_bar lan wifi_off
 volume_off volume_up volume_down volume_mute battery_charging_full battery_full battery_5_bar battery_3_bar
 battery_1_bar battery_alert content_paste keyboard select_window eco balance speed bolt schedule close check
 settings refresh lock logout restart_alt dark_mode light_mode brightness_medium notifications palette
-water_drop air near_me umbrella device_thermostat""".split()
+water_drop air near_me umbrella device_thermostat
+arrow_back battery_saver bluetooth bluetooth_connected bluetooth_disabled brightness_low calendar_month check_circle
+checklist clear_all coffee colorize delete do_not_disturb_on expand_less expand_more headphones mic mic_off mouse
+mobile nightlight notifications_off notifications_unread pause play_arrow priority_high radio_button_checked
+radio_button_unchecked replay screenshot_region speaker sports_esports timer tune wb_twilight""".split()
 f = TTFont(src)
 cmap = f.getBestCmap()
 by_name = {}

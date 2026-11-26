@@ -1,0 +1,32 @@
+{"appName": "Signal", "summary": "Jordan", "body": "hey are you awake? the basement is flooding, call me", "urgency": 1, "hasActions": true, "label": 1}
+{"appName": "Thunderbird", "summary": "HR: Please complete your tax form by Friday", "body": "Payroll can't process your salary without it.", "urgency": 1, "hasActions": false, "label": 1}
+{"appName": "Google", "summary": "Security alert", "body": "A new passkey was added to your Google Account. If you didn't add it, review your account.", "urgency": 1, "hasActions": true, "label": 1}
+{"appName": "Element", "summary": "Mira", "body": "the demo starts in 3 minutes, where are you??", "urgency": 1, "hasActions": true, "label": 1}
+{"appName": "gnome-calendar", "summary": "Pick up kids", "body": "In 10 minutes", "urgency": 1, "hasActions": false, "label": 1}
+{"appName": "Bank of Ireland", "summary": "Was this you?", "body": "€312.40 at ELECTRO STORE ONLINE. Reply YES or NO.", "urgency": 1, "hasActions": true, "label": 1}
+{"appName": "Slack", "summary": "Incident #482 opened", "body": "Checkout service returning 500s — you're the on-call engineer.", "urgency": 1, "hasActions": true, "label": 1}
+{"appName": "Messages", "summary": "PayPal", "body": "PayPal: 482913 is your security code. It expires in 10 minutes.", "urgency": 1, "hasActions": false, "label": 1}
+{"appName": "Power", "summary": "Low battery", "body": "4% left. Your laptop will hibernate soon.", "urgency": 2, "hasActions": false, "label": 1}
+{"appName": "Telegram", "summary": "Mum", "body": "Call me when you see this, it's about grandpa", "urgency": 1, "hasActions": true, "label": 1}
+{"appName": "smartd", "summary": "SMART error detected", "body": "/dev/nvme0n1: 12 reallocated sectors. Back up your data now.", "urgency": 2, "hasActions": false, "label": 1}
+{"appName": "Discord", "summary": "Incoming call", "body": "Sam is calling you", "urgency": 2, "hasActions": true, "label": 1}
+{"appName": "GitLab", "summary": "Pipeline #9921 failed", "body": "release/2.4 — stage deploy: job failed", "urgency": 1, "hasActions": true, "label": 1}
+{"appName": "Microsoft Outlook", "summary": "Meeting in 5 minutes: Quarterly review", "body": "Teams meeting", "urgency": 1, "hasActions": true, "label": 1}
+{"appName": "Proton Mail", "summary": "Your subscription payment failed", "body": "Update your payment method to avoid losing access.", "urgency": 1, "hasActions": false, "label": 1}
+{"appName": "Spotify", "summary": "Blinding Lights", "body": "The Weeknd", "urgency": 0, "hasActions": false, "label": 0}
+{"appName": "Firefox", "summary": "Download finished", "body": "linux-6.18.tar.xz", "urgency": 1, "hasActions": true, "label": 0}
+{"appName": "Bluesky", "summary": "Lena reposted your post", "body": "", "urgency": 1, "hasActions": false, "label": 0}
+{"appName": "Steam", "summary": "Autumn Sale is live!", "body": "Thousands of games at their lowest prices", "urgency": 1, "hasActions": false, "label": 0}
+{"appName": "NetworkManager", "summary": "Wi-Fi connected", "body": "Connected to Starbucks WiFi", "urgency": 0, "hasActions": false, "label": 0}
+{"appName": "Discord", "summary": "#off-topic", "body": "kai: who wants pizza tonight lmao", "urgency": 1, "hasActions": false, "label": 0}
+{"appName": "Halcyon", "summary": "Theme switched", "body": "Night theme until 06:30", "urgency": 0, "hasActions": false, "label": 0}
+{"appName": "Screenshot", "summary": "Screenshot taken", "body": "Saved to Pictures", "urgency": 0, "hasActions": true, "label": 0}
+{"appName": "Duolingo", "summary": "Your streak is at risk", "body": "Practice for 5 minutes to keep it", "urgency": 1, "hasActions": false, "label": 0}
+{"appName": "YouTube", "summary": "New upload: 3Blue1Brown", "body": "But what is a neural network?", "urgency": 1, "hasActions": false, "label": 0}
+{"appName": "KDE Connect", "summary": "Pixel 8: battery 20%", "body": "", "urgency": 0, "hasActions": false, "label": 0}
+{"appName": "GitHub", "summary": "All checks have passed", "body": "frontline#212 can be merged", "urgency": 1, "hasActions": true, "label": 0}
+{"appName": "WhatsApp", "summary": "Family", "body": "Aunt Rose: 😂😂😂", "urgency": 1, "hasActions": false, "label": 0}
+{"appName": "Thunderbird", "summary": "Newsletter: This week in Rust", "body": "Rust 1.92 released, new crates and more", "urgency": 1, "hasActions": false, "label": 0}
+{"appName": "pamac", "summary": "14 updates available", "body": "Click to update", "urgency": 1, "hasActions": true, "label": 0}
+{"appName": "Signal", "summary": "Ben", "body": "thanks for dinner last night!", "urgency": 1, "hasActions": true, "label": 0}
+{"appName": "Weather", "summary": "Light rain this evening", "body": "8° and windy", "urgency": 0, "hasActions": false, "label": 0}

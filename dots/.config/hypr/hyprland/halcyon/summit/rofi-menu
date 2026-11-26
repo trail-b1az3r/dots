@@ -30,12 +30,15 @@ if pkill -x rofi 2>/dev/null; then
     exit 0
 fi
 
-# The prompts' icons are Summit's cut of Material Symbols (Summit Symbols): fontconfig needs it once for Rofi to find it.
+# The prompts' icons are Summit's cut of Material Symbols (Summit Symbols), and the text is Summit Sans: fontconfig
+# needs them once for Rofi to find them (Summit's package installs both for everyone; this covers a copy of the dots).
 fonts="${XDG_DATA_HOME:-$HOME/.local/share}/fonts/halcyon"
-symbols="$HOME/.config/quickshell/Summit/assets/fonts/SummitSymbols.ttf"
-if [[ -r "$symbols" ]] && ! cmp -s "$symbols" "$fonts/SummitSymbols.ttf"; then
-    mkdir -p "$fonts" && cp -f "$symbols" "$fonts/SummitSymbols.ttf" && fc-cache -f "$fonts" >/dev/null 2>&1
-fi
+for font in SummitSymbols SummitSans; do
+    file="$HOME/.config/quickshell/Summit/assets/fonts/$font.ttf"
+    if [[ -r "$file" ]] && ! cmp -s "$file" "$fonts/$font.ttf"; then
+        mkdir -p "$fonts" && cp -f "$file" "$fonts/$font.ttf" && fc-cache -f "$fonts" >/dev/null 2>&1
+    fi
+done
 
 theme_args=(-config "${SUMMIT_ROFI_CONFIG:-$here/summit.rasi}")
 
@@ -45,7 +48,11 @@ if command -v fc-list >/dev/null 2>&1 && [[ -n "$(fc-list "Summit Symbols" famil
     export HAVE_SUMMIT_SYMBOLS=1
 else
     export HAVE_SUMMIT_SYMBOLS=0
-    theme_args+=(-theme-str 'prompt { font: "Inter Medium 11"; }')
+    theme_args+=(-theme-str 'prompt { font: "Summit Sans Medium 11"; }')
+fi
+# `halcyon fonts right-font` puts everything in RightFont until the next restart: Rofi too.
+if [[ -e "${XDG_RUNTIME_DIR:-/tmp}/halcyon/right-font" ]]; then
+    theme_args+=(-theme-str '* { font: "RightFont Review 11"; } element-text { font: "RightFont Review 11"; }')
 fi
 # icon NAME WORD: the icon when the font is there, else the word.
 icon() { if ((HAVE_SUMMIT_SYMBOLS)); then printf '%s' "$1"; else printf '%s' "$2"; fi; }
@@ -172,7 +179,7 @@ for line in sys.stdin:
     print(f"{chord:<30}{desc}")
 ' | r -dmenu -i -p "$prompt" -format i -mesg "$mesg" -kb-custom-1 Alt+h \
         -theme-str 'window { width: 820px; } listview { lines: 12; } element-icon { enabled: false; }
-                    element-text { font: "JetBrainsMono Nerd Font 10"; } message { padding: 6px 10px; }')"
+                    element-text { font: "Iosevka Nerd Font,JetBrainsMono Nerd Font 10"; } message { padding: 6px 10px; }')"
     code=$?
     if [[ "$code" == 10 ]]; then
         [[ "$which" == hypr ]] && keys_menu all || keys_menu hypr

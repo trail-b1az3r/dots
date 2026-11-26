@@ -40,7 +40,65 @@ Singleton {
     }
 
     // Type and shape ---------------------------------------------------------------------------------------------
-    readonly property string font: data.font ?? "Inter"
+    // Text: Summit Sans (assets/fonts: Google Sans Flex with rounded ends, under its own name; OFL), unless Settings
+    // or the theme names another. Code (keys, codes, the clipboard): Iosevka Nerd Font when it is installed
+    // (ttf-iosevka-nerd), else JetBrains Mono's, else any monospace.
+    // `halcyon fonts right-font` puts everything in RightFont until the next restart (a file in $XDG_RUNTIME_DIR,
+    // which the next boot clears; `halcyon fonts right-font off` sooner).
+    readonly property string font: rightFont ? rightFontName : (prefsText !== "" ? prefsText : (data.font ?? summitSansName))
+    readonly property string mono: rightFont ? rightFontName : (prefsCode !== "" ? prefsCode : installedMono)
+    readonly property string summitSansName: sans.status === FontLoader.Ready ? sans.name : "Summit Sans"
+    readonly property string installedMono: {
+        const families = Qt.fontFamilies();
+        for (const f of ["Iosevka Nerd Font", "Iosevka Nerd Font Mono", "Iosevka", "JetBrainsMono Nerd Font", "JetBrains Mono"])
+            if (families.includes(f))
+                return f;
+        return "monospace";
+    }
+    FontLoader {
+        id: sans
+        source: Qt.resolvedUrl("../assets/fonts/SummitSans.ttf")
+    }
+
+    property bool rightFont: false
+    readonly property string rightFontName: rightFontLoader.status === FontLoader.Ready ? rightFontLoader.name : "RightFont Review"
+    FontLoader {
+        id: rightFontLoader
+        source: root.rightFont ? "file://" + (Quickshell.env("XDG_DATA_HOME") || (Quickshell.env("HOME") + "/.local/share"))
+                                 + "/fonts/halcyon-rightfont/RightFont-Review-v7.ttf" : ""
+    }
+    FileView {
+        path: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/halcyon/right-font"
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: root.rightFont = true
+        onLoadFailed: root.rightFont = false
+    }
+
+    // The fonts chosen in Settings (services/Prefs.qml has the rest of that file).
+    property string prefsText: ""
+    property string prefsCode: ""
+    FileView {
+        path: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/halcyon/summit.json"
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            try {
+                const fonts = JSON.parse(text())?.fonts ?? {};
+                root.prefsText = fonts.text ?? "";
+                root.prefsCode = fonts.code ?? "";
+            } catch (e) {
+                root.prefsText = "";
+                root.prefsCode = "";
+            }
+        }
+        onLoadFailed: {
+            root.prefsText = "";
+            root.prefsCode = "";
+        }
+    }
     // The icons: Summit's own cut of Material Symbols Rounded (assets/fonts, Apache-2.0), with every icon it draws and
     // the font's fill and weight axes, so it never depends on the full font being installed (it is an AUR package).
     readonly property string iconFont: symbols.status === FontLoader.Ready ? symbols.name : "Material Symbols Rounded"

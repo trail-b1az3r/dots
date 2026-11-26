@@ -23,5 +23,7 @@ Singleton {
     function keys() { Quickshell.execDetached([root.rofiScript, "keys"]); }
     function hyprKeys() { Quickshell.execDetached([root.rofiScript, "hyprkeys"]); }
     function forecast() { Quickshell.execDetached([root.rofiScript, "forecast"]); }
+    // Settings (Super+I): Halcyon's Settings app, which shows Summit's own page while Summit is the shell.
+    function settings() { Quickshell.execDetached([root.halcyon + "/halcyon-theme", "settings"]); }
     function run(command) { Quickshell.execDetached(["sh", "-c", command]); }
 }

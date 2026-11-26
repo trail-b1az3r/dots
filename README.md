@@ -902,6 +902,9 @@ halcyon annotate off              # not at login (on turns it back on)
 halcyon annotate toggle           # show or hide it, as the key does
 ```
 
+Its daemon writes to `~/.cache/halcyon/wayscriber.log`. The key waits a moment for a daemon that has only just
+started (it refuses requests until it is ready), and says on screen if Wayscriber still does not open.
+
 Its pen palette is the theme's accent and tertiary colour and the usual pen colours leaning toward the accent, and
 its status bar and help panel use the theme's surfaces. Applying a theme or a wallpaper rewrites
 `~/.config/avizo/config.ini` and `~/.config/wayscriber/config.toml`, but only files that start with a

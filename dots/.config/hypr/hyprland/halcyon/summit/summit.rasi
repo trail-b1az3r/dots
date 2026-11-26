@@ -48,7 +48,7 @@ configuration {
     bg-alpha: #1E1E1E8C;
     pane: #2B2B2B99;
 
-    font: "Inter 11";
+    font: "Summit Sans,Inter 11";
     background-color: transparent;
     text-color: @fg;
     margin: 0;
